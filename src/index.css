@@ -2,6 +2,14 @@
 
 @variant dark (&:where(.dark, .dark *));
 
+/* ==========================================================================
+   WHIZ STUDIO FOUNDATIONAL BRAND PALETTE
+   Extracted directly from the official Whiz Studio logo:
+   - Primary: #00A86B (Vibrant Whiz Lettering Green)
+   - Secondary: #065A3F / #0B5E43 (Star Emblem Deep Forest/Teal)
+   - Accent: #FF4B26 / #FF5E1E (Studio Red-Orange Baseline & Flame Tip)
+   - Accent Flame: #FF9A24 (Warm Flame Amber/Yellow)
+   ========================================================================== */
 @theme {
   --color-brand-green-50: #ecfdf5;
   --color-brand-green-100: #d1fae5;
@@ -11,23 +19,23 @@
   --color-brand-green-500: #10b981;
   --color-brand-green-600: #059669;
   --color-brand-green-700: #047857;
-  --color-brand-green-800: #007A4D;
-  --color-brand-green-900: #064e3b;
+  --color-brand-green-800: #0B5E43;
+  --color-brand-green-900: #065A3F;
   --color-brand-green-whiz: #00A86B;
   --color-brand-green-emerald: #00C853;
   --color-brand-green-glow: #10B981;
 
-  --color-brand-accent-orange: #FF5E1E;
-  --color-brand-accent-flame: #F97316;
-  --color-brand-accent-amber: #F59E0B;
+  --color-brand-accent-orange: #FF4B26;
+  --color-brand-accent-flame: #FF5E1E;
+  --color-brand-accent-amber: #FF9A24;
   --color-brand-accent-red: #EF4444;
 
-  --color-brand-dark-950: #0b0f19;
-  --color-brand-dark-900: #111827;
-  --color-brand-dark-850: #1e293b;
-  --color-brand-dark-800: #334155;
-  --color-brand-dark-750: #475569;
-  --color-brand-dark-700: #64748b;
+  --color-brand-dark-950: #070C14;
+  --color-brand-dark-900: #0B0F19;
+  --color-brand-dark-850: #111827;
+  --color-brand-dark-800: #1E293B;
+  --color-brand-dark-750: #334155;
+  --color-brand-dark-700: #475569;
 
   --font-sans: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
@@ -35,23 +43,27 @@
 
 :root {
   --brand-primary: #00A86B;
-  --brand-accent: #FF5E1E;
+  --brand-secondary: #065A3F;
+  --brand-accent: #FF4B26;
+  --brand-accent-amber: #FF9A24;
   --brand-glow: #10B981;
-  --brand-bg: #0b0f19;
+  --brand-bg: #070C14;
 }
 
 /* Base Body Styles */
 body {
-  background-color: #0b0f19;
+  background-color: #070C14;
   color: #f8fafc;
   font-family: 'Plus Jakarta Sans', sans-serif;
   overflow-x: hidden;
   transition: background-color 0.25s ease, color 0.25s ease;
 }
 
-/* Fluid Typography Clamp */
+/* ==========================================================================
+   ULTRA-FLUID RESPONSIVE TYPOGRAPHY (clamp engine)
+   ========================================================================== */
 .fluid-lead {
-  font-size: clamp(1rem, 2vw, 1.35rem);
+  font-size: clamp(1rem, 2vw, 1.5rem);
   line-height: 1.6;
 }
 
@@ -65,35 +77,44 @@ body {
   line-height: 1.2;
 }
 
+.fluid-body {
+  font-size: clamp(0.875rem, 1.25vw, 1.125rem);
+  line-height: 1.65;
+}
+
 /* ==========================================================================
    LIQUID GLASS (GLASSMORPHISM) ENGINE
+   Exact Directive Specifications:
+   - backdrop-filter: blur(12px) saturate(180%);
+   - semi-transparent backgrounds (rgba)
+   - subtle frosted borders
    ========================================================================== */
 .liquid-glass,
 .glass-panel {
-  background: rgba(255, 255, 255, 0.05) !important;
-  backdrop-filter: blur(16px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(16px) saturate(200%) !important;
+  background: rgba(11, 15, 25, 0.72) !important;
+  backdrop-filter: blur(12px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.12) !important;
 }
 
 .glass-nav {
-  background: rgba(11, 15, 25, 0.88) !important;
-  backdrop-filter: blur(16px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(16px) saturate(200%) !important;
+  background: rgba(7, 12, 20, 0.85) !important;
+  backdrop-filter: blur(12px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.15) !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.18) !important;
 }
 
 /* ==========================================================================
-   LOGO ZERO-COMPRESSION RULE
+   LOGO STRICT VISIBILITY ENFORCEMENT
+   Strict CSS: min-height: 80px; max-height: 100px; width: auto; object-fit: contain;
    ========================================================================== */
 .whiz-logo-strict {
-  height: 85px !important;
-  min-height: 85px !important;
+  min-height: 80px !important;
+  max-height: 100px !important;
   width: auto !important;
   object-fit: contain !important;
-  max-height: none !important;
   display: block !important;
 }
 
@@ -103,7 +124,7 @@ body {
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #0b0f19;
+  background: #070C14;
 }
 ::-webkit-scrollbar-thumb {
   background: #1e293b;
@@ -122,13 +143,13 @@ body {
 }
 
 .text-gradient-flame {
-  background: linear-gradient(135deg, #FF7A00 0%, #FF5E1E 60%, #E11D48 100%);
+  background: linear-gradient(135deg, #FF9A24 0%, #FF5E1E 50%, #FF4B26 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 .text-gradient-dual {
-  background: linear-gradient(90deg, #00C853 0%, #10B981 40%, #FF7A00 80%, #FF5E1E 100%);
+  background: linear-gradient(90deg, #00C853 0%, #00A86B 40%, #FF9A24 80%, #FF4B26 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -145,11 +166,11 @@ body {
 }
 
 .glow-orange {
-  box-shadow: 0 0 35px -5px rgba(255, 94, 30, 0.45);
+  box-shadow: 0 0 35px -5px rgba(255, 75, 38, 0.45);
 }
 
 .bg-hero-mesh {
-  background-image: radial-gradient(at 10% 20%, rgba(0, 168, 107, 0.15) 0px, transparent 50%), radial-gradient(at 90% 10%, rgba(255, 94, 30, 0.12) 0px, transparent 50%), radial-gradient(at 50% 80%, rgba(16, 185, 129, 0.08) 0px, transparent 60%);
+  background-image: radial-gradient(at 10% 20%, rgba(0, 168, 107, 0.15) 0px, transparent 50%), radial-gradient(at 90% 10%, rgba(255, 75, 38, 0.12) 0px, transparent 50%), radial-gradient(at 50% 80%, rgba(16, 185, 129, 0.08) 0px, transparent 60%);
 }
 
 /* Infinite Marquee Animation for Testimonials */
@@ -204,8 +225,8 @@ html.light .liquid-glass,
 html[data-theme="light"] .glass-panel,
 html.light .glass-panel {
   background: rgba(255, 255, 255, 0.85) !important;
-  backdrop-filter: blur(16px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+  backdrop-filter: blur(12px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
   border: 1px solid rgba(15, 23, 42, 0.08) !important;
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05) !important;
 }
@@ -213,8 +234,8 @@ html.light .glass-panel {
 html[data-theme="light"] .glass-nav,
 html.light .glass-nav {
   background: rgba(255, 255, 255, 0.92) !important;
-  backdrop-filter: blur(16px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+  backdrop-filter: blur(12px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
   border-bottom: 1px solid rgba(15, 23, 42, 0.08) !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05) !important;
 }
@@ -351,5 +372,5 @@ html.light .text-gradient-silver {
 /* Radial Meshes in Light Mode */
 html[data-theme="light"] .bg-hero-mesh,
 html.light .bg-hero-mesh {
-  background-image: radial-gradient(at 10% 20%, rgba(0, 168, 107, 0.08) 0px, transparent 50%), radial-gradient(at 90% 10%, rgba(255, 94, 30, 0.06) 0px, transparent 50%), radial-gradient(at 50% 80%, rgba(16, 185, 129, 0.05) 0px, transparent 60%) !important;
+  background-image: radial-gradient(at 10% 20%, rgba(0, 168, 107, 0.08) 0px, transparent 50%), radial-gradient(at 90% 10%, rgba(255, 75, 38, 0.06) 0px, transparent 50%), radial-gradient(at 50% 80%, rgba(16, 185, 129, 0.05) 0px, transparent 60%) !important;
 }

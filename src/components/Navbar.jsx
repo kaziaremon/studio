@@ -40,17 +40,16 @@ export default function Navbar({ theme, onToggleTheme, onOpenPortal, onBookAudit
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-          {/* Prominent High-Visibility Logo (Strict 85px Zero-Compression Rule) */}
-          <a href="#" className="flex items-center gap-3 group focus:outline-none shrink-0 py-0.5">
+          {/* Prominent High-Visibility Logo (Strict 80px-100px Enforcement) */}
+          <a href="#" className="flex items-center gap-3 group focus:outline-none shrink-0 py-1">
             <img
               src="./assets/images/logo.png"
               alt="Whiz Studio Logo"
               style={{
-                height: '85px',
-                minHeight: '85px',
+                minHeight: '80px',
+                maxHeight: '100px',
                 width: 'auto',
                 objectFit: 'contain',
-                maxHeight: 'none',
                 display: 'block'
               }}
               className="whiz-logo-strict w-auto object-contain transition-transform duration-300 group-hover:scale-105 filter drop-shadow-[0_4px_16px_rgba(0,168,107,0.35)]"

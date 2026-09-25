@@ -43,11 +43,10 @@ export default function Footer({ onOpenPortal }) {
                   src="./assets/images/logo.png"
                   alt="Whiz Studio Logo"
                   style={{
-                    height: '85px',
-                    minHeight: '85px',
+                    minHeight: '80px',
+                    maxHeight: '100px',
                     width: 'auto',
                     objectFit: 'contain',
-                    maxHeight: 'none',
                     display: 'block'
                   }}
                   className="whiz-logo-strict w-auto object-contain filter drop-shadow-[0_4px_16px_rgba(0,168,107,0.35)]"
