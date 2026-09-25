@@ -1,15 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
-import LivePlatformTicker from './components/LivePlatformTicker';
 import AboutSection from './components/AboutSection';
 import ServicesGrid from './components/ServicesGrid';
-import PlatformManagement from './components/PlatformManagement';
-import RoiCalculator from './components/RoiCalculator';
-import ProcessSection from './components/ProcessSection';
-import CaseStudies from './components/CaseStudies';
-import TestimonialsSection from './components/TestimonialsSection';
 import BlogSection from './components/BlogSection';
+import RoiCalculator from './components/RoiCalculator';
+import TestimonialsSection from './components/TestimonialsSection';
 import FaqSection from './components/FaqSection';
 import ContactSection from './components/ContactSection';
 import Footer from './components/Footer';
@@ -68,66 +64,45 @@ function MainApp() {
         onBookAudit={() => scrollToContact()}
       />
 
-      <main className="flex-grow">
-        {/* 1. Immersive Hero Section */}
+      <main className="flex-grow space-y-12 sm:space-y-16 lg:space-y-24">
+        {/* 1. Hero / Home Section */}
         <Hero
           onBookAudit={() => scrollToContact()}
           onOpenPortal={() => setIsPortalOpen(true)}
         />
 
-        {/* 2. Live Platform Ticker */}
-        <LivePlatformTicker />
-
-        {/* 3. About Us & Dynamic Statistics Engine */}
+        {/* 2. About Us */}
         <AboutSection
           onBookAudit={() => scrollToContact()}
         />
 
-        {/* 4. Advanced 3D Tilt Services Grid */}
+        {/* 3. Services (Core 4: Facebook Ads, Social Media, Platform Optimization, Growth Planning) */}
         <ServicesGrid
           onBookService={handleBookService}
         />
 
-        {/* 5. Enterprise Platform Management & Command Center */}
-        <PlatformManagement
-          onOpenPortal={() => setIsPortalOpen(true)}
-        />
+        {/* 4. Strategic Blog (1 preview per core service) */}
+        <BlogSection />
 
-        {/* 6. Interactive ROI & Media Spend Simulator */}
+        {/* 5. ROI Simulator / Calculator (Synced with Universal Currency Toggle) */}
         <RoiCalculator
           onClaimProjection={handleClaimProjection}
         />
 
-        {/* 7. The 4-Phase Scale Methodology */}
-        <ProcessSection
-          onBookAudit={() => scrollToContact()}
-        />
-
-        {/* 8. Verified Client Case Studies & Proof of ROAS */}
-        <CaseStudies
-          onBookAudit={(context) => {
-            if (context) setPrefilledService(context);
-            scrollToContact();
-          }}
-        />
-
-        {/* 9. Verified Testimonials Marquee & Discord Review Submission */}
+        {/* 6. Dynamic Testimonial Engine (Discord Webhook Integration) */}
         <TestimonialsSection />
 
-        {/* 10. Strategic Knowledge Base & Blog */}
-        <BlogSection />
-
-        {/* 11. Frequently Answered Questions */}
+        {/* 7. FAQ Section (Accordion with 4-5 fundamental questions) */}
         <FaqSection />
 
-        {/* 12. Interactive Growth Audit & Contact Form */}
+        {/* 8. Book Growth Audit Form (Lead Gen to Discord Webhook) */}
         <ContactSection
           prefilledService={prefilledService}
           prefilledData={prefilledData}
         />
       </main>
 
-      {/* 13. Sophisticated Footer */}
+      {/* 9. Footer & Terms of Service */}
       <Footer
         onOpenPortal={() => setIsPortalOpen(true)}
       />
