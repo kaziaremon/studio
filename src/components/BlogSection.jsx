@@ -1,141 +1,158 @@
 import React, { useState } from 'react';
-import { BookOpen, ArrowRight, Clock, User, Tag, Sparkles, ChevronRight } from 'lucide-react';
+import { BookOpen, ArrowRight, Clock, User, Tag, ChevronRight, Sparkles } from 'lucide-react';
 
 export default function BlogSection() {
-  const [activeCategory, setActiveCategory] = useState('All');
+  const [activeFilter, setActiveFilter] = useState('All');
 
-  const categories = ['All', 'Meta Ads', 'Tracking & CAPI', 'Ecosystem Strategy', 'Growth Planning'];
+  const filterTabs = [
+    'All',
+    'Facebook Advertising',
+    'Social Media Marketing',
+    'Platform Optimization',
+    'Business Growth Planning'
+  ];
 
-  const articles = [
+  // 1 Realistic Blog Post Preview for each Core Service
+  const blogPosts = [
     {
-      id: 1,
-      title: "Advantage+ Shopping Campaigns (ASC): The 2026 Creative & Dynamic Testing Playbook",
-      summary: "How to engineer structured creative testing loops, eliminate ad fatigue, and systematically scale daily spend without algorithm volatility.",
-      category: "Meta Ads",
-      readTime: "6 min read",
-      date: "September 2026",
-      badge: "High Growth",
-      author: "Whiz Strategy Group",
-      gradient: "from-blue-600/20 to-brand-green-whiz/20"
+      id: 'fb-ads-creative-testing',
+      service: 'Facebook Advertising',
+      title: 'Advantage+ Creative Frameworks: How to Systematically Test Ad Concepts Without Burning Capital',
+      excerpt: 'Discover why high-volume creative testing outperforms micro-targeting in 2026. A step-by-step breakdown of dynamic creative testing (DCT) and hook velocity.',
+      readTime: '6 min read',
+      date: 'September 2026',
+      badge: 'Paid Acquisition',
+      author: 'Performance Strategy Group',
+      thumbnailBg: 'from-blue-600/30 via-slate-900 to-brand-dark-950',
+      tagColor: 'text-blue-400'
     },
     {
-      id: 2,
-      title: "Server-Side Tracking & Meta CAPI: Eliminating 40% Attribution Leakage",
-      summary: "A technical deep dive into zero-loss server telemetry. Why client-side pixels fail and how First-Party Gateway infrastructure protects ROAS.",
-      category: "Tracking & CAPI",
-      readTime: "8 min read",
-      date: "September 2026",
-      badge: "Technical",
-      author: "Infrastructure Team",
-      gradient: "from-brand-green-whiz/20 to-emerald-600/20"
+      id: 'social-media-distribution',
+      service: 'Social Media Marketing',
+      title: 'Organic Reach vs. Paid Amplification: Crafting a Balanced Multi-Channel Distribution Model',
+      excerpt: 'Learn how to transform organic short-form video engagement into profitable spark ads and whitelisted creator campaigns across Instagram, LinkedIn, and YouTube.',
+      readTime: '7 min read',
+      date: 'September 2026',
+      badge: 'Social Strategy',
+      author: 'Creative Direction Team',
+      thumbnailBg: 'from-pink-600/30 via-slate-900 to-brand-dark-950',
+      tagColor: 'text-pink-400'
     },
     {
-      id: 3,
-      title: "Omnichannel Funnel Design: Synchronizing Google Ads, YouTube, and WhatsApp CRM",
-      summary: "Unifying high-intent Search traffic with visual YouTube storytelling and automated conversational closing on WhatsApp for B2B & DTC.",
-      category: "Ecosystem Strategy",
-      readTime: "7 min read",
-      date: "August 2026",
-      badge: "Omnichannel",
-      author: "Media Architecture",
-      gradient: "from-purple-600/20 to-brand-accent-orange/20"
+      id: 'server-side-telemetry-cro',
+      service: 'Platform Optimization',
+      title: 'First-Party Attribution in 2026: Diagnosing and Fixing Server-Side Pixel Discrepancies',
+      excerpt: 'A technical analysis of Meta CAPI, Google Enhanced Conversions, and Server GTM. Why browser cookies fail and how to reclaim accurate conversion signals.',
+      readTime: '8 min read',
+      date: 'August 2026',
+      badge: 'Technical Telemetry',
+      author: 'Data & Tracking Infrastructure',
+      thumbnailBg: 'from-brand-green-whiz/30 via-slate-900 to-brand-dark-950',
+      tagColor: 'text-brand-green-400'
     },
     {
-      id: 4,
-      title: "Unit Economics First: The 4-Pillar Growth Planning Framework for High-Ticket Brands",
-      summary: "Stop optimizing for vanity ROAS. Learn how to align blended CAC, customer lifetime value (LTV), and cash flow cycles for sustainable scale.",
-      category: "Growth Planning",
-      readTime: "5 min read",
-      date: "August 2026",
-      badge: "Economics",
-      author: "Growth Advisory",
-      gradient: "from-brand-accent-orange/20 to-amber-500/20"
+      id: 'unit-economics-scaling',
+      service: 'Business Growth Planning',
+      title: 'The 3 Critical Metrics for Scaling: Aligning Contribution Margin, CAC, and LTV',
+      excerpt: 'Why optimizing solely for in-platform ROAS leads to cash flow crunches. How to model blended marketing efficiency ratios (MER) for predictable enterprise scale.',
+      readTime: '5 min read',
+      date: 'August 2026',
+      badge: 'Executive Advisory',
+      author: 'Growth Planning Advisory',
+      thumbnailBg: 'from-brand-accent-orange/30 via-slate-900 to-brand-dark-950',
+      tagColor: 'text-brand-accent-orange'
     }
   ];
 
-  const filteredArticles = activeCategory === 'All' 
-    ? articles 
-    : articles.filter(a => a.category === activeCategory);
+  const filteredPosts = activeFilter === 'All'
+    ? blogPosts
+    : blogPosts.filter(p => p.service === activeFilter);
 
   return (
     <section id="blog" className="relative py-24 px-4 sm:px-6 lg:px-8 bg-brand-dark-950 overflow-hidden">
-      {/* Glow Mesh */}
-      <div className="pointer-events-none absolute top-1/3 right-0 w-96 h-96 bg-brand-green-whiz/5 blur-[120px] rounded-full" />
+      {/* Subtle Purple / Indigo Ambient Highlight */}
+      <div className="pointer-events-none absolute top-1/4 right-0 w-96 h-96 bg-purple-600/10 blur-[130px] rounded-full" />
 
       <div className="max-w-7xl mx-auto relative z-10">
-        {/* Header */}
+        {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
           <div>
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/90 dark:bg-slate-900/90 border border-brand-green-whiz/30 text-xs font-mono font-medium text-brand-green-400 mb-4 shadow-sm">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full liquid-glass border border-brand-green-whiz/30 text-xs font-mono font-medium text-brand-green-400 mb-4 shadow-sm">
               <BookOpen className="w-3.5 h-3.5 text-brand-green-400" />
-              <span>THE WHIZ DISPATCH & KNOWLEDGE BASE</span>
+              <span>PRACTICAL MARKETING INTELLIGENCE</span>
             </div>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white">
-              Platform Insights & <br className="hidden sm:inline" />
-              <span className="text-gradient-whiz">Acquisition Strategies</span>
+            <h2 className="fluid-heading-lg font-extrabold tracking-tight text-white">
+              Strategic Insights & <br className="hidden sm:inline" />
+              <span className="text-gradient-whiz">Execution Breakdowns</span>
             </h2>
           </div>
 
-          {/* Category Filter Pills */}
+          {/* Service Filter Tabs */}
           <div className="flex flex-wrap gap-2">
-            {categories.map((cat) => (
+            {filterTabs.map((tab) => (
               <button
-                key={cat}
-                onClick={() => setActiveCategory(cat)}
+                key={tab}
+                onClick={() => setActiveFilter(tab)}
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 ${
-                  activeCategory === cat
-                    ? 'bg-brand-green-whiz text-slate-950 font-bold shadow-md shadow-brand-green-whiz/20'
-                    : 'bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800'
+                  activeFilter === tab
+                    ? 'bg-brand-green-whiz text-slate-950 font-bold shadow-md shadow-brand-green-whiz/25'
+                    : 'liquid-glass text-slate-300 hover:text-white border border-slate-800'
                 }`}
               >
-                {cat}
+                {tab}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Article Cards Grid */}
+        {/* Dynamic 4-Post Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
-          {filteredArticles.map((article) => (
+          {filteredPosts.map((post) => (
             <article
-              key={article.id}
+              key={post.id}
               className="liquid-glass rounded-3xl p-7 sm:p-8 hover:border-brand-green-whiz/50 transition-all duration-300 group flex flex-col justify-between relative overflow-hidden"
             >
-              {/* Card top banner */}
-              <div>
-                <div className="flex items-center justify-between gap-3 mb-4">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-slate-900/80 border border-slate-800 text-[11px] font-mono font-medium text-brand-green-400">
-                    <Tag className="w-3 h-3" />
-                    <span>{article.category}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs text-slate-400 font-mono">
-                    <Clock className="w-3.5 h-3.5 text-slate-500" />
-                    <span>{article.readTime}</span>
+              {/* Thumbnail Placeholder with Graphic Mesh */}
+              <div className={`w-full h-44 rounded-2xl bg-gradient-to-br ${post.thumbnailBg} border border-slate-800/80 mb-6 p-6 flex flex-col justify-between relative overflow-hidden group-hover:border-brand-green-whiz/40 transition-colors`}>
+                <div className="flex items-center justify-between">
+                  <span className="px-3 py-1 rounded-full bg-slate-950/80 border border-slate-700/80 text-[11px] font-mono font-semibold text-white">
+                    {post.badge}
+                  </span>
+                  <div className="flex items-center gap-1.5 text-xs text-slate-300 font-mono">
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>{post.readTime}</span>
                   </div>
                 </div>
 
-                <h3 className="text-xl sm:text-2xl font-bold text-white group-hover:text-brand-green-400 transition-colors mb-3 leading-snug">
-                  {article.title}
-                </h3>
+                <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
+                  <Tag className="w-3.5 h-3.5 text-brand-green-400" />
+                  <span className={post.tagColor}>{post.service}</span>
+                </div>
+              </div>
 
-                <p className="text-sm text-slate-300 leading-relaxed mb-6">
-                  {article.summary}
+              {/* Title & Excerpt */}
+              <div className="space-y-3 mb-6">
+                <h3 className="text-xl sm:text-2xl font-bold text-white group-hover:text-brand-green-400 transition-colors leading-snug">
+                  {post.title}
+                </h3>
+                <p className="text-sm text-slate-300 leading-relaxed">
+                  {post.excerpt}
                 </p>
               </div>
 
-              {/* Card footer */}
+              {/* Author & Read Action */}
               <div className="pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-brand-green-950 border border-brand-green-800 flex items-center justify-center">
-                    <User className="w-3 h-3 text-brand-green-400" />
+                  <div className="w-6 h-6 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center">
+                    <User className="w-3.5 h-3.5 text-brand-green-400" />
                   </div>
-                  <span className="font-medium text-slate-300">{article.author}</span>
+                  <span className="font-medium text-slate-300">{post.author}</span>
                 </div>
 
-                <div className="flex items-center gap-1 font-semibold text-brand-green-400 group-hover:translate-x-1 transition-transform">
-                  <span>Read Blueprint</span>
+                <span className="flex items-center gap-1 font-semibold text-brand-green-400 group-hover:translate-x-1 transition-transform">
+                  <span>Read Brief</span>
                   <ChevronRight className="w-4 h-4" />
-                </div>
+                </span>
               </div>
             </article>
           ))}

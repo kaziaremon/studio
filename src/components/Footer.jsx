@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowRight, CheckCircle2, Shield, Heart, Send, Scale } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Shield, Heart, Send, Phone, Mail, Globe } from 'lucide-react';
 import { ServiceIcon } from './ServiceIcons';
 import TermsModal from './TermsModal';
 
@@ -17,26 +17,27 @@ export default function Footer({ onOpenPortal }) {
     }
   };
 
-  // Official Untouched Brand Colors
-  const socialLinks = [
-    { name: 'Facebook', id: 'facebook-marketing', href: 'https://facebook.com', color: '#1877F2' },
-    { name: 'Instagram', id: 'instagram-marketing', href: 'https://instagram.com', color: '#E1306C' },
-    { name: 'WhatsApp', id: 'whatsapp-marketing', href: 'https://whatsapp.com', color: '#25D366' },
-    { name: 'YouTube', id: 'youtube-marketing', href: 'https://youtube.com', color: '#FF0000' },
-    { name: 'Pinterest', id: 'pinterest-marketing', href: 'https://pinterest.com', color: '#E60023' },
-    { name: 'LinkedIn', id: 'linkedin-marketing', href: 'https://linkedin.com', color: '#0A66C2' },
+  // Visually appealing grid of platform logos/icons with clickable placeholder links (#)
+  const platformEcosystemLinks = [
+    { name: 'Meta Ads (Facebook)', id: 'facebook-marketing', href: '#', color: '#1877F2' },
+    { name: 'Instagram Marketing', id: 'instagram-marketing', href: '#', color: '#E1306C' },
+    { name: 'Google Ads & PMax', id: 'google-ads', href: '#', color: '#4285F4' },
+    { name: 'WhatsApp Business CRM', id: 'whatsapp-marketing', href: '#', color: '#25D366' },
+    { name: 'YouTube Video Network', id: 'youtube-marketing', href: '#', color: '#FF0000' },
+    { name: 'LinkedIn Enterprise B2B', id: 'linkedin-marketing', href: '#', color: '#0A66C2' },
+    { name: 'Pinterest Visual Shopping', id: 'pinterest-marketing', href: '#', color: '#E60023' },
   ];
 
   return (
     <>
       <footer className="relative bg-brand-dark-950 border-t border-slate-800/80 pt-20 pb-12 px-4 sm:px-6 lg:px-8 overflow-hidden">
         {/* Glow */}
-        <div className="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 w-[1000px] h-[300px] bg-brand-green-whiz/5 blur-[140px] rounded-full" />
+        <div className="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 w-[900px] h-[280px] bg-gradient-to-r from-brand-green-whiz/5 via-purple-600/5 to-brand-accent-orange/5 blur-[140px] rounded-full" />
 
         <div className="max-w-7xl mx-auto">
           {/* Top Footer Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 pb-16 border-b border-slate-800/80">
-            {/* Brand Info Col */}
+            {/* Brand & Direct Contact Details Col */}
             <div className="lg:col-span-4 space-y-6">
               <div className="flex items-center gap-3">
                 <img
@@ -54,33 +55,30 @@ export default function Footer({ onOpenPortal }) {
               </div>
               
               <p className="text-xs sm:text-sm text-slate-400 leading-relaxed max-w-sm">
-                Whiz Studio is a premier digital platform management and multi-channel marketing agency. We engineer full-funnel acquisition, server-side data telemetry, and automated sales architectures.
+                Whiz Studio is a bespoke digital marketing consultancy. We combine server-side data integrity, conversion rate optimization, and disciplined media buying to scale ambitious businesses.
               </p>
 
-              {/* Social Media Routing with Official Untouched Brand Colors */}
-              <div>
-                <div className="text-xs font-mono uppercase tracking-wider text-slate-500 mb-3">
-                  Connect Across Ecosystems
+              {/* Formatted Contact Details Box */}
+              <div className="p-4 rounded-2xl liquid-glass border border-slate-800/80 space-y-2.5">
+                <div className="text-[11px] font-mono uppercase tracking-wider text-brand-green-400 font-bold">
+                  Direct Inquiries & Bookings
                 </div>
-                <div className="flex flex-wrap gap-2.5">
-                  {socialLinks.map((social) => (
-                    <a
-                      key={social.name}
-                      href={social.href}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="w-10 h-10 rounded-xl liquid-glass border border-slate-800 flex items-center justify-center hover:border-brand-green-whiz/50 transition-all hover:scale-110 shadow-sm"
-                      style={{ color: social.color }}
-                      aria-label={`Visit Whiz Studio on ${social.name}`}
-                    >
-                      <ServiceIcon id={social.id} className="w-4 h-4" />
-                    </a>
-                  ))}
+                <div className="flex items-center gap-2.5 text-xs text-slate-300">
+                  <Phone className="w-4 h-4 text-brand-green-whiz shrink-0" />
+                  <span><strong>Phone:</strong> +1 (555) 234-5678 / +880 1700-000000</span>
+                </div>
+                <div className="flex items-center gap-2.5 text-xs text-slate-300">
+                  <Mail className="w-4 h-4 text-brand-green-whiz shrink-0" />
+                  <span><strong>Webmail:</strong> consult@whizstudio.art</span>
+                </div>
+                <div className="flex items-center gap-2.5 text-xs text-slate-400">
+                  <Globe className="w-4 h-4 text-slate-500 shrink-0" />
+                  <span><strong>Domain:</strong> whizstudio.art • Global Remote Operations</span>
                 </div>
               </div>
             </div>
 
-            {/* Sitemap Columns */}
+            {/* Sitemap Columns: 4 Core Services */}
             <div className="lg:col-span-2 space-y-3">
               <h4 className="text-xs font-mono uppercase tracking-wider text-brand-green-400 font-bold">
                 Core Services
@@ -90,46 +88,43 @@ export default function Footer({ onOpenPortal }) {
                 <li><a href="#services" className="hover:text-white transition-colors">Social Media Marketing</a></li>
                 <li><a href="#services" className="hover:text-white transition-colors">Platform Optimization</a></li>
                 <li><a href="#services" className="hover:text-white transition-colors">Business Growth Planning</a></li>
-                <li><a href="#services" className="hover:text-white transition-colors">Google Ads & PMax</a></li>
-                <li><a href="#services" className="hover:text-white transition-colors">WhatsApp CRM Engine</a></li>
-                <li><a href="#services" className="hover:text-white transition-colors">LinkedIn Enterprise B2B</a></li>
+                <li><a href="#roi-calculator" className="hover:text-white transition-colors">ROI Simulator</a></li>
               </ul>
             </div>
 
             <div className="lg:col-span-2 space-y-3">
               <h4 className="text-xs font-mono uppercase tracking-wider text-brand-accent-orange font-bold">
-                Platform Hub
+                Consulting Hub
               </h4>
               <ul className="space-y-2 text-xs text-slate-400 font-medium">
-                <li><a href="#about" className="hover:text-white transition-colors">About Whiz Studio</a></li>
-                <li><a href="#roi-calculator" className="hover:text-white transition-colors">Ad ROI Simulator</a></li>
-                <li><a href="#testimonials" className="hover:text-white transition-colors">Client Testimonials</a></li>
-                <li><a href="#blog" className="hover:text-white transition-colors">Knowledge Base & Blog</a></li>
+                <li><a href="#about" className="hover:text-white transition-colors">About Our Approach</a></li>
+                <li><a href="#blog" className="hover:text-white transition-colors">Strategic Knowledge Base</a></li>
+                <li><a href="#testimonials" className="hover:text-white transition-colors">Client Reviews</a></li>
                 <li><a href="#faq" className="hover:text-white transition-colors">Frequently Answered Questions</a></li>
-                <li><button onClick={() => setTermsOpen(true)} className="hover:text-white transition-colors text-left">Payment Terms (60-20-20)</button></li>
+                <li><button onClick={() => setTermsOpen(true)} className="hover:text-white transition-colors text-left">Terms & 60-20-20 Policy</button></li>
               </ul>
             </div>
 
             {/* Newsletter Column */}
             <div className="lg:col-span-4 space-y-4">
               <h4 className="text-xs font-mono uppercase tracking-wider text-slate-200 font-bold">
-                The Whiz Growth Dispatch
+                Weekly Strategic Briefing
               </h4>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Join 12,000+ CMOs and digital leaders receiving our weekly teardowns of algorithm changes, high-ROAS hooks, and platform updates.
+                Join forward-thinking founders and marketing directors receiving our weekly teardowns of algorithm changes, CAC reduction tactics, and unit economics.
               </p>
 
               {subscribed ? (
                 <div className="p-3 rounded-xl bg-brand-green-950/60 border border-brand-green-800/40 text-brand-green-400 text-xs font-semibold flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>Subscribed to Growth Dispatch! Check your inbox.</span>
+                  <span>Subscribed! Check your inbox for the briefing.</span>
                 </div>
               ) : (
                 <form onSubmit={handleNewsletterSubmit} className="flex gap-2">
                   <input
                     type="email"
                     required
-                    placeholder="name@company.com"
+                    placeholder="founder@company.com"
                     value={newsletterEmail}
                     onChange={(e) => setNewsletterEmail(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-brand-green-whiz"
@@ -146,15 +141,39 @@ export default function Footer({ onOpenPortal }) {
 
               <div className="flex items-center gap-2 pt-2 text-[11px] font-mono text-slate-400">
                 <span className="w-2 h-2 rounded-full bg-brand-green-500 animate-pulse" />
-                <span>Whiz Platform Engine SLA: 99.98% Uptime</span>
+                <span>Client Telemetry & Reporting SLA: 99.98%</span>
               </div>
             </div>
           </div>
 
-          {/* Bottom Bar */}
+          {/* Social & Platform Integration Grid with Clickable Placeholders (#) */}
+          <div className="py-8 border-b border-slate-800/80">
+            <div className="text-xs font-mono uppercase tracking-wider text-slate-500 mb-4 text-center sm:text-left">
+              Ecosystem & Advertising Platform Integrations
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
+              {platformEcosystemLinks.map((plat) => (
+                <a
+                  key={plat.name}
+                  href={plat.href}
+                  className="p-3 rounded-2xl liquid-glass border border-slate-800 hover:border-brand-green-whiz/50 transition-all flex flex-col items-center justify-center gap-2 text-center group hover:scale-105 shadow-sm"
+                  aria-label={`Integration link for ${plat.name}`}
+                >
+                  <div style={{ color: plat.color }}>
+                    <ServiceIcon id={plat.id} className="w-5 h-5 transition-transform group-hover:scale-110" />
+                  </div>
+                  <span className="text-[11px] font-semibold text-slate-300 group-hover:text-white truncate max-w-full">
+                    {plat.name.split(' ')[0]}
+                  </span>
+                </a>
+              ))}
+            </div>
+          </div>
+
+          {/* Bottom Copyright Bar */}
           <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
             <div>
-              © {new Date().getFullYear()} Whiz Studio Inc. All rights reserved. Precision Digital Platform Governance.
+              © {new Date().getFullYear()} Whiz Studio. All rights reserved. Strategic Digital Marketing Consulting.
             </div>
 
             <div className="flex items-center gap-6">

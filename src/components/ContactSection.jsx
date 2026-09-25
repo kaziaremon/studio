@@ -3,9 +3,8 @@ import confetti from 'canvas-confetti';
 import { 
   Send, Sparkles, CheckCircle2, ShieldCheck, 
   Phone, Mail, MessageSquare, Building2, User, Globe, ArrowRight,
-  Clock, AlertCircle
+  Clock, AlertCircle, HelpCircle, Layers
 } from 'lucide-react';
-import { ServiceIcon } from './ServiceIcons';
 import { useCurrency } from '../context/CurrencyContext';
 import { sendDiscordAuditNotification } from '../utils/discordWebhook';
 
@@ -19,7 +18,8 @@ export default function ContactSection({ prefilledService, prefilledData }) {
     phone: '',
     website: '',
     budget: '$500 - $2,500 / mo',
-    platforms: ['facebook-marketing', 'google-ads', 'whatsapp-marketing'],
+    bottleneck: 'High CAC & Unpredictable ROAS',
+    platforms: ['Facebook Advertising', 'Platform Optimization'],
     message: ''
   });
 
@@ -39,30 +39,46 @@ export default function ContactSection({ prefilledService, prefilledData }) {
     '$10,000+ / mo (Enterprise Scale)'
   ];
 
+  const bottlenecksList = [
+    'High CAC & Unpredictable ROAS',
+    'Tracking Inaccuracy & Meta Pixel Discrepancies',
+    'Ad Creative Fatigue & Declining Hook Rates',
+    'Scaling Budget Without Sacrificing Margins',
+    'Lack of Full-Funnel Attribution Strategy'
+  ];
+
+  const coreServicesSelection = [
+    'Facebook Advertising',
+    'Social Media Marketing',
+    'Platform Optimization',
+    'Business Growth Planning'
+  ];
+
   useEffect(() => {
     if (prefilledService) {
       setFormData(prev => ({
         ...prev,
-        message: `Inquiring specifically about deploying: ${prefilledService}. Looking forward to reviewing strategy deliverables.`
+        platforms: [prefilledService],
+        message: `Inquiring specifically regarding deployment of: ${prefilledService}. Looking forward to discussing implementation milestones.`
       }));
     }
     if (prefilledData) {
       setFormData(prev => ({
         ...prev,
-        budget: `${prefilledData.monthlyBudget} / mo (${prefilledData.industry})`,
-        message: `Calculated projection from ROI Simulator: Expected Revenue ${prefilledData.projectedRevenue} with target ${prefilledData.roas} ROAS.`
+        budget: `${prefilledData.monthlyBudget} / mo`,
+        message: `Calculated projection from ROI Simulator: Expected Revenue ${prefilledData.projectedRevenue} with target ${prefilledData.roas} ROAS under ${prefilledData.service}.`
       }));
     }
   }, [prefilledService, prefilledData]);
 
-  const togglePlatform = (id) => {
+  const togglePlatform = (serviceName) => {
     setFormData(prev => {
-      const exists = prev.platforms.includes(id);
+      const exists = prev.platforms.includes(serviceName);
       return {
         ...prev,
         platforms: exists
-          ? prev.platforms.filter(p => p !== id)
-          : [...prev.platforms, id]
+          ? prev.platforms.filter(p => p !== serviceName)
+          : [...prev.platforms, serviceName]
       };
     });
   };
@@ -72,109 +88,95 @@ export default function ContactSection({ prefilledService, prefilledData }) {
     setStatus('submitting');
 
     try {
-      // 1. Send Discord Webhook payload
+      // 1. Dispatch formatted Discord Webhook payload
       await sendDiscordAuditNotification({
-        name: formData.fullName,
+        fullName: formData.fullName,
         email: formData.email,
         phone: formData.phone,
-        website: formData.website || formData.company,
-        platform: formData.platforms.join(', '),
+        company: formData.company,
+        website: formData.website,
         budget: formData.budget,
+        bottleneck: formData.bottleneck,
+        platforms: formData.platforms,
         message: formData.message
       }, currency);
 
-      // 2. Also dispatch to local FastAPI endpoint if active
-      fetch('/api/v1/contact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      }).catch(() => {});
-
       setStatus('success');
-      setResponseMsg('Your Growth Audit request has been dispatched to Whiz Mission Control.');
+      setResponseMsg('Your detailed Growth Audit application has been submitted to Discord Mission Control. A Senior Strategist will review your telemetry within 24 hours.');
       
       confetti({
-        particleCount: 100,
-        spread: 80,
+        particleCount: 80,
+        spread: 70,
         origin: { y: 0.6 },
-        colors: ['#00A86B', '#10B981', '#FF5E1E', '#F97316']
+        colors: ['#00A86B', '#8B5CF6', '#FF5E1E', '#10B981']
       });
 
     } catch (err) {
-      console.warn('Form submission handled:', err);
+      console.warn('Audit submission handled:', err);
       setStatus('success');
-      setResponseMsg('Your request has been logged successfully.');
+      setResponseMsg('Your application has been logged successfully.');
     }
   };
 
-  const platformsAvailable = [
-    { id: 'facebook-marketing', name: 'Facebook Ads' },
-    { id: 'instagram-marketing', name: 'Instagram Ads' },
-    { id: 'google-ads', name: 'Google & PMax' },
-    { id: 'whatsapp-marketing', name: 'WhatsApp CRM' },
-    { id: 'youtube-ads', name: 'YouTube Video' },
-    { id: 'linkedin-marketing', name: 'LinkedIn B2B' },
-    { id: 'pinterest-marketing', name: 'Pinterest Visual' },
-  ];
-
   return (
     <section id="contact" className="relative py-24 px-4 sm:px-6 lg:px-8 bg-brand-dark-950 overflow-hidden">
-      {/* Glow */}
-      <div className="pointer-events-none absolute bottom-0 right-1/4 w-[700px] h-[500px] bg-brand-green-whiz/5 blur-[160px] rounded-full" />
+      {/* Background Lighting */}
+      <div className="pointer-events-none absolute bottom-0 right-1/4 w-[750px] h-[550px] bg-purple-600/5 blur-[160px] rounded-full" />
+      <div className="pointer-events-none absolute top-10 left-10 w-[500px] h-[500px] bg-brand-green-whiz/5 blur-[160px] rounded-full" />
 
       <div className="max-w-7xl mx-auto relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-          {/* Left Column: Context & Guarantees */}
+          {/* Left Column: Context & Consultation SLA */}
           <div className="lg:col-span-5 space-y-8">
             <div>
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/90 dark:bg-slate-900/90 border border-brand-green-whiz/30 text-xs font-mono font-medium text-brand-green-400 mb-4 shadow-sm">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full liquid-glass border border-brand-green-whiz/30 text-xs font-mono font-medium text-brand-green-400 mb-4 shadow-sm">
                 <Sparkles className="w-3.5 h-3.5 text-brand-green-400" />
-                <span>CONFIDENTIAL GROWTH AUDIT</span>
+                <span>BOOK A GROWTH AUDIT</span>
               </div>
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white mb-6">
-                Let's Engineer Your <br className="hidden sm:inline" />
-                <span className="text-gradient-dual">Next Scale Milestone</span>
+              <h2 className="fluid-heading-lg font-extrabold tracking-tight text-white mb-6">
+                Let's Diagnose Your <br className="hidden sm:inline" />
+                <span className="text-gradient-whiz">Acquisition Engine</span>
               </h2>
               <p className="text-base text-slate-300 leading-relaxed">
-                Book a comprehensive platform audit. We analyze your pixel integrity, creative fatigue, audience saturation, and multi-channel attribution with actionable insights.
+                Receive an objective, comprehensive review of your advertising account structures, conversion tracking integrity, and scaling opportunities. No sales pressure—just actionable consulting insights.
               </p>
             </div>
 
-            {/* Guarantees Box */}
+            {/* Consulting Standards */}
             <div className="liquid-glass rounded-3xl p-7 border border-slate-800/80 space-y-4">
               <div className="text-xs font-mono uppercase tracking-wider text-brand-green-400 font-bold">
-                The Whiz Audit SLA
+                Consultation Commitment
               </div>
               <div className="space-y-3">
                 <div className="flex items-start gap-3 text-xs sm:text-sm text-slate-300">
                   <Clock className="w-4 h-4 text-brand-green-400 shrink-0 mt-0.5" />
-                  <span><strong>24-Hour Review Turnaround:</strong> Direct response from a Senior Media Strategist.</span>
+                  <span><strong>24-Hour Review:</strong> Direct evaluation by a Senior Marketing Consultant.</span>
                 </div>
                 <div className="flex items-start gap-3 text-xs sm:text-sm text-slate-300">
                   <ShieldCheck className="w-4 h-4 text-brand-green-400 shrink-0 mt-0.5" />
-                  <span><strong>Strict 60-20-20 Terms:</strong> Clear milestone protection and IP ownership.</span>
+                  <span><strong>Data Privacy Guaranteed:</strong> 100% confidential assessment of your metrics.</span>
                 </div>
                 <div className="flex items-start gap-3 text-xs sm:text-sm text-slate-300">
                   <CheckCircle2 className="w-4 h-4 text-brand-green-400 shrink-0 mt-0.5" />
-                  <span><strong>Zero Fluff Strategy:</strong> Technical roadmap covering CAPI, Lookalikes & ROAS.</span>
+                  <span><strong>Actionable Roadmap:</strong> Concrete recommendations on CAPI, CAC & ad spend.</span>
                 </div>
               </div>
             </div>
 
-            {/* Direct Connect */}
-            <div className="space-y-3 text-xs font-mono text-slate-400">
+            {/* Direct Contact Reference */}
+            <div className="space-y-3 text-xs font-mono text-slate-400 pt-2">
               <div className="flex items-center gap-2">
-                <Mail className="w-4 h-4 text-brand-green-whiz" />
-                <span>hello@whizstudio.art</span>
+                <Phone className="w-4 h-4 text-brand-green-whiz" />
+                <span>Direct Hotline: +1 (555) 234-5678 / +880 1700-000000</span>
               </div>
               <div className="flex items-center gap-2">
-                <Globe className="w-4 h-4 text-brand-green-whiz" />
-                <span>whizstudio.art • Global Remote Agency</span>
+                <Mail className="w-4 h-4 text-brand-green-whiz" />
+                <span>Webmail: consult@whizstudio.art</span>
               </div>
             </div>
           </div>
 
-          {/* Right Column: Interactive Form */}
+          {/* Right Column: Detailed Form */}
           <div className="lg:col-span-7">
             <div className="liquid-glass rounded-3xl p-7 sm:p-10 border border-brand-green-whiz/40 shadow-2xl">
               {status === 'success' ? (
@@ -182,19 +184,19 @@ export default function ContactSection({ prefilledService, prefilledData }) {
                   <div className="w-16 h-16 rounded-full bg-brand-green-950 border border-brand-green-500 text-brand-green-400 flex items-center justify-center mx-auto">
                     <CheckCircle2 className="w-10 h-10" />
                   </div>
-                  <h3 className="text-2xl font-bold text-white">Application Received!</h3>
-                  <p className="text-sm text-slate-300 max-w-md mx-auto">
+                  <h3 className="text-2xl font-bold text-white">Application Dispatched!</h3>
+                  <p className="text-sm text-slate-300 max-w-md mx-auto leading-relaxed">
                     {responseMsg}
                   </p>
                   <button
                     onClick={() => setStatus('idle')}
                     className="px-6 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs font-bold text-white hover:bg-slate-800 transition-colors"
                   >
-                    Submit Another Application
+                    Submit Additional Inquiries
                   </button>
                 </div>
               ) : (
-                <form onSubmit={handleSubmit} className="space-y-5">
+                <form onSubmit={handleSubmit} className="space-y-4.5">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-semibold text-slate-300 mb-1.5">
@@ -205,10 +207,10 @@ export default function ContactSection({ prefilledService, prefilledData }) {
                         <input
                           type="text"
                           required
-                          placeholder="Sarah Jenkins"
+                          placeholder="e.g. David Sterling"
                           value={formData.fullName}
                           onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                          className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-brand-green-whiz transition-colors"
+                          className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-brand-green-whiz"
                         />
                       </div>
                     </div>
@@ -222,10 +224,10 @@ export default function ContactSection({ prefilledService, prefilledData }) {
                         <input
                           type="email"
                           required
-                          placeholder="sarah@company.com"
+                          placeholder="david@company.com"
                           value={formData.email}
                           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                          className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-brand-green-whiz transition-colors"
+                          className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-brand-green-whiz"
                         />
                       </div>
                     </div>
@@ -234,16 +236,17 @@ export default function ContactSection({ prefilledService, prefilledData }) {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                        Brand / Website URL
+                        Website or Store URL *
                       </label>
                       <div className="relative">
                         <Globe className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
                         <input
                           type="text"
-                          placeholder="yourbrand.com"
+                          required
+                          placeholder="https://yourbrand.com"
                           value={formData.website}
                           onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-                          className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-brand-green-whiz transition-colors"
+                          className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-brand-green-whiz"
                         />
                       </div>
                     </div>
@@ -259,21 +262,39 @@ export default function ContactSection({ prefilledService, prefilledData }) {
                           placeholder="+1 (555) 000-0000"
                           value={formData.phone}
                           onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                          className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-brand-green-whiz transition-colors"
+                          className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-brand-green-whiz"
                         />
                       </div>
                     </div>
                   </div>
 
-                  {/* Monthly Ad Budget */}
+                  {/* Primary Challenge Bottleneck */}
                   <div>
                     <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                      Target Monthly Ad Spend ({currency})
+                      Primary Growth Bottleneck *
+                    </label>
+                    <select
+                      value={formData.bottleneck}
+                      onChange={(e) => setFormData({ ...formData, bottleneck: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-brand-green-whiz"
+                    >
+                      {bottlenecksList.map((bn, idx) => (
+                        <option key={idx} value={bn}>
+                          {bn}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Monthly Investment Budget */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                      Target Monthly Advertising Budget ({currency}) *
                     </label>
                     <select
                       value={formData.budget}
                       onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
-                      className="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-brand-green-whiz transition-colors"
+                      className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-brand-green-whiz"
                     >
                       {budgetOptions.map((opt, idx) => (
                         <option key={idx} value={opt}>
@@ -283,58 +304,58 @@ export default function ContactSection({ prefilledService, prefilledData }) {
                     </select>
                   </div>
 
-                  {/* Platforms Selector */}
+                  {/* Core Services Selection */}
                   <div>
                     <label className="block text-xs font-semibold text-slate-300 mb-2">
-                      Focus Advertising Channels
+                      Primary Services Required
                     </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      {platformsAvailable.map((plat) => {
-                        const isSelected = formData.platforms.includes(plat.id);
+                    <div className="grid grid-cols-2 gap-2">
+                      {coreServicesSelection.map((sName) => {
+                        const isSelected = formData.platforms.includes(sName);
                         return (
                           <button
                             type="button"
-                            key={plat.id}
-                            onClick={() => togglePlatform(plat.id)}
-                            className={`p-2.5 rounded-xl border text-[11px] font-semibold flex items-center justify-between transition-all ${
+                            key={sName}
+                            onClick={() => togglePlatform(sName)}
+                            className={`p-2 rounded-xl border text-[11px] font-semibold flex items-center justify-between transition-all ${
                               isSelected
                                 ? 'bg-slate-900 border-brand-green-whiz text-white'
-                                : 'bg-slate-900/50 border-slate-800 text-slate-500'
+                                : 'bg-slate-900/50 border-slate-800 text-slate-400 hover:text-white'
                             }`}
                           >
-                            <span>{plat.name}</span>
-                            {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-brand-green-400" />}
+                            <span className="truncate">{sName}</span>
+                            {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-brand-green-400 shrink-0 ml-1" />}
                           </button>
                         );
                       })}
                     </div>
                   </div>
 
-                  {/* Message / Goals */}
+                  {/* Detailed Goals Message */}
                   <div>
                     <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                      Current Challenges & Growth Objectives
+                      Current Numbers & Growth Goals
                     </label>
                     <textarea
                       rows={3}
-                      placeholder="Tell us about your current ROAS, primary scaling bottlenecks, or target revenue goals..."
+                      placeholder="Share your current monthly revenue, primary conversion goals, and what a successful consultation achieves..."
                       value={formData.message}
                       onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                      className="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-brand-green-whiz transition-colors resize-none"
+                      className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-brand-green-whiz resize-none"
                     />
                   </div>
 
                   <button
                     type="submit"
                     disabled={status === 'submitting'}
-                    className="w-full py-4 rounded-2xl bg-gradient-to-r from-brand-green-600 via-brand-green-whiz to-brand-green-emerald text-slate-950 font-black text-xs uppercase tracking-wider hover:scale-[1.01] transition-all shadow-xl shadow-brand-green-whiz/30 flex items-center justify-center gap-2"
+                    className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-brand-green-600 via-brand-green-whiz to-brand-green-emerald text-slate-950 font-black text-xs uppercase tracking-wider hover:opacity-95 transition-opacity shadow-xl shadow-brand-green-whiz/30 flex items-center justify-center gap-2"
                   >
                     {status === 'submitting' ? (
-                      <span>Transmitting Growth Audit...</span>
+                      <span>Submitting to Mission Control...</span>
                     ) : (
                       <>
                         <Send className="w-4 h-4" />
-                        <span>Submit Free Growth Audit Request</span>
+                        <span>Submit Book Growth Audit Request</span>
                       </>
                     )}
                   </button>
