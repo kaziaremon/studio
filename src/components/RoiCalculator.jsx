@@ -1,10 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import confetti from 'canvas-confetti';
-import { Calculator, TrendingUp, DollarSign, Users, Target, ArrowRight, Check, Sparkles } from 'lucide-react';
+import { Calculator, TrendingUp, DollarSign, Users, Target, ArrowRight, Check, Sparkles, Sliders } from 'lucide-react';
 import { ServiceIcon } from './ServiceIcons';
+import { useCurrency } from '../context/CurrencyContext';
 
 export default function RoiCalculator({ onClaimProjection }) {
-  const [budget, setBudget] = useState(15000);
+  const { currency, formatAmount, exchangeRate } = useCurrency();
+  
+  // Daily budget in USD base
+  const [dailyBudgetUSD, setDailyBudgetUSD] = useState(25); // Default $25/day ($750/mo)
   const [selectedPlatforms, setSelectedPlatforms] = useState([
     'facebook-marketing',
     'instagram-marketing',
@@ -14,10 +18,10 @@ export default function RoiCalculator({ onClaimProjection }) {
   const [industry, setIndustry] = useState('ecommerce');
 
   const industries = [
-    { id: 'ecommerce', name: 'E-Commerce / DTC', baseRoas: 4.8, cpc: 1.10, cvr: 3.8 },
-    { id: 'saas', name: 'B2B SaaS / Tech', baseRoas: 5.4, cpc: 2.80, cvr: 4.5 },
-    { id: 'highticket', name: 'High-Ticket Services', baseRoas: 6.2, cpc: 3.40, cvr: 5.2 },
-    { id: 'realestate', name: 'Real Estate & Luxury', baseRoas: 7.1, cpc: 2.10, cvr: 3.2 },
+    { id: 'ecommerce', name: 'E-Commerce / DTC', baseRoas: 4.6, cpcUSD: 0.65, cvr: 3.4, cpmUSD: 5.50 },
+    { id: 'saas', name: 'B2B SaaS / Tech', baseRoas: 5.2, cpcUSD: 1.80, cvr: 4.2, cpmUSD: 8.50 },
+    { id: 'highticket', name: 'High-Ticket Services', baseRoas: 5.8, cpcUSD: 2.20, cvr: 4.8, cpmUSD: 9.00 },
+    { id: 'realestate', name: 'Real Estate & Luxury', baseRoas: 6.4, cpcUSD: 1.60, cvr: 3.0, cpmUSD: 7.20 },
   ];
 
   const currentIndustry = industries.find((i) => i.id === industry) || industries[0];
@@ -32,25 +36,28 @@ export default function RoiCalculator({ onClaimProjection }) {
     }
   };
 
-  // Calculations
+  // Realistic Digital Marketing Algorithm
   const calculated = useMemo(() => {
-    // Multi-channel synergy bonus (more channels = higher attribution & retention)
-    const synergyMultiplier = 1 + (selectedPlatforms.length - 1) * 0.08;
+    const monthlyBudgetUSD = dailyBudgetUSD * 30;
+    
+    // Multi-channel attribution synergy boost (more channels = higher retention)
+    const synergyMultiplier = 1 + (selectedPlatforms.length - 1) * 0.07;
     const effectiveRoas = (currentIndustry.baseRoas * synergyMultiplier).toFixed(2);
     
-    const projectedRevenue = Math.round(budget * effectiveRoas);
-    const estimatedClicks = Math.round(budget / currentIndustry.cpc);
-    const estimatedConversions = Math.round((estimatedClicks * currentIndustry.cvr) / 100);
-    const estimatedReach = Math.round((budget / 10) * 1250);
+    const projectedRevenueUSD = Math.round(monthlyBudgetUSD * effectiveRoas);
+    const estimatedReach = Math.round((monthlyBudgetUSD / currentIndustry.cpmUSD) * 1000);
+    const estimatedClicks = Math.round(monthlyBudgetUSD / currentIndustry.cpcUSD);
+    const estimatedConversions = Math.max(1, Math.round((estimatedClicks * currentIndustry.cvr) / 100));
 
     return {
+      monthlyBudgetUSD,
       effectiveRoas,
-      projectedRevenue,
+      projectedRevenueUSD,
       estimatedClicks,
       estimatedConversions,
       estimatedReach,
     };
-  }, [budget, selectedPlatforms, currentIndustry]);
+  }, [dailyBudgetUSD, selectedPlatforms, currentIndustry]);
 
   const handleConfetti = () => {
     confetti({
@@ -59,201 +66,233 @@ export default function RoiCalculator({ onClaimProjection }) {
       origin: { y: 0.6 },
       colors: ['#00A86B', '#10B981', '#FF5E1E', '#F97316'],
     });
-
-    onClaimProjection({
-      budget,
-      selectedPlatforms,
-      industry: currentIndustry.name,
-      projectedRevenue: calculated.projectedRevenue,
-      roas: calculated.effectiveRoas,
-    });
+    if (onClaimProjection) {
+      onClaimProjection({
+        monthlyBudget: formatAmount(calculated.monthlyBudgetUSD),
+        projectedRevenue: formatAmount(calculated.projectedRevenueUSD),
+        roas: `${calculated.effectiveRoas}x`,
+        platforms: selectedPlatforms.join(', '),
+        industry: currentIndustry.name,
+      });
+    }
   };
 
   const platformsList = [
-    { id: 'facebook-marketing', name: 'Facebook' },
-    { id: 'instagram-marketing', name: 'Instagram' },
-    { id: 'google-ads', name: 'Google Ads' },
-    { id: 'whatsapp-marketing', name: 'WhatsApp' },
-    { id: 'youtube-ads', name: 'YouTube' },
-    { id: 'pinterest-ads', name: 'Pinterest' },
-    { id: 'linkedin-marketing', name: 'LinkedIn' },
+    { id: 'facebook-marketing', name: 'Facebook Ads', icon: 'facebook-marketing', color: '#1877F2' },
+    { id: 'instagram-marketing', name: 'Instagram Ads', icon: 'instagram-marketing', color: '#E1306C' },
+    { id: 'google-ads', name: 'Google Ads & PMax', icon: 'google-ads', color: '#4285F4' },
+    { id: 'whatsapp-marketing', name: 'WhatsApp CRM', icon: 'whatsapp-marketing', color: '#25D366' },
+    { id: 'youtube-ads', name: 'YouTube Video Ads', icon: 'youtube-ads', color: '#FF0000' },
+    { id: 'linkedin-marketing', name: 'LinkedIn B2B', icon: 'linkedin-marketing', color: '#0A66C2' },
+    { id: 'pinterest-marketing', name: 'Pinterest Visual', icon: 'pinterest-marketing', color: '#E60023' },
   ];
 
   return (
-    <section id="roi-calculator" className="relative py-28 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="text-center max-w-3xl mx-auto mb-16">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-green-whiz/10 border border-brand-green-whiz/30 text-brand-green-400 text-xs font-mono font-semibold uppercase tracking-wider mb-4">
-          <Calculator className="w-3.5 h-3.5 text-brand-green-whiz" />
-          Interactive Forecasting
+    <section id="roi-calculator" className="relative py-24 px-4 sm:px-6 lg:px-8 bg-brand-dark-950 overflow-hidden">
+      {/* Background Lighting */}
+      <div className="pointer-events-none absolute top-1/4 right-0 w-[600px] h-[600px] bg-brand-green-whiz/5 blur-[160px] rounded-full" />
+      <div className="pointer-events-none absolute bottom-1/4 left-0 w-[600px] h-[600px] bg-brand-accent-orange/5 blur-[160px] rounded-full" />
+
+      <div className="max-w-7xl mx-auto relative z-10">
+        {/* Section Header */}
+        <div className="text-center max-w-3xl mx-auto mb-16">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/90 dark:bg-slate-900/90 border border-brand-green-whiz/30 text-xs font-mono font-medium text-brand-green-400 mb-4 shadow-sm">
+            <Calculator className="w-3.5 h-3.5 text-brand-green-400" />
+            <span>REALISTIC MEDIA PROJECTION SIMULATOR</span>
+          </div>
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white mb-6">
+            Calculate Your Multi-Channel <br className="hidden sm:inline" />
+            <span className="text-gradient-whiz">Acquisition ROI & Scale</span>
+          </h2>
+          <p className="text-base sm:text-lg text-slate-300 leading-relaxed">
+            Test custom daily ad spend budgets from early testing stages ($5/day / ৳600/day) up to high-velocity scale. Algorithms reflect verified digital marketing benchmark metrics.
+          </p>
         </div>
-        <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight">
-          Ad Spend & Platform <span className="text-gradient-whiz">ROI Simulator</span>
-        </h2>
-        <p className="mt-4 text-base sm:text-lg text-slate-400 leading-relaxed">
-          Simulate your projected revenue and ROAS based on Whiz Studio’s real client benchmarks across paid and conversational channels.
-        </p>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left Inputs Column */}
-        <div className="lg:col-span-7 bg-brand-dark-900 border border-slate-800 rounded-3xl p-6 sm:p-8 backdrop-blur-xl shadow-2xl">
-          {/* Step 1: Monthly Budget Slider */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-3">
-              <label className="text-sm font-bold text-white flex items-center gap-2">
-                <DollarSign className="w-4 h-4 text-brand-green-400" />
-                Monthly Target Ad Spend
-              </label>
-              <span className="text-2xl font-mono font-extrabold text-brand-green-whiz">
-                ${budget.toLocaleString()} / mo
-              </span>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Controls Column */}
+          <div className="lg:col-span-7 space-y-6">
+            {/* 1. Daily Budget Range Slider */}
+            <div className="liquid-glass rounded-3xl p-7 sm:p-8 space-y-6">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <div className="text-xs font-mono uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1.5">
+                    <Sliders className="w-3.5 h-3.5 text-brand-green-400" />
+                    <span>Daily Ad Spend Budget</span>
+                  </div>
+                  <div className="text-3xl sm:text-4xl font-extrabold text-white font-mono">
+                    {formatAmount(dailyBudgetUSD)} <span className="text-xs text-slate-400 font-sans font-normal">/ day</span>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <div className="text-xs font-mono uppercase tracking-wider text-slate-400 mb-1">
+                    Monthly Projected Spend
+                  </div>
+                  <div className="text-xl sm:text-2xl font-bold text-brand-green-400 font-mono">
+                    {formatAmount(calculated.monthlyBudgetUSD)} <span className="text-xs text-slate-400 font-sans font-normal">/ mo</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Slider (Input type: range) */}
+              <div className="space-y-2">
+                <input
+                  type="range"
+                  min={5}
+                  max={500}
+                  step={5}
+                  value={dailyBudgetUSD}
+                  onChange={(e) => setDailyBudgetUSD(Number(e.target.value))}
+                  className="w-full h-3 bg-slate-900 rounded-lg appearance-none cursor-pointer accent-brand-green-whiz focus:outline-none"
+                  aria-label="Daily Ad Spend Range Slider"
+                />
+                <div className="flex justify-between text-[11px] font-mono text-slate-400">
+                  <span>{formatAmount(5)}/day (Testing Tier)</span>
+                  <span>{formatAmount(100)}/day (Growth Tier)</span>
+                  <span>{formatAmount(500)}/day (Scale Tier)</span>
+                </div>
+              </div>
             </div>
 
-            <input
-              type="range"
-              min="2000"
-              max="100000"
-              step="1000"
-              value={budget}
-              onChange={(e) => setBudget(Number(e.target.value))}
-              className="w-full h-3 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-brand-green-whiz"
-            />
-
-            <div className="flex justify-between text-xs font-mono text-slate-400 mt-2">
-              <span>$2k/mo</span>
-              <span>$25k/mo</span>
-              <span>$50k/mo</span>
-              <span>$100k+/mo</span>
-            </div>
-          </div>
-
-          {/* Step 2: Industry Selector */}
-          <div className="mb-8">
-            <label className="text-sm font-bold text-white flex items-center gap-2 mb-3">
-              <Target className="w-4 h-4 text-brand-accent-orange" />
-              Select Industry Vertical
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-              {industries.map((ind) => (
-                <button
-                  key={ind.id}
-                  onClick={() => setIndustry(ind.id)}
-                  className={`p-3 rounded-xl text-xs font-semibold text-center transition-all border ${
-                    industry === ind.id
-                      ? 'bg-brand-accent-orange/15 border-brand-accent-orange text-brand-accent-orange'
-                      : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
-                  }`}
-                >
-                  {ind.name}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Step 3: Platform Selection Pills */}
-          <div>
-            <label className="text-sm font-bold text-white flex items-center gap-2 mb-3">
-              <Users className="w-4 h-4 text-brand-green-400" />
-              Target Growth Channels
-            </label>
-            <div className="flex flex-wrap gap-2.5">
-              {platformsList.map((p) => {
-                const isSelected = selectedPlatforms.includes(p.id);
-                return (
+            {/* 2. Industry Model Selector */}
+            <div className="liquid-glass rounded-3xl p-7 sm:p-8 space-y-4">
+              <div className="text-xs font-mono uppercase tracking-wider text-slate-400">
+                Select Your Business Model
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {industries.map((ind) => (
                   <button
-                    key={p.id}
-                    onClick={() => togglePlatform(p.id)}
-                    className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all border ${
-                      isSelected
-                        ? 'bg-brand-green-whiz/15 border-brand-green-whiz text-brand-green-300 shadow-md shadow-brand-green-whiz/10'
-                        : 'bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700'
+                    key={ind.id}
+                    onClick={() => setIndustry(ind.id)}
+                    className={`p-3.5 rounded-2xl text-xs font-bold text-left transition-all duration-200 ${
+                      industry === ind.id
+                        ? 'bg-brand-green-whiz/15 border border-brand-green-whiz text-white shadow-md'
+                        : 'bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800'
                     }`}
                   >
-                    <ServiceIcon id={p.id} className="w-3.5 h-3.5" />
-                    <span>{p.name}</span>
-                    {isSelected && <Check className="w-3.5 h-3.5 text-brand-green-400" />}
+                    <div className="text-slate-200 font-semibold mb-1">{ind.name}</div>
+                    <div className="text-[11px] font-mono text-brand-green-400">
+                      Base ROAS: {ind.baseRoas}x
+                    </div>
                   </button>
-                );
-              })}
-            </div>
-            <p className="text-[11px] text-slate-400 mt-2">
-              *Multi-channel synergy adds up to +32% cross-device conversion lift.
-            </p>
-          </div>
-        </div>
-
-        {/* Right Output Projections Column */}
-        <div className="lg:col-span-5 bg-gradient-to-b from-brand-dark-900 to-slate-950 border-2 border-brand-green-whiz/30 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
-          <div className="pointer-events-none absolute -right-20 -bottom-20 w-60 h-60 bg-brand-green-whiz/15 rounded-full blur-3xl" />
-
-          <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-6">
-            <span className="text-xs font-mono uppercase tracking-wider text-slate-400">
-              Simulated Forecast
-            </span>
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-green-400 bg-brand-green-950/80 px-2.5 py-1 rounded-full border border-brand-green-800/40">
-              <Sparkles className="w-3 h-3" />
-              High-Velocity Model
-            </span>
-          </div>
-
-          {/* Big Number: Projected Revenue */}
-          <div className="mb-6">
-            <div className="text-xs font-mono uppercase tracking-wider text-slate-400">
-              Estimated Monthly Revenue
-            </div>
-            <div className="text-3xl sm:text-4xl lg:text-5xl font-black font-mono text-white mt-1 text-gradient-whiz">
-              ${calculated.projectedRevenue.toLocaleString()}
-            </div>
-            <div className="text-xs text-slate-400 mt-1">
-              Projected ROI Return: <strong className="text-brand-green-400 font-mono text-sm">{calculated.effectiveRoas}x ROAS</strong>
-            </div>
-          </div>
-
-          {/* Breakdown KPI Grid */}
-          <div className="grid grid-cols-2 gap-3 mb-8">
-            <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800">
-              <div className="text-[11px] text-slate-400 uppercase font-mono">Estimated Reach</div>
-              <div className="text-lg font-bold text-white font-mono mt-0.5">
-                {calculated.estimatedReach.toLocaleString()}
+                ))}
               </div>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800">
-              <div className="text-[11px] text-slate-400 uppercase font-mono">Target Traffic Clicks</div>
-              <div className="text-lg font-bold text-white font-mono mt-0.5">
-                {calculated.estimatedClicks.toLocaleString()}
+            {/* 3. Multi-Channel Platform Selection */}
+            <div className="liquid-glass rounded-3xl p-7 sm:p-8 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-mono uppercase tracking-wider text-slate-400">
+                  Target Advertising Channels
+                </div>
+                <div className="text-[11px] font-mono text-brand-accent-orange">
+                  {selectedPlatforms.length} Ecosystems Active (+{((selectedPlatforms.length - 1) * 7)}% Synergy)
+                </div>
               </div>
-            </div>
 
-            <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800">
-              <div className="text-[11px] text-slate-400 uppercase font-mono">Qualified Orders / Leads</div>
-              <div className="text-lg font-bold text-brand-accent-orange font-mono mt-0.5">
-                {calculated.estimatedConversions.toLocaleString()}
-              </div>
-            </div>
-
-            <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800">
-              <div className="text-[11px] text-slate-400 uppercase font-mono">Active Channels</div>
-              <div className="text-lg font-bold text-brand-green-400 font-mono mt-0.5">
-                {selectedPlatforms.length} Ecosystems
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {platformsList.map((platform) => {
+                  const isSelected = selectedPlatforms.includes(platform.id);
+                  return (
+                    <button
+                      key={platform.id}
+                      onClick={() => togglePlatform(platform.id)}
+                      className={`p-3 rounded-2xl border text-xs font-semibold flex items-center justify-between transition-all duration-200 ${
+                        isSelected
+                          ? 'bg-slate-900 border-brand-green-whiz/50 text-white shadow-sm'
+                          : 'bg-slate-900/40 border-slate-800 text-slate-500 hover:text-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <ServiceIcon id={platform.icon} className="w-4 h-4" />
+                        <span className="truncate">{platform.name}</span>
+                      </div>
+                      {isSelected && (
+                        <Check className="w-3.5 h-3.5 text-brand-green-whiz shrink-0" />
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
 
-          {/* CTA Button */}
-          <button
-            onClick={handleConfetti}
-            className="w-full py-4 rounded-xl bg-gradient-to-r from-brand-green-600 via-brand-green-whiz to-brand-green-400 text-slate-950 font-black text-sm uppercase tracking-wider hover:opacity-95 transition-all shadow-xl hover:shadow-brand-green-whiz/30 flex items-center justify-center gap-2 group"
-          >
-            <span>Lock In This Forecast & Book Audit</span>
-            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-          </button>
-          
-          <div className="text-center mt-3">
-            <span className="text-[11px] text-slate-400">
-              Includes 30-Day Platform Audit & CAPI Setup Guarantee
-            </span>
+          {/* Results Output Column */}
+          <div className="lg:col-span-5 space-y-6">
+            <div className="liquid-glass rounded-3xl p-7 sm:p-9 border border-brand-green-whiz/40 space-y-6 relative overflow-hidden">
+              <div className="space-y-1">
+                <span className="text-xs font-mono uppercase tracking-wider text-slate-400">
+                  Estimated Monthly Pipeline / Revenue
+                </span>
+                <div className="text-4xl sm:text-5xl font-extrabold text-gradient-whiz font-mono tracking-tight">
+                  {formatAmount(calculated.projectedRevenueUSD)}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-800/80">
+                <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800">
+                  <div className="text-[11px] font-mono text-slate-400 uppercase">
+                    Effective Blended ROAS
+                  </div>
+                  <div className="text-2xl font-extrabold text-brand-green-400 font-mono mt-1">
+                    {calculated.effectiveRoas}x
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-1">
+                    Channel synergy included
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800">
+                  <div className="text-[11px] font-mono text-slate-400 uppercase">
+                    Estimated Conversions / Leads
+                  </div>
+                  <div className="text-2xl font-extrabold text-white font-mono mt-1">
+                    {calculated.estimatedConversions.toLocaleString()}
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-1">
+                    ~{currentIndustry.cvr}% Conversion Rate
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800">
+                  <div className="text-[11px] font-mono text-slate-400 uppercase">
+                    Estimated High-Intent Clicks
+                  </div>
+                  <div className="text-xl font-bold text-white font-mono mt-1">
+                    {calculated.estimatedClicks.toLocaleString()}
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-1">
+                    Qualified traffic
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800">
+                  <div className="text-[11px] font-mono text-slate-400 uppercase">
+                    Estimated Monthly Reach
+                  </div>
+                  <div className="text-xl font-bold text-white font-mono mt-1">
+                    {calculated.estimatedReach.toLocaleString()}
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-1">
+                    Targeted impressions
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2 space-y-3">
+                <button
+                  onClick={handleConfetti}
+                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-brand-green-600 via-brand-green-whiz to-brand-green-emerald text-slate-950 font-black text-xs uppercase tracking-wider hover:scale-[1.02] transition-all shadow-xl shadow-brand-green-whiz/30 flex items-center justify-center gap-2"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>Claim This Growth Projection</span>
+                </button>
+                <div className="text-[11px] text-center text-slate-400">
+                  *Projections are mathematical estimates based on verified industry benchmarks.
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

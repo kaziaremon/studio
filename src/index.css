@@ -11,7 +11,7 @@
   --color-brand-green-500: #10b981;
   --color-brand-green-600: #059669;
   --color-brand-green-700: #047857;
-  --color-brand-green-800: #065f46;
+  --color-brand-green-800: #007A4D;
   --color-brand-green-900: #064e3b;
   --color-brand-green-whiz: #00A86B;
   --color-brand-green-emerald: #00C853;
@@ -40,6 +40,7 @@
   --brand-bg: #0b0f19;
 }
 
+/* Base Body Styles */
 body {
   background-color: #0b0f19;
   color: #f8fafc;
@@ -48,9 +49,58 @@ body {
   transition: background-color 0.25s ease, color 0.25s ease;
 }
 
+/* Fluid Typography Clamp */
+.fluid-lead {
+  font-size: clamp(1rem, 2vw, 1.35rem);
+  line-height: 1.6;
+}
+
+.fluid-heading-xl {
+  font-size: clamp(2.25rem, 5vw, 4.5rem);
+  line-height: 1.1;
+}
+
+.fluid-heading-lg {
+  font-size: clamp(1.75rem, 3.5vw, 3rem);
+  line-height: 1.2;
+}
+
+/* ==========================================================================
+   LIQUID GLASS (GLASSMORPHISM) ENGINE
+   ========================================================================== */
+.liquid-glass,
+.glass-panel {
+  background: rgba(255, 255, 255, 0.05) !important;
+  backdrop-filter: blur(16px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(200%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1) !important;
+}
+
+.glass-nav {
+  background: rgba(11, 15, 25, 0.88) !important;
+  backdrop-filter: blur(16px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(200%) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.15) !important;
+}
+
+/* ==========================================================================
+   LOGO ZERO-COMPRESSION RULE
+   ========================================================================== */
+.whiz-logo-strict {
+  height: 85px !important;
+  min-height: 85px !important;
+  width: auto !important;
+  object-fit: contain !important;
+  max-height: none !important;
+  display: block !important;
+}
+
 /* Custom Sleek Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
   background: #0b0f19;
@@ -62,21 +112,6 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #00A86B;
-}
-
-/* Glassmorphism Defaults (Dark Mode) */
-.glass-panel {
-  background: rgba(19, 27, 46, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.glass-nav {
-  background: rgba(11, 15, 25, 0.9);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* Gradients */
@@ -117,6 +152,22 @@ body {
   background-image: radial-gradient(at 10% 20%, rgba(0, 168, 107, 0.15) 0px, transparent 50%), radial-gradient(at 90% 10%, rgba(255, 94, 30, 0.12) 0px, transparent 50%), radial-gradient(at 50% 80%, rgba(16, 185, 129, 0.08) 0px, transparent 60%);
 }
 
+/* Infinite Marquee Animation for Testimonials */
+@keyframes marqueeScroll {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marqueeScroll 35s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
 /* Keyframes */
 @keyframes fadeIn {
   from { opacity: 0; transform: scale(0.98); }
@@ -128,128 +179,169 @@ body {
 }
 
 /* ==========================================================================
-   LIGHT MODE PALETTE - CLEAN, MODERN AGENCY LOOK
+   LIGHT MODE PALETTE - STRICT DATA-THEME AND CLASS OVERRIDES
    ========================================================================== */
+html[data-theme="light"],
+html.light,
 html.light body {
   background-color: #f8fafc !important;
   color: #0f172a !important;
 }
 
+html[data-theme="light"] ::-webkit-scrollbar-track,
 html.light ::-webkit-scrollbar-track {
   background: #f1f5f9;
 }
+html[data-theme="light"] ::-webkit-scrollbar-thumb,
 html.light ::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-color: rgba(0, 168, 107, 0.2);
 }
-html.light ::-webkit-scrollbar-thumb:hover {
-  background: #00a86b;
+
+/* Liquid Glass in Light Mode */
+html[data-theme="light"] .liquid-glass,
+html.light .liquid-glass,
+html[data-theme="light"] .glass-panel,
+html.light .glass-panel {
+  background: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(16px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05) !important;
 }
 
-/* Background replacements in Light Mode */
+html[data-theme="light"] .glass-nav,
+html.light .glass-nav {
+  background: rgba(255, 255, 255, 0.92) !important;
+  backdrop-filter: blur(16px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Background Replacements in Light Mode */
+html[data-theme="light"] .bg-brand-dark-950,
 html.light .bg-brand-dark-950,
+html[data-theme="light"] main section,
 html.light main section {
   background-color: #f8fafc !important;
   color: #0f172a !important;
 }
 
+html[data-theme="light"] .bg-brand-dark-900,
 html.light .bg-brand-dark-900,
+html[data-theme="light"] .bg-slate-900,
 html.light .bg-slate-900,
+html[data-theme="light"] .bg-slate-950,
 html.light .bg-slate-950 {
   background-color: #ffffff !important;
   color: #0f172a !important;
 }
 
+html[data-theme="light"] .bg-brand-dark-850,
 html.light .bg-brand-dark-850,
+html[data-theme="light"] .bg-slate-800,
 html.light .bg-slate-800,
+html[data-theme="light"] .bg-slate-900\/80,
 html.light .bg-slate-900\/80,
+html[data-theme="light"] .bg-slate-900\/90,
 html.light .bg-slate-900\/90,
+html[data-theme="light"] .bg-slate-900\/70,
 html.light .bg-slate-900\/70,
+html[data-theme="light"] .bg-slate-950\/60,
 html.light .bg-slate-950\/60 {
   background-color: #f1f5f9 !important;
   color: #0f172a !important;
 }
 
-html.light .bg-brand-dark-800 {
-  background-color: #e2e8f0 !important;
-}
-
-/* Glass components in Light Mode */
-html.light .glass-panel {
-  background: rgba(255, 255, 255, 0.92) !important;
-  border: 1px solid #e2e8f0 !important;
-  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02) !important;
-}
-
-html.light .glass-nav {
-  background: rgba(255, 255, 255, 0.94) !important;
-  border-bottom: 1px solid #e2e8f0 !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04) !important;
-}
-
 /* Typography Hierarchy in Light Mode */
+html[data-theme="light"] h1,
 html.light h1,
+html[data-theme="light"] h2,
 html.light h2,
+html[data-theme="light"] h3,
 html.light h3,
+html[data-theme="light"] h4,
 html.light h4,
+html[data-theme="light"] .text-white,
 html.light .text-white {
   color: #0f172a !important;
 }
 
+html[data-theme="light"] .text-slate-100,
 html.light .text-slate-100 {
   color: #0f172a !important;
 }
 
+html[data-theme="light"] .text-slate-200,
 html.light .text-slate-200 {
   color: #1e293b !important;
 }
 
+html[data-theme="light"] p,
 html.light p,
+html[data-theme="light"] .text-slate-300,
 html.light .text-slate-300 {
   color: #334155 !important;
 }
 
+html[data-theme="light"] .text-slate-400,
 html.light .text-slate-400 {
   color: #475569 !important;
 }
 
+html[data-theme="light"] .text-slate-500,
 html.light .text-slate-500 {
   color: #64748b !important;
 }
 
 /* Borders in Light Mode */
+html[data-theme="light"] .border-slate-800,
 html.light .border-slate-800,
+html[data-theme="light"] .border-slate-800\/80,
 html.light .border-slate-800\/80,
+html[data-theme="light"] .border-slate-800\/60,
 html.light .border-slate-800\/60,
+html[data-theme="light"] .border-slate-800\/50,
 html.light .border-slate-800\/50,
+html[data-theme="light"] .border-slate-700,
 html.light .border-slate-700,
-html.light .border-slate-700\/80,
-html.light .border-slate-700\/60 {
+html[data-theme="light"] .border-slate-700\/80,
+html.light .border-slate-700\/80 {
   border-color: #e2e8f0 !important;
 }
 
 /* Form Controls in Light Mode */
+html[data-theme="light"] input,
 html.light input,
+html[data-theme="light"] select,
 html.light select,
+html[data-theme="light"] textarea,
 html.light textarea {
   background-color: #ffffff !important;
   color: #0f172a !important;
   border: 1px solid #cbd5e1 !important;
 }
 
+html[data-theme="light"] input:focus,
 html.light input:focus,
+html[data-theme="light"] select:focus,
 html.light select:focus,
+html[data-theme="light"] textarea:focus,
 html.light textarea:focus {
   border-color: #00A86B !important;
   outline: 2px solid rgba(0, 168, 107, 0.2) !important;
 }
 
+html[data-theme="light"] input::placeholder,
 html.light input::placeholder,
+html[data-theme="light"] textarea::placeholder,
 html.light textarea::placeholder {
   color: #94a3b8 !important;
 }
 
-/* Silver text gradient in Light Mode */
+/* Silver Text Gradient in Light Mode */
+html[data-theme="light"] .text-gradient-silver,
 html.light .text-gradient-silver {
   background: linear-gradient(180deg, #0f172a 0%, #475569 100%) !important;
   -webkit-background-clip: text !important;
@@ -257,12 +349,7 @@ html.light .text-gradient-silver {
 }
 
 /* Radial Meshes in Light Mode */
+html[data-theme="light"] .bg-hero-mesh,
 html.light .bg-hero-mesh {
   background-image: radial-gradient(at 10% 20%, rgba(0, 168, 107, 0.08) 0px, transparent 50%), radial-gradient(at 90% 10%, rgba(255, 94, 30, 0.06) 0px, transparent 50%), radial-gradient(at 50% 80%, rgba(16, 185, 129, 0.05) 0px, transparent 60%) !important;
-}
-
-/* Card shadows in Light Mode */
-html.light [class*="rounded-2xl"],
-html.light [class*="rounded-3xl"] {
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.04);
 }

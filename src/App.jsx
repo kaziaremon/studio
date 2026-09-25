@@ -2,17 +2,21 @@ import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import LivePlatformTicker from './components/LivePlatformTicker';
+import AboutSection from './components/AboutSection';
 import ServicesGrid from './components/ServicesGrid';
 import PlatformManagement from './components/PlatformManagement';
 import RoiCalculator from './components/RoiCalculator';
 import ProcessSection from './components/ProcessSection';
 import CaseStudies from './components/CaseStudies';
+import TestimonialsSection from './components/TestimonialsSection';
+import BlogSection from './components/BlogSection';
 import FaqSection from './components/FaqSection';
 import ContactSection from './components/ContactSection';
 import Footer from './components/Footer';
 import ClientPortalModal from './components/ClientPortalModal';
+import { CurrencyProvider } from './context/CurrencyContext';
 
-export default function App() {
+function MainApp() {
   const [isPortalOpen, setIsPortalOpen] = useState(false);
   const [prefilledService, setPrefilledService] = useState(null);
   const [prefilledData, setPrefilledData] = useState(null);
@@ -22,6 +26,7 @@ export default function App() {
 
   useEffect(() => {
     const root = document.documentElement;
+    root.setAttribute('data-theme', theme);
     if (theme === 'dark') {
       root.classList.add('dark');
       root.classList.remove('light');
@@ -73,27 +78,32 @@ export default function App() {
         {/* 2. Live Platform Ticker */}
         <LivePlatformTicker />
 
-        {/* 3. Advanced 3D Tilt Services Grid (9 Core Services) */}
+        {/* 3. About Us & Dynamic Statistics Engine */}
+        <AboutSection
+          onBookAudit={() => scrollToContact()}
+        />
+
+        {/* 4. Advanced 3D Tilt Services Grid */}
         <ServicesGrid
           onBookService={handleBookService}
         />
 
-        {/* 4. Enterprise Platform Management & Command Center */}
+        {/* 5. Enterprise Platform Management & Command Center */}
         <PlatformManagement
           onOpenPortal={() => setIsPortalOpen(true)}
         />
 
-        {/* 5. Interactive ROI & Ad Spend Simulator */}
+        {/* 6. Interactive ROI & Media Spend Simulator */}
         <RoiCalculator
           onClaimProjection={handleClaimProjection}
         />
 
-        {/* 6. The 4-Phase Scale Methodology */}
+        {/* 7. The 4-Phase Scale Methodology */}
         <ProcessSection
           onBookAudit={() => scrollToContact()}
         />
 
-        {/* 7. Verified Client Case Studies & Proof of ROI */}
+        {/* 8. Verified Client Case Studies & Proof of ROAS */}
         <CaseStudies
           onBookAudit={(context) => {
             if (context) setPrefilledService(context);
@@ -101,26 +111,40 @@ export default function App() {
           }}
         />
 
-        {/* 8. Frequently Answered Questions */}
+        {/* 9. Verified Testimonials Marquee & Discord Review Submission */}
+        <TestimonialsSection />
+
+        {/* 10. Strategic Knowledge Base & Blog */}
+        <BlogSection />
+
+        {/* 11. Frequently Answered Questions */}
         <FaqSection />
 
-        {/* 9. Interactive Growth Audit & Contact Form (FastAPI-ready) */}
+        {/* 12. Interactive Growth Audit & Contact Form */}
         <ContactSection
           prefilledService={prefilledService}
           prefilledData={prefilledData}
         />
       </main>
 
-      {/* 10. Sophisticated Footer */}
+      {/* 13. Sophisticated Footer */}
       <Footer
         onOpenPortal={() => setIsPortalOpen(true)}
       />
 
-      {/* Client Portal & Dashboard Live Demo Modal */}
+      {/* Client Command Portal Modal */}
       <ClientPortalModal
         isOpen={isPortalOpen}
         onClose={() => setIsPortalOpen(false)}
       />
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <CurrencyProvider>
+      <MainApp />
+    </CurrencyProvider>
   );
 }
