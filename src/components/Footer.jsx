@@ -38,7 +38,8 @@ export default function Footer({ onOpenPortal }) {
               <img
                 src="./assets/images/logo.png"
                 alt="Whiz Studio Logo"
-                className="h-11 w-auto object-contain filter drop-shadow-[0_2px_10px_rgba(0,168,107,0.3)]"
+                style={{ height: '75px', width: 'auto', maxHeight: '75px' }}
+                className="h-14 sm:h-18 w-auto object-contain filter drop-shadow-[0_4px_14px_rgba(0,168,107,0.35)]"
               />
             </div>
             

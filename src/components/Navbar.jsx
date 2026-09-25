@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, ArrowRight, ShieldCheck, Sparkles, LayoutDashboard, ChevronRight } from 'lucide-react';
+import { Menu, X, ArrowRight, ShieldCheck, Sparkles, LayoutDashboard, ChevronRight, Sun, Moon } from 'lucide-react';
 
-export default function Navbar({ onOpenPortal, onBookAudit }) {
+export default function Navbar({ theme, onToggleTheme, onOpenPortal, onBookAudit }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -31,24 +31,23 @@ export default function Navbar({ onOpenPortal, onBookAudit }) {
       <header
         className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
           isScrolled
-            ? 'glass-nav py-3.5 shadow-2xl shadow-black/50'
-            : 'bg-transparent py-5'
+            ? 'glass-nav py-2 shadow-2xl shadow-black/30'
+            : 'bg-transparent py-3'
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-          {/* Logo Integration */}
-          <a href="#" className="flex items-center gap-3 group focus:outline-none">
-            <div className="relative flex items-center">
-              <img
-                src="./assets/images/logo.png"
-                alt="Whiz Studio Logo"
-                className="h-10 sm:h-12 w-auto object-contain transition-transform duration-300 group-hover:scale-105 filter drop-shadow-[0_2px_12px_rgba(0,168,107,0.3)]"
-              />
-            </div>
+          {/* Prominent Enriched Logo */}
+          <a href="#" className="flex items-center gap-3 group focus:outline-none shrink-0">
+            <img
+              src="./assets/images/logo.png"
+              alt="Whiz Studio Logo"
+              style={{ height: '80px', width: 'auto', maxHeight: '80px' }}
+              className="h-14 sm:h-20 w-auto object-contain transition-transform duration-300 group-hover:scale-105 filter drop-shadow-[0_4px_16px_rgba(0,168,107,0.35)]"
+            />
           </a>
 
           {/* Desktop Nav Links */}
-          <nav className="hidden lg:flex items-center gap-1 bg-slate-950/60 p-1.5 rounded-full border border-slate-800/80 backdrop-blur-xl">
+          <nav className="hidden lg:flex items-center gap-1 bg-slate-950/60 dark:bg-slate-950/60 p-1.5 rounded-full border border-slate-800/80 backdrop-blur-xl">
             {navLinks.map((link) => (
               <a
                 key={link.name}
@@ -62,6 +61,20 @@ export default function Navbar({ onOpenPortal, onBookAudit }) {
 
           {/* Action CTAs */}
           <div className="hidden sm:flex items-center gap-3">
+            {/* Theme Toggle Button */}
+            <button
+              onClick={onToggleTheme}
+              className="p-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 hover:border-brand-green-whiz/50 text-slate-300 hover:text-white transition-all duration-200 flex items-center justify-center shadow-sm"
+              title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              aria-label="Toggle theme mode"
+            >
+              {theme === 'dark' ? (
+                <Sun className="w-4 h-4 text-amber-400 animate-spin-slow" />
+              ) : (
+                <Moon className="w-4 h-4 text-indigo-500" />
+              )}
+            </button>
+
             {/* Client Portal Button */}
             <button
               onClick={onOpenPortal}
@@ -84,6 +97,19 @@ export default function Navbar({ onOpenPortal, onBookAudit }) {
 
           {/* Mobile Menu Button */}
           <div className="flex sm:hidden items-center gap-2">
+            {/* Mobile Theme Toggle */}
+            <button
+              onClick={onToggleTheme}
+              className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300"
+              aria-label="Toggle theme mode"
+            >
+              {theme === 'dark' ? (
+                <Sun className="w-4 h-4 text-amber-400" />
+              ) : (
+                <Moon className="w-4 h-4 text-indigo-500" />
+              )}
+            </button>
+
             <button
               onClick={onOpenPortal}
               className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-brand-green-400 text-xs font-bold"

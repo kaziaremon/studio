@@ -16,6 +16,25 @@ export default function App() {
   const [isPortalOpen, setIsPortalOpen] = useState(false);
   const [prefilledService, setPrefilledService] = useState(null);
   const [prefilledData, setPrefilledData] = useState(null);
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('whiz_theme') || 'dark';
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+      root.classList.remove('light');
+    } else {
+      root.classList.add('light');
+      root.classList.remove('dark');
+    }
+    localStorage.setItem('whiz_theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
+  };
 
   const scrollToContact = () => {
     const el = document.getElementById('contact');
@@ -35,9 +54,11 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-brand-dark-950 text-slate-100 flex flex-col selection:bg-brand-green-whiz selection:text-black">
+    <div className={`min-h-screen ${theme === 'dark' ? 'bg-brand-dark-950 text-slate-100' : 'bg-slate-50 text-slate-900'} flex flex-col selection:bg-brand-green-whiz selection:text-black transition-colors duration-300`}>
       {/* Navigation Header */}
       <Navbar
+        theme={theme}
+        onToggleTheme={toggleTheme}
         onOpenPortal={() => setIsPortalOpen(true)}
         onBookAudit={() => scrollToContact()}
       />
