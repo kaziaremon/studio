@@ -22,12 +22,12 @@
   --color-brand-accent-amber: #F59E0B;
   --color-brand-accent-red: #EF4444;
 
-  --color-brand-dark-950: #04070C;
-  --color-brand-dark-900: #070C14;
-  --color-brand-dark-850: #0B121E;
-  --color-brand-dark-800: #10192A;
-  --color-brand-dark-750: #162238;
-  --color-brand-dark-700: #1E2D4A;
+  --color-brand-dark-950: #0b0f19;
+  --color-brand-dark-900: #111827;
+  --color-brand-dark-850: #1e293b;
+  --color-brand-dark-800: #334155;
+  --color-brand-dark-750: #475569;
+  --color-brand-dark-700: #64748b;
 
   --font-sans: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
@@ -37,15 +37,15 @@
   --brand-primary: #00A86B;
   --brand-accent: #FF5E1E;
   --brand-glow: #10B981;
-  --brand-bg: #060A11;
+  --brand-bg: #0b0f19;
 }
 
 body {
-  background-color: #04070C;
-  color: #F1F5F9;
+  background-color: #0b0f19;
+  color: #f8fafc;
   font-family: 'Plus Jakarta Sans', sans-serif;
   overflow-x: hidden;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 /* Custom Sleek Scrollbar */
@@ -53,10 +53,10 @@ body {
   width: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #070C14;
+  background: #0b0f19;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1E2D4A;
+  background: #1e293b;
   border-radius: 4px;
   border: 1px solid rgba(0, 168, 107, 0.2);
 }
@@ -64,16 +64,16 @@ body {
   background: #00A86B;
 }
 
-/* Glassmorphism */
+/* Glassmorphism Defaults (Dark Mode) */
 .glass-panel {
-  background: rgba(11, 18, 30, 0.7);
+  background: rgba(19, 27, 46, 0.85);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .glass-nav {
-  background: rgba(4, 7, 12, 0.85);
+  background: rgba(11, 15, 25, 0.9);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
@@ -128,7 +128,7 @@ body {
 }
 
 /* ==========================================================================
-   LIGHT MODE COMPREHENSIVE SYSTEM OVERRIDES
+   LIGHT MODE PALETTE - CLEAN, MODERN AGENCY LOOK
    ========================================================================== */
 html.light body {
   background-color: #f8fafc !important;
@@ -140,41 +140,62 @@ html.light ::-webkit-scrollbar-track {
 }
 html.light ::-webkit-scrollbar-thumb {
   background: #cbd5e1;
+  border-color: rgba(0, 168, 107, 0.2);
 }
 html.light ::-webkit-scrollbar-thumb:hover {
   background: #00a86b;
 }
 
-html.light .bg-brand-dark-950 {
+/* Background replacements in Light Mode */
+html.light .bg-brand-dark-950,
+html.light main section {
   background-color: #f8fafc !important;
   color: #0f172a !important;
 }
 
-html.light .bg-brand-dark-900 {
+html.light .bg-brand-dark-900,
+html.light .bg-slate-900,
+html.light .bg-slate-950 {
   background-color: #ffffff !important;
+  color: #0f172a !important;
 }
 
-html.light .bg-brand-dark-850 {
+html.light .bg-brand-dark-850,
+html.light .bg-slate-800,
+html.light .bg-slate-900\/80,
+html.light .bg-slate-900\/90,
+html.light .bg-slate-900\/70,
+html.light .bg-slate-950\/60 {
   background-color: #f1f5f9 !important;
+  color: #0f172a !important;
 }
 
 html.light .bg-brand-dark-800 {
   background-color: #e2e8f0 !important;
 }
 
+/* Glass components in Light Mode */
 html.light .glass-panel {
-  background: rgba(255, 255, 255, 0.88) !important;
-  border-color: rgba(15, 23, 42, 0.1) !important;
-  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.06), 0 4px 6px -2px rgba(0, 0, 0, 0.02) !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02) !important;
 }
 
 html.light .glass-nav {
-  background: rgba(255, 255, 255, 0.92) !important;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.08) !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  border-bottom: 1px solid #e2e8f0 !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04) !important;
 }
 
-html.light .text-white,
+/* Typography Hierarchy in Light Mode */
+html.light h1,
+html.light h2,
+html.light h3,
+html.light h4,
+html.light .text-white {
+  color: #0f172a !important;
+}
+
 html.light .text-slate-100 {
   color: #0f172a !important;
 }
@@ -183,6 +204,7 @@ html.light .text-slate-200 {
   color: #1e293b !important;
 }
 
+html.light p,
 html.light .text-slate-300 {
   color: #334155 !important;
 }
@@ -195,36 +217,31 @@ html.light .text-slate-500 {
   color: #64748b !important;
 }
 
+/* Borders in Light Mode */
 html.light .border-slate-800,
 html.light .border-slate-800\/80,
 html.light .border-slate-800\/60,
+html.light .border-slate-800\/50,
 html.light .border-slate-700,
-html.light .border-slate-700\/80 {
-  border-color: rgba(15, 23, 42, 0.1) !important;
+html.light .border-slate-700\/80,
+html.light .border-slate-700\/60 {
+  border-color: #e2e8f0 !important;
 }
 
-html.light .bg-slate-950,
-html.light .bg-slate-950\/60,
-html.light .bg-slate-900,
-html.light .bg-slate-900\/80,
-html.light .bg-slate-900\/90 {
-  background-color: #ffffff !important;
-  color: #0f172a !important;
-  border-color: rgba(15, 23, 42, 0.12) !important;
-}
-
-html.light .bg-slate-800,
-html.light .bg-slate-800\/60 {
-  background-color: #f1f5f9 !important;
-  color: #0f172a !important;
-}
-
+/* Form Controls in Light Mode */
 html.light input,
 html.light select,
 html.light textarea {
   background-color: #ffffff !important;
   color: #0f172a !important;
-  border-color: #cbd5e1 !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+html.light input:focus,
+html.light select:focus,
+html.light textarea:focus {
+  border-color: #00A86B !important;
+  outline: 2px solid rgba(0, 168, 107, 0.2) !important;
 }
 
 html.light input::placeholder,
@@ -232,12 +249,20 @@ html.light textarea::placeholder {
   color: #94a3b8 !important;
 }
 
+/* Silver text gradient in Light Mode */
 html.light .text-gradient-silver {
   background: linear-gradient(180deg, #0f172a 0%, #475569 100%) !important;
   -webkit-background-clip: text !important;
   -webkit-text-fill-color: transparent !important;
 }
 
+/* Radial Meshes in Light Mode */
 html.light .bg-hero-mesh {
   background-image: radial-gradient(at 10% 20%, rgba(0, 168, 107, 0.08) 0px, transparent 50%), radial-gradient(at 90% 10%, rgba(255, 94, 30, 0.06) 0px, transparent 50%), radial-gradient(at 50% 80%, rgba(16, 185, 129, 0.05) 0px, transparent 60%) !important;
+}
+
+/* Card shadows in Light Mode */
+html.light [class*="rounded-2xl"],
+html.light [class*="rounded-3xl"] {
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.04);
 }
