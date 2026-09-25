@@ -36,7 +36,7 @@ export default function Footer({ onOpenPortal }) {
           <div className="lg:col-span-4 space-y-6">
             <div className="flex items-center gap-3">
               <img
-                src="/assets/images/logo.png"
+                src="./assets/images/logo.png"
                 alt="Whiz Studio Logo"
                 className="h-11 w-auto object-contain filter drop-shadow-[0_2px_10px_rgba(0,168,107,0.3)]"
               />

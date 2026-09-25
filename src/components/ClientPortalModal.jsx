@@ -42,7 +42,7 @@ export default function ClientPortalModal({ isOpen, onClose }) {
         {/* Modal Top Header */}
         <div className="flex items-center justify-between px-6 py-5 bg-slate-950/80 border-b border-slate-800">
           <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="Whiz Studio" className="h-8 w-auto" />
+            <img src="./logo.png" alt="Whiz Studio" className="h-8 w-auto" />
             <div className="border-l border-slate-700 pl-3">
               <span className="text-xs font-mono font-bold text-white uppercase tracking-wider">
                 Client Command Portal

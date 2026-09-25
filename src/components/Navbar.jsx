@@ -40,7 +40,7 @@ export default function Navbar({ onOpenPortal, onBookAudit }) {
           <a href="#" className="flex items-center gap-3 group focus:outline-none">
             <div className="relative flex items-center">
               <img
-                src="/assets/images/logo.png"
+                src="./assets/images/logo.png"
                 alt="Whiz Studio Logo"
                 className="h-10 sm:h-12 w-auto object-contain transition-transform duration-300 group-hover:scale-105 filter drop-shadow-[0_2px_12px_rgba(0,168,107,0.3)]"
               />
