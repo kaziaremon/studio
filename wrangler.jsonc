@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "whiz-studio",
+  "main": "src/worker.js",
+  "compatibility_date": "2024-09-23",
+  "account_id": "c71a151e01e6c71669dd8e3fce7d5598",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "single-page-application"
+  },
+  "routes": [
+    {
+      "pattern": "whizstudio.art/*",
+      "zone_id": "e0d16350f992ad32f21b499b02b99fb4"
+    },
+    {
+      "pattern": "www.whizstudio.art/*",
+      "zone_id": "e0d16350f992ad32f21b499b02b99fb4"
+    }
+  ]
+}
