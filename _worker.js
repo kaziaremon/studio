@@ -121,10 +121,13 @@ export default {
     if ((path === "/api/submit-review" || path === "/api/review") && request.method === "POST") {
       try {
         const body = await request.json();
-        const { name, email, text, rating } = body;
+        const name = body.name || body.clientName || body.company || "Anonymous Client";
+        const email = body.email || body.clientEmail || "Not provided";
+        const text = body.text || body.review || body.feedback || body.message;
+        const rating = body.rating || 5;
 
-        if (!name || !email || !text) {
-          return new Response(JSON.stringify({ success: false, error: "Missing required fields" }), {
+        if (!text) {
+          return new Response(JSON.stringify({ success: false, error: "Review text is required." }), {
             status: 400,
             headers: { ...CORS_HEADERS, "Content-Type": "application/json" }
           });

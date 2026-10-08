@@ -12,10 +12,13 @@ const REVIEW_CHANNEL_ID = "1557820513982742580";
 export async function onRequestPost({ request, env }) {
   try {
     const data = await request.json();
-    const { name, email, text, rating } = data;
+    const name = data.name || data.clientName || data.company || "Anonymous Client";
+    const email = data.email || data.clientEmail || "Not provided";
+    const text = data.text || data.review || data.feedback || data.message;
+    const rating = data.rating || 5;
 
-    if (!name || !email || !text) {
-      return new Response(JSON.stringify({ success: false, error: "Please provide your name, email, and review feedback." }), {
+    if (!text) {
+      return new Response(JSON.stringify({ success: false, error: "Please provide your review feedback." }), {
         status: 400,
         headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
       });
