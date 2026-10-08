@@ -1,5 +1,5 @@
 /**
- * CLOUDFLARE WORKER / PAGES ADVANCED PROXY ROUTER (_worker.js)
+ * CLOUDFLARE WORKER BACKEND PROXY (worker.js)
  * Whiz Studio Secure API Gateway & Discord Integration
  *
  * Exposes:
@@ -357,10 +357,10 @@ export default {
 
           if (customId.startsWith("accept_review")) {
             return jsonResponse({
-              type: 4,
+              type: 4, // Channel message with source
               data: {
                 content: `✅ Review was **APPROVED** for publication by **@${userTag}**!`,
-                flags: 64 // Ephemeral
+                flags: 64 // Ephemeral: visible only to moderator
               }
             });
           }

@@ -1,13 +1,20 @@
 /**
- * Cloudflare Pages Function: /api/review
- * Directly delivers review submissions to #review-moderation on new server
- * and attaches [✅ Accept] and [❌ Decline] reaction controls.
+ * Cloudflare Pages Function: /api/review and /api/submit-review
+ * Delivers review submissions to Discord #review-moderation with ActionRow [✅ Accept] and [❌ Decline] buttons.
  */
 
-const P1 = "MTU0OTU2NjM3NjcwMjc3MTMyMA";
-const P2 = "G6RTlJ";
-const P3 = "SAAtY6RKG_m6AOC9LBwznRcSi6mPaEdcNj3iU0";
-const REVIEW_CHANNEL_ID = "1557820513982742580";
+const REVIEW_WEBHOOK_URL = "https://discord.com/api/webhooks/1557836746916372614/D9tZfwn_N8cDd4qnWjeD3FJPo_c5f6PZuvPRFz4DKspOyZrnqaoHU6JjMoXvvnjdxA0J";
+
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+  "Content-Type": "application/json"
+};
+
+export async function onRequestOptions() {
+  return new Response(null, { status: 204, headers: CORS_HEADERS });
+}
 
 export async function onRequestPost({ request, env }) {
   try {
@@ -15,32 +22,33 @@ export async function onRequestPost({ request, env }) {
     const name = data.name || data.clientName || data.company || "Anonymous Client";
     const email = data.email || data.clientEmail || "Not provided";
     const text = data.text || data.review || data.feedback || data.message;
-    const rating = data.rating || 5;
+    const rating = Number(data.rating) || 5;
 
     if (!text) {
-      return new Response(JSON.stringify({ success: false, error: "Please provide your review feedback." }), {
+      return new Response(JSON.stringify({ success: false, error: "Review text is required." }), {
         status: 400,
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+        headers: CORS_HEADERS
       });
     }
 
-    const starCount = Number(rating) || 5;
-    const starString = "★".repeat(starCount) + ` (${starCount} / 5 Stars)`;
-    const botToken = (env && env.DISCORD_BOT_TOKEN) || [P1, P2, P3].join(".");
+    const webhookUrl = (env && env.REVIEW_WEBHOOK_URL) || REVIEW_WEBHOOK_URL;
+    const starString = "★".repeat(rating) + "☆".repeat(Math.max(0, 5 - rating)) + ` (${rating} / 5 Stars)`;
+    const reviewId = `rev_${Date.now()}`;
 
     const payload = {
       content: "⭐ **NEW CLIENT TESTIMONIAL AWAITING MODERATION**",
       embeds: [
         {
           title: "⭐ Client Review Submission — Whiz Studio",
-          description: "A new client review has been submitted via **https://whizstudio.art**.\n\n### 🛡️ Moderation Controls:\n• Click **✅** below to **Approve & Publish Live**\n• Click **❌** or delete message to **Decline & Reject**",
+          description: "A new client review has been submitted and is awaiting team moderation.\n\n### 🛡️ Moderation Actions:\n• Click **✅ Accept** to approve for public display\n• Click **❌ Decline** to reject this review",
           color: 0xF59E0B,
           fields: [
-            { name: "👤 Client / Company", value: name, inline: true },
+            { name: "👤 Client / Company", value: String(name), inline: true },
             { name: "⭐ Rating Given", value: starString, inline: true },
-            { name: "📧 Verified Email", value: email, inline: true },
-            { name: "💬 Review Feedback", value: text, inline: false },
-            { name: "⏰ Submission Timestamp", value: new Date().toUTCString(), inline: false }
+            { name: "📧 Verified Email", value: String(email), inline: true },
+            { name: "💬 Review Feedback", value: String(text), inline: false },
+            { name: "🆔 Review Reference ID", value: reviewId, inline: true },
+            { name: "⏰ Submission Timestamp", value: new Date().toUTCString(), inline: true }
           ],
           footer: {
             text: "Whiz Studio Moderation Panel • whizstudio.art"
@@ -48,6 +56,35 @@ export async function onRequestPost({ request, env }) {
         }
       ],
       components: [
+        {
+          type: 1, // ActionRow
+          components: [
+            {
+              type: 2,
+              style: 3, // Success
+              label: "✅ Accept",
+              custom_id: `accept_review:${reviewId}`
+            },
+            {
+              type: 2,
+              style: 4, // Danger
+              label: "❌ Decline",
+              custom_id: `decline_review:${reviewId}`
+            }
+          ]
+        }
+      ]
+    };
+
+    let discordRes = await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    if (!discordRes.ok && discordRes.status === 400) {
+      // Fallback without interactive buttons if needed
+      payload.components = [
         {
           type: 1,
           components: [
@@ -59,55 +96,32 @@ export async function onRequestPost({ request, env }) {
             }
           ]
         }
-      ]
-    };
-
-    const discordRes = await fetch(`https://discord.com/api/v10/channels/${REVIEW_CHANNEL_ID}/messages`, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bot ${botToken}`,
-        "Content-Type": "application/json",
-        "User-Agent": "DiscordBot (WhizStudioReviews, 1.0)"
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (!discordRes.ok) {
-      const errText = await discordRes.text();
-      console.error("Discord Bot API Error:", discordRes.status, errText);
-      return new Response(JSON.stringify({ success: false, error: "Discord API delivery failed: " + errText }), {
-        status: discordRes.status,
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+      ];
+      discordRes = await fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
       });
     }
 
-    const msgData = await discordRes.json();
-
-    // Attach One-Click Reaction Controls (✅ and ❌)
-    if (msgData && msgData.id) {
-      try {
-        await fetch(`https://discord.com/api/v10/channels/${REVIEW_CHANNEL_ID}/messages/${msgData.id}/reactions/%E2%9C%85/@me`, {
-          method: "PUT",
-          headers: { "Authorization": `Bot ${botToken}` }
-        });
-        await fetch(`https://discord.com/api/v10/channels/${REVIEW_CHANNEL_ID}/messages/${msgData.id}/reactions/%E2%9D%8C/@me`, {
-          method: "PUT",
-          headers: { "Authorization": `Bot ${botToken}` }
-        });
-      } catch (e) {
-        console.warn("Reaction add notice:", e);
-      }
+    if (!discordRes.ok) {
+      const errText = await discordRes.text();
+      console.error("Discord Webhook API Error:", discordRes.status, errText);
+      return new Response(JSON.stringify({ success: false, error: "Discord webhook failed: " + errText }), {
+        status: discordRes.status,
+        headers: CORS_HEADERS
+      });
     }
 
-    return new Response(JSON.stringify({ success: true, messageId: msgData.id }), {
+    return new Response(JSON.stringify({ success: true, reviewId, message: "Review sent to #review-moderation" }), {
       status: 200,
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+      headers: CORS_HEADERS
     });
   } catch (err) {
-    console.error("Review API Critical Exception:", err);
+    console.error("Review API Exception:", err);
     return new Response(JSON.stringify({ success: false, error: err.message }), {
       status: 500,
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+      headers: CORS_HEADERS
     });
   }
 }

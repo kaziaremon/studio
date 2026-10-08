@@ -1,27 +1,35 @@
 /**
- * Cloudflare Pages Function: /api/contact
- * Directly delivers inquiries into Discord #contact-inquiries on new server.
+ * Cloudflare Pages Function: /api/contact and /api/submit-contact
+ * Directly delivers inquiries into Discord #contact-inquiries on new server via Webhook.
  */
 
-const P1 = "MTU0OTU2NjM3NjcwMjc3MTMyMA";
-const P2 = "G6RTlJ";
-const P3 = "SAAtY6RKG_m6AOC9LBwznRcSi6mPaEdcNj3iU0";
-const CONTACT_CHANNEL_ID = "1557820511642456076";
+const CONTACT_WEBHOOK_URL = "https://discord.com/api/webhooks/1557836745142444102/EXn8-9jj3oUjWQDwt0pti9DTlBKKpEb8O_m8ufSp56SGxvRiebmhXPVm2D73DAj0-lAA";
+
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+  "Content-Type": "application/json"
+};
+
+export async function onRequestOptions() {
+  return new Response(null, { status: 204, headers: CORS_HEADERS });
+}
 
 export async function onRequestPost({ request, env }) {
   try {
     const data = await request.json();
     const { name, email, phone, service, details } = data;
 
-    if (!name || !email || !phone || !service || !details) {
-      return new Response(JSON.stringify({ success: false, error: "All fields are required." }), {
+    if (!name || !email || !details) {
+      return new Response(JSON.stringify({ success: false, error: "Name, email, and details are required." }), {
         status: 400,
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+        headers: CORS_HEADERS
       });
     }
 
-    const botToken = (env && env.DISCORD_BOT_TOKEN) || [P1, P2, P3].join(".");
-    const cleanPhone = phone.replace(/[^0-9]/g, "");
+    const webhookUrl = (env && env.CONTACT_WEBHOOK_URL) || CONTACT_WEBHOOK_URL;
+    const cleanPhone = (phone || "").replace(/[^0-9]/g, "");
     const waUrl = cleanPhone ? `https://wa.me/${cleanPhone}` : "https://wa.me/8801815127022";
 
     const payload = {
@@ -32,11 +40,11 @@ export async function onRequestPost({ request, env }) {
           description: "A new prospective client has submitted an inquiry through the official website contact form.",
           color: 0x00A86B,
           fields: [
-            { name: "👤 Client / Company", value: name, inline: true },
-            { name: "📱 WhatsApp / Phone", value: phone, inline: true },
-            { name: "📧 Email Address", value: email, inline: true },
-            { name: "🎯 Selected Service", value: service, inline: true },
-            { name: "📝 Project Scope & Details", value: details, inline: false },
+            { name: "👤 Client / Company", value: String(name), inline: true },
+            { name: "📱 WhatsApp / Phone", value: String(phone || "Not provided"), inline: true },
+            { name: "📧 Email Address", value: String(email), inline: true },
+            { name: "🎯 Selected Service", value: String(service || "General Inquiry"), inline: true },
+            { name: "📝 Project Scope & Details", value: String(details), inline: false },
             { name: "⏰ Submission Timestamp", value: new Date().toUTCString(), inline: false }
           ],
           footer: {
@@ -65,35 +73,30 @@ export async function onRequestPost({ request, env }) {
       ]
     };
 
-    const discordRes = await fetch(`https://discord.com/api/v10/channels/${CONTACT_CHANNEL_ID}/messages`, {
+    const discordRes = await fetch(webhookUrl, {
       method: "POST",
-      headers: {
-        "Authorization": `Bot ${botToken}`,
-        "Content-Type": "application/json",
-        "User-Agent": "DiscordBot (WhizStudioContact, 1.0)"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
     });
 
     if (!discordRes.ok) {
       const errText = await discordRes.text();
-      console.error("Discord Bot API Error:", discordRes.status, errText);
-      return new Response(JSON.stringify({ success: false, error: "Discord API delivery failed: " + errText }), {
+      console.error("Discord Webhook API Error:", discordRes.status, errText);
+      return new Response(JSON.stringify({ success: false, error: "Discord webhook failed: " + errText }), {
         status: discordRes.status,
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+        headers: CORS_HEADERS
       });
     }
 
-    const resData = await discordRes.json();
-    return new Response(JSON.stringify({ success: true, messageId: resData.id }), {
+    return new Response(JSON.stringify({ success: true, message: "Delivered to #contact-inquiries" }), {
       status: 200,
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+      headers: CORS_HEADERS
     });
   } catch (err) {
-    console.error("Contact API Critical Exception:", err);
+    console.error("Contact API Exception:", err);
     return new Response(JSON.stringify({ success: false, error: err.message }), {
       status: 500,
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+      headers: CORS_HEADERS
     });
   }
 }
