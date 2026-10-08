@@ -42,7 +42,10 @@ export async function onRequestGet({ env }) {
         if (embed.fields) {
           for (const f of embed.fields) {
             const fieldName = (f.name || "").toLowerCase();
-            if (fieldName.includes("client") || fieldName.includes("name") || fieldName.includes("company")) {
+            if (fieldName.includes("email")) {
+              // Skip email from becoming the name
+              continue;
+            } else if (fieldName.includes("name") || fieldName.includes("company") || fieldName.includes("client")) {
               name = f.value;
             } else if (fieldName.includes("rating") || fieldName.includes("star")) {
               const stars = (f.value.match(/★/g) || []).length;
