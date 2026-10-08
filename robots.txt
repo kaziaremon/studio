@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+
+# Directives for major search engine crawlers
+User-agent: Googlebot
+Allow: /
+
+User-agent: Googlebot-Image
+Allow: /assets/images/
+
+User-agent: Bingbot
+Allow: /
+
+# Explicit Sitemap Indexing
+Sitemap: https://whizstudio.art/sitemap.xml
