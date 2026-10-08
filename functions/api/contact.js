@@ -1,12 +1,12 @@
 /**
  * Cloudflare Pages Function: /api/contact
- * Directly delivers inquiries into Discord #contact-inquiries via Bot API.
+ * Directly delivers inquiries into Discord #contact-inquiries on new server.
  */
 
 const P1 = "MTU0OTU2NjM3NjcwMjc3MTMyMA";
 const P2 = "G6RTlJ";
 const P3 = "SAAtY6RKG_m6AOC9LBwznRcSi6mPaEdcNj3iU0";
-const CONTACT_CHANNEL_ID = "1557779981352837260";
+const CONTACT_CHANNEL_ID = "1557820511642456076";
 
 export async function onRequestPost({ request, env }) {
   try {
@@ -16,7 +16,7 @@ export async function onRequestPost({ request, env }) {
     if (!name || !email || !phone || !service || !details) {
       return new Response(JSON.stringify({ success: false, error: "All fields are required." }), {
         status: 400,
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
       });
     }
 
@@ -79,21 +79,21 @@ export async function onRequestPost({ request, env }) {
       const errText = await discordRes.text();
       console.error("Discord Bot API Error:", discordRes.status, errText);
       return new Response(JSON.stringify({ success: false, error: "Discord API delivery failed: " + errText }), {
-        status: 502,
-        headers: { "Content-Type": "application/json" }
+        status: discordRes.status,
+        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
       });
     }
 
     const resData = await discordRes.json();
     return new Response(JSON.stringify({ success: true, messageId: resData.id }), {
       status: 200,
-      headers: { "Content-Type": "application/json" }
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
     });
   } catch (err) {
     console.error("Contact API Critical Exception:", err);
     return new Response(JSON.stringify({ success: false, error: err.message }), {
       status: 500,
-      headers: { "Content-Type": "application/json" }
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
     });
   }
 }

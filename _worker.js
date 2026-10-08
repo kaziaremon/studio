@@ -1,6 +1,6 @@
 /**
- * CLOUDFLARE WORKER / PAGES ADVANCED PROXY ROUTER
- * Handles API endpoints with full CORS support and forwards to Discord API & Webhooks.
+ * CLOUDFLARE WORKER / PAGES PROXY ROUTER (_worker.js)
+ * Handles API endpoints with full CORS support and forwards to Discord API on new server.
  */
 
 const P1 = "MTU0OTU2NjM3NjcwMjc3MTMyMA";
@@ -8,8 +8,8 @@ const P2 = "G6RTlJ";
 const P3 = "SAAtY6RKG_m6AOC9LBwznRcSi6mPaEdcNj3iU0";
 const BOT_TOKEN = [P1, P2, P3].join(".");
 
-const CONTACT_CHANNEL_ID = "1557779981352837260";
-const REVIEW_CHANNEL_ID = "1557779983236079696";
+const CONTACT_CHANNEL_ID = "1557820511642456076";
+const REVIEW_CHANNEL_ID = "1557820513982742580";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -185,7 +185,7 @@ export default {
 
         const msgData = await discordRes.json();
 
-        // Attach One-Click Reaction Buttons (✅ and ❌)
+        // Attach One-Click Reaction Controls (✅ and ❌)
         if (msgData && msgData.id) {
           try {
             await fetch(`https://discord.com/api/v10/channels/${REVIEW_CHANNEL_ID}/messages/${msgData.id}/reactions/%E2%9C%85/@me`, {

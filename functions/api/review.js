@@ -1,13 +1,13 @@
 /**
  * Cloudflare Pages Function: /api/review
- * Directly delivers review submissions to #review-moderation via Discord Bot API
- * and immediately attaches [✅ Accept] and [❌ Decline] reaction controls.
+ * Directly delivers review submissions to #review-moderation on new server
+ * and attaches [✅ Accept] and [❌ Decline] reaction controls.
  */
 
 const P1 = "MTU0OTU2NjM3NjcwMjc3MTMyMA";
 const P2 = "G6RTlJ";
 const P3 = "SAAtY6RKG_m6AOC9LBwznRcSi6mPaEdcNj3iU0";
-const REVIEW_CHANNEL_ID = "1557779983236079696";
+const REVIEW_CHANNEL_ID = "1557820513982742580";
 
 export async function onRequestPost({ request, env }) {
   try {
@@ -17,7 +17,7 @@ export async function onRequestPost({ request, env }) {
     if (!name || !email || !text) {
       return new Response(JSON.stringify({ success: false, error: "Please provide your name, email, and review feedback." }), {
         status: 400,
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
       });
     }
 
@@ -59,7 +59,6 @@ export async function onRequestPost({ request, env }) {
       ]
     };
 
-    // 1. Deliver to #review-moderation Channel via Discord Bot API
     const discordRes = await fetch(`https://discord.com/api/v10/channels/${REVIEW_CHANNEL_ID}/messages`, {
       method: "POST",
       headers: {
@@ -74,14 +73,14 @@ export async function onRequestPost({ request, env }) {
       const errText = await discordRes.text();
       console.error("Discord Bot API Error:", discordRes.status, errText);
       return new Response(JSON.stringify({ success: false, error: "Discord API delivery failed: " + errText }), {
-        status: 502,
-        headers: { "Content-Type": "application/json" }
+        status: discordRes.status,
+        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
       });
     }
 
     const msgData = await discordRes.json();
 
-    // 2. Add Accept [✅] & Decline [❌] Reaction Buttons
+    // Attach One-Click Reaction Controls (✅ and ❌)
     if (msgData && msgData.id) {
       try {
         await fetch(`https://discord.com/api/v10/channels/${REVIEW_CHANNEL_ID}/messages/${msgData.id}/reactions/%E2%9C%85/@me`, {
@@ -99,13 +98,13 @@ export async function onRequestPost({ request, env }) {
 
     return new Response(JSON.stringify({ success: true, messageId: msgData.id }), {
       status: 200,
-      headers: { "Content-Type": "application/json" }
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
     });
   } catch (err) {
     console.error("Review API Critical Exception:", err);
     return new Response(JSON.stringify({ success: false, error: err.message }), {
       status: 500,
-      headers: { "Content-Type": "application/json" }
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
     });
   }
 }

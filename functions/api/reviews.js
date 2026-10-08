@@ -1,12 +1,12 @@
 /**
  * Cloudflare Pages Function: /api/reviews
- * Live Discord Database Sync: Fetches approved reviews from the #review-moderation Discord channel.
+ * Live Discord Database Sync: Fetches approved reviews from #review-moderation on new server.
  */
 
 const P1 = "MTU0OTU2NjM3NjcwMjc3MTMyMA";
 const P2 = "G6RTlJ";
 const P3 = "SAAtY6RKG_m6AOC9LBwznRcSi6mPaEdcNj3iU0";
-const REVIEW_CHANNEL_ID = "1557779983236079696";
+const REVIEW_CHANNEL_ID = "1557820513982742580";
 
 export async function onRequestGet({ env }) {
   try {
@@ -21,7 +21,7 @@ export async function onRequestGet({ env }) {
 
     if (!res.ok) {
       return new Response(JSON.stringify({ reviews: [] }), {
-        headers: { "Content-Type": "application/json", "Cache-Control": "no-cache" }
+        headers: { "Content-Type": "application/json", "Cache-Control": "no-cache", "Access-Control-Allow-Origin": "*" }
       });
     }
 
@@ -43,7 +43,6 @@ export async function onRequestGet({ env }) {
           for (const f of embed.fields) {
             const fieldName = (f.name || "").toLowerCase();
             if (fieldName.includes("email")) {
-              // Skip email from becoming the name
               continue;
             } else if (fieldName.includes("name") || fieldName.includes("company") || fieldName.includes("client")) {
               name = f.value;
@@ -79,7 +78,7 @@ export async function onRequestGet({ env }) {
     console.error("Error syncing reviews from Discord:", err);
     return new Response(JSON.stringify({ success: false, reviews: [], error: err.message }), {
       status: 500,
-      headers: { "Content-Type": "application/json" }
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
     });
   }
 }
