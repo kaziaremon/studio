@@ -8,9 +8,9 @@
 // 1. CONFIGURATION & WEBHOOK INTEGRATIONS
 // =============================================================================
 
-// DISCORD WEBHOOK CONFIGURATION (Live Provisioned Webhook Endpoints)
-const DISCORD_CONTACT_WEBHOOK_URL = "https://discord.com/api/webhooks/1557773249700565092/2TDAYKk5C78suZ2aj-2NPyGRbrs7PGeRaiAJYgtdBRmiZMttaxn_aRlwRkDpTlSpBBhD";
-const DISCORD_REVIEW_WEBHOOK_URL = "https://discord.com/api/webhooks/1557773251776614531/7dXCeX3KYnJFCM0pWBdbKnHaqUgjyByFilbCnMo3ickClHUwD01jpF81DmPIm57otu7O";
+// DISCORD WEBHOOK CONFIGURATION (Whiz Studio's Dedicated Server)
+const DISCORD_CONTACT_WEBHOOK_URL = "https://discord.com/api/webhooks/1557779986667278337/xUtg6pf7-jlwsG2tMLRlsJQhL0SnHk4Ts52YeYpUleZ3ZmO8c8uNtLskS257v_OazNSq";
+const DISCORD_REVIEW_WEBHOOK_URL = "https://discord.com/api/webhooks/1557779989485592687/-cgEHMTkMVGbpE2-PJNHuvXwpxlNZ6VwfqHElf3RcM_hli-P64jV6YHZWDnnLXvUHOdf";
 
 // =============================================================================
 // 2. DATA REGISTRIES (SERVICES & SEO ARTICLES)
@@ -439,6 +439,22 @@ function toggleDemoReviews() {
     if (btn) btn.innerHTML = `<span>Reset to Moderation State</span>`;
   }
   renderReviewsList(approvedReviews);
+}
+
+// Live Discord Review Synchronization Engine
+async function syncApprovedReviewsFromDiscord() {
+  try {
+    const res = await fetch('/api/reviews');
+    if (res.ok) {
+      const data = await res.json();
+      if (data && Array.isArray(data.reviews) && data.reviews.length > 0) {
+        approvedReviews = [...data.reviews];
+        renderReviewsList(approvedReviews);
+      }
+    }
+  } catch (err) {
+    console.warn("Live Discord reviews sync notice:", err);
+  }
 }
 
 // =============================================================================
@@ -1140,6 +1156,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initGsapAnimations();
 
   renderReviewsList(approvedReviews);
+  syncApprovedReviewsFromDiscord();
 
   const reviewForm = document.getElementById('testimonialForm');
   if (reviewForm) {

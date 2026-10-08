@@ -1,6 +1,6 @@
 /**
  * Cloudflare Pages Function: /api/contact
- * Handles inbound contact submissions and dispatches rich Discord Embeds + WhatsApp Action Button
+ * Handles inbound contact submissions and dispatches rich Discord Embeds to #contact-inquiries
  */
 
 export async function onRequestPost({ request }) {
@@ -18,7 +18,7 @@ export async function onRequestPost({ request }) {
     const cleanPhone = phone.replace(/[^0-9]/g, "");
     const waUrl = cleanPhone ? `https://wa.me/${cleanPhone}` : "https://wa.me/8801815127022";
 
-    const DISCORD_CONTACT_WEBHOOK_URL = "https://discord.com/api/webhooks/1557773249700565092/2TDAYKk5C78suZ2aj-2NPyGRbrs7PGeRaiAJYgtdBRmiZMttaxn_aRlwRkDpTlSpBBhD";
+    const DISCORD_CONTACT_WEBHOOK_URL = "https://discord.com/api/webhooks/1557779986667278337/xUtg6pf7-jlwsG2tMLRlsJQhL0SnHk4Ts52YeYpUleZ3ZmO8c8uNtLskS257v_OazNSq";
 
     const payload = {
       content: "🚨 **NEW INBOUND CLIENT INQUIRY FROM WHIZSTUDIO.ART**",
@@ -36,7 +36,7 @@ export async function onRequestPost({ request }) {
             { name: "⏰ Submission Timestamp", value: new Date().toUTCString(), inline: false }
           ],
           footer: {
-            text: "Whiz Studio Lead Dispatch • whizstudio.art"
+            text: "Whiz Studio Permanent Ledger • whizstudio.art"
           }
         }
       ],
