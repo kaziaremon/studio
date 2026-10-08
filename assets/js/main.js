@@ -325,34 +325,19 @@ async function handleReviewSubmit(e) {
   };
 
   try {
-    // 1. Try Cloudflare Pages Serverless Function (Zero CORS, Full Reliability)
-    let dispatched = false;
-    try {
-      const apiRes = await fetch("/api/review", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, text, rating })
-      });
-      if (apiRes.ok) {
-        dispatched = true;
-      }
-    } catch (e) {
-      console.warn("API route not available, falling back to direct Discord dispatch", e);
+    const apiRes = await fetch("/api/review", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, text, rating })
+    });
+
+    const resJson = await apiRes.json().catch(() => ({}));
+
+    if (!apiRes.ok || !resJson.success) {
+      throw new Error(resJson.error || `Server responded with status ${apiRes.status}`);
     }
 
-    // 2. Direct Discord Webhook Fallback
-    if (!dispatched) {
-      const response = await fetch(DISCORD_REVIEW_WEBHOOK_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(reviewPayload)
-      });
-      if (!response.ok) {
-        throw new Error(`Discord returned status ${response.status}`);
-      }
-    }
-
-    // Reset form & Notify Client
+    // Reset form fields & Notify Client ONLY upon verified success
     nameInput.value = "";
     emailInput.value = "";
     textInput.value = "";
@@ -364,12 +349,12 @@ async function handleReviewSubmit(e) {
       statusMsg.innerHTML = `
         <div class="flex items-center space-x-2">
           <i class="fa-solid fa-circle-check text-brand-whiz text-sm"></i>
-          <span>Thank you, ${escapeHtml(name)}! Your review has been securely transmitted to our Discord moderation channel and is awaiting approval.</span>
+          <span>Thank you, ${escapeHtml(name)}! Your review has been securely transmitted to #review-moderation on Discord.</span>
         </div>
       `;
     }
 
-    showToast("Feedback submitted to moderation queue!", "success");
+    showToast("Review submitted to Discord moderation queue!", "success");
 
     if (submitBtn) {
       submitBtn.innerHTML = `<span class="flex items-center space-x-2"><i class="fa-solid fa-check text-xs"></i><span>Sent Successfully!</span></span>`;
@@ -379,11 +364,20 @@ async function handleReviewSubmit(e) {
       }, 3000);
     }
   } catch (err) {
-    console.error("Discord Review Webhook Error:", err);
-    showToast("Failed to transmit review. Please try again.", "error");
+    console.error("Critical Review Submission Error:", err);
+    showToast(`Submission Failed: ${err.message || "Network Error"}`, "error");
     if (submitBtn) {
       submitBtn.disabled = false;
       submitBtn.innerHTML = originalBtnContent;
+    }
+    if (statusMsg) {
+      statusMsg.className = "p-4 rounded-xl bg-rose-50 border border-rose-300 text-rose-950 text-xs font-semibold block";
+      statusMsg.innerHTML = `
+        <div class="flex items-center space-x-2">
+          <i class="fa-solid fa-triangle-exclamation text-rose-600 text-sm"></i>
+          <span>Submission failed: ${escapeHtml(err.message || "Could not connect to Discord API. Please try again.")}</span>
+        </div>
+      `;
     }
   }
 }
@@ -610,34 +604,19 @@ async function handleContactSubmit(e) {
   };
 
   try {
-    // 1. Try Cloudflare Pages Serverless Function (Zero CORS, Full Reliability)
-    let dispatched = false;
-    try {
-      const apiRes = await fetch("/api/contact", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, phone, service, details })
-      });
-      if (apiRes.ok) {
-        dispatched = true;
-      }
-    } catch (e) {
-      console.warn("API route not available, falling back to direct Discord dispatch", e);
+    const apiRes = await fetch("/api/contact", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, phone, service, details })
+    });
+
+    const resJson = await apiRes.json().catch(() => ({}));
+
+    if (!apiRes.ok || !resJson.success) {
+      throw new Error(resJson.error || `Server responded with status ${apiRes.status}`);
     }
 
-    // 2. Direct Discord Webhook Fallback
-    if (!dispatched) {
-      const response = await fetch(DISCORD_CONTACT_WEBHOOK_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(contactPayload)
-      });
-      if (!response.ok) {
-        throw new Error(`Discord returned status ${response.status}`);
-      }
-    }
-
-    // Reset form and dropdown
+    // Reset form and dropdown ONLY on verified success
     nameInput.value = "";
     emailInput.value = "";
     phoneInput.value = "";
@@ -663,14 +642,14 @@ async function handleContactSubmit(e) {
         <div class="flex items-center space-x-2">
           <i class="fa-solid fa-circle-check text-brand-whiz text-base"></i>
           <div>
-            <div class="font-bold">Inquiry Transmitted Successfully!</div>
-            <div class="font-normal mt-0.5">Thank you, ${escapeHtml(name)}. A senior marketing strategist will review your platform parameters and respond within 24 business hours.</div>
+            <div class="font-bold">Inquiry Transmitted to Discord Ledger!</div>
+            <div class="font-normal mt-0.5">Thank you, ${escapeHtml(name)}. Your inquiry is now recorded in our #contact-inquiries channel.</div>
           </div>
         </div>
       `;
     }
 
-    showToast("Inquiry successfully transmitted!", "success");
+    showToast("Inquiry successfully delivered to Discord!", "success");
 
     if (submitBtn) {
       submitBtn.innerHTML = `<span class="flex items-center space-x-2"><i class="fa-solid fa-check text-xs"></i><span>Sent Successfully!</span></span>`;
@@ -680,11 +659,23 @@ async function handleContactSubmit(e) {
       }, 3000);
     }
   } catch (err) {
-    console.error("Discord Contact Webhook Error:", err);
-    showToast("Failed to transmit inquiry. Please try again.", "error");
+    console.error("Critical Contact Submission Error:", err);
+    showToast(`Transmission Failed: ${err.message || "Network Error"}`, "error");
     if (submitBtn) {
       submitBtn.disabled = false;
       submitBtn.innerHTML = originalBtnContent;
+    }
+    if (alertBox) {
+      alertBox.className = "p-4 rounded-xl bg-rose-50 border border-rose-300 text-rose-950 text-xs font-semibold block";
+      alertBox.innerHTML = `
+        <div class="flex items-center space-x-2">
+          <i class="fa-solid fa-triangle-exclamation text-rose-600 text-base"></i>
+          <div>
+            <div class="font-bold">Delivery Failed</div>
+            <div class="font-normal mt-0.5">${escapeHtml(err.message || "Could not connect to Discord API. Please check your network or try again.")}</div>
+          </div>
+        </div>
+      `;
     }
   }
 }

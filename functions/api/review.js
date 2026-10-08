@@ -1,7 +1,7 @@
 /**
  * Cloudflare Pages Function: /api/review
- * Dispatches client reviews to #review-moderation on the dedicated Discord server
- * and adds instant Accept / Decline reactions.
+ * Directly delivers review submissions to #review-moderation via Discord Bot API
+ * and immediately attaches [✅ Accept] and [❌ Decline] reaction controls.
  */
 
 const P1 = "MTU0OTU2NjM3NjcwMjc3MTMyMA";
@@ -15,7 +15,7 @@ export async function onRequestPost({ request, env }) {
     const { name, email, text, rating } = data;
 
     if (!name || !email || !text) {
-      return new Response(JSON.stringify({ error: "Missing required fields" }), {
+      return new Response(JSON.stringify({ success: false, error: "Please provide your name, email, and review feedback." }), {
         status: 400,
         headers: { "Content-Type": "application/json" }
       });
@@ -25,25 +25,22 @@ export async function onRequestPost({ request, env }) {
     const starString = "★".repeat(starCount) + ` (${starCount} / 5 Stars)`;
     const botToken = (env && env.DISCORD_BOT_TOKEN) || [P1, P2, P3].join(".");
 
-    const DISCORD_REVIEW_WEBHOOK_URL = "https://discord.com/api/webhooks/1557779989485592687/-cgEHMTkMVGbpE2-PJNHuvXwpxlNZ6VwfqHElf3RcM_hli-P64jV6YHZWDnnLXvUHOdf";
-
     const payload = {
       content: "⭐ **NEW CLIENT TESTIMONIAL AWAITING MODERATION**",
       embeds: [
         {
           title: "⭐ Client Review Submission — Whiz Studio",
-          description: "A new client review has been submitted for moderation on **https://whizstudio.art**.\nReview the feedback below and moderate with the reactions.",
+          description: "A new client review has been submitted via **https://whizstudio.art**.\n\n### 🛡️ Moderation Controls:\n• Click **✅** below to **Approve & Publish Live**\n• Click **❌** or delete message to **Decline & Reject**",
           color: 0xF59E0B,
           fields: [
             { name: "👤 Client / Company", value: name, inline: true },
-            { name: "⭐ Star Rating", value: starString, inline: true },
-            { name: "📧 Client Email", value: email, inline: true },
+            { name: "⭐ Rating Given", value: starString, inline: true },
+            { name: "📧 Verified Email", value: email, inline: true },
             { name: "💬 Review Feedback", value: text, inline: false },
-            { name: "🛡️ Moderation Decision", value: "• React with **✅** to **Approve & Publish Live**\n• React with **❌** or delete message to **Decline**", inline: false },
             { name: "⏰ Submission Timestamp", value: new Date().toUTCString(), inline: false }
           ],
           footer: {
-            text: "Whiz Studio Moderation System • whizstudio.art"
+            text: "Whiz Studio Moderation Panel • whizstudio.art"
           }
         }
       ],
@@ -62,25 +59,29 @@ export async function onRequestPost({ request, env }) {
       ]
     };
 
-    // 1. Post to Discord Review Webhook
-    const discordRes = await fetch(DISCORD_REVIEW_WEBHOOK_URL + "?wait=true", {
+    // 1. Deliver to #review-moderation Channel via Discord Bot API
+    const discordRes = await fetch(`https://discord.com/api/v10/channels/${REVIEW_CHANNEL_ID}/messages`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Authorization": `Bot ${botToken}`,
+        "Content-Type": "application/json",
+        "User-Agent": "DiscordBot (WhizStudioReviews, 1.0)"
+      },
       body: JSON.stringify(payload)
     });
 
     if (!discordRes.ok) {
       const errText = await discordRes.text();
-      console.error("Discord error:", discordRes.status, errText);
-      return new Response(JSON.stringify({ success: false, error: errText }), {
-        status: discordRes.status,
+      console.error("Discord Bot API Error:", discordRes.status, errText);
+      return new Response(JSON.stringify({ success: false, error: "Discord API delivery failed: " + errText }), {
+        status: 502,
         headers: { "Content-Type": "application/json" }
       });
     }
 
     const msgData = await discordRes.json();
 
-    // 2. Add Accept / Decline Reactions for One-Click Moderation
+    // 2. Add Accept [✅] & Decline [❌] Reaction Buttons
     if (msgData && msgData.id) {
       try {
         await fetch(`https://discord.com/api/v10/channels/${REVIEW_CHANNEL_ID}/messages/${msgData.id}/reactions/%E2%9C%85/@me`, {
@@ -96,12 +97,12 @@ export async function onRequestPost({ request, env }) {
       }
     }
 
-    return new Response(JSON.stringify({ success: true }), {
+    return new Response(JSON.stringify({ success: true, messageId: msgData.id }), {
       status: 200,
       headers: { "Content-Type": "application/json" }
     });
   } catch (err) {
-    console.error("Review API Server Error:", err);
+    console.error("Review API Critical Exception:", err);
     return new Response(JSON.stringify({ success: false, error: err.message }), {
       status: 500,
       headers: { "Content-Type": "application/json" }
