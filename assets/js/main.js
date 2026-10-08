@@ -8,9 +8,9 @@
 // 1. CONFIGURATION & WEBHOOK INTEGRATIONS
 // =============================================================================
 
-// DISCORD WEBHOOK CONFIGURATION (Replace with your actual Discord Webhook URLs)
-const DISCORD_TESTIMONIALS_WEBHOOK = "YOUR_DISCORD_WEBHOOK_URL_HERE";
-const DISCORD_CONTACT_WEBHOOK = "YOUR_DISCORD_WEBHOOK_URL_HERE";
+// DISCORD WEBHOOK CONFIGURATION (Live Provisioned Webhook Endpoints)
+const DISCORD_CONTACT_WEBHOOK_URL = "https://discord.com/api/webhooks/1557773249700565092/2TDAYKk5C78suZ2aj-2NPyGRbrs7PGeRaiAJYgtdBRmiZMttaxn_aRlwRkDpTlSpBBhD";
+const DISCORD_REVIEW_WEBHOOK_URL = "https://discord.com/api/webhooks/1557773251776614531/7dXCeX3KYnJFCM0pWBdbKnHaqUgjyByFilbCnMo3ickClHUwD01jpF81DmPIm57otu7O";
 
 // =============================================================================
 // 2. DATA REGISTRIES (SERVICES & SEO ARTICLES)
@@ -298,64 +298,76 @@ async function handleReviewSubmit(e) {
     return;
   }
 
+  const originalBtnContent = submitBtn ? submitBtn.innerHTML : `<span>Submit for Moderation</span>`;
+
   if (submitBtn) {
     submitBtn.disabled = true;
-    submitBtn.innerHTML = `<span>Submitting for Verification...</span>`;
+    submitBtn.innerHTML = `<span class="flex items-center space-x-2"><i class="fa-solid fa-spinner fa-spin text-xs"></i><span>Sending...</span></span>`;
   }
 
   const reviewPayload = {
     embeds: [
       {
-        title: "⭐ New Whiz Studio Testimonial (Awaiting Moderation)",
-        color: 0x00A86B,
+        title: "⭐ New Whiz Studio Testimonial Submission",
+        color: 0xF59E0B,
         fields: [
-          { name: "Client Name", value: name, inline: true },
-          { name: "Client Email (Private)", value: email, inline: true },
+          { name: "Client / Company", value: name, inline: true },
+          { name: "Client Email", value: email, inline: true },
           { name: "Rating", value: "★".repeat(rating) + ` (${rating}/5 Stars)`, inline: true },
           { name: "Review Feedback", value: text, inline: false },
-          { name: "Timestamp", value: new Date().toISOString(), inline: false }
+          { name: "Submission Timestamp", value: new Date().toISOString(), inline: false }
         ],
         footer: {
-          text: "Whiz Studio Moderation System • whizstudio.art"
+          text: "Whiz Studio Review Pipeline • whizstudio.art"
         }
       }
     ]
   };
 
   try {
-    if (DISCORD_TESTIMONIALS_WEBHOOK && !DISCORD_TESTIMONIALS_WEBHOOK.includes("YOUR_DISCORD_WEBHOOK_URL")) {
-      await fetch(DISCORD_TESTIMONIALS_WEBHOOK, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(reviewPayload)
-      });
+    const response = await fetch(DISCORD_REVIEW_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(reviewPayload)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Discord returned status ${response.status}`);
+    }
+
+    // Reset form & Notify Client
+    nameInput.value = "";
+    emailInput.value = "";
+    textInput.value = "";
+    selectedStarRating = 5;
+    initStarRating();
+
+    if (statusMsg) {
+      statusMsg.className = "p-4 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-950 text-xs font-semibold block";
+      statusMsg.innerHTML = `
+        <div class="flex items-center space-x-2">
+          <i class="fa-solid fa-circle-check text-brand-whiz text-sm"></i>
+          <span>Thank you, ${escapeHtml(name)}! Your review has been securely transmitted to our Discord moderation channel.</span>
+        </div>
+      `;
+    }
+
+    showToast("Feedback submitted to moderation queue!", "success");
+
+    if (submitBtn) {
+      submitBtn.innerHTML = `<span class="flex items-center space-x-2"><i class="fa-solid fa-check text-xs"></i><span>Sent Successfully!</span></span>`;
+      setTimeout(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnContent;
+      }, 3000);
     }
   } catch (err) {
-    console.warn("Discord Webhook notice:", err);
-  }
-
-  // Reset form & Notify Client
-  nameInput.value = "";
-  emailInput.value = "";
-  textInput.value = "";
-  selectedStarRating = 5;
-  initStarRating();
-
-  if (statusMsg) {
-    statusMsg.className = "p-4 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-950 text-xs font-semibold block";
-    statusMsg.innerHTML = `
-      <div class="flex items-center space-x-2">
-        <i class="fa-solid fa-circle-check text-brand-whiz text-sm"></i>
-        <span>Thank you, ${escapeHtml(name)}! Your review has been securely submitted to our Discord moderation channel and will appear publicly once authorized.</span>
-      </div>
-    `;
-  }
-
-  showToast("Feedback submitted to moderation queue!", "success");
-
-  if (submitBtn) {
-    submitBtn.disabled = false;
-    submitBtn.innerHTML = `<span>Submit for Moderation</span> <i class="fa-regular fa-paper-plane text-xs ml-1"></i>`;
+    console.error("Discord Review Webhook Error:", err);
+    showToast("Failed to transmit review. Please try again.", "error");
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = originalBtnContent;
+    }
   }
 }
 
@@ -537,9 +549,11 @@ async function handleContactSubmit(e) {
     return;
   }
 
+  const originalBtnContent = submitBtn ? submitBtn.innerHTML : `<span>Transmit Inquiry to Whiz Studio</span>`;
+
   if (submitBtn) {
     submitBtn.disabled = true;
-    submitBtn.innerHTML = `<span>Transmitting Inquiry...</span>`;
+    submitBtn.innerHTML = `<span class="flex items-center space-x-2"><i class="fa-solid fa-spinner fa-spin text-xs"></i><span>Sending...</span></span>`;
   }
 
   const contactPayload = {
@@ -563,55 +577,65 @@ async function handleContactSubmit(e) {
   };
 
   try {
-    if (DISCORD_CONTACT_WEBHOOK && !DISCORD_CONTACT_WEBHOOK.includes("YOUR_DISCORD_WEBHOOK_URL")) {
-      await fetch(DISCORD_CONTACT_WEBHOOK, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(contactPayload)
-      });
+    const response = await fetch(DISCORD_CONTACT_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(contactPayload)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Discord returned status ${response.status}`);
+    }
+
+    // Reset form and dropdown
+    nameInput.value = "";
+    emailInput.value = "";
+    phoneInput.value = "";
+    hiddenService.value = "";
+    detailsInput.value = "";
+
+    if (selectedLabel) {
+      selectedLabel.textContent = "Select a Service Category";
+      selectedLabel.classList.add('text-slate-500');
+      selectedLabel.classList.remove('text-slate-900', 'font-bold');
+    }
+
+    const dropdownItems = document.querySelectorAll('#dropdownMenuList .dropdown-item');
+    dropdownItems.forEach(i => {
+      i.classList.remove('bg-emerald-500/20', 'text-emerald-950', 'font-bold');
+      const check = i.querySelector('.check-icon');
+      if (check) check.classList.add('hidden');
+    });
+
+    if (alertBox) {
+      alertBox.className = "p-4 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-950 text-xs font-semibold block";
+      alertBox.innerHTML = `
+        <div class="flex items-center space-x-2">
+          <i class="fa-solid fa-circle-check text-brand-whiz text-base"></i>
+          <div>
+            <div class="font-bold">Inquiry Transmitted Successfully!</div>
+            <div class="font-normal mt-0.5">Thank you, ${escapeHtml(name)}. A senior marketing strategist will review your platform parameters and respond within 24 business hours.</div>
+          </div>
+        </div>
+      `;
+    }
+
+    showToast("Inquiry successfully transmitted!", "success");
+
+    if (submitBtn) {
+      submitBtn.innerHTML = `<span class="flex items-center space-x-2"><i class="fa-solid fa-check text-xs"></i><span>Sent Successfully!</span></span>`;
+      setTimeout(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnContent;
+      }, 3000);
     }
   } catch (err) {
-    console.warn("Contact webhook notice:", err);
-  }
-
-  // Reset form and dropdown
-  nameInput.value = "";
-  emailInput.value = "";
-  phoneInput.value = "";
-  hiddenService.value = "";
-  detailsInput.value = "";
-
-  if (selectedLabel) {
-    selectedLabel.textContent = "Select a Service Category";
-    selectedLabel.classList.add('text-slate-500');
-    selectedLabel.classList.remove('text-slate-900', 'font-bold');
-  }
-
-  const dropdownItems = document.querySelectorAll('#dropdownMenuList .dropdown-item');
-  dropdownItems.forEach(i => {
-    i.classList.remove('bg-emerald-500/20', 'text-emerald-950', 'font-bold');
-    const check = i.querySelector('.check-icon');
-    if (check) check.classList.add('hidden');
-  });
-
-  if (alertBox) {
-    alertBox.className = "p-4 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-950 text-xs font-semibold block";
-    alertBox.innerHTML = `
-      <div class="flex items-center space-x-2">
-        <i class="fa-solid fa-circle-check text-brand-whiz text-base"></i>
-        <div>
-          <div class="font-bold">Inquiry Transmitted Successfully!</div>
-          <div class="font-normal mt-0.5">Thank you, ${escapeHtml(name)}. A senior marketing strategist will review your platform parameters and respond within 24 business hours.</div>
-        </div>
-      </div>
-    `;
-  }
-
-  showToast("Inquiry successfully transmitted!", "success");
-
-  if (submitBtn) {
-    submitBtn.disabled = false;
-    submitBtn.innerHTML = `<span>Transmit Inquiry to Whiz Studio</span> <i class="fa-solid fa-arrow-right text-xs ml-1"></i>`;
+    console.error("Discord Contact Webhook Error:", err);
+    showToast("Failed to transmit inquiry. Please try again.", "error");
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = originalBtnContent;
+    }
   }
 }
 
