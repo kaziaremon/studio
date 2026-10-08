@@ -8,9 +8,10 @@
 // 1. CONFIGURATION & WEBHOOK INTEGRATIONS
 // =============================================================================
 
-// DISCORD WEBHOOK CONFIGURATION (Whiz Studio's Dedicated Server)
-const DISCORD_CONTACT_WEBHOOK_URL = "https://discord.com/api/webhooks/1557779986667278337/xUtg6pf7-jlwsG2tMLRlsJQhL0SnHk4Ts52YeYpUleZ3ZmO8c8uNtLskS257v_OazNSq";
-const DISCORD_REVIEW_WEBHOOK_URL = "https://discord.com/api/webhooks/1557779989485592687/-cgEHMTkMVGbpE2-PJNHuvXwpxlNZ6VwfqHElf3RcM_hli-P64jV6YHZWDnnLXvUHOdf";
+// API & PROXY ENDPOINTS (Supports both Production domain and local/preview environments)
+const API_BASE = (typeof window !== 'undefined' && (window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
+  ? 'https://whizstudio.art'
+  : '';
 
 // =============================================================================
 // 2. DATA REGISTRIES (SERVICES & SEO ARTICLES)
@@ -325,7 +326,7 @@ async function handleReviewSubmit(e) {
   };
 
   try {
-    const apiRes = await fetch("/api/review", {
+    const apiRes = await fetch(`${API_BASE}/api/submit-review`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, email, text, rating })
@@ -333,7 +334,8 @@ async function handleReviewSubmit(e) {
 
     const resJson = await apiRes.json().catch(() => ({}));
 
-    if (!apiRes.ok || !resJson.success) {
+    // Strictly enforce 200 OK or 204 No Content
+    if ((apiRes.status !== 200 && apiRes.status !== 204) || !resJson.success) {
       throw new Error(resJson.error || `Server responded with status ${apiRes.status}`);
     }
 
@@ -438,7 +440,7 @@ function toggleDemoReviews() {
 // Live Discord Review Synchronization Engine
 async function syncApprovedReviewsFromDiscord() {
   try {
-    const res = await fetch('/api/reviews');
+    const res = await fetch(`${API_BASE}/api/reviews`);
     if (res.ok) {
       const data = await res.json();
       if (data && Array.isArray(data.reviews) && data.reviews.length > 0) {
@@ -604,7 +606,7 @@ async function handleContactSubmit(e) {
   };
 
   try {
-    const apiRes = await fetch("/api/contact", {
+    const apiRes = await fetch(`${API_BASE}/api/submit-contact`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, email, phone, service, details })
@@ -612,7 +614,8 @@ async function handleContactSubmit(e) {
 
     const resJson = await apiRes.json().catch(() => ({}));
 
-    if (!apiRes.ok || !resJson.success) {
+    // Strictly enforce 200 OK or 204 No Content
+    if ((apiRes.status !== 200 && apiRes.status !== 204) || !resJson.success) {
       throw new Error(resJson.error || `Server responded with status ${apiRes.status}`);
     }
 
