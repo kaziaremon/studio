@@ -325,14 +325,31 @@ async function handleReviewSubmit(e) {
   };
 
   try {
-    const response = await fetch(DISCORD_REVIEW_WEBHOOK_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(reviewPayload)
-    });
+    // 1. Try Cloudflare Pages Serverless Function (Zero CORS, Full Reliability)
+    let dispatched = false;
+    try {
+      const apiRes = await fetch("/api/review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, text, rating })
+      });
+      if (apiRes.ok) {
+        dispatched = true;
+      }
+    } catch (e) {
+      console.warn("API route not available, falling back to direct Discord dispatch", e);
+    }
 
-    if (!response.ok) {
-      throw new Error(`Discord returned status ${response.status}`);
+    // 2. Direct Discord Webhook Fallback
+    if (!dispatched) {
+      const response = await fetch(DISCORD_REVIEW_WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(reviewPayload)
+      });
+      if (!response.ok) {
+        throw new Error(`Discord returned status ${response.status}`);
+      }
     }
 
     // Reset form & Notify Client
@@ -347,7 +364,7 @@ async function handleReviewSubmit(e) {
       statusMsg.innerHTML = `
         <div class="flex items-center space-x-2">
           <i class="fa-solid fa-circle-check text-brand-whiz text-sm"></i>
-          <span>Thank you, ${escapeHtml(name)}! Your review has been securely transmitted to our Discord moderation channel.</span>
+          <span>Thank you, ${escapeHtml(name)}! Your review has been securely transmitted to our Discord moderation channel and is awaiting approval.</span>
         </div>
       `;
     }
@@ -577,14 +594,31 @@ async function handleContactSubmit(e) {
   };
 
   try {
-    const response = await fetch(DISCORD_CONTACT_WEBHOOK_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(contactPayload)
-    });
+    // 1. Try Cloudflare Pages Serverless Function (Zero CORS, Full Reliability)
+    let dispatched = false;
+    try {
+      const apiRes = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, phone, service, details })
+      });
+      if (apiRes.ok) {
+        dispatched = true;
+      }
+    } catch (e) {
+      console.warn("API route not available, falling back to direct Discord dispatch", e);
+    }
 
-    if (!response.ok) {
-      throw new Error(`Discord returned status ${response.status}`);
+    // 2. Direct Discord Webhook Fallback
+    if (!dispatched) {
+      const response = await fetch(DISCORD_CONTACT_WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(contactPayload)
+      });
+      if (!response.ok) {
+        throw new Error(`Discord returned status ${response.status}`);
+      }
     }
 
     // Reset form and dropdown
