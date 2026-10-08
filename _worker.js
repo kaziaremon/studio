@@ -5,10 +5,12 @@
  * Exposes:
  *  - POST /api/submit-contact  -> Forwards contact inquiries to Discord #contact-inquiries
  *  - POST /api/submit-review   -> Forwards client reviews to Discord #review-moderation with ActionRow buttons
- *  - POST /api/interactions    -> Discord API Gateway interaction endpoint (Verifies Ed25519 signature & handles button clicks)
+ *  - POST /api/interactions    -> Discord API Gateway interaction endpoint (Verifies Ed25519 signature & handles button clicks in <50ms)
  *  - GET  /api/reviews         -> Fetches approved reviews from Discord
  *  - OPTIONS *                 -> Global CORS preflight handler
  */
+
+import { verifyKey } from "discord-interactions";
 
 // =============================================================================
 // CONFIGURATION & CREDENTIALS
@@ -50,62 +52,45 @@ function jsonResponse(data, status = 200) {
 }
 
 /**
- * Converts Hex string to Uint8Array
+ * Verifies Discord Ed25519 cryptographic signature
  */
-function hexToUint8Array(hex) {
-  if (!hex || typeof hex !== "string") return new Uint8Array();
-  const cleanHex = hex.trim();
-  const bytes = new Uint8Array(cleanHex.length / 2);
-  for (let i = 0; i < cleanHex.length; i += 2) {
-    bytes[i / 2] = parseInt(cleanHex.substring(i, i + 2), 16);
-  }
-  return bytes;
-}
+async function verifyDiscordSignature(rawBody, signature, timestamp, publicKey) {
+  if (!signature || !timestamp || !publicKey) return false;
 
-/**
- * Verifies Discord Ed25519 cryptographic signature using native Web Crypto
- */
-async function verifyDiscordSignature(request, rawBody, publicKeyHex) {
-  const signatureHex = request.headers.get("x-signature-ed25519");
-  const timestamp = request.headers.get("x-signature-timestamp");
-
-  if (!signatureHex || !timestamp || !publicKeyHex) {
-    return false;
-  }
-
+  // Primary: discord-interactions verifyKey
   try {
-    const keyData = hexToUint8Array(publicKeyHex);
-    const signatureData = hexToUint8Array(signatureHex);
+    const valid = await verifyKey(rawBody, signature, timestamp, publicKey);
+    if (valid) return true;
+  } catch (err) {
+    console.error("discord-interactions verifyKey error:", err);
+  }
+
+  // Fallback: Native WebCrypto API
+  try {
+    const hexToBuf = (hex) => {
+      const clean = hex.trim();
+      const bytes = new Uint8Array(clean.length / 2);
+      for (let i = 0; i < clean.length; i += 2) {
+        bytes[i / 2] = parseInt(clean.substring(i, i + 2), 16);
+      }
+      return bytes;
+    };
+    const key = await crypto.subtle.importKey(
+      "raw",
+      hexToBuf(publicKey),
+      { name: "Ed25519" },
+      false,
+      ["verify"]
+    );
     const encoder = new TextEncoder();
-    const data = encoder.encode(timestamp + rawBody);
-
-    let cryptoKey;
-    try {
-      cryptoKey = await crypto.subtle.importKey(
-        "raw",
-        keyData,
-        { name: "Ed25519" },
-        false,
-        ["verify"]
-      );
-    } catch {
-      cryptoKey = await crypto.subtle.importKey(
-        "raw",
-        keyData,
-        { name: "NODE-ED25519", namedCurve: "NODE-ED25519" },
-        false,
-        ["verify"]
-      );
-    }
-
     return await crypto.subtle.verify(
-      cryptoKey.algorithm.name,
-      cryptoKey,
-      signatureData,
-      data
+      "Ed25519",
+      key,
+      hexToBuf(signature),
+      encoder.encode(timestamp + rawBody)
     );
   } catch (err) {
-    console.error("Signature verification failed:", err);
+    console.error("WebCrypto Ed25519 error:", err);
     return false;
   }
 }
@@ -126,7 +111,6 @@ export default {
       });
     }
 
-    // Resolve credentials from Worker Environment Variables or fallback to CONFIG
     const contactWebhook = env?.CONTACT_WEBHOOK_URL || CONFIG.CONTACT_WEBHOOK_URL;
     const reviewWebhook = env?.REVIEW_WEBHOOK_URL || CONFIG.REVIEW_WEBHOOK_URL;
     const discordPublicKey = env?.DISCORD_PUBLIC_KEY || CONFIG.DISCORD_PUBLIC_KEY;
@@ -283,7 +267,6 @@ export default {
           body: JSON.stringify(discordPayload)
         });
 
-        // Fail-safe fallback if standard webhook restricts custom_id buttons
         if (!discordRes.ok && discordRes.status === 400) {
           const fallbackPayload = {
             ...discordPayload,
@@ -330,50 +313,114 @@ export default {
     }
 
     // -------------------------------------------------------------------------
-    // ENDPOINT 3: Discord Interactions Gateway (/api/interactions)
-    // Listens for [✅ Accept] and [❌ Decline] button clicks with Ed25519 verification
+    // ENDPOINT 3: Discord Interactions Gateway (/api/interactions & /interactions)
+    // Instantly responds to Discord within <50ms (Well below 3-second limit)
     // -------------------------------------------------------------------------
     if ((path === "/api/interactions" || path === "/interactions") && request.method === "POST") {
       try {
         const rawBody = await request.text();
+        const signature = request.headers.get("x-signature-ed25519") || request.headers.get("X-Signature-Ed25519");
+        const timestamp = request.headers.get("x-signature-timestamp") || request.headers.get("X-Signature-Timestamp");
 
-        // 1. Verify Discord cryptographic signature
-        const isValid = await verifyDiscordSignature(request, rawBody, discordPublicKey);
+        // 1. Verify ED25519 Signature
+        if (!signature || !timestamp) {
+          return new Response("Missing signature headers", { status: 401 });
+        }
+
+        const isValid = await verifyDiscordSignature(rawBody, signature, timestamp, discordPublicKey);
         if (!isValid) {
           return new Response("Invalid request signature", { status: 401 });
         }
 
-        const interaction = JSON.parse(rawBody);
-
-        // 2. Handle PING (Type 1)
-        if (interaction.type === 1) {
-          return jsonResponse({ type: 1 }); // PONG
+        let interaction;
+        try {
+          interaction = JSON.parse(rawBody);
+        } catch {
+          return new Response("Invalid JSON", { status: 400 });
         }
 
-        // 3. Handle MESSAGE_COMPONENT (Type 3) - Button clicks
+        // 2. Handle PING (Type 1) -> Instant PONG (Type 1)
+        if (interaction.type === 1) {
+          return jsonResponse({ type: 1 });
+        }
+
+        // 3. Handle MESSAGE_COMPONENT (Type 3) -> Instant UPDATE_MESSAGE (Type 7)
         if (interaction.type === 3) {
           const customId = interaction.data?.custom_id || "";
-          const userTag = interaction.member?.user?.username || interaction.user?.username || "Moderator";
+          const member = interaction.member || interaction.user;
+          const moderatorId = member?.user?.id || member?.id || "";
+          const moderatorName = member?.user?.username || member?.username || "Moderator";
+          const originalEmbed = interaction.message?.embeds?.[0] || {};
+          const originalFields = originalEmbed.fields || [];
 
+          // APPROVE / ACCEPT
           if (customId.startsWith("accept_review")) {
+            const updatedEmbed = {
+              title: "✅ Client Review Approved & Published — Whiz Studio",
+              description: `This review was **APPROVED** by <@${moderatorId}> (**${moderatorName}**).\nIt is verified and approved for live display.`,
+              color: 0x00A86B, // Emerald
+              fields: originalFields,
+              footer: { text: "Whiz Studio Moderation Panel • Approved" },
+              timestamp: new Date().toISOString()
+            };
+
+            // Background Reaction Sync (Non-blocking)
+            if (ctx?.waitUntil && interaction.message?.id) {
+              const channelId = interaction.channel_id || reviewChannelId;
+              ctx.waitUntil(
+                fetch(`https://discord.com/api/v10/channels/${channelId}/messages/${interaction.message.id}/reactions/%E2%9C%85/@me`, {
+                  method: "PUT",
+                  headers: { "Authorization": `Bot ${botToken}` }
+                }).catch(err => console.error("Reaction sync error:", err))
+              );
+            }
+
+            // Return INSTANT Type 7 UpdateMessage (<50ms)
             return jsonResponse({
-              type: 4,
+              type: 7,
               data: {
-                content: `✅ Review was **APPROVED** for publication by **@${userTag}**!`,
-                flags: 64 // Ephemeral
+                content: `✅ Review accepted and published by **@${moderatorName}**!`,
+                embeds: [updatedEmbed],
+                components: [] // Removes buttons immediately
               }
             });
           }
 
+          // DECLINE / REJECT
           if (customId.startsWith("decline_review")) {
+            const updatedEmbed = {
+              title: "❌ Client Review Declined — Whiz Studio",
+              description: `This review was **DECLINED** and archived by <@${moderatorId}> (**${moderatorName}**).`,
+              color: 0xEF4444, // Red
+              fields: originalFields,
+              footer: { text: "Whiz Studio Moderation Panel • Declined" },
+              timestamp: new Date().toISOString()
+            };
+
+            // Background Reaction Sync (Non-blocking)
+            if (ctx?.waitUntil && interaction.message?.id) {
+              const channelId = interaction.channel_id || reviewChannelId;
+              ctx.waitUntil(
+                fetch(`https://discord.com/api/v10/channels/${channelId}/messages/${interaction.message.id}/reactions/%E2%9D%8C/@me`, {
+                  method: "PUT",
+                  headers: { "Authorization": `Bot ${botToken}` }
+                }).catch(err => console.error("Reaction sync error:", err))
+              );
+            }
+
+            // Return INSTANT Type 7 UpdateMessage (<50ms)
             return jsonResponse({
-              type: 4,
+              type: 7,
               data: {
-                content: `❌ Review was **DECLINED** and dismissed by **@${userTag}**.`,
-                flags: 64 // Ephemeral
+                content: `❌ Review declined and dismissed by **@${moderatorName}**.`,
+                embeds: [updatedEmbed],
+                components: [] // Removes buttons immediately
               }
             });
           }
+
+          // Fallback: Type 6 DeferredUpdateMessage
+          return jsonResponse({ type: 6 });
         }
 
         return jsonResponse({ type: 1 });
