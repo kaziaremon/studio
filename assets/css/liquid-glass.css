@@ -1,7 +1,8 @@
 /* ==========================================================================
-   WHIZ STUDIO - TRUE LIQUID GLASS DESIGN SYSTEM (LIGHT MODE)
+   WHIZ STUDIO - TRUE LIQUID GLASS DESIGN SYSTEM (MASTER RESPONSIVE ARCHITECTURE)
    Domain: whizstudio.art | Primary Brand Green: #00A86B / #059669 / #047857
    Aesthetics: Genuine Liquid Glass, Backdrop Blur, Specular Highlights, Glowing Blobs
+   Responsive: Fluid scaling from 320px mobile to 2560px+ ultrawide displays
    ========================================================================== */
 
 :root {
@@ -14,31 +15,76 @@
   --glass-shadow: 0 4px 30px rgba(0, 0, 0, 0.10);
 }
 
-/* Base resets & typography */
+/* Base Universal Resets & Strict Viewport / Overflow Control */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 html {
   scroll-behavior: smooth;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
   background-color: #F4FAF7;
   color: #0F172A;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  width: 100%;
+  max-width: 100vw;
   overflow-x: hidden;
   position: relative;
   min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+/* Fluid Media & Break-word Resets */
+img, svg, video, canvas, audio, iframe {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+h1, h2, h3, h4, h5, h6, p, span, a, li, label {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
 }
 
 h1, h2, h3, h4, h5, h6, .font-heading {
   font-family: 'Poppins', 'Inter', system-ui, sans-serif;
+  letter-spacing: -0.02em;
+}
+
+/* Fluid Typography Scaling */
+.hero-title {
+  font-size: clamp(1.85rem, 4.5vw + 0.4rem, 3.75rem);
+  line-height: 1.15;
+}
+
+.section-title {
+  font-size: clamp(1.6rem, 2.8vw + 0.4rem, 2.5rem);
+  line-height: 1.25;
+}
+
+.card-title {
+  font-size: clamp(1.15rem, 1.6vw + 0.3rem, 1.45rem);
+  line-height: 1.3;
 }
 
 /* ==========================================================================
    VIBRANT GLOWING ANIMATED BACKGROUND BLOBS (LIQUID GLASS LIGHT REACTION)
+   Strictly confined to prevent any overflow or horizontal scroll
    ========================================================================= */
 .liquid-bg-blobs {
   position: fixed;
   inset: 0;
+  width: 100%;
+  max-width: 100vw;
+  height: 100%;
   pointer-events: none;
   z-index: 0;
   overflow: hidden;
@@ -50,13 +96,14 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   filter: blur(80px);
   will-change: transform;
   opacity: 0.65;
+  pointer-events: none;
 }
 
 .blob-1 {
   top: -10%;
   left: -5%;
-  width: 55vw;
-  height: 55vw;
+  width: clamp(280px, 50vw, 680px);
+  height: clamp(280px, 50vw, 680px);
   background: radial-gradient(circle, rgba(0, 168, 107, 0.45) 0%, rgba(52, 211, 153, 0.3) 40%, transparent 70%);
   animation: blobFloat1 18s ease-in-out infinite alternate;
 }
@@ -64,8 +111,8 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 .blob-2 {
   top: 25%;
   right: -10%;
-  width: 60vw;
-  height: 60vw;
+  width: clamp(300px, 55vw, 750px);
+  height: clamp(300px, 55vw, 750px);
   background: radial-gradient(circle, rgba(16, 185, 129, 0.4) 0%, rgba(5, 150, 105, 0.25) 45%, transparent 75%);
   animation: blobFloat2 22s ease-in-out infinite alternate;
 }
@@ -73,8 +120,8 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 .blob-3 {
   top: 60%;
   left: 8%;
-  width: 50vw;
-  height: 50vw;
+  width: clamp(260px, 45vw, 600px);
+  height: clamp(260px, 45vw, 600px);
   background: radial-gradient(circle, rgba(0, 168, 107, 0.38) 0%, rgba(16, 185, 129, 0.2) 50%, transparent 70%);
   animation: blobFloat3 20s ease-in-out infinite alternate;
 }
@@ -82,33 +129,36 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 .blob-4 {
   bottom: -12%;
   right: 12%;
-  width: 52vw;
-  height: 52vw;
+  width: clamp(280px, 48vw, 640px);
+  height: clamp(280px, 48vw, 640px);
   background: radial-gradient(circle, rgba(5, 150, 105, 0.4) 0%, rgba(110, 231, 183, 0.3) 50%, transparent 70%);
   animation: blobFloat1 25s ease-in-out infinite alternate;
 }
 
 @keyframes blobFloat1 {
   0% { transform: translate(0px, 0px) scale(1); }
-  50% { transform: translate(60px, 50px) scale(1.08); }
-  100% { transform: translate(-40px, 80px) scale(0.95); }
+  50% { transform: translate(40px, 35px) scale(1.06); }
+  100% { transform: translate(-30px, 50px) scale(0.96); }
 }
 
 @keyframes blobFloat2 {
   0% { transform: translate(0px, 0px) scale(1); }
-  50% { transform: translate(-70px, -40px) scale(1.1); }
-  100% { transform: translate(40px, 60px) scale(0.92); }
+  50% { transform: translate(-45px, -30px) scale(1.08); }
+  100% { transform: translate(30px, 40px) scale(0.94); }
 }
 
 @keyframes blobFloat3 {
   0% { transform: translate(0px, 0px) scale(0.96); }
-  50% { transform: translate(50px, -60px) scale(1.06); }
-  100% { transform: translate(-50px, 30px) scale(1); }
+  50% { transform: translate(35px, -40px) scale(1.05); }
+  100% { transform: translate(-35px, 25px) scale(1); }
 }
 
 .liquid-grid-overlay {
   position: fixed;
   inset: 0;
+  width: 100%;
+  max-width: 100vw;
+  height: 100%;
   background-image: radial-gradient(rgba(0, 168, 107, 0.12) 1.2px, transparent 1.2px);
   background-size: 32px 32px;
   pointer-events: none;
@@ -128,6 +178,7 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   border: 1px solid rgba(255, 255, 255, 0.20) !important;
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.10) !important;
   transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
 }
 
 .liquid-glass-card:hover {
@@ -152,6 +203,10 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   border: 1px solid rgba(255, 255, 255, 0.35) !important;
   box-shadow: 0 4px 14px 0 rgba(0, 168, 107, 0.35), inset 0 1px 1px 0 rgba(255, 255, 255, 0.4) !important;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-glass-primary:hover {
@@ -168,6 +223,10 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   border: 1px solid rgba(0, 168, 107, 0.35) !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05) !important;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-glass-secondary:hover {
@@ -187,6 +246,7 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   color: #0F172A !important;
   transition: all 0.25s ease;
   box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+  min-height: 42px;
 }
 
 .glass-input:focus {
@@ -221,8 +281,8 @@ select.glass-input option:hover {
 
 /* Social Icon Round Button */
 .social-icon-btn {
-  width: 46px;
-  height: 46px;
+  width: 44px;
+  height: 44px;
   border-radius: 9999px;
   background: rgba(255, 255, 255, 0.30);
   backdrop-filter: blur(12px);
@@ -235,6 +295,7 @@ select.glass-input option:hover {
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07);
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   font-size: 1.15rem;
+  flex-shrink: 0;
 }
 
 .social-icon-btn:hover {
@@ -256,6 +317,7 @@ select.glass-input option:hover {
 .custom-modal-scroll {
   scrollbar-width: thin;
   scrollbar-color: rgba(5, 150, 105, 0.35) transparent;
+  -webkit-overflow-scrolling: touch;
 }
 
 .custom-modal-scroll::-webkit-scrollbar {
@@ -326,4 +388,78 @@ select.glass-input option:hover {
 #articleModalBody strong {
   color: #065F46;
   font-weight: 700;
+}
+
+/* ==========================================================================
+   MASTER RESPONSIVE ADAPTATIONS & MEDIA QUERIES
+   ========================================================================== */
+
+/* Mobile Phones (< 640px) */
+@media (max-width: 639px) {
+  /* Container Padding & Spacing */
+  section {
+    padding-top: 3rem !important;
+    padding-bottom: 3rem !important;
+  }
+  
+  /* Buttons expand to full width if inside hero/modal action groups */
+  .hero-actions .btn-glass-primary,
+  .hero-actions .btn-glass-secondary {
+    width: 100% !important;
+    text-align: center;
+    justify-content: center;
+  }
+
+  /* Star rating buttons touch size */
+  .star-btn {
+    font-size: 1.75rem !important;
+    padding: 0 4px !important;
+    min-width: 36px;
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Modals fit snug within small screens */
+  #serviceModalContent,
+  #articleModalContent {
+    max-height: 88vh !important;
+    margin: 0.75rem !important;
+    width: calc(100% - 1.5rem) !important;
+  }
+
+  /* Notification Toast mobile alignment */
+  #toastContainer {
+    right: 1rem !important;
+    left: 1rem !important;
+    max-width: calc(100vw - 2rem) !important;
+  }
+}
+
+/* Tablet screens (640px to 1023px) */
+@media (min-width: 640px) and (max-width: 1023px) {
+  section {
+    padding-top: 4.5rem !important;
+    padding-bottom: 4.5rem !important;
+  }
+}
+
+/* Ultrawide screens (>= 1920px) */
+@media (min-width: 1920px) {
+  .hero-title {
+    font-size: 4rem !important;
+  }
+}
+
+/* Touch Device Target Optimization */
+@media (hover: none) and (pointer: coarse) {
+  a, button, input, select, textarea {
+    min-height: 44px;
+  }
+  
+  .social-icon-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
 }

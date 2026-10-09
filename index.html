@@ -2,7 +2,7 @@
 <html lang="en" class="scroll-smooth">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <link rel="icon" type="image/png" href="assets/images/logo.png">
   <link rel="apple-touch-icon" href="assets/images/logo.png">
   
@@ -275,12 +275,12 @@
             Whiz Studio builds transparent, performance-driven marketing infrastructure across Meta and LinkedIn. No inflated buzzwords or empty guarantees—just disciplined audience targeting, rigorous creative testing, and organic profile authority engineered to drive real revenue.
           </p>
 
-          <div class="hero-actions flex flex-wrap items-center gap-4 pt-2">
-            <a href="#services" class="px-7 py-3.5 rounded-xl font-bold text-sm btn-glass-primary flex items-center space-x-2">
+          <div class="hero-actions flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 sm:gap-4 pt-2">
+            <a href="#services" class="px-7 py-3.5 rounded-xl font-bold text-sm btn-glass-primary flex items-center justify-center space-x-2">
               <span>Explore Services</span>
               <i class="fa-solid fa-arrow-down text-xs"></i>
             </a>
-            <a href="#contact" class="px-7 py-3.5 rounded-xl font-bold text-sm btn-glass-secondary flex items-center space-x-2">
+            <a href="#contact" class="px-7 py-3.5 rounded-xl font-bold text-sm btn-glass-secondary flex items-center justify-center space-x-2">
               <span>Request Custom Quote</span>
               <i class="fa-regular fa-file-lines text-xs"></i>
             </a>
@@ -941,12 +941,12 @@
 
           <!-- Right: Live Approved Reviews Display -->
           <div class="lg:col-span-6 space-y-6">
-            <div class="flex items-center justify-between">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h3 class="text-xl font-bold text-slate-900">Published Testimonials</h3>
                 <p class="text-xs text-slate-600 font-medium">Authentic reviews authorized via Discord webhook pipeline.</p>
               </div>
-              <button id="toggleDemoReviewsBtn" class="px-3.5 py-1.5 rounded-lg text-xs font-bold text-emerald-950 bg-emerald-100/90 hover:bg-emerald-200 border border-emerald-300 transition-colors">
+              <button id="toggleDemoReviewsBtn" class="self-start sm:self-auto px-3.5 py-1.5 rounded-lg text-xs font-bold text-emerald-950 bg-emerald-100/90 hover:bg-emerald-200 border border-emerald-300 transition-colors">
                 <span>Preview Approved Reviews (Demo)</span>
               </button>
             </div>
@@ -1249,10 +1249,10 @@
        ========================================================================= -->
   <footer class="relative z-10 border-t border-white/30 bg-white/10 backdrop-blur-md mt-12">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 mb-8">
         
         <!-- Brand Logo & Identity in Footer -->
-        <div class="md:col-span-2 space-y-4">
+        <div class="col-span-1 sm:col-span-2 space-y-4">
           <a href="#home" class="inline-flex items-center group focus:outline-none">
             <img src="assets/images/logo.png" alt="Whiz Studio" class="h-10 sm:h-11 w-auto object-contain">
           </a>
