@@ -226,28 +226,31 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   font-weight: 700 !important;
 }
 
-/* Mobile Navigation Link Styling & Perfect Centering */
+/* Mobile Navigation Link Styling (Compact Centered Pill Bubble) */
 .mobile-nav-link.nav-link {
-  display: flex !important;
+  display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
   text-align: center !important;
-  padding: 0.625rem 1.5rem !important;
+  padding: 0.45rem 1.4rem !important;
   border-radius: 9999px !important;
   font-size: 0.875rem !important;
-  width: 100% !important;
+  width: auto !important;
+  max-width: fit-content !important;
+  margin: 0 auto !important;
+  border: 1px solid transparent !important;
+  box-shadow: none !important;
 }
 
-/* Mobile Active State Indicator (Exact Unified Liquid Glass Pill) */
+/* Mobile Active State Indicator (Soft Glass Pill Bubble - Zero Left Accent/Border) */
 .mobile-nav-link.nav-link.active {
   color: #00A86B !important;
   background: rgba(255, 255, 255, 0.75) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
-  border: 1px solid rgba(0, 168, 107, 0.35) !important;
-  box-shadow: 0 4px 18px rgba(0, 168, 107, 0.16), 
-              inset 0 1px 2px rgba(255, 255, 255, 0.95), 
-              inset 0 -1px 2px rgba(0, 168, 107, 0.08) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+  border: 1px solid rgba(0, 168, 107, 0.25) !important;
+  box-shadow: 0 4px 16px rgba(0, 168, 107, 0.12), 
+              inset 0 1px 2px rgba(255, 255, 255, 0.95) !important;
   font-weight: 700 !important;
   border-radius: 9999px !important;
 }
