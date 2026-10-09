@@ -23,7 +23,7 @@ const SERVICES_DATA = {
     subtitle: "Organic Authority & Community Retention",
     badge: "Community & Trust",
     necessityHeadline: "Why Your Brand Cannot Rely on Sporadic Organic Posting",
-    whyNeed: `In today’s hyper-competitive social ecosystem, organic Facebook presence is no longer about broadcast vanity metrics—it is the digital storefront where high-intent buyers vet your legitimacy before making financial commitments. 
+    whyNeed: `In today's fast-moving social landscape, an organic Facebook presence is no longer about broadcast vanity metrics. It is the digital storefront where high-intent buyers vet your legitimacy before making financial commitments. 
 
 When potential clients discover your brand, the first action they take is verifying your social presence. An unmaintained page with irregular updates, generic stock graphics, and unmoderated comments signals business instability. Consistent, strategic Facebook marketing establishes immediate credibility, builds an active community around your value proposition, and keeps your brand top-of-mind when purchasing needs arise. Without it, you actively leak warm, high-intent prospects to competitors whose pages look established and active every single day.`,
     whoNeeds: `• B2C & Local Businesses seeking consistent customer retention and regional market trust.
@@ -37,9 +37,9 @@ When potential clients discover your brand, the first action they take is verify
     subtitle: "Visual Prestige & Cultural Positioning",
     badge: "Brand Positioning",
     necessityHeadline: "Why Visual Credibility Dictates Your Premium Pricing Power",
-    whyNeed: `Instagram is the premier visual proof engine of the internet. Perceived value is entirely visual—if your aesthetic presentation feels disjointed, amateur, or inconsistent, prospective buyers immediately question your pricing and product quality.
+    whyNeed: `Instagram is the premier visual proof engine of the internet. Perceived value is largely visual: when aesthetic presentation feels disjointed, amateur, or inconsistent, prospective buyers immediately question your pricing and product quality.
 
-A disorganized feed directly erodes client confidence before they ever reach your checkout or booking calendar. High-value clients make snap psychological judgments based on aesthetic polish, narrative coherence, and social proof. Without intentional Instagram positioning, you are forced to compete on price rather than brand prestige, leaving significant enterprise margin on the table.`,
+A disorganized feed directly erodes client confidence before they ever reach your checkout or booking calendar. High-value clients make quick judgments based on aesthetic polish, narrative coherence, and social proof. Without intentional Instagram positioning, you are forced to compete on price rather than brand prestige, leaving significant enterprise margin on the table.`,
     whoNeeds: `• Lifestyle, Fashion, Retail & Hospitality brands where aesthetic appeal directly influences buying decisions.
 • Modern Professional Services, Clinics & Creative Studios seeking high-ticket client acquisition.
 • Founders & Brands launching modern products that demand premium positioning in a crowded market.`,
@@ -51,7 +51,7 @@ A disorganized feed directly erodes client confidence before they ever reach you
     subtitle: "Scalable Customer Acquisition Engine",
     badge: "Direct Response Ads",
     necessityHeadline: "Why Relying Solely on Organic Reach Kills Business Scalability",
-    whyNeed: `Organic reach across Meta platforms is algorithmically limited to a minute fraction of your existing following. Hoping that organic posts will consistently generate revenue is not a growth strategy—it is business gambling.
+    whyNeed: `Organic reach across Meta platforms is algorithmically limited to a minute fraction of your existing following. Hoping that organic posts will consistently generate revenue is not a growth strategy, it is business gambling.
 
 Paid Facebook advertising is the only reliable mechanism that allows an ambitious company to predict customer acquisition costs, test offer messaging against tens of thousands of qualified prospects daily, and control lead pipeline volume on demand. If you do not operate a structured paid ad engine, your business growth is held hostage by word-of-mouth plateau and unpredictable algorithmic whims.`,
     whoNeeds: `• Validated Businesses that need predictable, scalable monthly client and sales volume.
@@ -65,7 +65,7 @@ Paid Facebook advertising is the only reliable mechanism that allows an ambitiou
     subtitle: "High-Converting Vertical Video & Impulse Capture",
     badge: "Impulse Acquisition",
     necessityHeadline: "Why Ignoring Vertical Format Ads Forfeits Modern Impulse Buyers",
-    whyNeed: `Consumer attention has decisively shifted to mobile-first vertical content—Reels and Stories. Modern buyers make rapid buying decisions and book consultations directly within their native Instagram browsing experience.
+    whyNeed: `Consumer attention has decisively shifted to mobile-first vertical content, including Reels and Stories. Modern buyers make rapid buying decisions and book consultations directly within their native Instagram browsing experience.
 
 Failing to deploy dedicated, high-converting Instagram ad placements forfeits the highest-converting mobile impulse-traffic channel available. If your ads are merely resized desktop banners or generic text posts, users swipe past in milliseconds. Without strategic, thumb-stopping Instagram ad campaigns, you surrender modern demographic attention to competitors who understand the vertical video format.`,
     whoNeeds: `• Brands targeting active demographics (ages 18–45) who interact and buy primarily on mobile feeds.
@@ -93,9 +93,9 @@ If your bio is vague, your call-to-action is broken, your highlights lack essent
     subtitle: "Executive Authority & High-Ticket B2B Pipeline",
     badge: "B2B Authority",
     necessityHeadline: "Why Anonymous Company Pages Fail to Close High-Ticket B2B Contracts",
-    whyNeed: `In enterprise B2B sales and high-ticket consulting, corporate buyers do not buy from faceless company logos—they buy from trusted executives, industry thought leaders, and credible practitioners.
+    whyNeed: `In enterprise B2B sales and high-ticket consulting, corporate buyers do not buy from faceless company logos. They buy from trusted executives, industry thought leaders, and credible practitioners.
 
-If an executive’s or company’s LinkedIn profile looks like a generic resume rather than a value-driven client-landing asset, procurement heads and founders will quietly dismiss your proposals in favor of competitors who project clear authority. An unoptimized LinkedIn profile causes high-value B2B opportunities to stall before initial discovery conversations even commence.`,
+If an executive's or company's LinkedIn profile looks like a generic resume rather than a value-driven client-landing asset, procurement heads and founders will quietly dismiss your proposals in favor of competitors who project clear authority. An unoptimized LinkedIn profile causes high-value B2B opportunities to stall before initial discovery conversations even commence.`,
     whoNeeds: `• B2B Founders, Agency Leaders & Managing Directors closing five- and six-figure contracts.
 • Corporate Consultants, Professional Advisors & IT/SaaS Executives seeking inbound partnership inquiries.
 • Companies targeting corporate procurement teams, institutional investors, and strategic alliances.`,
