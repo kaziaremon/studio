@@ -226,16 +226,30 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   font-weight: 700 !important;
 }
 
-/* Mobile Active State Indicator */
-.mobile-nav-link.active {
-  background: rgba(236, 253, 245, 0.85) !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
-  color: #047857 !important;
-  border: 1px solid rgba(0, 168, 107, 0.3) !important;
-  border-left: 4px solid #00A86B !important;
-  box-shadow: 0 2px 12px rgba(0, 168, 107, 0.12) !important;
-  border-radius: 0.75rem !important;
+/* Mobile Navigation Link Styling & Perfect Centering */
+.mobile-nav-link.nav-link {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  padding: 0.625rem 1.5rem !important;
+  border-radius: 9999px !important;
+  font-size: 0.875rem !important;
+  width: 100% !important;
+}
+
+/* Mobile Active State Indicator (Exact Unified Liquid Glass Pill) */
+.mobile-nav-link.nav-link.active {
+  color: #00A86B !important;
+  background: rgba(255, 255, 255, 0.75) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(0, 168, 107, 0.35) !important;
+  box-shadow: 0 4px 18px rgba(0, 168, 107, 0.16), 
+              inset 0 1px 2px rgba(255, 255, 255, 0.95), 
+              inset 0 -1px 2px rgba(0, 168, 107, 0.08) !important;
+  font-weight: 700 !important;
+  border-radius: 9999px !important;
 }
 
 /* Glass Buttons */
