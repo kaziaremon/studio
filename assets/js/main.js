@@ -1162,8 +1162,10 @@ function initNavigation() {
   const sectionIds = ['home', 'about', 'services', 'pricing', 'articles', 'testimonials', 'faq', 'contact'];
   const sections = sectionIds.map(id => document.getElementById(id)).filter(Boolean);
 
+  let currentActiveId = null;
   function setActiveNavLink(activeId) {
-    if (!activeId) return;
+    if (!activeId || activeId === currentActiveId) return;
+    currentActiveId = activeId;
     allNavLinks.forEach(link => {
       const href = link.getAttribute('href');
       if (href === `#${activeId}`) {
