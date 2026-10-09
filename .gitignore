@@ -44,3 +44,7 @@ venv.bak/
 *.sw?
 .DS_Store
 Thumbs.db
+
+# Internal maintenance scripts
+scripts/
+

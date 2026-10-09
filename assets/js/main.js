@@ -437,19 +437,20 @@ function toggleDemoReviews() {
   renderReviewsList(approvedReviews);
 }
 
-// Live Discord Review Synchronization Engine
+// Live Database Review Synchronization Engine
 async function syncApprovedReviewsFromDiscord() {
+  if (isDemoReviewsActive) return;
   try {
     const res = await fetch(`${API_BASE}/api/reviews`);
     if (res.ok) {
       const data = await res.json();
-      if (data && Array.isArray(data.reviews) && data.reviews.length > 0) {
+      if (data && Array.isArray(data.reviews)) {
         approvedReviews = [...data.reviews];
         renderReviewsList(approvedReviews);
       }
     }
   } catch (err) {
-    console.warn("Live Discord reviews sync notice:", err);
+    console.warn("Live reviews sync notice:", err);
   }
 }
 

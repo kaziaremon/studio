@@ -1,15 +1,16 @@
 /**
  * Cloudflare Pages Function: /api/interactions
- * Instant Discord Interaction Handler (< 50ms)
- * 
- * Satisfies Discord's strict 3-second acknowledgment window:
- *  - Handles PING (Type 1) -> Returns PONG (Type 1)
- *  - Handles MESSAGE_COMPONENT (Type 3) -> Returns Instant UPDATE_MESSAGE (Type 7)
- *  - Validates ED25519 signatures via discord-interactions / WebCrypto
- *  - Dispatches background sync via ctx.waitUntil
+ * Permanent Discord Review Control Panel & Instant Interaction Handler
+ *
+ * Implements:
+ *  1. FIX THE TIMEOUT ERROR: Instant DEFERRED_UPDATE_MESSAGE (Type 6) acknowledgment (< 20ms)
+ *  2. PERMANENT CONTROL DASHBOARD: Never deletes/disables buttons (All 4 buttons stay active)
+ *  3. DATABASE STATE MANAGEMENT: Updates moderation_status & visibility in Cloudflare D1/KV
+ *  4. DYNAMIC FEEDBACK: Edits Discord embed to show Live Status with infinite Show/Hide toggles
  */
 
 import { verifyKey } from "discord-interactions";
+import { dbUpdateReview } from "./_db.js";
 
 const P1 = "MTU0OTU2NjM3NjcwMjc3MTMyMA";
 const P2 = "G6RTlJ";
@@ -68,6 +69,196 @@ async function verifyDiscordSignature(rawBody, signature, timestamp, publicKey) 
   }
 }
 
+/**
+ * Background task to update database and edit the Discord message with permanent control panel
+ */
+async function processInteractionAsync(interaction, env) {
+  try {
+    const customId = interaction.data?.custom_id || "";
+    const member = interaction.member || interaction.user;
+    const moderatorId = member?.user?.id || member?.id || "";
+    const moderatorName = member?.user?.username || member?.username || "Moderator";
+
+    let action = "";
+    let reviewId = "";
+
+    if (customId.includes(":")) {
+      const parts = customId.split(":");
+      const prefix = parts[0];
+      reviewId = parts.slice(1).join(":");
+      if (prefix.includes("accept")) action = "accept";
+      else if (prefix.includes("decline")) action = "decline";
+      else if (prefix.includes("show")) action = "show";
+      else if (prefix.includes("hide")) action = "hide";
+    }
+
+    if (!reviewId || !action) {
+      console.warn("Invalid interaction action or reviewId:", customId);
+      return;
+    }
+
+    // Extract fallback data from original message embed if review was not yet stored in DB
+    const originalEmbed = interaction.message?.embeds?.[0] || {};
+    const originalFields = originalEmbed.fields || [];
+    let fallbackData = {
+      name: "Verified Client",
+      email: "Not provided",
+      rating: 5,
+      text: ""
+    };
+
+    for (const f of originalFields) {
+      const fname = (f.name || "").toLowerCase();
+      if (fname.includes("client") || fname.includes("company") || fname.includes("name")) {
+        fallbackData.name = f.value;
+      } else if (fname.includes("email")) {
+        fallbackData.email = f.value;
+      } else if (fname.includes("rating") || fname.includes("star")) {
+        const stars = (f.value.match(/★/g) || []).length;
+        if (stars > 0) fallbackData.rating = stars;
+      } else if (fname.includes("feedback") || fname.includes("review") || fname.includes("text")) {
+        fallbackData.text = f.value;
+      }
+    }
+
+    // Determine state changes
+    const fieldsToUpdate = {};
+    if (action === "accept") {
+      fieldsToUpdate.moderation_status = "accepted";
+    } else if (action === "decline") {
+      fieldsToUpdate.moderation_status = "declined";
+    } else if (action === "show") {
+      fieldsToUpdate.visibility = "showing";
+    } else if (action === "hide") {
+      fieldsToUpdate.visibility = "hidden";
+    }
+
+    // 1. Update Database (Cloudflare D1 + KV)
+    const updatedRecord = await dbUpdateReview(env, reviewId, fieldsToUpdate, fallbackData);
+
+    const modStatus = updatedRecord.moderation_status || "pending";
+    const visStatus = updatedRecord.visibility || "hidden";
+
+    const statusBadge = modStatus === "accepted" ? "✅ Accepted" : (modStatus === "declined" ? "❌ Declined" : "⏳ Pending");
+    const visBadge = visStatus === "showing" ? "👁️ Showing" : "🙈 Hidden";
+    const liveStatusStr = `Status: ${statusBadge} | Visibility: ${visBadge}`;
+
+    let embedColor = 0xF59E0B; // Amber (Pending)
+    if (modStatus === "accepted" && visStatus === "showing") {
+      embedColor = 0x00A86B; // Emerald (Live on site)
+    } else if (modStatus === "accepted") {
+      embedColor = 0x3B82F6; // Blue (Accepted, but hidden)
+    } else if (modStatus === "declined") {
+      embedColor = 0xEF4444; // Red (Declined)
+    }
+
+    let statusExplanation = "";
+    if (modStatus === "accepted" && visStatus === "showing") {
+      statusExplanation = "🟢 **Live on Website:** This review is currently visible to all visitors on https://whizstudio.art/#reviews";
+    } else if (modStatus === "accepted" && visStatus === "hidden") {
+      statusExplanation = "🟡 **Accepted (Hidden):** Review is approved by moderation, but currently hidden from the live website.";
+    } else if (modStatus === "declined") {
+      statusExplanation = "🔴 **Declined:** Review was declined and is suppressed from the website.";
+    } else {
+      statusExplanation = "⏳ **Pending Moderation:** Awaiting administrator acceptance and visibility toggle.";
+    }
+
+    const starString = "★".repeat(updatedRecord.rating || 5) + "☆".repeat(Math.max(0, 5 - (updatedRecord.rating || 5))) + ` (${updatedRecord.rating || 5} / 5 Stars)`;
+
+    const updatedEmbed = {
+      title: "⭐ Client Review Control Panel — Whiz Studio",
+      description: `Permanent moderation control panel for Whiz Studio.\n\n${statusExplanation}\n\n👤 **Last Action By:** <@${moderatorId}> (**${moderatorName}**)`,
+      color: embedColor,
+      fields: [
+        { name: "👤 Client / Company", value: String(updatedRecord.name || fallbackData.name), inline: true },
+        { name: "⭐ Rating Given", value: starString, inline: true },
+        { name: "📧 Verified Email", value: String(updatedRecord.email || fallbackData.email), inline: true },
+        { name: "💬 Review Feedback", value: String(updatedRecord.text || fallbackData.text || "No feedback text"), inline: false },
+        { name: "🆔 Review Reference ID", value: String(reviewId), inline: true },
+        { name: "⚙️ Live Status", value: liveStatusStr, inline: true },
+        { name: "⏰ Last Updated", value: new Date().toUTCString(), inline: false }
+      ],
+      footer: { text: "Whiz Studio Permanent Control Panel • whizstudio.art" }
+    };
+
+    // PERMANENT 4-BUTTON CONTROL PANEL
+    const components = [
+      {
+        type: 1, // ActionRow
+        components: [
+          {
+            type: 2,
+            style: 3, // Success (Green)
+            label: "✅ Accept",
+            custom_id: `review_accept:${reviewId}`
+          },
+          {
+            type: 2,
+            style: 4, // Danger (Red)
+            label: "❌ Decline",
+            custom_id: `review_decline:${reviewId}`
+          },
+          {
+            type: 2,
+            style: 1, // Primary (Blurple)
+            label: "👁️ Show on Website",
+            custom_id: `review_show:${reviewId}`
+          },
+          {
+            type: 2,
+            style: 2, // Secondary (Grey)
+            label: "🙈 Hide from Website",
+            custom_id: `review_hide:${reviewId}`
+          }
+        ]
+      }
+    ];
+
+    const editPayload = {
+      content: `🛡️ Review Control Panel • ${liveStatusStr}`,
+      embeds: [updatedEmbed],
+      components: components
+    };
+
+    // 2. Edit original Discord message via Interaction Webhook (@original)
+    const webhookEditUrl = `https://discord.com/api/v10/webhooks/${interaction.application_id}/${interaction.token}/messages/@original`;
+    let editRes = await fetch(webhookEditUrl, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(editPayload)
+    });
+
+    // Fallback: Direct bot channel message edit
+    if (!editRes.ok && interaction.message?.id) {
+      const channelId = interaction.channel_id || CONFIG.REVIEW_CHANNEL_ID;
+      const botToken = (env && env.DISCORD_BOT_TOKEN) || CONFIG.BOT_TOKEN;
+      await fetch(`https://discord.com/api/v10/channels/${channelId}/messages/${interaction.message.id}`, {
+        method: "PATCH",
+        headers: {
+          "Authorization": `Bot ${botToken}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(editPayload)
+      });
+    }
+
+    // Background reaction feedback
+    if (interaction.message?.id) {
+      const channelId = interaction.channel_id || CONFIG.REVIEW_CHANNEL_ID;
+      const botToken = (env && env.DISCORD_BOT_TOKEN) || CONFIG.BOT_TOKEN;
+      const reactionEmoji = modStatus === "accepted" ? "%E2%9C%85" : (modStatus === "declined" ? "%E2%9D%8C" : null);
+      if (reactionEmoji) {
+        fetch(`https://discord.com/api/v10/channels/${channelId}/messages/${interaction.message.id}/reactions/${reactionEmoji}/@me`, {
+          method: "PUT",
+          headers: { "Authorization": `Bot ${botToken}` }
+        }).catch(err => console.error("Reaction sync notice:", err));
+      }
+    }
+  } catch (err) {
+    console.error("Async interaction process failed:", err);
+  }
+}
+
 export async function onRequestOptions() {
   return new Response(null, { status: 204, headers: CORS_HEADERS });
 }
@@ -103,88 +294,15 @@ export async function onRequestPost({ request, env, waitUntil }) {
     });
   }
 
-  // 3. Handle MESSAGE_COMPONENT (Type 3) -> Instant UPDATE_MESSAGE (Type 7)
+  // 3. Handle MESSAGE_COMPONENT (Type 3)
+  // FIX THE TIMEOUT ERROR: Return DEFERRED_UPDATE_MESSAGE (Type 6) immediately (< 20ms)
+  // Process database update and permanent control panel message edit asynchronously
   if (interaction.type === 3) {
-    const customId = interaction.data?.custom_id || "";
-    const member = interaction.member || interaction.user;
-    const moderatorId = member?.user?.id || member?.id || "";
-    const moderatorName = member?.user?.username || member?.username || "Moderator";
-    const originalEmbed = interaction.message?.embeds?.[0] || {};
-    const originalFields = originalEmbed.fields || [];
-
-    // APPROVE
-    if (customId.startsWith("accept_review")) {
-      const updatedEmbed = {
-        title: "✅ Client Review Approved & Published — Whiz Studio",
-        description: `This review was **APPROVED** by <@${moderatorId}> (**${moderatorName}**).\nIt is verified and approved for live display.`,
-        color: 0x00A86B, // Emerald
-        fields: originalFields,
-        footer: { text: "Whiz Studio Moderation Panel • Approved" },
-        timestamp: new Date().toISOString()
-      };
-
-      // Background task: Add reaction to message
-      if (waitUntil && interaction.message?.id) {
-        const botToken = (env && env.DISCORD_BOT_TOKEN) || CONFIG.BOT_TOKEN;
-        const channelId = interaction.channel_id || CONFIG.REVIEW_CHANNEL_ID;
-        waitUntil(
-          fetch(`https://discord.com/api/v10/channels/${channelId}/messages/${interaction.message.id}/reactions/%E2%9C%85/@me`, {
-            method: "PUT",
-            headers: { "Authorization": `Bot ${botToken}` }
-          }).catch(console.error)
-        );
-      }
-
-      // Return INSTANT 200 OK with Type 7
-      return new Response(JSON.stringify({
-        type: 7,
-        data: {
-          content: `✅ Review accepted and published by **@${moderatorName}**!`,
-          embeds: [updatedEmbed],
-          components: [] // Removes buttons immediately
-        }
-      }), {
-        status: 200,
-        headers: CORS_HEADERS
-      });
+    const taskPromise = processInteractionAsync(interaction, env);
+    if (waitUntil) {
+      waitUntil(taskPromise);
     }
 
-    // DECLINE
-    if (customId.startsWith("decline_review")) {
-      const updatedEmbed = {
-        title: "❌ Client Review Declined — Whiz Studio",
-        description: `This review was **DECLINED** and dismissed by <@${moderatorId}> (**${moderatorName}**).`,
-        color: 0xEF4444, // Red
-        fields: originalFields,
-        footer: { text: "Whiz Studio Moderation Panel • Declined" },
-        timestamp: new Date().toISOString()
-      };
-
-      if (waitUntil && interaction.message?.id) {
-        const botToken = (env && env.DISCORD_BOT_TOKEN) || CONFIG.BOT_TOKEN;
-        const channelId = interaction.channel_id || CONFIG.REVIEW_CHANNEL_ID;
-        waitUntil(
-          fetch(`https://discord.com/api/v10/channels/${channelId}/messages/${interaction.message.id}/reactions/%E2%9D%8C/@me`, {
-            method: "PUT",
-            headers: { "Authorization": `Bot ${botToken}` }
-          }).catch(console.error)
-        );
-      }
-
-      return new Response(JSON.stringify({
-        type: 7,
-        data: {
-          content: `❌ Review declined and dismissed by **@${moderatorName}**.`,
-          embeds: [updatedEmbed],
-          components: []
-        }
-      }), {
-        status: 200,
-        headers: CORS_HEADERS
-      });
-    }
-
-    // Fallback: Type 6 DeferredUpdateMessage
     return new Response(JSON.stringify({ type: 6 }), {
       status: 200,
       headers: CORS_HEADERS
