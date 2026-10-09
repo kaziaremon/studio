@@ -226,7 +226,7 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   font-weight: 700 !important;
 }
 
-/* Mobile Navigation Link Styling (Compact Pure Centered Pill Bubble) */
+/* Mobile Navigation Link Styling */
 #mobileMenu .mobile-nav-link,
 .mobile-nav-link.nav-link,
 .mobile-nav-link {
@@ -234,37 +234,51 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   align-items: center !important;
   justify-content: center !important;
   text-align: center !important;
-  padding: 0.5rem 1.6rem !important;
-  border-radius: 9999px !important;
-  font-size: 0.875rem !important;
+  padding: 8px 24px !important;
+  border-radius: 50px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: #1E293B !important;
   width: auto !important;
   max-width: fit-content !important;
-  margin: 0 auto !important;
-  border: none !important;
-  border-left: none !important;
-  box-shadow: none !important;
-  outline: none !important;
-  transition: background-color 0.25s ease, color 0.25s ease, box-shadow 0.25s ease !important;
-}
-
-/* Mobile Active State Indicator (Pure Soft Translucent Glass Pill - ZERO BORDER - Perfect Oval) */
-#mobileMenu .mobile-nav-link.active,
-.mobile-nav-link.nav-link.active,
-.mobile-nav-link.active {
-  color: #00A86B !important;
-  background: rgba(255, 255, 255, 0.70) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
+  margin: 2px auto !important;
+  background: transparent !important;
   border: none !important;
   border-left: none !important;
   border-right: none !important;
   border-top: none !important;
   border-bottom: none !important;
   outline: none !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06), 
-              inset 0 1px 2px rgba(255, 255, 255, 0.95) !important;
+  box-shadow: none !important;
+  text-decoration: none !important;
+  transition: all 0.25s ease !important;
+}
+
+#mobileMenu .mobile-nav-link::before,
+#mobileMenu .mobile-nav-link::after,
+.mobile-nav-link::before,
+.mobile-nav-link::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* Mobile Active State: Smooth Translucent Glass Pebble (Zero Border, Perfect Pill) */
+#mobileMenu .mobile-nav-link.active,
+.mobile-nav-link.nav-link.active,
+.mobile-nav-link.active {
+  color: #00A86B !important;
+  background: rgba(255, 255, 255, 0.45) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border-radius: 50px !important;
+  border: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-top: none !important;
+  border-bottom: none !important;
+  outline: none !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05), inset 0 1px 1px rgba(255, 255, 255, 0.8) !important;
   font-weight: 700 !important;
-  border-radius: 9999px !important;
 }
 
 /* Glass Buttons */
