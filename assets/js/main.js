@@ -872,8 +872,7 @@ function initGsapAnimations() {
     gsap.registerPlugin(ScrollTrigger);
 
     // 1. Hero Smooth Staggered Entrance
-    gsap.from(".hero-badge", { y: -20, opacity: 0, duration: 0.8, delay: 0.1, ease: "power3.out" });
-    gsap.from(".hero-title", { y: 40, opacity: 0, duration: 0.8, delay: 0.2, ease: "power3.out" });
+    gsap.from(".hero-title", { y: 40, opacity: 0, duration: 0.8, delay: 0.15, ease: "power3.out" });
     gsap.from(".hero-description", { y: 30, opacity: 0, duration: 0.8, delay: 0.35, ease: "power3.out" });
     gsap.from(".hero-actions", { y: 25, opacity: 0, duration: 0.8, delay: 0.5, ease: "power3.out" });
     gsap.from(".hero-visual", { scale: 0.96, opacity: 0, duration: 0.8, delay: 0.4, ease: "power3.out" });

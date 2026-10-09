@@ -486,11 +486,6 @@ select.glass-input option:hover {
     padding-top: 2.75rem !important;
     padding-bottom: 2.75rem !important;
   }
-  
-  #home {
-    padding-top: 0.75rem !important;
-    padding-bottom: 2.5rem !important;
-  }
 
   /* Compact glass card inner padding for mobile */
   .liquid-glass-card,
@@ -548,7 +543,7 @@ select.glass-input option:hover {
 
 /* Tablet screens (640px to 1023px) */
 @media (min-width: 640px) and (max-width: 1023px) {
-  section {
+  section:not(#home) {
     padding-top: 4.5rem !important;
     padding-bottom: 4.5rem !important;
   }
