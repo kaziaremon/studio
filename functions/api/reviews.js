@@ -1,12 +1,9 @@
 /**
  * Cloudflare Pages Function: /api/reviews
- * Website Reviews API Endpoint
- *
- * Filters and returns ONLY reviews where:
- *  moderation_status === 'accepted' AND visibility === 'showing'
+ * Route C: Fetches reviews from REVIEWS_DB KV and filters for moderation_status === 'accepted' AND visibility === 'show'.
  */
 
-import { dbGetApprovedAndShowingReviews } from "./_db.js";
+import { kvList, kvGet } from "./_db.js";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -22,30 +19,45 @@ export async function onRequestOptions() {
 
 export async function onRequestGet({ env }) {
   try {
-    // Fetch ONLY reviews where moderation_status = 'accepted' AND visibility = 'showing'
-    const rows = await dbGetApprovedAndShowingReviews(env);
+    const keys = await kvList(env, "review_");
+    const filteredReviews = [];
 
-    const reviews = (rows || []).map(r => ({
-      id: r.id,
-      name: r.name || "Verified Client",
-      rating: Number(r.rating) || 5,
-      text: r.text || "",
-      date: r.created_at
-        ? new Date(r.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-        : "Verified Client"
-    }));
+    for (const k of keys) {
+      const val = await kvGet(env, k.name);
+      if (val) {
+        try {
+          const review = JSON.parse(val);
+          if (review.moderation_status === "accepted" && review.visibility === "show") {
+            filteredReviews.push({
+              id: review.id,
+              clientName: review.clientName,
+              name: review.clientName,
+              reviewText: review.reviewText,
+              text: review.reviewText,
+              rating: Number(review.rating) || 5,
+              moderation_status: review.moderation_status,
+              visibility: review.visibility,
+              timestamp: review.timestamp,
+              date: review.timestamp ? new Date(review.timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Verified Client"
+            });
+          }
+        } catch (e) {}
+      }
+    }
+
+    filteredReviews.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
 
     return new Response(JSON.stringify({
       success: true,
-      count: reviews.length,
-      reviews: reviews
+      count: filteredReviews.length,
+      reviews: filteredReviews
     }), {
       status: 200,
       headers: CORS_HEADERS
     });
 
   } catch (err) {
-    console.error("Error fetching filtered reviews:", err);
+    console.error("Route C Error:", err);
     return new Response(JSON.stringify({
       success: false,
       reviews: [],

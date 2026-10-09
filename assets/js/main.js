@@ -329,7 +329,14 @@ async function handleReviewSubmit(e) {
     const apiRes = await fetch(`${API_BASE}/api/submit-review`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, text, rating })
+      body: JSON.stringify({
+        clientName: name,
+        reviewText: text,
+        name,
+        email,
+        text,
+        rating
+      })
     });
 
     const resJson = await apiRes.json().catch(() => ({}));
@@ -402,18 +409,20 @@ function renderReviewsList(reviews) {
 
   reviews.forEach(review => {
     const card = document.createElement('div');
+    const displayName = review.clientName || review.name || 'Verified Client';
+    const displayText = review.reviewText || review.text || '';
     card.className = "bg-white/10 backdrop-blur-md border border-white/20 shadow-[0_4px_30px_rgba(0,0,0,0.1)] rounded-2xl p-6 transition-all hover:border-emerald-400";
     card.innerHTML = `
       <div class="flex items-center justify-between mb-3">
         <div>
-          <div class="font-bold text-slate-900 text-sm">${escapeHtml(review.name)}</div>
+          <div class="font-bold text-slate-900 text-sm">${escapeHtml(displayName)}</div>
           <div class="text-[11px] text-slate-600 font-medium">${escapeHtml(review.date || 'Verified Client')}</div>
         </div>
         <div class="text-amber-400 text-sm tracking-wide">
-          ${'★'.repeat(review.rating)}${'☆'.repeat(5 - review.rating)}
+          ${'★'.repeat(review.rating || 5)}${'☆'.repeat(Math.max(0, 5 - (review.rating || 5)))}
         </div>
       </div>
-      <p class="text-slate-700 text-xs sm:text-sm leading-relaxed font-normal">"${escapeHtml(review.text)}"</p>
+      <p class="text-slate-700 text-xs sm:text-sm leading-relaxed font-normal">"${escapeHtml(displayText)}"</p>
       <div class="mt-3 pt-2.5 border-t border-white/30 flex items-center space-x-1.5 text-[11px] text-emerald-800 font-semibold">
         <i class="fa-solid fa-shield-check text-brand-whiz"></i>
         <span>Verified Whiz Studio Client Engagement</span>
