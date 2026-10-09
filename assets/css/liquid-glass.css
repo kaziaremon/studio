@@ -226,30 +226,42 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   font-weight: 700 !important;
 }
 
-/* Mobile Navigation Link Styling (Compact Centered Pill Bubble) */
-.mobile-nav-link.nav-link {
+/* Mobile Navigation Link Styling (Compact Pure Centered Pill Bubble) */
+#mobileMenu .mobile-nav-link,
+.mobile-nav-link.nav-link,
+.mobile-nav-link {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
   text-align: center !important;
-  padding: 0.45rem 1.4rem !important;
+  padding: 0.5rem 1.6rem !important;
   border-radius: 9999px !important;
   font-size: 0.875rem !important;
   width: auto !important;
   max-width: fit-content !important;
   margin: 0 auto !important;
-  border: 1px solid transparent !important;
+  border: none !important;
+  border-left: none !important;
   box-shadow: none !important;
+  outline: none !important;
+  transition: background-color 0.25s ease, color 0.25s ease, box-shadow 0.25s ease !important;
 }
 
-/* Mobile Active State Indicator (Soft Glass Pill Bubble - Zero Left Accent/Border) */
-.mobile-nav-link.nav-link.active {
+/* Mobile Active State Indicator (Pure Soft Translucent Glass Pill - ZERO BORDER - Perfect Oval) */
+#mobileMenu .mobile-nav-link.active,
+.mobile-nav-link.nav-link.active,
+.mobile-nav-link.active {
   color: #00A86B !important;
-  background: rgba(255, 255, 255, 0.75) !important;
-  backdrop-filter: blur(14px) !important;
-  -webkit-backdrop-filter: blur(14px) !important;
-  border: 1px solid rgba(0, 168, 107, 0.25) !important;
-  box-shadow: 0 4px 16px rgba(0, 168, 107, 0.12), 
+  background: rgba(255, 255, 255, 0.70) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-top: none !important;
+  border-bottom: none !important;
+  outline: none !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06), 
               inset 0 1px 2px rgba(255, 255, 255, 0.95) !important;
   font-weight: 700 !important;
   border-radius: 9999px !important;
