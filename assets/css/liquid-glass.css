@@ -423,6 +423,33 @@ select.glass-input option:hover {
   background: rgba(0, 168, 107, 0.6);
 }
 
+/* Custom Dropdown Internal Scrollbar (Inset, Rounded, Zero Border Clipping) */
+.custom-dropdown-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(5, 150, 105, 0.4) transparent;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
+}
+
+.custom-dropdown-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+
+.custom-dropdown-scroll::-webkit-scrollbar-track {
+  background: transparent;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.custom-dropdown-scroll::-webkit-scrollbar-thumb {
+  background: rgba(5, 150, 105, 0.35);
+  border-radius: 9999px;
+}
+
+.custom-dropdown-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 168, 107, 0.7);
+}
+
 /* Global Page Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
