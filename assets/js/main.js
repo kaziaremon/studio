@@ -8,10 +8,10 @@
 // 1. CONFIGURATION & WEBHOOK INTEGRATIONS
 // =============================================================================
 
-// API & PROXY ENDPOINTS (Supports both Production domain and local/preview environments)
-const API_BASE = (typeof window !== 'undefined' && (window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
-  ? 'https://whizstudio.art'
-  : '';
+// CLOUDFLARE WORKER BACKEND ENGINE API
+const CLOUDFLARE_WORKER_API = 'https://whizstudio-proxy.kaziaremon.workers.dev';
+const API_BASE = CLOUDFLARE_WORKER_API;
+
 
 // =============================================================================
 // 2. DATA REGISTRIES (SERVICES & SEO ARTICLES)
