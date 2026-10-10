@@ -234,7 +234,8 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   align-items: center !important;
   justify-content: center !important;
   text-align: center !important;
-  padding: 8px 24px !important;
+  padding: 10px 24px !important;
+  min-height: 44px !important;
   border-radius: 50px !important;
   font-size: 14px !important;
   font-weight: 600 !important;
@@ -506,8 +507,8 @@ select.glass-input option:hover {
    MASTER RESPONSIVE ADAPTATIONS & MEDIA QUERIES
    ========================================================================== */
 
-/* Mobile Phones (< 640px) */
-@media (max-width: 639px) {
+/* Mobile Phones & Tablets (< 768px) */
+@media (max-width: 767px) {
   /* Container Padding & Spacing */
   section:not(#home) {
     padding-top: 2.75rem !important;
@@ -524,40 +525,53 @@ select.glass-input option:hover {
 
   /* Headings line height and compact sizing on small screens */
   .hero-title {
-    font-size: 2.05rem !important;
-    line-height: 1.18 !important;
+    font-size: clamp(1.85rem, 6.5vw, 2.65rem) !important;
+    line-height: 1.16 !important;
+  }
+
+  .section-title, h2 {
+    font-size: clamp(1.5rem, 5vw, 2.15rem) !important;
+    line-height: 1.22 !important;
   }
 
   .hero-description {
-    font-size: 0.925rem !important;
-    line-height: 1.55 !important;
+    font-size: 0.95rem !important;
+    line-height: 1.6 !important;
   }
   
-  /* Buttons expand to full width if inside hero/modal action groups */
+  /* Buttons expand to full width if inside hero action groups */
   .hero-actions .btn-glass-primary,
   .hero-actions .btn-glass-secondary {
     width: 100% !important;
     text-align: center;
     justify-content: center;
+    min-height: 48px !important;
   }
 
   /* Star rating buttons touch size */
   .star-btn {
-    font-size: 1.6rem !important;
-    padding: 0 3px !important;
-    min-width: 32px;
-    min-height: 32px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    font-size: 1.75rem !important;
+    padding: 2px 4px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  /* Form inputs & interactive touch size */
+  .glass-input {
+    min-height: 44px !important;
+    font-size: 15px !important;
   }
 
   /* Modals fit snug within small screens */
   #serviceModalContent,
   #articleModalContent {
-    max-height: 88vh !important;
+    max-height: 90vh !important;
     margin: 0.5rem !important;
     width: calc(100% - 1rem) !important;
+    border-radius: 1.25rem !important;
   }
 
   /* Notification Toast mobile alignment */
@@ -568,8 +582,8 @@ select.glass-input option:hover {
   }
 }
 
-/* Tablet screens (640px to 1023px) */
-@media (min-width: 640px) and (max-width: 1023px) {
+/* Tablet screens (768px to 1023px) */
+@media (min-width: 768px) and (max-width: 1023px) {
   section:not(#home) {
     padding-top: 4.5rem !important;
     padding-bottom: 4.5rem !important;
@@ -584,9 +598,10 @@ select.glass-input option:hover {
 }
 
 /* Touch Device Target Optimization */
-@media (hover: none) and (pointer: coarse) {
+@media (hover: none) and (pointer: coarse), (max-width: 767px) {
   a, button, input, select, textarea {
     min-height: 44px;
+    touch-action: manipulation;
   }
   
   .social-icon-btn {
