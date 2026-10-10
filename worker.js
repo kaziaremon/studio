@@ -614,6 +614,41 @@ export default {
       }
     }
 
+    // -------------------------------------------------------------------------
+    // Explicit SEO Routing (/sitemap.xml & /robots.txt)
+    // -------------------------------------------------------------------------
+    if (path === "/sitemap.xml" && (request.method === "GET" || request.method === "HEAD")) {
+      const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://whizstudio.art/</loc>
+    <lastmod>${new Date().toISOString().split("T")[0]}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>`;
+      return new Response(request.method === "HEAD" ? null : sitemap, {
+        status: 200,
+        headers: {
+          "Content-Type": "application/xml; charset=utf-8",
+          "Cache-Control": "public, max-age=3600, must-revalidate",
+          "Access-Control-Allow-Origin": "*"
+        }
+      });
+    }
+
+    if (path === "/robots.txt" && (request.method === "GET" || request.method === "HEAD")) {
+      const robots = `User-agent: *\nAllow: /\n\nUser-agent: Googlebot\nAllow: /\n\nUser-agent: Googlebot-Image\nAllow: /assets/images/\n\nUser-agent: Bingbot\nAllow: /\n\nSitemap: https://whizstudio.art/sitemap.xml\n`;
+      return new Response(request.method === "HEAD" ? null : robots, {
+        status: 200,
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Cache-Control": "public, max-age=3600, must-revalidate",
+          "Access-Control-Allow-Origin": "*"
+        }
+      });
+    }
+
     // Static Asset fallback for Cloudflare Pages
     if (env?.ASSETS && typeof env.ASSETS.fetch === "function") {
       return env.ASSETS.fetch(request);
