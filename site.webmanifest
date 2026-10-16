@@ -1,0 +1,28 @@
+{
+  "name": "Whiz Studio",
+  "short_name": "Whiz Studio",
+  "description": "Whiz Studio is a premier digital platform management and multi-channel marketing agency.",
+  "start_url": "https://whizstudio.art/",
+  "scope": "https://whizstudio.art/",
+  "display": "standalone",
+  "background_color": "#04070C",
+  "theme_color": "#00A86B",
+  "icons": [
+    {
+      "src": "https://whizstudio.art/favicon-48x48.png",
+      "sizes": "48x48",
+      "type": "image/png"
+    },
+    {
+      "src": "https://whizstudio.art/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://whizstudio.art/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

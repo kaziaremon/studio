@@ -162,6 +162,23 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
+    // Strict HTTPS Enforcement (301 Permanent Redirect)
+    const proto = request.headers.get("x-forwarded-proto") || (url.protocol ? url.protocol.replace(":", "") : "https");
+    if (proto === "http" || url.protocol === "http:") {
+      const secureUrl = new URL(request.url);
+      secureUrl.protocol = "https:";
+      secureUrl.hostname = "whizstudio.art";
+      return Response.redirect(secureUrl.toString(), 301);
+    }
+
+    // Canonical Apex Domain Enforcement (301 Permanent Redirect)
+    if (url.hostname === "www.whizstudio.art") {
+      const canonicalUrl = new URL(request.url);
+      canonicalUrl.protocol = "https:";
+      canonicalUrl.hostname = "whizstudio.art";
+      return Response.redirect(canonicalUrl.toString(), 301);
+    }
+
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
     }

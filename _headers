@@ -2,9 +2,54 @@
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   X-XSS-Protection: 1; mode=block
-  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
   Referrer-Policy: strict-origin-when-cross-origin
   Access-Control-Allow-Origin: *
+
+/favicon.ico
+  Access-Control-Allow-Origin: *
+  Content-Type: image/x-icon
+  Cache-Control: public, max-age=604800, must-revalidate
+
+/favicon.png
+  Access-Control-Allow-Origin: *
+  Content-Type: image/png
+  Cache-Control: public, max-age=604800, must-revalidate
+
+/favicon-32x32.png
+  Access-Control-Allow-Origin: *
+  Content-Type: image/png
+  Cache-Control: public, max-age=604800, must-revalidate
+
+/favicon-16x16.png
+  Access-Control-Allow-Origin: *
+  Content-Type: image/png
+  Cache-Control: public, max-age=604800, must-revalidate
+
+/favicon-48x48.png
+  Access-Control-Allow-Origin: *
+  Content-Type: image/png
+  Cache-Control: public, max-age=604800, must-revalidate
+
+/apple-touch-icon.png
+  Access-Control-Allow-Origin: *
+  Content-Type: image/png
+  Cache-Control: public, max-age=604800, must-revalidate
+
+/android-chrome-192x192.png
+  Access-Control-Allow-Origin: *
+  Content-Type: image/png
+  Cache-Control: public, max-age=604800, must-revalidate
+
+/android-chrome-512x512.png
+  Access-Control-Allow-Origin: *
+  Content-Type: image/png
+  Cache-Control: public, max-age=604800, must-revalidate
+
+/site.webmanifest
+  Access-Control-Allow-Origin: *
+  Content-Type: application/manifest+json; charset=utf-8
+  Cache-Control: public, max-age=86400, must-revalidate
 
 /brand-logo.png
   Access-Control-Allow-Origin: *
