@@ -614,13 +614,14 @@ export default {
     }
 
     if (path === "/robots.txt" && (request.method === "GET" || request.method === "HEAD")) {
-      const robots = `User-agent: *\nAllow: /\n\nUser-agent: Googlebot\nAllow: /\n\nUser-agent: Googlebot-Image\nAllow: /assets/images/\n\nUser-agent: Bingbot\nAllow: /\n\nSitemap: https://whizstudio.art/sitemap.xml\n`;
+      const robots = `User-agent: *\nAllow: /\nSitemap: https://whizstudio.art/sitemap.xml\n`;
       return new Response(request.method === "HEAD" ? null : robots, {
         status: 200,
         headers: {
           "Content-Type": "text/plain; charset=utf-8",
           "Cache-Control": "public, max-age=3600, must-revalidate",
-          "Access-Control-Allow-Origin": "*"
+          "Access-Control-Allow-Origin": "*",
+          "X-Content-Type-Options": "nosniff"
         }
       });
     }
