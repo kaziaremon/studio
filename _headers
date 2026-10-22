@@ -31,6 +31,21 @@
   Content-Type: image/png
   Cache-Control: public, max-age=604800, must-revalidate
 
+/favicon-96x96.png
+  Access-Control-Allow-Origin: *
+  Content-Type: image/png
+  Cache-Control: public, max-age=604800, must-revalidate
+
+/favicon-144x144.png
+  Access-Control-Allow-Origin: *
+  Content-Type: image/png
+  Cache-Control: public, max-age=604800, must-revalidate
+
+/brand-logo-square.png
+  Access-Control-Allow-Origin: *
+  Content-Type: image/png
+  Cache-Control: public, max-age=604800, must-revalidate
+
 /apple-touch-icon.png
   Access-Control-Allow-Origin: *
   Content-Type: image/png
