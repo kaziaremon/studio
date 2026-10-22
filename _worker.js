@@ -611,13 +611,107 @@ export default {
     // Explicit SEO Routing (/sitemap.xml & /robots.txt)
     // -------------------------------------------------------------------------
     if (path === "/sitemap.xml" && (request.method === "GET" || request.method === "HEAD")) {
+      const today = new Date().toISOString().split("T")[0];
       const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
     <loc>https://whizstudio.art/</loc>
-    <lastmod>${new Date().toISOString().split("T")[0]}</lastmod>
+    <lastmod>${today}</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://whizstudio.art/"/>
+    <xhtml:link rel="alternate" hreflang="bn" href="https://whizstudio.art/bn/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://whizstudio.art/"/>
+  </url>
+  <url>
+    <loc>https://whizstudio.art/bn/</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://whizstudio.art/"/>
+    <xhtml:link rel="alternate" hreflang="bn" href="https://whizstudio.art/bn/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://whizstudio.art/"/>
+  </url>
+  <url>
+    <loc>https://whizstudio.art/services/facebook-marketing/</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://whizstudio.art/services/facebook-marketing/"/>
+    <xhtml:link rel="alternate" hreflang="bn" href="https://whizstudio.art/bn/"/>
+  </url>
+  <url>
+    <loc>https://whizstudio.art/services/instagram-marketing/</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://whizstudio.art/services/instagram-marketing/"/>
+    <xhtml:link rel="alternate" hreflang="bn" href="https://whizstudio.art/bn/"/>
+  </url>
+  <url>
+    <loc>https://whizstudio.art/services/facebook-ads/</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://whizstudio.art/services/facebook-ads/"/>
+    <xhtml:link rel="alternate" hreflang="bn" href="https://whizstudio.art/bn/"/>
+  </url>
+  <url>
+    <loc>https://whizstudio.art/services/instagram-ads/</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://whizstudio.art/services/instagram-ads/"/>
+    <xhtml:link rel="alternate" hreflang="bn" href="https://whizstudio.art/bn/"/>
+  </url>
+  <url>
+    <loc>https://whizstudio.art/services/social-media-optimization/</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://whizstudio.art/services/social-media-optimization/"/>
+    <xhtml:link rel="alternate" hreflang="bn" href="https://whizstudio.art/bn/"/>
+  </url>
+  <url>
+    <loc>https://whizstudio.art/services/linkedin-optimization/</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://whizstudio.art/services/linkedin-optimization/"/>
+    <xhtml:link rel="alternate" hreflang="bn" href="https://whizstudio.art/bn/"/>
+  </url>
+  <url>
+    <loc>https://whizstudio.art/articles/organic-reach-reality/</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://whizstudio.art/articles/organic-reach-reality/"/>
+    <xhtml:link rel="alternate" hreflang="bn" href="https://whizstudio.art/bn/"/>
+  </url>
+  <url>
+    <loc>https://whizstudio.art/articles/smo-ad-efficiency/</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://whizstudio.art/articles/smo-ad-efficiency/"/>
+    <xhtml:link rel="alternate" hreflang="bn" href="https://whizstudio.art/bn/"/>
+  </url>
+  <url>
+    <loc>https://whizstudio.art/articles/linkedin-executive-presence/</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://whizstudio.art/articles/linkedin-executive-presence/"/>
+    <xhtml:link rel="alternate" hreflang="bn" href="https://whizstudio.art/bn/"/>
+  </url>
+  <url>
+    <loc>https://whizstudio.art/articles/creative-fatigue-mitigation/</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://whizstudio.art/articles/creative-fatigue-mitigation/"/>
+    <xhtml:link rel="alternate" hreflang="bn" href="https://whizstudio.art/bn/"/>
   </url>
 </urlset>`;
       return new Response(request.method === "HEAD" ? null : sitemap, {

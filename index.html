@@ -20,6 +20,11 @@
   <!-- Primary Canonical Tag Directives (Strict Indexing Resolution) -->
   <link rel="canonical" href="https://whizstudio.art/">
 
+  <!-- Multi-language SEO Directives (Strict Bidirectional Hreflang) -->
+  <link rel="alternate" hreflang="en" href="https://whizstudio.art/">
+  <link rel="alternate" hreflang="bn" href="https://whizstudio.art/bn/">
+  <link rel="alternate" hreflang="x-default" href="https://whizstudio.art/">
+
   <!-- Favicon & Device Touch Icons (Strict Absolute HTTPS URLs for Google Search & Browsers) -->
   <link rel="icon" type="image/x-icon" href="https://whizstudio.art/favicon.ico">
   <link rel="shortcut icon" href="https://whizstudio.art/favicon.ico">
@@ -87,8 +92,7 @@
         "name": "Whiz Studio",
         "alternateName": [
           "WhizStudio",
-          "Whiz Studio Art",
-          "whizstudio.art"
+          "Whiz Studio Art"
         ],
         "description": "Whiz Studio is a top digital marketing agency specializing in Social Media Optimization (SMO), Facebook Ads management, and data-driven growth.",
         "inLanguage": "en-US",
@@ -304,8 +308,14 @@
           <a href="#faq" class="nav-link px-4 py-1.5 rounded-full">FAQ</a>
         </div>
 
-        <!-- Main Call-to-Action: Button text "Contact with Us" -->
-        <div class="flex items-center space-x-3">
+        <!-- Main Call-to-Action & Language Switcher -->
+        <div class="flex items-center space-x-2 sm:space-x-3">
+          <!-- Static Page-Based Language Switcher (No JavaScript dependency) -->
+          <a href="/bn/" class="inline-flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-bold text-emerald-950 bg-emerald-100/90 hover:bg-emerald-200 border border-emerald-300 transition-all shadow-xs" title="বাংলা সংস্করণে পরিবর্তন করুন">
+            <span class="text-sm">🇧🇩</span>
+            <span class="font-semibold">বাংলা</span>
+          </a>
+
           <a href="#contact" class="hidden sm:inline-flex items-center justify-center px-5 py-2.5 rounded-xl font-bold text-sm btn-glass-primary shadow-sm">
             <span>Contact with Us</span>
             <i class="fa-solid fa-arrow-right text-xs ml-2"></i>
@@ -320,6 +330,11 @@
 
       <!-- Mobile Dropdown Menu -->
       <div id="mobileMenu" class="hidden lg:hidden mt-2 bg-white/30 backdrop-blur-xl border border-white/40 shadow-[0_12px_40px_rgba(0,168,107,0.12)] rounded-3xl p-5 sm:p-6 flex flex-col items-center justify-center space-y-2 text-center">
+        <!-- Mobile Language Switch -->
+        <a href="/bn/" class="mobile-nav-link inline-flex items-center justify-center space-x-2 text-center px-6 py-2 rounded-full text-xs font-bold text-emerald-950 bg-emerald-100/90 border border-emerald-300 transition-all min-h-[44px]">
+          <span>🇧🇩</span>
+          <span>বাংলা সংস্করণে যান</span>
+        </a>
         <a href="#home" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]">Home</a>
         <a href="#about" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]">About Us</a>
         <a href="#services" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]">Services</a>
@@ -543,15 +558,15 @@
               <i class="fa-brands fa-facebook text-2xl"></i>
             </div>
             <span class="text-xs font-bold text-emerald-950 bg-emerald-100/90 px-3 py-1 rounded-md border border-emerald-300">Retention & Community</span>
-            <h3 class="text-xl font-bold text-slate-900 mt-3 mb-2">Facebook Marketing</h3>
+            <a href="/services/facebook-marketing/"><h3 class="text-xl font-bold text-slate-900 mt-3 mb-2 hover:text-brand-whiz transition-colors">Facebook Marketing</h3></a>
             <p class="text-sm text-slate-700 leading-relaxed mb-6 font-normal">
               Build an authentic organic storefront that validates your legitimacy, nurtures warm audiences, and prevents prospective buyers from leaving for active competitors.
             </p>
           </div>
-          <button onclick="openServiceModal('facebook-marketing')" class="w-full py-3 px-4 rounded-xl text-sm font-bold bg-white/30 hover:bg-white/60 text-emerald-900 border border-white/40 hover:border-brand-whiz shadow-xs flex items-center justify-center space-x-2 transition-all">
-            <span>Learn More</span>
-            <i class="fa-solid fa-circle-info text-brand-whiz text-sm"></i>
-          </button>
+          <a href="/services/facebook-marketing/" class="w-full py-3 px-4 rounded-xl text-sm font-bold bg-white/30 hover:bg-white/60 text-emerald-900 border border-white/40 hover:border-brand-whiz shadow-xs flex items-center justify-center space-x-2 transition-all">
+            <span>Explore Service Details</span>
+            <i class="fa-solid fa-arrow-right text-brand-whiz text-xs"></i>
+          </a>
         </div>
 
         <!-- Service 2: Instagram Marketing -->
@@ -561,15 +576,15 @@
               <i class="fa-brands fa-instagram text-2xl"></i>
             </div>
             <span class="text-xs font-bold text-emerald-950 bg-emerald-100/90 px-3 py-1 rounded-md border border-emerald-300">Visual Authority</span>
-            <h3 class="text-xl font-bold text-slate-900 mt-3 mb-2">Instagram Marketing</h3>
+            <a href="/services/instagram-marketing/"><h3 class="text-xl font-bold text-slate-900 mt-3 mb-2 hover:text-brand-whiz transition-colors">Instagram Marketing</h3></a>
             <p class="text-sm text-slate-700 leading-relaxed mb-6 font-normal">
               Establish premium aesthetic credibility. Curate visual proof, consistent brand storytelling, and high-trust highlights that justify premium pricing.
             </p>
           </div>
-          <button onclick="openServiceModal('instagram-marketing')" class="w-full py-3 px-4 rounded-xl text-sm font-bold bg-white/30 hover:bg-white/60 text-emerald-900 border border-white/40 hover:border-brand-whiz shadow-xs flex items-center justify-center space-x-2 transition-all">
-            <span>Learn More</span>
-            <i class="fa-solid fa-circle-info text-brand-whiz text-sm"></i>
-          </button>
+          <a href="/services/instagram-marketing/" class="w-full py-3 px-4 rounded-xl text-sm font-bold bg-white/30 hover:bg-white/60 text-emerald-900 border border-white/40 hover:border-brand-whiz shadow-xs flex items-center justify-center space-x-2 transition-all">
+            <span>Explore Service Details</span>
+            <i class="fa-solid fa-arrow-right text-brand-whiz text-xs"></i>
+          </a>
         </div>
 
         <!-- Service 3: Facebook Ads -->
@@ -579,15 +594,15 @@
               <i class="fa-solid fa-bullseye text-2xl"></i>
             </div>
             <span class="text-xs font-bold text-emerald-950 bg-emerald-100/90 px-3 py-1 rounded-md border border-emerald-300">Direct Response Ads</span>
-            <h3 class="text-xl font-bold text-slate-900 mt-3 mb-2">Facebook Ads</h3>
+            <a href="/services/facebook-ads/"><h3 class="text-xl font-bold text-slate-900 mt-3 mb-2 hover:text-brand-whiz transition-colors">Facebook Ads</h3></a>
             <p class="text-sm text-slate-700 leading-relaxed mb-6 font-normal">
               Scalable paid acquisition systems. Stop relying on algorithm luck and build a repeatable monthly pipeline of leads and direct customer purchases.
             </p>
           </div>
-          <button onclick="openServiceModal('facebook-ads')" class="w-full py-3 px-4 rounded-xl text-sm font-bold bg-white/30 hover:bg-white/60 text-emerald-900 border border-white/40 hover:border-brand-whiz shadow-xs flex items-center justify-center space-x-2 transition-all">
-            <span>Learn More</span>
-            <i class="fa-solid fa-circle-info text-brand-whiz text-sm"></i>
-          </button>
+          <a href="/services/facebook-ads/" class="w-full py-3 px-4 rounded-xl text-sm font-bold bg-white/30 hover:bg-white/60 text-emerald-900 border border-white/40 hover:border-brand-whiz shadow-xs flex items-center justify-center space-x-2 transition-all">
+            <span>Explore Service Details</span>
+            <i class="fa-solid fa-arrow-right text-brand-whiz text-xs"></i>
+          </a>
         </div>
 
         <!-- Service 4: Instagram Ads -->
@@ -597,15 +612,15 @@
               <i class="fa-solid fa-mobile-screen-button text-2xl"></i>
             </div>
             <span class="text-xs font-bold text-emerald-950 bg-emerald-100/90 px-3 py-1 rounded-md border border-emerald-300">Vertical Video Capture</span>
-            <h3 class="text-xl font-bold text-slate-900 mt-3 mb-2">Instagram Ads</h3>
+            <a href="/services/instagram-ads/"><h3 class="text-xl font-bold text-slate-900 mt-3 mb-2 hover:text-brand-whiz transition-colors">Instagram Ads</h3></a>
             <p class="text-sm text-slate-700 leading-relaxed mb-6 font-normal">
               High-converting Reels and Stories campaigns. Capture mobile attention with thumb-stopping creative hooks that drive frictionless impulse conversions.
             </p>
           </div>
-          <button onclick="openServiceModal('instagram-ads')" class="w-full py-3 px-4 rounded-xl text-sm font-bold bg-white/30 hover:bg-white/60 text-emerald-900 border border-white/40 hover:border-brand-whiz shadow-xs flex items-center justify-center space-x-2 transition-all">
-            <span>Learn More</span>
-            <i class="fa-solid fa-circle-info text-brand-whiz text-sm"></i>
-          </button>
+          <a href="/services/instagram-ads/" class="w-full py-3 px-4 rounded-xl text-sm font-bold bg-white/30 hover:bg-white/60 text-emerald-900 border border-white/40 hover:border-brand-whiz shadow-xs flex items-center justify-center space-x-2 transition-all">
+            <span>Explore Service Details</span>
+            <i class="fa-solid fa-arrow-right text-brand-whiz text-xs"></i>
+          </a>
         </div>
 
         <!-- Service 5: Social Media Optimization -->
@@ -615,15 +630,15 @@
               <i class="fa-solid fa-sliders text-2xl"></i>
             </div>
             <span class="text-xs font-bold text-emerald-950 bg-emerald-100/90 px-3 py-1 rounded-md border border-emerald-300">Conversion Hygiene</span>
-            <h3 class="text-xl font-bold text-slate-900 mt-3 mb-2">Social Media Optimization</h3>
+            <a href="/services/social-media-optimization/"><h3 class="text-xl font-bold text-slate-900 mt-3 mb-2 hover:text-brand-whiz transition-colors">Social Media Optimization</h3></a>
             <p class="text-sm text-slate-700 leading-relaxed mb-6 font-normal">
               Fix leaky profiles before spending on advertising. Complete audit and restructuring of bio copy, highlight architecture, keywords, and CTAs.
             </p>
           </div>
-          <button onclick="openServiceModal('social-media-optimization')" class="w-full py-3 px-4 rounded-xl text-sm font-bold bg-white/30 hover:bg-white/60 text-emerald-900 border border-white/40 hover:border-brand-whiz shadow-xs flex items-center justify-center space-x-2 transition-all">
-            <span>Learn More</span>
-            <i class="fa-solid fa-circle-info text-brand-whiz text-sm"></i>
-          </button>
+          <a href="/services/social-media-optimization/" class="w-full py-3 px-4 rounded-xl text-sm font-bold bg-white/30 hover:bg-white/60 text-emerald-900 border border-white/40 hover:border-brand-whiz shadow-xs flex items-center justify-center space-x-2 transition-all">
+            <span>Explore Service Details</span>
+            <i class="fa-solid fa-arrow-right text-brand-whiz text-xs"></i>
+          </a>
         </div>
 
         <!-- Service 6: LinkedIn Optimization -->
@@ -633,15 +648,15 @@
               <i class="fa-brands fa-linkedin-in text-2xl"></i>
             </div>
             <span class="text-xs font-bold text-emerald-950 bg-emerald-100/90 px-3 py-1 rounded-md border border-emerald-300">Executive B2B Authority</span>
-            <h3 class="text-xl font-bold text-slate-900 mt-3 mb-2">LinkedIn Optimization</h3>
+            <a href="/services/linkedin-optimization/"><h3 class="text-xl font-bold text-slate-900 mt-3 mb-2 hover:text-brand-whiz transition-colors">LinkedIn Optimization</h3></a>
             <p class="text-sm text-slate-700 leading-relaxed mb-6 font-normal">
               Position founders and enterprise pages for high-ticket contracts. Turn your profile into an executive landing page that commands institutional trust.
             </p>
           </div>
-          <button onclick="openServiceModal('linkedin-optimization')" class="w-full py-3 px-4 rounded-xl text-sm font-bold bg-white/30 hover:bg-white/60 text-emerald-900 border border-white/40 hover:border-brand-whiz shadow-xs flex items-center justify-center space-x-2 transition-all">
-            <span>Learn More</span>
-            <i class="fa-solid fa-circle-info text-brand-whiz text-sm"></i>
-          </button>
+          <a href="/services/linkedin-optimization/" class="w-full py-3 px-4 rounded-xl text-sm font-bold bg-white/30 hover:bg-white/60 text-emerald-900 border border-white/40 hover:border-brand-whiz shadow-xs flex items-center justify-center space-x-2 transition-all">
+            <span>Explore Service Details</span>
+            <i class="fa-solid fa-arrow-right text-brand-whiz text-xs"></i>
+          </a>
         </div>
 
       </div>
@@ -866,17 +881,19 @@
               <span class="bg-emerald-100/90 px-2.5 py-1 rounded-md border border-emerald-300">Paid Acquisition</span>
               <span class="text-slate-600 font-semibold">5 Min Read</span>
             </div>
-            <h3 class="text-xl font-bold text-slate-900 mb-3 hover:text-brand-whiz transition-colors cursor-pointer" onclick="openArticleModal('organic-reach-reality')">
-              Why Organic Reach Alone Can't Sustain Growth on Meta in 2026
-            </h3>
+            <a href="/articles/organic-reach-reality/">
+              <h3 class="text-xl font-bold text-slate-900 mb-3 hover:text-brand-whiz transition-colors">
+                Why Organic Reach Alone Can't Sustain Growth on Meta in 2026
+              </h3>
+            </a>
             <p class="text-sm text-slate-700 leading-relaxed mb-6 font-normal">
               The mathematical reality of social platform algorithms and why combining organic positioning with structured paid ads is the only predictable growth path for modern enterprises.
             </p>
           </div>
-          <button onclick="openArticleModal('organic-reach-reality')" class="inline-flex items-center space-x-2 text-sm font-bold text-brand-whiz hover:text-emerald-800 transition-colors">
+          <a href="/articles/organic-reach-reality/" class="inline-flex items-center space-x-2 text-sm font-bold text-brand-whiz hover:text-emerald-800 transition-colors">
             <span>Read Complete Article</span>
             <i class="fa-solid fa-arrow-right text-xs"></i>
-          </button>
+          </a>
         </article>
 
         <!-- Article 2 -->
@@ -886,17 +903,19 @@
               <span class="bg-emerald-100/90 px-2.5 py-1 rounded-md border border-emerald-300">Platform Infrastructure</span>
               <span class="text-slate-600 font-semibold">6 Min Read</span>
             </div>
-            <h3 class="text-xl font-bold text-slate-900 mb-3 hover:text-brand-whiz transition-colors cursor-pointer" onclick="openArticleModal('smo-ad-efficiency')">
-              Social Media Optimization (SMO): The Overlooked Foundation of Paid Ad Efficiency
-            </h3>
+            <a href="/articles/smo-ad-efficiency/">
+              <h3 class="text-xl font-bold text-slate-900 mb-3 hover:text-brand-whiz transition-colors">
+                Social Media Optimization (SMO): The Overlooked Foundation of Paid Ad Efficiency
+              </h3>
+            </a>
             <p class="text-sm text-slate-700 leading-relaxed mb-6 font-normal">
               How conversion rate leaks across bios, highlights, and profile architecture artificially inflate customer acquisition costs across commercial advertising campaigns.
             </p>
           </div>
-          <button onclick="openArticleModal('smo-ad-efficiency')" class="inline-flex items-center space-x-2 text-sm font-bold text-brand-whiz hover:text-emerald-800 transition-colors">
+          <a href="/articles/smo-ad-efficiency/" class="inline-flex items-center space-x-2 text-sm font-bold text-brand-whiz hover:text-emerald-800 transition-colors">
             <span>Read Complete Article</span>
             <i class="fa-solid fa-arrow-right text-xs"></i>
-          </button>
+          </a>
         </article>
 
         <!-- Article 3 -->
@@ -906,17 +925,19 @@
               <span class="bg-emerald-100/90 px-2.5 py-1 rounded-md border border-emerald-300">B2B Strategy</span>
               <span class="text-slate-600 font-semibold">5 Min Read</span>
             </div>
-            <h3 class="text-xl font-bold text-slate-900 mb-3 hover:text-brand-whiz transition-colors cursor-pointer" onclick="openArticleModal('linkedin-executive-presence')">
-              LinkedIn Optimization for Founders: Turning Profiles into Enterprise Magnets
-            </h3>
+            <a href="/articles/linkedin-executive-presence/">
+              <h3 class="text-xl font-bold text-slate-900 mb-3 hover:text-brand-whiz transition-colors">
+                LinkedIn Optimization for Founders: Turning Profiles into Enterprise Magnets
+              </h3>
+            </a>
             <p class="text-sm text-slate-700 leading-relaxed mb-6 font-normal">
               Why enterprise decision-makers evaluate the executive behind the contract, and how to structure personal profiles to drive inbound procurement conversations.
             </p>
           </div>
-          <button onclick="openArticleModal('linkedin-executive-presence')" class="inline-flex items-center space-x-2 text-sm font-bold text-brand-whiz hover:text-emerald-800 transition-colors">
+          <a href="/articles/linkedin-executive-presence/" class="inline-flex items-center space-x-2 text-sm font-bold text-brand-whiz hover:text-emerald-800 transition-colors">
             <span>Read Complete Article</span>
             <i class="fa-solid fa-arrow-right text-xs"></i>
-          </button>
+          </a>
         </article>
 
         <!-- Article 4 -->
@@ -926,17 +947,19 @@
               <span class="bg-emerald-100/90 px-2.5 py-1 rounded-md border border-emerald-300">Performance Media</span>
               <span class="text-slate-600 font-semibold">4 Min Read</span>
             </div>
-            <h3 class="text-xl font-bold text-slate-900 mb-3 hover:text-brand-whiz transition-colors cursor-pointer" onclick="openArticleModal('creative-fatigue-mitigation')">
-              Creative Fatigue & Ad Burnout: Protecting Your Campaign Return on Ad Spend
-            </h3>
+            <a href="/articles/creative-fatigue-mitigation/">
+              <h3 class="text-xl font-bold text-slate-900 mb-3 hover:text-brand-whiz transition-colors">
+                Creative Fatigue & Ad Burnout: Protecting Your Campaign Return on Ad Spend
+              </h3>
+            </a>
             <p class="text-sm text-slate-700 leading-relaxed mb-6 font-normal">
               A structured methodology for creative testing cadences, preventing audience ad blindness, and maintaining stable acquisition costs over multi-month campaigns.
             </p>
           </div>
-          <button onclick="openArticleModal('creative-fatigue-mitigation')" class="inline-flex items-center space-x-2 text-sm font-bold text-brand-whiz hover:text-emerald-800 transition-colors">
+          <a href="/articles/creative-fatigue-mitigation/" class="inline-flex items-center space-x-2 text-sm font-bold text-brand-whiz hover:text-emerald-800 transition-colors">
             <span>Read Complete Article</span>
             <i class="fa-solid fa-arrow-right text-xs"></i>
-          </button>
+          </a>
         </article>
 
       </div>
