@@ -9,57 +9,62 @@
 /favicon.ico
   Access-Control-Allow-Origin: *
   Content-Type: image/x-icon
-  Cache-Control: public, max-age=604800, must-revalidate
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800, must-revalidate
 
 /favicon.png
   Access-Control-Allow-Origin: *
   Content-Type: image/png
-  Cache-Control: public, max-age=604800, must-revalidate
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800, must-revalidate
 
 /favicon-32x32.png
   Access-Control-Allow-Origin: *
   Content-Type: image/png
-  Cache-Control: public, max-age=604800, must-revalidate
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800, must-revalidate
 
 /favicon-16x16.png
   Access-Control-Allow-Origin: *
   Content-Type: image/png
-  Cache-Control: public, max-age=604800, must-revalidate
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800, must-revalidate
 
 /favicon-48x48.png
   Access-Control-Allow-Origin: *
   Content-Type: image/png
-  Cache-Control: public, max-age=604800, must-revalidate
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800, must-revalidate
 
 /favicon-96x96.png
   Access-Control-Allow-Origin: *
   Content-Type: image/png
-  Cache-Control: public, max-age=604800, must-revalidate
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800, must-revalidate
 
 /favicon-144x144.png
   Access-Control-Allow-Origin: *
   Content-Type: image/png
-  Cache-Control: public, max-age=604800, must-revalidate
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800, must-revalidate
 
 /brand-logo-square.png
   Access-Control-Allow-Origin: *
   Content-Type: image/png
-  Cache-Control: public, max-age=604800, must-revalidate
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800, must-revalidate
+
+/brand-symbol-raw.png
+  Access-Control-Allow-Origin: *
+  Content-Type: image/png
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800, must-revalidate
 
 /apple-touch-icon.png
   Access-Control-Allow-Origin: *
   Content-Type: image/png
-  Cache-Control: public, max-age=604800, must-revalidate
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800, must-revalidate
 
 /android-chrome-192x192.png
   Access-Control-Allow-Origin: *
   Content-Type: image/png
-  Cache-Control: public, max-age=604800, must-revalidate
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800, must-revalidate
 
 /android-chrome-512x512.png
   Access-Control-Allow-Origin: *
   Content-Type: image/png
-  Cache-Control: public, max-age=604800, must-revalidate
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800, must-revalidate
 
 /site.webmanifest
   Access-Control-Allow-Origin: *
