@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
 <head>
   <!-- Google tag (gtag.js) - Google Analytics 4 & Google Ads -->
@@ -23,7 +23,7 @@
   <link rel="alternate" hreflang="bn" href="https://whizstudio.art/bn/">
   <link rel="alternate" hreflang="x-default" href="https://whizstudio.art/services/social-media-optimization/">
 
-    <!-- Favicons (Multiple of 48px prioritized for Search Engines & Browsers) -->
+  <!-- Favicons (Multiple of 48px prioritized for Search Engines & Browsers) -->
   <link rel="icon" type="image/png" sizes="48x48" href="https://whizstudio.art/favicon-48x48.png">
   <link rel="icon" type="image/png" sizes="96x96" href="https://whizstudio.art/favicon-96x96.png">
   <link rel="icon" type="image/png" sizes="144x144" href="https://whizstudio.art/favicon-144x144.png">
@@ -42,9 +42,9 @@
   <meta name="theme-color" content="#00A86B" media="(prefers-color-scheme: light)">
 
   <!-- SEO Meta Tags -->
-  <title>Social Media Optimization (SMO) Agency | Whiz Studio</title>
-  <meta name="description" content="Fix leaky social profiles and cut customer acquisition costs. Professional Social Media Optimization (SMO), bio restructuring, and conversion hygiene with Whiz Studio.">
-  <meta name="keywords" content="Social Media Optimization, SMO agency, profile architecture, conversion hygiene, social bio optimization, CAC reduction, Whiz Studio">
+  <title>Social Media Optimization (SMO) Agency | Whiz Studio Profile CRO</title>
+  <meta name="description" content="Fix leaky social media profiles before spending on advertising. Complete audit of bio copy, highlight funnels, keywords, and conversion CTAs with Whiz Studio.">
+  <meta name="keywords" content="Social Media Optimization, SMO agency, social profile audit, conversion rate optimization, bio optimization, Instagram highlights, Whiz Studio">
   <meta name="author" content="Whiz Studio">
   <meta name="robots" content="index, follow, max-image-preview:large">
 
@@ -52,8 +52,8 @@
   <meta property="og:site_name" content="Whiz Studio">
   <meta property="og:type" content="article">
   <meta property="og:url" content="https://whizstudio.art/services/social-media-optimization/">
-  <meta property="og:title" content="Social Media Optimization (SMO) Agency | Whiz Studio">
-  <meta property="og:description" content="Fix leaky social profiles and cut customer acquisition costs. Professional Social Media Optimization (SMO) and profile architecture.">
+  <meta property="og:title" content="Social Media Optimization (SMO) Agency | Whiz Studio Profile CRO">
+  <meta property="og:description" content="Fix leaky social media profiles before spending on advertising. Complete audit of bio copy, highlight funnels, keywords, and conversion CTAs.">
   <meta property="og:image" content="https://whizstudio.art/brand-logo.png">
   <meta property="og:locale" content="en_US">
 
@@ -61,10 +61,10 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@whizstudio">
   <meta name="twitter:title" content="Social Media Optimization (SMO) Agency | Whiz Studio">
-  <meta name="twitter:description" content="Turn social media profile visits into automated conversion funnels with professional SMO.">
+  <meta name="twitter:description" content="Turn social media profile visits into paying clients with structured bio architecture, evergreen proof highlights, and frictionless CTAs.">
   <meta name="twitter:image" content="https://whizstudio.art/brand-logo.png">
 
-  <!-- Structured Schema: Service & Breadcrumbs -->
+  <!-- Structured Schema: Service, Breadcrumbs & FAQPage -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -102,8 +102,45 @@
           "url": "https://whizstudio.art/",
           "logo": "https://whizstudio.art/brand-logo-square.png"
         },
-        "description": "Full audit and restructuring of bio copy, highlight architecture, keywords, and CTA funnels to optimize visitor-to-inquiry conversion rates.",
+        "description": "Conversion-focused profile restructuring, bio architecture, evergreen social proof highlights, search keyword indexing, and frictionless inbound funnel integration engineered by Whiz Studio.",
         "areaServed": "Worldwide"
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is the difference between Social Media Optimization (SMO) and Social Media Marketing?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Marketing is about producing content and driving traffic; Optimization is engineering the profile destination (bio, highlights, search keywords, links) so the traffic actually converts into customers."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why should we optimize our social profiles before running paid ads?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Nearly 45% of users who see your ads click through to your profile before purchasing. If your profile is confusing, outdated, or lacks proof, you pay for clicks that immediately bounce."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How long does a full SMO overhaul take?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "An end-to-end profile restructuring is typically audited, rewritten, designed, and implemented within 5 to 7 business days."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Which social media platforms do you optimize?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "We specialize in Facebook Business Pages, Instagram Professional Profiles, and LinkedIn Personal & Corporate Company Pages."
+            }
+          }
+        ]
       }
     ]
   }
@@ -146,6 +183,10 @@
     }
   </script>
 
+  <!-- GSAP Animation Engine -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+
+  <!-- Bespoke True Liquid Glass Stylesheet -->
   <link rel="stylesheet" href="../../assets/css/liquid-glass.css">
 </head>
 <body class="bg-[#F4FAF7] text-slate-900 selection:bg-brand-whiz selection:text-white antialiased relative min-h-screen">
@@ -161,11 +202,12 @@
   <!-- NAVIGATION BAR -->
   <header class="fixed top-0 left-0 right-0 z-50 transition-all duration-300">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-2">
-      <nav class="glass-nav rounded-2xl px-4 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between border border-white/40 shadow-[0_4px_30px_rgba(0,0,0,0.06)]">
+      <nav id="mainNav" class="glass-nav rounded-2xl px-4 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between border border-white/40 shadow-[0_4px_30px_rgba(0,0,0,0.06)] transition-all duration-300">
         <a href="/" class="inline-flex items-center group transition-transform hover:scale-[1.02]" aria-label="Whiz Studio Home">
           <img src="../../assets/images/logo.png" alt="Whiz Studio Logo" class="h-9 sm:h-11 md:h-12 w-auto object-contain">
         </a>
 
+        <!-- Desktop Navigation Links -->
         <div class="hidden lg:flex items-center space-x-1 xl:space-x-2 text-sm font-semibold text-slate-800">
           <a href="/" class="nav-link px-4 py-1.5 rounded-full">Home</a>
           <a href="/#about" class="nav-link px-4 py-1.5 rounded-full">About Us</a>
@@ -176,153 +218,480 @@
           <a href="/#faq" class="nav-link px-4 py-1.5 rounded-full">FAQ</a>
         </div>
 
+        <!-- Desktop Action & Mobile Hamburger -->
         <div class="flex items-center space-x-2 sm:space-x-3">
           <a href="/#contact" class="hidden sm:inline-flex items-center justify-center px-5 py-2.5 rounded-xl font-bold text-sm btn-glass-primary shadow-sm">
             <span>Get Started</span>
             <i class="fa-solid fa-arrow-right text-xs ml-2"></i>
           </a>
+
+          <!-- Mobile Hamburger Menu Button -->
+          <button id="mobileMenuToggle" class="lg:hidden w-10 h-10 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-xl text-slate-800 hover:text-brand-whiz hover:bg-white/40 border border-white/60 transition-all focus:outline-none" aria-label="Toggle Navigation" aria-expanded="false">
+            <i class="fa-solid fa-bars text-lg transition-transform duration-200"></i>
+          </button>
         </div>
       </nav>
+
+      <!-- Mobile Dropdown Navigation Menu -->
+      <div id="mobileMenu" class="hidden lg:hidden mt-2 bg-white/40 backdrop-blur-2xl border border-white/50 shadow-[0_12px_40px_rgba(0,168,107,0.12)] rounded-3xl p-5 sm:p-6 flex flex-col items-center justify-center space-y-2 text-center transition-all duration-300">
+        <a href="/" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]">Home</a>
+        <a href="/#about" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]">About Us</a>
+        <a href="/#services" class="mobile-nav-link nav-link active inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-brand-whiz transition-all min-h-[44px]">Services</a>
+        <a href="/#pricing" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]">Pricing</a>
+        <a href="/#articles" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]">Articles</a>
+        <a href="/#testimonials" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]">Reviews</a>
+        <a href="/#faq" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]">FAQ</a>
+        <a href="/#contact" class="mobile-nav-link inline-flex items-center justify-center text-center px-7 py-3 rounded-full text-sm font-bold text-white bg-brand-whiz hover:bg-emerald-700 shadow-sm mt-2 min-h-[44px]">Get Started</a>
+      </div>
     </div>
   </header>
 
-  <main class="relative z-10 pt-28 sm:pt-36 pb-20">
-    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+  <main class="relative z-10 pt-24 sm:pt-32 pb-16 sm:pb-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       
-      <!-- Breadcrumb Nav -->
-      <nav class="flex items-center space-x-2 text-xs font-semibold text-slate-600 mb-6" aria-label="Breadcrumb">
-        <a href="/" class="hover:text-brand-whiz transition-colors">Home</a>
-        <span>/</span>
+      <!-- Re-aligned, Compact Glass Pill Breadcrumb Nav -->
+      <nav class="inline-flex items-center flex-wrap gap-1.5 sm:gap-2 px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-white/40 backdrop-blur-md border border-white/60 shadow-xs text-xs font-medium text-slate-600 mb-6 sm:mb-8" aria-label="Breadcrumb">
+        <a href="/" class="hover:text-brand-whiz transition-colors flex items-center space-x-1.5">
+          <i class="fa-solid fa-house text-[11px] text-brand-whiz"></i>
+          <span>Home</span>
+        </a>
+        <i class="fa-solid fa-chevron-right text-[9px] text-slate-400"></i>
         <a href="/#services" class="hover:text-brand-whiz transition-colors">Services</a>
-        <span>/</span>
-        <span class="text-slate-900 font-bold">Social Media Optimization (SMO)</span>
+        <i class="fa-solid fa-chevron-right text-[9px] text-slate-400"></i>
+        <span class="text-slate-900 font-bold truncate max-w-[180px] sm:max-w-none">Social Media Optimization</span>
       </nav>
 
       <!-- Hero Header Card -->
-      <div class="bg-white/15 backdrop-blur-xl border border-white/30 shadow-[0_8px_32px_rgba(0,168,107,0.12)] rounded-3xl p-6 sm:p-10 md:p-12 mb-10">
-        <div class="inline-flex items-center space-x-2 px-3.5 py-1 rounded-full text-xs font-bold text-emerald-950 bg-emerald-100/90 border border-emerald-300 mb-4">
-          <i class="fa-solid fa-sliders text-sm text-brand-whiz"></i>
+      <div class="bg-white/15 backdrop-blur-xl border border-white/30 shadow-[0_8px_32px_rgba(0,168,107,0.12)] rounded-3xl p-5 sm:p-8 md:p-10 mb-8 sm:mb-10">
+        <div class="inline-flex items-center space-x-2 px-3.5 py-1 rounded-full text-xs font-bold text-emerald-950 bg-emerald-100/90 border border-emerald-300 mb-3 sm:mb-4">
+          <i class="fa-solid fa-sliders text-xs sm:text-sm text-brand-whiz"></i>
           <span>Conversion Hygiene & Funnel Architecture</span>
         </div>
-        <h1 class="text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight mb-4">
+        <h1 class="text-2xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight mb-3 sm:mb-4">
           Social Media Optimization: <span class="bg-gradient-to-r from-emerald-800 via-brand-whiz to-emerald-600 bg-clip-text text-transparent">Turn Profile Visitors into Paying Clients</span>
         </h1>
-        <p class="text-base sm:text-lg text-slate-700 leading-relaxed font-normal mb-8">
-          Fix leaky profiles before spending your marketing budget. Complete audit and restructuring of bio copy, highlight architecture, keywords, and CTAs.
+        <p class="text-sm sm:text-base lg:text-lg text-slate-700 leading-relaxed font-normal mb-6 sm:mb-8 max-w-4xl">
+          Fix leaky profiles before spending your marketing budget. Complete audit and restructuring of bio copy, highlight architecture, keywords, and CTAs to turn profile visits into high-intent inquiries.
         </p>
 
         <!-- Key Takeaway Glass Box -->
-        <div class="p-5 rounded-2xl bg-white/40 border border-white/60 shadow-xs flex items-start space-x-4">
-          <div class="w-10 h-10 rounded-xl bg-brand-whiz text-white flex items-center justify-center shrink-0 mt-0.5">
-            <i class="fa-solid fa-lightbulb"></i>
+        <div class="p-4 sm:p-5 rounded-2xl bg-white/40 border border-white/60 shadow-xs flex items-start space-x-3 sm:space-x-4 mb-5">
+          <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-brand-whiz text-white flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
+            <i class="fa-solid fa-lightbulb text-sm"></i>
           </div>
           <div>
-            <div class="text-xs font-bold uppercase tracking-wider text-emerald-900 mb-1">Strategic Key Takeaway</div>
-            <p class="text-sm font-semibold text-slate-900">
+            <div class="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-emerald-900 mb-0.5">Strategic Key Takeaway</div>
+            <p class="text-xs sm:text-sm font-semibold text-slate-900 leading-snug sm:leading-relaxed">
               Paid traffic brings visitors to your doorstep; Social Media Optimization turns that doorstep into an automated conversion funnel.
             </p>
           </div>
         </div>
-      </div>
 
-      <!-- Problem Breakdown -->
-      <div class="bg-white/10 backdrop-blur-md border border-white/20 shadow-[0_4px_30px_rgba(0,0,0,0.08)] rounded-3xl p-6 sm:p-10 mb-10 space-y-5">
-        <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-          Why Running Ads to Unoptimized Profiles Wastes Your Marketing Budget
-        </h2>
-        <div class="text-slate-700 leading-relaxed text-sm sm:text-base space-y-4">
-          <p>
-            Driving paid traffic to an unoptimized social profile is the equivalent of pouring water into a leaky bucket. When users see your advertisement, a massive percentage will click through to your main profile to inspect your credentials before completing a purchase or inquiry.
-          </p>
-          <p>
-            If your bio is vague, your call-to-action is broken, your highlights lack essential social proof, or your profile search keywords are missing, that hard-won traffic vanishes instantly.
-          </p>
-          <p>
-            Without Social Media Optimization (SMO), your customer acquisition cost (CAC) artificially doubles because your platform infrastructure fails to convert the visitors you already paid to attract.
-          </p>
+        <!-- Performance Metadata Tags Strip -->
+        <div class="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-200/50 text-[11px] sm:text-xs text-slate-700 font-semibold">
+          <span class="inline-flex items-center space-x-1.5 px-3 py-1 rounded-lg bg-white/50 border border-white/70">
+            <i class="fa-solid fa-layer-group text-brand-whiz"></i>
+            <span>Platforms: Instagram, Facebook & LinkedIn</span>
+          </span>
+          <span class="inline-flex items-center space-x-1.5 px-3 py-1 rounded-lg bg-white/50 border border-white/70">
+            <i class="fa-solid fa-funnel-dollar text-brand-whiz"></i>
+            <span>Objective: Profile CRO & Leak Prevention</span>
+          </span>
+          <span class="inline-flex items-center space-x-1.5 px-3 py-1 rounded-lg bg-white/50 border border-white/70">
+            <i class="fa-solid fa-bolt text-brand-whiz"></i>
+            <span>Turnaround: 5–7 Day Complete Overhaul</span>
+          </span>
         </div>
       </div>
 
-      <!-- Target Audience -->
-      <div class="bg-white/10 backdrop-blur-md border border-white/20 shadow-[0_4px_30px_rgba(0,0,0,0.08)] rounded-3xl p-6 sm:p-10 mb-10">
-        <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-6">
-          Who Needs Social Media Optimization?
-        </h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <div class="p-6 rounded-2xl bg-white/25 border border-white/40 shadow-xs">
-            <div class="w-10 h-10 rounded-xl bg-emerald-100 text-brand-whiz flex items-center justify-center font-bold text-lg mb-4">
-              🚰
+      <!-- DESKTOP SPLIT-COLUMN / GRID LAYOUT -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mb-8 sm:mb-12">
+        
+        <!-- LEFT / MAIN CONTENT COLUMN (8 Cols on Desktop) -->
+        <div class="lg:col-span-8 space-y-6 sm:space-y-8">
+
+          <!-- 1. Strategic Problem & Market Reality -->
+          <div class="bg-white/10 backdrop-blur-md border border-white/20 shadow-[0_4px_30px_rgba(0,0,0,0.08)] rounded-3xl p-5 sm:p-8">
+            <div class="flex items-center space-x-2 text-xs font-extrabold uppercase tracking-wider text-slate-900 mb-3">
+              <i class="fa-solid fa-triangle-exclamation text-brand-whiz text-sm"></i>
+              <span>Market Problem & Reality</span>
             </div>
-            <h3 class="font-bold text-slate-900 text-base mb-2">Active Ad Advertisers</h3>
-            <p class="text-xs text-slate-700 leading-relaxed">
-              Businesses spending on Meta ads experiencing low conversion rates and high drop-offs on profile visits.
-            </p>
-          </div>
-          <div class="p-6 rounded-2xl bg-white/25 border border-white/40 shadow-xs">
-            <div class="w-10 h-10 rounded-xl bg-emerald-100 text-brand-whiz flex items-center justify-center font-bold text-lg mb-4">
-              🔄
+            <h2 class="text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight mb-4">
+              Why Running Ads to Unoptimized Profiles Wastes Your Marketing Budget
+            </h2>
+            <div class="text-slate-700 leading-relaxed text-xs sm:text-sm md:text-base space-y-3.5 font-normal">
+              <p>
+                Driving paid traffic to an unoptimized social profile is the equivalent of pouring water into a leaky bucket. When users see your advertisement, a massive percentage will click through to your main profile to inspect your credentials before completing a purchase or inquiry.
+              </p>
+              <p>
+                If your bio is vague, your call-to-action is broken, your highlights lack essential social proof, or your profile search keywords are missing, that hard-won traffic vanishes instantly.
+              </p>
+              <p>
+                Without Social Media Optimization (SMO), your customer acquisition cost (CAC) artificially doubles because your platform infrastructure fails to convert the visitors you already paid to attract.
+              </p>
             </div>
-            <h3 class="font-bold text-slate-900 text-base mb-2">Rebranding Companies</h3>
-            <p class="text-xs text-slate-700 leading-relaxed">
-              Brands entering new regional markets or launching refreshed service lines that need clean positioning.
-            </p>
           </div>
-          <div class="p-6 rounded-2xl bg-white/25 border border-white/40 shadow-xs">
-            <div class="w-10 h-10 rounded-xl bg-emerald-100 text-brand-whiz flex items-center justify-center font-bold text-lg mb-4">
-              🧹
+
+          <!-- 2. Key Deliverables (NEW SEO & Trust Section) -->
+          <div class="bg-white/10 backdrop-blur-md border border-white/20 shadow-[0_4px_30px_rgba(0,0,0,0.08)] rounded-3xl p-5 sm:p-8">
+            <div class="flex items-center space-x-2 text-xs font-extrabold uppercase tracking-wider text-emerald-950 mb-2">
+              <i class="fa-solid fa-box-open text-brand-whiz text-sm"></i>
+              <span>Engineered Capabilities</span>
             </div>
-            <h3 class="font-bold text-slate-900 text-base mb-2">Cluttered Accounts</h3>
-            <p class="text-xs text-slate-700 leading-relaxed">
-              Established pages with disorganized story highlights, broken link routing, and confusing offerings.
+            <h2 class="text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight mb-2">
+              Key Deliverables Included in This Service
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-600 mb-6">
+              Full profile conversion rate optimization, keyword indexing, and friction-free inquiry funnels.
             </p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <!-- Deliverable 1 -->
+              <div class="p-4 sm:p-5 rounded-2xl bg-white/30 border border-white/50 shadow-xs hover:border-brand-whiz/50 transition-all">
+                <div class="w-8 h-8 rounded-xl bg-emerald-100 text-brand-whiz flex items-center justify-center font-bold text-sm mb-3">
+                  <i class="fa-solid fa-clipboard-check"></i>
+                </div>
+                <h3 class="font-bold text-slate-900 text-sm sm:text-base mb-1.5">Profile Conversion Hygiene Audit</h3>
+                <p class="text-xs text-slate-700 leading-relaxed font-normal">
+                  Comprehensive audit of your bios, profile links, highlights, and CTAs across Instagram, Facebook, and LinkedIn to uncover drop-offs.
+                </p>
+              </div>
+
+              <!-- Deliverable 2 -->
+              <div class="p-4 sm:p-5 rounded-2xl bg-white/30 border border-white/50 shadow-xs hover:border-brand-whiz/50 transition-all">
+                <div class="w-8 h-8 rounded-xl bg-emerald-100 text-brand-whiz flex items-center justify-center font-bold text-sm mb-3">
+                  <i class="fa-solid fa-bullseye"></i>
+                </div>
+                <h3 class="font-bold text-slate-900 text-sm sm:text-base mb-1.5">High-Converting Bio Positioning</h3>
+                <p class="text-xs text-slate-700 leading-relaxed font-normal">
+                  Rewriting bio statements that clearly state target clientele, proprietary value propositions, and single-minded next action calls.
+                </p>
+              </div>
+
+              <!-- Deliverable 3 -->
+              <div class="p-4 sm:p-5 rounded-2xl bg-white/30 border border-white/50 shadow-xs hover:border-brand-whiz/50 transition-all">
+                <div class="w-8 h-8 rounded-xl bg-emerald-100 text-brand-whiz flex items-center justify-center font-bold text-sm mb-3">
+                  <i class="fa-solid fa-layer-group"></i>
+                </div>
+                <h3 class="font-bold text-slate-900 text-sm sm:text-base mb-1.5">Evergreen Highlight Architecture</h3>
+                <p class="text-xs text-slate-700 leading-relaxed font-normal">
+                  Restructuring highlight story funnels with branded cover badges to showcase client reviews, social proof, and product tiers.
+                </p>
+              </div>
+
+              <!-- Deliverable 4 -->
+              <div class="p-4 sm:p-5 rounded-2xl bg-white/30 border border-white/50 shadow-xs hover:border-brand-whiz/50 transition-all">
+                <div class="w-8 h-8 rounded-xl bg-emerald-100 text-brand-whiz flex items-center justify-center font-bold text-sm mb-3">
+                  <i class="fa-solid fa-magnifying-glass"></i>
+                </div>
+                <h3 class="font-bold text-slate-900 text-sm sm:text-base mb-1.5">Native Search & SEO Keywords</h3>
+                <p class="text-xs text-slate-700 leading-relaxed font-normal">
+                  Injecting high-volume organic search keywords into account names, handles, bios, and categories for discoverability.
+                </p>
+              </div>
+
+              <!-- Deliverable 5 -->
+              <div class="p-4 sm:p-5 rounded-2xl bg-white/30 border border-white/50 shadow-xs hover:border-brand-whiz/50 transition-all">
+                <div class="w-8 h-8 rounded-xl bg-emerald-100 text-brand-whiz flex items-center justify-center font-bold text-sm mb-3">
+                  <i class="fa-brands fa-whatsapp"></i>
+                </div>
+                <h3 class="font-bold text-slate-900 text-sm sm:text-base mb-1.5">Frictionless WhatsApp & DM Inbound Funnels</h3>
+                <p class="text-xs text-slate-700 leading-relaxed font-normal">
+                  Replacing clunky external links with 1-tap WhatsApp click-to-chat gateways and direct booking calendar links.
+                </p>
+              </div>
+
+              <!-- Deliverable 6 -->
+              <div class="p-4 sm:p-5 rounded-2xl bg-white/30 border border-white/50 shadow-xs hover:border-brand-whiz/50 transition-all">
+                <div class="w-8 h-8 rounded-xl bg-emerald-100 text-brand-whiz flex items-center justify-center font-bold text-sm mb-3">
+                  <i class="fa-solid fa-arrow-trend-up"></i>
+                </div>
+                <h3 class="font-bold text-slate-900 text-sm sm:text-base mb-1.5">Post-Optimization CRO Benchmark</h3>
+                <p class="text-xs text-slate-700 leading-relaxed font-normal">
+                  Verification report demonstrating improved profile click-through rates, follower-to-inquiry ratios, and reduced acquisition friction.
+                </p>
+              </div>
+            </div>
           </div>
+
+          <!-- 3. Target Audience: Who Needs SMO -->
+          <div class="bg-white/10 backdrop-blur-md border border-white/20 shadow-[0_4px_30px_rgba(0,0,0,0.08)] rounded-3xl p-5 sm:p-8">
+            <div class="flex items-center space-x-2 text-xs font-extrabold uppercase tracking-wider text-slate-900 mb-2">
+              <i class="fa-solid fa-bullseye text-brand-whiz text-sm"></i>
+              <span>Ideal Audience Fit</span>
+            </div>
+            <h2 class="text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight mb-6">
+              Who Needs Social Media Optimization?
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div class="p-5 rounded-2xl bg-white/25 border border-white/40 shadow-xs">
+                <div class="w-10 h-10 rounded-xl bg-emerald-100 text-brand-whiz flex items-center justify-center font-bold text-lg mb-3">
+                  📉
+                </div>
+                <h3 class="font-bold text-slate-900 text-sm sm:text-base mb-1.5">Active Paid Advertisers</h3>
+                <p class="text-xs text-slate-700 leading-relaxed font-normal">
+                  Businesses currently running paid ad campaigns experiencing high cost-per-lead due to leaky landing handles.
+                </p>
+              </div>
+              <div class="p-5 rounded-2xl bg-white/25 border border-white/40 shadow-xs">
+                <div class="w-10 h-10 rounded-xl bg-emerald-100 text-brand-whiz flex items-center justify-center font-bold text-lg mb-3">
+                  🔄
+                </div>
+                <h3 class="font-bold text-slate-900 text-sm sm:text-base mb-1.5">Brands in Transition</h3>
+                <p class="text-xs text-slate-700 leading-relaxed font-normal">
+                  Companies entering new markets, modernizing visual identity, or launching high-ticket service tiers.
+                </p>
+              </div>
+              <div class="p-5 rounded-2xl bg-white/25 border border-white/40 shadow-xs">
+                <div class="w-10 h-10 rounded-xl bg-emerald-100 text-brand-whiz flex items-center justify-center font-bold text-lg mb-3">
+                  🏛️
+                </div>
+                <h3 class="font-bold text-slate-900 text-sm sm:text-base mb-1.5">Established Companies</h3>
+                <p class="text-xs text-slate-700 leading-relaxed font-normal">
+                  Whose social media profiles have become cluttered, outdated, or confusing across years of uncoordinated posting.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. Execution Methodology Framework -->
+          <div class="bg-white/10 backdrop-blur-md border border-white/20 shadow-[0_4px_30px_rgba(0,0,0,0.08)] rounded-3xl p-5 sm:p-8">
+            <div class="flex items-center space-x-2 text-xs font-extrabold uppercase tracking-wider text-slate-900 mb-2">
+              <i class="fa-solid fa-network-wired text-brand-whiz text-sm"></i>
+              <span>Systematic Process</span>
+            </div>
+            <h2 class="text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight mb-6">
+              Our Conversion Hygiene Optimization Protocol
+            </h2>
+            <div class="space-y-3.5">
+              <div class="p-4 sm:p-5 rounded-2xl bg-white/20 border border-white/30 flex items-start space-x-3.5 sm:space-x-4">
+                <span class="px-2.5 sm:px-3 py-1 rounded-lg bg-brand-whiz text-white font-extrabold text-xs sm:text-sm shrink-0 mt-0.5">01</span>
+                <div>
+                  <h3 class="font-bold text-slate-900 text-sm sm:text-base mb-1">Conversion Leak Diagnostic</h3>
+                  <p class="text-xs sm:text-sm text-slate-700 leading-relaxed font-normal">Tracking the journey from first impression to click-through, identifying friction points in bio copy, link routing, and missing proof.</p>
+                </div>
+              </div>
+              <div class="p-4 sm:p-5 rounded-2xl bg-white/20 border border-white/30 flex items-start space-x-3.5 sm:space-x-4">
+                <span class="px-2.5 sm:px-3 py-1 rounded-lg bg-brand-whiz text-white font-extrabold text-xs sm:text-sm shrink-0 mt-0.5">02</span>
+                <div>
+                  <h3 class="font-bold text-slate-900 text-sm sm:text-base mb-1">Architecture & Bio Positioning Rewrite</h3>
+                  <p class="text-xs sm:text-sm text-slate-700 leading-relaxed font-normal">Writing crisp, high-converting value propositions and designing evergreen highlight covers that answer buyer objections immediately.</p>
+                </div>
+              </div>
+              <div class="p-4 sm:p-5 rounded-2xl bg-white/20 border border-white/30 flex items-start space-x-3.5 sm:space-x-4">
+                <span class="px-2.5 sm:px-3 py-1 rounded-lg bg-brand-whiz text-white font-extrabold text-xs sm:text-sm shrink-0 mt-0.5">03</span>
+                <div>
+                  <h3 class="font-bold text-slate-900 text-sm sm:text-base mb-1">Search Keywords & Inbound Gateway Deployment</h3>
+                  <p class="text-xs sm:text-sm text-slate-700 leading-relaxed font-normal">Embedding discovery search keywords and integrating clean WhatsApp / consultation booking gateways tested across iOS and Android.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 5. Frequently Asked Questions (Short FAQ Accordion) -->
+          <div class="bg-white/10 backdrop-blur-md border border-white/20 shadow-[0_4px_30px_rgba(0,0,0,0.08)] rounded-3xl p-5 sm:p-8">
+            <div class="flex items-center space-x-2 text-xs font-extrabold uppercase tracking-wider text-emerald-950 mb-2">
+              <i class="fa-solid fa-circle-question text-brand-whiz text-sm"></i>
+              <span>Clarity & Reassurance</span>
+            </div>
+            <h2 class="text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight mb-2">
+              Frequently Asked Questions
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-600 mb-6">
+              Essential answers regarding how Social Media Optimization protects your customer acquisition investment.
+            </p>
+
+            <div class="space-y-3">
+              <!-- FAQ Item 1 -->
+              <div class="faq-item rounded-2xl bg-white/30 border border-white/50 overflow-hidden transition-all">
+                <button type="button" class="faq-toggle w-full p-4 sm:p-5 text-left font-bold text-slate-900 text-xs sm:text-sm flex items-center justify-between gap-4 focus:outline-none" aria-expanded="false">
+                  <span>What is the difference between Social Media Optimization (SMO) and Social Media Marketing?</span>
+                  <i class="faq-icon fa-solid fa-chevron-down text-brand-whiz text-xs transition-transform duration-300 shrink-0"></i>
+                </button>
+                <div class="faq-content hidden px-4 sm:px-5 pb-4 sm:pb-5 text-xs sm:text-sm text-slate-700 leading-relaxed font-normal border-t border-white/40 pt-3">
+                  Marketing is about producing content and driving traffic; Optimization is engineering the profile destination (bio, highlights, search keywords, links) so the traffic actually converts into customers.
+                </div>
+              </div>
+
+              <!-- FAQ Item 2 -->
+              <div class="faq-item rounded-2xl bg-white/30 border border-white/50 overflow-hidden transition-all">
+                <button type="button" class="faq-toggle w-full p-4 sm:p-5 text-left font-bold text-slate-900 text-xs sm:text-sm flex items-center justify-between gap-4 focus:outline-none" aria-expanded="false">
+                  <span>Why should we optimize our social profiles before running paid ads?</span>
+                  <i class="faq-icon fa-solid fa-chevron-down text-brand-whiz text-xs transition-transform duration-300 shrink-0"></i>
+                </button>
+                <div class="faq-content hidden px-4 sm:px-5 pb-4 sm:pb-5 text-xs sm:text-sm text-slate-700 leading-relaxed font-normal border-t border-white/40 pt-3">
+                  Nearly 45% of users who see your ads click through to your profile before purchasing. If your profile is confusing, outdated, or lacks proof, you pay for clicks that immediately bounce.
+                </div>
+              </div>
+
+              <!-- FAQ Item 3 -->
+              <div class="faq-item rounded-2xl bg-white/30 border border-white/50 overflow-hidden transition-all">
+                <button type="button" class="faq-toggle w-full p-4 sm:p-5 text-left font-bold text-slate-900 text-xs sm:text-sm flex items-center justify-between gap-4 focus:outline-none" aria-expanded="false">
+                  <span>How long does a full SMO overhaul take?</span>
+                  <i class="faq-icon fa-solid fa-chevron-down text-brand-whiz text-xs transition-transform duration-300 shrink-0"></i>
+                </button>
+                <div class="faq-content hidden px-4 sm:px-5 pb-4 sm:pb-5 text-xs sm:text-sm text-slate-700 leading-relaxed font-normal border-t border-white/40 pt-3">
+                  An end-to-end profile restructuring is typically audited, rewritten, designed, and implemented within 5 to 7 business days.
+                </div>
+              </div>
+
+              <!-- FAQ Item 4 -->
+              <div class="faq-item rounded-2xl bg-white/30 border border-white/50 overflow-hidden transition-all">
+                <button type="button" class="faq-toggle w-full p-4 sm:p-5 text-left font-bold text-slate-900 text-xs sm:text-sm flex items-center justify-between gap-4 focus:outline-none" aria-expanded="false">
+                  <span>Which social media platforms do you optimize?</span>
+                  <i class="faq-icon fa-solid fa-chevron-down text-brand-whiz text-xs transition-transform duration-300 shrink-0"></i>
+                </button>
+                <div class="faq-content hidden px-4 sm:px-5 pb-4 sm:pb-5 text-xs sm:text-sm text-slate-700 leading-relaxed font-normal border-t border-white/40 pt-3">
+                  We specialize in Facebook Business Pages, Instagram Professional Profiles, and LinkedIn Personal & Corporate Company Pages.
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
+
+        <!-- RIGHT / SIDEBAR COLUMN (4 Cols on Desktop - Sticky) -->
+        <div class="lg:col-span-4 space-y-6 lg:sticky lg:top-24">
+
+          <!-- 'Why Choose Us' Trust Building Card -->
+          <div class="bg-white/15 backdrop-blur-xl border border-white/30 shadow-[0_8px_32px_rgba(0,168,107,0.12)] rounded-3xl p-5 sm:p-7">
+            <div class="flex items-center space-x-2 text-xs font-extrabold uppercase tracking-wider text-emerald-950 mb-3">
+              <i class="fa-solid fa-award text-brand-whiz text-sm"></i>
+              <span>Agency Advantage</span>
+            </div>
+            <h2 class="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight mb-4">
+              Why Partner with Whiz Studio?
+            </h2>
+
+            <div class="space-y-4 text-xs sm:text-sm">
+              <div class="flex items-start space-x-3">
+                <div class="w-6 h-6 rounded-lg bg-emerald-100 text-brand-whiz flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+                  <i class="fa-solid fa-check"></i>
+                </div>
+                <div>
+                  <h3 class="font-bold text-slate-900 text-xs sm:text-sm">Fixes the Leaky Bucket</h3>
+                  <p class="text-xs text-slate-600 font-normal mt-0.5">Stops artificial increases in Customer Acquisition Cost caused by poorly optimized landing handles.</p>
+                </div>
+              </div>
+
+              <div class="flex items-start space-x-3">
+                <div class="w-6 h-6 rounded-lg bg-emerald-100 text-brand-whiz flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+                  <i class="fa-solid fa-check"></i>
+                </div>
+                <div>
+                  <h3 class="font-bold text-slate-900 text-xs sm:text-sm">Multi-Platform Cohesion</h3>
+                  <p class="text-xs text-slate-600 font-normal mt-0.5">Aligns your messaging, aesthetics, and social proof identically across Meta and LinkedIn.</p>
+                </div>
+              </div>
+
+              <div class="flex items-start space-x-3">
+                <div class="w-6 h-6 rounded-lg bg-emerald-100 text-brand-whiz flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+                  <i class="fa-solid fa-check"></i>
+                </div>
+                <div>
+                  <h3 class="font-bold text-slate-900 text-xs sm:text-sm">Data-Backed CRO Science</h3>
+                  <p class="text-xs text-slate-600 font-normal mt-0.5">Applying rigorous conversion rate optimization rules to bio copy and call-to-actions.</p>
+                </div>
+              </div>
+
+              <div class="flex items-start space-x-3">
+                <div class="w-6 h-6 rounded-lg bg-emerald-100 text-brand-whiz flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+                  <i class="fa-solid fa-check"></i>
+                </div>
+                <div>
+                  <h3 class="font-bold text-slate-900 text-xs sm:text-sm">Fast 5–7 Day Turnaround</h3>
+                  <p class="text-xs text-slate-600 font-normal mt-0.5">Complete sprint overhaul delivered and deployed with zero disruption to your daily operations.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Trust Badges Strip -->
+            <div class="mt-6 pt-4 border-t border-white/50 flex flex-col space-y-2 text-[11px] font-semibold text-slate-700">
+              <div class="flex items-center space-x-2">
+                <i class="fa-solid fa-shield-halved text-brand-whiz text-xs"></i>
+                <span>Registered Professional Digital Agency</span>
+              </div>
+              <div class="flex items-center space-x-2">
+                <i class="fa-solid fa-comments text-brand-whiz text-xs"></i>
+                <span>Direct WhatsApp & Discord Coordination</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Consultation Card -->
+          <div class="bg-gradient-to-br from-brand-900 to-emerald-800 text-white rounded-3xl p-5 sm:p-7 shadow-xl space-y-4">
+            <div class="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-white/20 text-white border border-white/30">
+              <span class="w-2 h-2 rounded-full bg-emerald-300 animate-pulse"></span>
+              <span>Available for New Accounts</span>
+            </div>
+            <h3 class="text-lg sm:text-xl font-extrabold tracking-tight">
+              Ready to Optimize Your Profile Conversion Rates?
+            </h3>
+            <p class="text-xs sm:text-sm text-emerald-100 font-normal leading-relaxed">
+              Schedule a comprehensive profile conversion audit with our specialists to eliminate leaks and turn profile views into revenue.
+            </p>
+            <div class="space-y-2.5 pt-2">
+              <a href="/#contact" class="w-full py-3 px-4 rounded-xl font-bold text-xs sm:text-sm bg-white text-emerald-950 hover:bg-emerald-50 transition-all shadow-md flex items-center justify-center space-x-2">
+                <span>Inquire for Custom Scope</span>
+                <i class="fa-solid fa-arrow-right text-xs"></i>
+              </a>
+              <a href="https://wa.me/8801815127022?text=Hello%20Whiz%20Studio,%20I%20am%20interested%20in%20Social%20Media%20Optimization." target="_blank" rel="noopener noreferrer" class="w-full py-3 px-4 rounded-xl font-bold text-xs sm:text-sm bg-emerald-700/60 hover:bg-emerald-700 text-white border border-emerald-400/40 transition-all flex items-center justify-center space-x-2">
+                <i class="fa-brands fa-whatsapp text-sm"></i>
+                <span>WhatsApp Direct</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- Complementary Services Directory -->
+          <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-5 shadow-xs">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-800 mb-3 flex items-center justify-between">
+              <span>Related Capabilities</span>
+              <i class="fa-solid fa-arrow-trend-up text-brand-whiz"></i>
+            </h4>
+            <div class="space-y-2">
+              <a href="/services/facebook-marketing/" class="flex items-center justify-between p-2.5 rounded-xl bg-white/30 hover:bg-white/60 text-slate-800 text-xs font-semibold border border-white/40 transition-all group">
+                <span class="flex items-center space-x-2">
+                  <i class="fa-brands fa-facebook text-brand-whiz text-xs"></i>
+                  <span>Facebook Marketing</span>
+                </span>
+                <i class="fa-solid fa-chevron-right text-[10px] text-slate-400 group-hover:text-brand-whiz group-hover:translate-x-0.5 transition-all"></i>
+              </a>
+              <a href="/services/instagram-marketing/" class="flex items-center justify-between p-2.5 rounded-xl bg-white/30 hover:bg-white/60 text-slate-800 text-xs font-semibold border border-white/40 transition-all group">
+                <span class="flex items-center space-x-2">
+                  <i class="fa-brands fa-instagram text-brand-whiz text-xs"></i>
+                  <span>Instagram Marketing</span>
+                </span>
+                <i class="fa-solid fa-chevron-right text-[10px] text-slate-400 group-hover:text-brand-whiz group-hover:translate-x-0.5 transition-all"></i>
+              </a>
+              <a href="/services/linkedin-optimization/" class="flex items-center justify-between p-2.5 rounded-xl bg-white/30 hover:bg-white/60 text-slate-800 text-xs font-semibold border border-white/40 transition-all group">
+                <span class="flex items-center space-x-2">
+                  <i class="fa-brands fa-linkedin text-brand-whiz text-xs"></i>
+                  <span>LinkedIn Optimization</span>
+                </span>
+                <i class="fa-solid fa-chevron-right text-[10px] text-slate-400 group-hover:text-brand-whiz group-hover:translate-x-0.5 transition-all"></i>
+              </a>
+            </div>
+          </div>
+
+        </div>
+
       </div>
 
-      <!-- Execution Methodology -->
-      <div class="bg-white/10 backdrop-blur-md border border-white/20 shadow-[0_4px_30px_rgba(0,0,0,0.08)] rounded-3xl p-6 sm:p-10 mb-10">
-        <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-6">
-          The Whiz Studio SMO Restructuring Audit
+      <!-- Bottom Conversion Callout Card -->
+      <div class="bg-gradient-to-br from-brand-900 via-emerald-800 to-brand-900 text-white rounded-3xl p-6 sm:p-10 md:p-12 shadow-xl text-center space-y-5">
+        <h2 class="text-xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight">
+          Ready to Stop Leaking Warm Inquiries on Your Social Handles?
         </h2>
-        <div class="space-y-4">
-          <div class="p-5 rounded-2xl bg-white/20 border border-white/30 flex items-start space-x-4">
-            <span class="px-3 py-1 rounded-lg bg-brand-whiz text-white font-extrabold text-sm">01</span>
-            <div>
-              <h4 class="font-bold text-slate-900 text-base mb-1">Value-First Bio Optimization</h4>
-              <p class="text-xs text-slate-700 leading-relaxed">Rewriting your bio to state who you serve, the quantifiable result you produce, and where to click next within 3 seconds of arrival.</p>
-            </div>
-          </div>
-          <div class="p-5 rounded-2xl bg-white/20 border border-white/30 flex items-start space-x-4">
-            <span class="px-3 py-1 rounded-lg bg-brand-whiz text-white font-extrabold text-sm">02</span>
-            <div>
-              <h4 class="font-bold text-slate-900 text-base mb-1">Evergreen Social Proof Highlights</h4>
-              <p class="text-xs text-slate-700 leading-relaxed">Curating client testimonials, case studies, FAQ answers, and service pricing menus into permanent, easy-to-browse highlights.</p>
-            </div>
-          </div>
-          <div class="p-5 rounded-2xl bg-white/20 border border-white/30 flex items-start space-x-4">
-            <span class="px-3 py-1 rounded-lg bg-brand-whiz text-white font-extrabold text-sm">03</span>
-            <div>
-              <h4 class="font-bold text-slate-900 text-base mb-1">Inbound Funnel & WhatsApp Integration</h4>
-              <p class="text-xs text-slate-700 leading-relaxed">Eliminating multi-step forms in favor of friction-free WhatsApp chat triggers and automated pre-qualification flows.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- CTA Card -->
-      <div class="bg-gradient-to-br from-brand-900 to-emerald-800 text-white rounded-3xl p-8 sm:p-12 shadow-xl text-center space-y-6">
-        <h2 class="text-2xl sm:text-4xl font-extrabold tracking-tight">
-          Plug Your Profile Leaks Before Spending Another Dollar on Ads
-        </h2>
-        <p class="text-sm sm:text-base text-emerald-100 max-w-2xl mx-auto font-normal">
-          Get a comprehensive Social Media Optimization audit from Whiz Studio and cut your customer acquisition costs in half.
+        <p class="text-xs sm:text-sm md:text-base text-emerald-100 max-w-2xl mx-auto font-normal leading-relaxed">
+          Let our optimization team transform your profile architecture into an automated inbound funnel that turns profile visitors into clients.
         </p>
-        <div class="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
-          <a href="/#contact" class="px-8 py-3.5 rounded-xl font-bold text-sm bg-white text-emerald-950 hover:bg-emerald-50 transition-all shadow-md">
-            Request SMO Audit
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          <a href="/#contact" class="w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold text-xs sm:text-sm bg-white text-emerald-950 hover:bg-emerald-50 transition-all shadow-md">
+            Start Profile Optimization
           </a>
-          <a href="https://wa.me/8801815127022?text=Hello%20Whiz%20Studio,%20I%20am%20interested%20in%20your%20Social%20Media%20Optimization%20services." target="_blank" rel="noopener noreferrer" class="px-8 py-3.5 rounded-xl font-bold text-sm bg-emerald-700/60 hover:bg-emerald-700 text-white border border-emerald-400/40 transition-all">
-            <i class="fa-brands fa-whatsapp mr-2"></i> WhatsApp Direct
+          <a href="https://wa.me/8801815127022?text=Hello%20Whiz%20Studio,%20I%20am%20interested%20in%20Social%20Media%20Optimization." target="_blank" rel="noopener noreferrer" class="w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold text-xs sm:text-sm bg-emerald-700/60 hover:bg-emerald-700 text-white border border-emerald-400/40 transition-all flex items-center justify-center space-x-2">
+            <i class="fa-brands fa-whatsapp"></i>
+            <span>WhatsApp Direct</span>
           </a>
         </div>
       </div>
@@ -331,17 +700,152 @@
   </main>
 
   <!-- FOOTER -->
-  <footer class="bg-white/20 backdrop-blur-xl border-t border-white/30 py-10 relative z-10 text-slate-800 text-xs">
+  <footer class="bg-white/20 backdrop-blur-xl border-t border-white/30 py-8 relative z-10 text-slate-800 text-xs">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
       <div>
         © 2026 Whiz Studio. All rights reserved. Registered Digital Marketing Agency.
       </div>
       <div class="flex items-center space-x-4">
-        <a href="/" class="hover:text-brand-whiz font-bold">Home</a>
-        <a href="/#contact" class="hover:text-brand-whiz font-bold">Contact with Us</a>
+        <a href="/" class="hover:text-brand-whiz font-bold transition-colors">Home</a>
+        <a href="/#about" class="hover:text-brand-whiz font-bold transition-colors">About Us</a>
+        <a href="/#services" class="hover:text-brand-whiz font-bold transition-colors">Services</a>
+        <a href="/#contact" class="hover:text-brand-whiz font-bold transition-colors">Contact with Us</a>
       </div>
     </div>
   </footer>
 
+  <!-- Interactive JavaScript: Mobile Navigation & FAQ Accordion Engine -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. Navbar Glass Background Scroll Reactivity
+      const nav = document.getElementById('mainNav');
+      window.addEventListener('scroll', () => {
+        if (window.scrollY > 30) {
+          nav.classList.add('shadow-md', 'bg-white/90');
+          nav.classList.remove('bg-white/70');
+        } else {
+          nav.classList.remove('shadow-md', 'bg-white/90');
+          nav.classList.add('bg-white/70');
+        }
+      }, { passive: true });
+
+      // 2. Mobile Hamburger Menu Toggle with Smooth Animation
+      const mobileToggle = document.getElementById('mobileMenuToggle');
+      const mobileMenu = document.getElementById('mobileMenu');
+      const header = document.querySelector('header');
+
+      if (mobileToggle && mobileMenu) {
+        const toggleIcon = mobileToggle.querySelector('i');
+
+        function openMobileMenu() {
+          mobileMenu.classList.remove('hidden');
+          mobileToggle.setAttribute('aria-expanded', 'true');
+          if (toggleIcon) {
+            toggleIcon.classList.remove('fa-bars');
+            toggleIcon.classList.add('fa-xmark');
+          }
+          if (window.gsap) {
+            gsap.fromTo(mobileMenu, 
+              { opacity: 0, y: -10, scale: 0.98 }, 
+              { opacity: 1, y: 0, scale: 1, duration: 0.25, ease: 'power2.out' }
+            );
+          }
+        }
+
+        function closeMobileMenu() {
+          if (mobileMenu.classList.contains('hidden')) return;
+          if (window.gsap) {
+            gsap.to(mobileMenu, {
+              opacity: 0,
+              y: -8,
+              scale: 0.98,
+              duration: 0.2,
+              ease: 'power2.in',
+              onComplete: () => {
+                mobileMenu.classList.add('hidden');
+                mobileToggle.setAttribute('aria-expanded', 'false');
+                if (toggleIcon) {
+                  toggleIcon.classList.remove('fa-xmark');
+                  toggleIcon.classList.add('fa-bars');
+                }
+              }
+            });
+          } else {
+            mobileMenu.classList.add('hidden');
+            mobileToggle.setAttribute('aria-expanded', 'false');
+            if (toggleIcon) {
+              toggleIcon.classList.remove('fa-xmark');
+              toggleIcon.classList.add('fa-bars');
+            }
+          }
+        }
+
+        mobileToggle.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const isClosed = mobileMenu.classList.contains('hidden');
+          if (isClosed) {
+            openMobileMenu();
+          } else {
+            closeMobileMenu();
+          }
+        });
+
+        // Close on link click
+        mobileMenu.querySelectorAll('a').forEach(link => {
+          link.addEventListener('click', closeMobileMenu);
+        });
+
+        // Close on outside click
+        document.addEventListener('click', (e) => {
+          if (!mobileMenu.classList.contains('hidden') && !header.contains(e.target)) {
+            closeMobileMenu();
+          }
+        });
+
+        // Close on escape key
+        window.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && !mobileMenu.classList.contains('hidden')) {
+            closeMobileMenu();
+          }
+        });
+      }
+
+      // 3. Short FAQ Accordion Logic
+      const faqButtons = document.querySelectorAll('.faq-toggle');
+      faqButtons.forEach(button => {
+        button.addEventListener('click', () => {
+          const isExpanded = button.getAttribute('aria-expanded') === 'true';
+          const content = button.nextElementSibling;
+          const icon = button.querySelector('.faq-icon');
+
+          // Close other FAQ items
+          faqButtons.forEach(otherBtn => {
+            if (otherBtn !== button) {
+              otherBtn.setAttribute('aria-expanded', 'false');
+              if (otherBtn.nextElementSibling) otherBtn.nextElementSibling.classList.add('hidden');
+              const otherIcon = otherBtn.querySelector('.faq-icon');
+              if (otherIcon) otherIcon.style.transform = 'rotate(0deg)';
+            }
+          });
+
+          // Toggle current FAQ
+          if (isExpanded) {
+            button.setAttribute('aria-expanded', 'false');
+            if (content) content.classList.add('hidden');
+            if (icon) icon.style.transform = 'rotate(0deg)';
+          } else {
+            button.setAttribute('aria-expanded', 'true');
+            if (content) {
+              content.classList.remove('hidden');
+              if (window.gsap) {
+                gsap.fromTo(content, { opacity: 0, y: -6 }, { opacity: 1, y: 0, duration: 0.25, ease: 'power2.out' });
+              }
+            }
+            if (icon) icon.style.transform = 'rotate(180deg)';
+          }
+        });
+      });
+    });
+  </script>
 </body>
 </html>
