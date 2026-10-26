@@ -189,8 +189,25 @@
             <span>Get in Touch</span>
             <i class="fa-solid fa-arrow-right text-xs ml-2"></i>
           </a>
+
+          <!-- Mobile Hamburger Menu Button -->
+          <button id="mobileMenuToggle" class="lg:hidden w-10 h-10 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-xl text-slate-800 hover:text-brand-whiz hover:bg-white/40 border border-white/60 transition-all focus:outline-none" aria-label="Toggle Navigation" aria-expanded="false">
+            <i class="fa-solid fa-bars text-lg transition-transform duration-200"></i>
+          </button>
         </div>
       </nav>
+
+      <!-- Mobile Dropdown Navigation Menu -->
+      <div id="mobileMenu" class="hidden lg:hidden mt-2 bg-white/40 backdrop-blur-2xl border border-white/50 shadow-[0_12px_40px_rgba(0,168,107,0.12)] rounded-3xl p-5 sm:p-6 flex flex-col items-center justify-center space-y-2 text-center transition-all duration-300">
+        <a href="/" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]">Home</a>
+        <a href="/#about" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]">About Us</a>
+        <a href="/#services" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]">Services</a>
+        <a href="/#pricing" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]">Pricing</a>
+        <a href="/#articles" class="mobile-nav-link nav-link active inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-brand-whiz transition-all min-h-[44px]">Articles</a>
+        <a href="/#testimonials" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]">Reviews</a>
+        <a href="/#faq" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]">FAQ</a>
+        <a href="/#contact" class="mobile-nav-link inline-flex items-center justify-center text-center px-7 py-3 rounded-full text-sm font-bold text-white bg-brand-whiz hover:bg-emerald-700 shadow-sm mt-2 min-h-[44px]">Get in Touch</a>
+      </div>
     </div>
   </header>
 
@@ -303,5 +320,105 @@
     </div>
   </footer>
 
+  <!-- GSAP Animation Engine -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. Navbar Glass Background Scroll Reactivity
+      const nav = document.querySelector('.glass-nav');
+      window.addEventListener('scroll', () => {
+        if (!nav) return;
+        if (window.scrollY > 30) {
+          nav.classList.add('shadow-md', 'bg-white/90');
+          nav.classList.remove('bg-white/70');
+        } else {
+          nav.classList.remove('shadow-md', 'bg-white/90');
+          nav.classList.add('bg-white/70');
+        }
+      }, { passive: true });
+
+      // 2. Mobile Hamburger Menu Toggle with Smooth GSAP Animation
+      const mobileToggle = document.getElementById('mobileMenuToggle');
+      const mobileMenu = document.getElementById('mobileMenu');
+      const header = document.querySelector('header');
+
+      if (mobileToggle && mobileMenu) {
+        const toggleIcon = mobileToggle.querySelector('i');
+
+        function openMobileMenu() {
+          mobileMenu.classList.remove('hidden');
+          mobileToggle.setAttribute('aria-expanded', 'true');
+          if (toggleIcon) {
+            toggleIcon.classList.remove('fa-bars');
+            toggleIcon.classList.add('fa-xmark');
+          }
+          if (window.gsap) {
+            gsap.fromTo(mobileMenu, 
+              { opacity: 0, y: -10, scale: 0.98 }, 
+              { opacity: 1, y: 0, scale: 1, duration: 0.25, ease: 'power2.out' }
+            );
+          }
+        }
+
+        function closeMobileMenu() {
+          if (mobileMenu.classList.contains('hidden')) return;
+          if (window.gsap) {
+            gsap.to(mobileMenu, {
+              opacity: 0,
+              y: -8,
+              scale: 0.98,
+              duration: 0.2,
+              ease: 'power2.in',
+              onComplete: () => {
+                mobileMenu.classList.add('hidden');
+                mobileToggle.setAttribute('aria-expanded', 'false');
+                if (toggleIcon) {
+                  toggleIcon.classList.remove('fa-xmark');
+                  toggleIcon.classList.add('fa-bars');
+                }
+              }
+            });
+          } else {
+            mobileMenu.classList.add('hidden');
+            mobileToggle.setAttribute('aria-expanded', 'false');
+            if (toggleIcon) {
+              toggleIcon.classList.remove('fa-xmark');
+              toggleIcon.classList.add('fa-bars');
+            }
+          }
+        }
+
+        mobileToggle.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const isClosed = mobileMenu.classList.contains('hidden');
+          if (isClosed) {
+            openMobileMenu();
+          } else {
+            closeMobileMenu();
+          }
+        });
+
+        // Close on link click
+        mobileMenu.querySelectorAll('a').forEach(link => {
+          link.addEventListener('click', closeMobileMenu);
+        });
+
+        // Close on outside click
+        document.addEventListener('click', (e) => {
+          if (!mobileMenu.classList.contains('hidden') && !header.contains(e.target)) {
+            closeMobileMenu();
+          }
+        });
+
+        // Close on escape key
+        window.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && !mobileMenu.classList.contains('hidden')) {
+            closeMobileMenu();
+          }
+        });
+      }
+    });
+  </script>
 </body>
 </html>
