@@ -1221,8 +1221,13 @@ function initNavigation() {
     });
   }
 
-  // Set default initial active state
-  setActiveNavLink('home');
+  // Set default initial active state based on URL hash if present
+  const initialHashId = window.location.hash ? window.location.hash.substring(1) : null;
+  if (initialHashId && sectionIds.includes(initialHashId)) {
+    setActiveNavLink(initialHashId);
+  } else {
+    setActiveNavLink('home');
+  }
 
   // Intersection Observer for fluid scroll-spy tracking
   if ('IntersectionObserver' in window && sections.length > 0) {
@@ -1306,6 +1311,38 @@ function initNavigation() {
       }
     });
   });
+
+  // Handle direct hash navigation with sticky header offset on page load and hashchange
+  function scrollToHashTarget() {
+    if (window.location.hash) {
+      const targetId = window.location.hash.substring(1);
+      const targetElement = document.getElementById(targetId);
+      if (targetElement) {
+        setTimeout(() => {
+          const headerOffset = (header ? header.offsetHeight : 80) + 16;
+          const elementPosition = targetElement.getBoundingClientRect().top;
+          const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+          window.scrollTo({
+            top: Math.max(0, offsetPosition),
+            behavior: 'smooth'
+          });
+
+          setActiveNavLink(targetId);
+        }, 120);
+      }
+    }
+  }
+
+  // Execute scroll on page load and on hash change
+  if (window.location.hash) {
+    if (document.readyState === 'complete') {
+      scrollToHashTarget();
+    } else {
+      window.addEventListener('load', scrollToHashTarget);
+    }
+  }
+  window.addEventListener('hashchange', scrollToHashTarget);
 }
 
 // =============================================================================

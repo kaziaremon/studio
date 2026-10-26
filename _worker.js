@@ -548,6 +548,13 @@ export default {
     }
 
     // -------------------------------------------------------------------------
+    // Services Section Routing (/services & /services/)
+    // -------------------------------------------------------------------------
+    if (path === "/services" || path === "/services/") {
+      return Response.redirect(`${url.origin}/#services`, 301);
+    }
+
+    // -------------------------------------------------------------------------
     // Contact Gateway (/api/submit-contact & /api/contact)
     // -------------------------------------------------------------------------
     if ((path === "/api/submit-contact" || path === "/api/contact") && request.method === "POST") {
