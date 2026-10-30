@@ -428,7 +428,7 @@
             <!-- Clients Table Card -->
             <div class="rounded-3xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-xl overflow-hidden shadow-xl">
               <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs text-slate-300">
+                <table class="w-full text-left text-xs text-slate-300 min-w-[680px]">
                   <thead class="bg-slate-950/70 border-b border-slate-800 text-[11px] uppercase font-bold text-slate-400">
                     <tr>
                       <th class="px-6 py-3.5">Client & Company</th>
@@ -693,7 +693,7 @@
 
             <div class="rounded-3xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-xl overflow-hidden shadow-xl">
               <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs text-slate-300">
+                <table class="w-full text-left text-xs text-slate-300 min-w-[680px]">
                   <thead class="bg-slate-950/70 border-b border-slate-800 text-[11px] uppercase font-bold text-slate-400">
                     <tr>
                       <th class="px-6 py-3.5">Project Name</th>
@@ -754,7 +754,7 @@
             <!-- Payments Ledger Table -->
             <div class="rounded-3xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-xl overflow-hidden shadow-xl">
               <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs text-slate-300">
+                <table class="w-full text-left text-xs text-slate-300 min-w-[680px]">
                   <thead class="bg-slate-950/70 border-b border-slate-800 text-[11px] uppercase font-bold text-slate-400">
                     <tr>
                       <th class="px-6 py-3.5">Receipt #</th>
@@ -882,7 +882,7 @@
                 <span id="userDirectoryCount" class="text-[11px] font-mono text-slate-500">0 accounts</span>
               </div>
               <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs text-slate-300">
+                <table class="w-full text-left text-xs text-slate-300 min-w-[680px]">
                   <thead class="bg-slate-950/70 border-b border-slate-800 text-[11px] uppercase font-bold text-slate-400">
                     <tr>
                       <th class="px-6 py-3.5">User</th>
@@ -928,7 +928,7 @@
                 <span class="text-[10px] font-mono uppercase text-emerald-400 bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-500/30">Authoritative D1 Audit</span>
               </div>
               <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs text-slate-300">
+                <table class="w-full text-left text-xs text-slate-300 min-w-[680px]">
                   <thead class="bg-slate-950/70 border-b border-slate-800 text-[11px] uppercase font-bold text-slate-400">
                     <tr>
                       <th class="px-6 py-3.5">Timestamp</th>
@@ -960,7 +960,7 @@
 
             <div class="rounded-3xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-xl overflow-hidden shadow-xl">
               <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs text-slate-300">
+                <table class="w-full text-left text-xs text-slate-300 min-w-[680px]">
                   <thead class="bg-slate-950/70 border-b border-slate-800 text-[11px] uppercase font-bold text-slate-400">
                     <tr>
                       <th class="px-6 py-3.5">Client & Email</th>
@@ -1100,8 +1100,8 @@
   <!-- =========================================================================
        MODAL 1: ADD CLIENT WITH SERVICE SELECTION & AUTO-TASK PROVISIONING
        ========================================================================= -->
-  <div id="modalAddClient" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
-    <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-2xl w-full p-6 sm:p-8 space-y-5 shadow-2xl">
+  <div id="modalAddClient" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-2xl w-full p-5 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
       <div class="flex items-center justify-between pb-3 border-b border-slate-800">
         <h3 class="text-lg font-bold text-white flex items-center gap-2">
           <i class="fa-solid fa-user-plus text-brand-whiz text-sm"></i>
@@ -1173,8 +1173,8 @@
   <!-- =========================================================================
        MODAL: EDIT CLIENT PROFILE
        ========================================================================= -->
-  <div id="modalEditClient" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
-    <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-xl w-full p-6 sm:p-8 space-y-5 shadow-2xl">
+  <div id="modalEditClient" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-xl w-full p-5 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
       <div class="flex items-center justify-between pb-3 border-b border-slate-800">
         <h3 class="text-lg font-bold text-white flex items-center gap-2">
           <i class="fa-solid fa-user-pen text-brand-whiz text-sm"></i>
@@ -1248,8 +1248,8 @@
   <!-- =========================================================================
        MODAL: ASSIGN SERVICE TO CLIENT
        ========================================================================= -->
-  <div id="modalAssignService" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
-    <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-5 shadow-2xl">
+  <div id="modalAssignService" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-lg w-full p-5 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
       <div class="flex items-center justify-between pb-3 border-b border-slate-800">
         <h3 class="text-lg font-bold text-white flex items-center gap-2">
           <i class="fa-solid fa-layer-group text-brand-whiz text-sm"></i>
@@ -1339,8 +1339,8 @@
   <!-- =========================================================================
        MODAL: ADD NEW SERVICE (Phase 6)
        ========================================================================= -->
-  <div id="modalAddService" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
-    <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-xl w-full p-6 sm:p-8 space-y-5 shadow-2xl">
+  <div id="modalAddService" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-xl w-full p-5 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
       <div class="flex items-center justify-between pb-3 border-b border-slate-800">
         <h3 class="text-lg font-bold text-white flex items-center gap-2">
           <i class="fa-solid fa-plus text-brand-whiz text-sm"></i>
@@ -1407,8 +1407,8 @@
   <!-- =========================================================================
        MODAL: EDIT SERVICE METADATA
        ========================================================================= -->
-  <div id="modalEditService" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
-    <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-xl w-full p-6 sm:p-8 space-y-5 shadow-2xl">
+  <div id="modalEditService" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-xl w-full p-5 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
       <div class="flex items-center justify-between pb-3 border-b border-slate-800">
         <h3 class="text-lg font-bold text-white flex items-center gap-2">
           <i class="fa-solid fa-pen-to-square text-brand-whiz text-sm"></i>
@@ -1566,8 +1566,8 @@
   <!-- =========================================================================
        MODAL: ADD NEW TASK BLUEPRINT
        ========================================================================= -->
-  <div id="modalAddBlueprint" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
-    <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-2xl w-full p-6 sm:p-8 space-y-5 shadow-2xl">
+  <div id="modalAddBlueprint" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-2xl w-full p-5 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
       <div class="flex items-center justify-between pb-3 border-b border-slate-800">
         <h3 class="text-lg font-bold text-white flex items-center gap-2">
           <i class="fa-solid fa-plus text-brand-whiz text-sm"></i>
@@ -1672,8 +1672,8 @@
   <!-- =========================================================================
        MODAL: LIVE TASK DETAILS & EDIT (Phase 11)
        ========================================================================= -->
-  <div id="modalLiveTaskDetail" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
-    <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-4 shadow-2xl">
+  <div id="modalLiveTaskDetail" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-lg w-full p-5 sm:p-8 space-y-4 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
       <div class="flex items-center justify-between pb-3 border-b border-slate-800">
         <h3 class="text-base font-bold text-white flex items-center gap-2" id="liveTaskModalTitle">
           <i class="fa-solid fa-list-check text-brand-whiz"></i>
@@ -1740,8 +1740,8 @@
   <!-- =========================================================================
        MODAL: RECORD PAYMENT
        ========================================================================= -->
-  <div id="modalRecordPayment" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
-    <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-xl w-full p-6 sm:p-8 space-y-5 shadow-2xl">
+  <div id="modalRecordPayment" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-xl w-full p-5 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
       <div class="flex items-center justify-between pb-3 border-b border-slate-800">
         <h3 class="text-lg font-bold text-white flex items-center gap-2">
           <i class="fa-solid fa-receipt text-brand-whiz text-sm"></i>

@@ -8,7 +8,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
   <link rel="icon" type="image/png" href="/favicon.png">
 
-  <!-- Clerk JavaScript SDK (Hobby / Free Tier Production CDN) -->
+  <!-- Clerk JavaScript SDK (Auto-resolves Production or Development environment) -->
   <script async crossorigin="anonymous" data-clerk-publishable-key="pk_test_cG9ldGljLWxpZ2VyLTQzNTUuY2xlcmsuYWNjb3VudHMuZGV2JA" src="https://poetic-liger-4355.clerk.accounts.dev/npm/@clerk/clerk-js@5/dist/clerk.browser.js" type="text/javascript"></script>
 
   <!-- Google Fonts: Inter & Plus Jakarta Sans -->
@@ -56,7 +56,7 @@
 <body class="h-full bg-[#04070C] text-slate-100 flex items-center justify-center font-sans antialiased selection:bg-brand-whiz selection:text-white p-4">
 
   <!-- Main Container -->
-  <div class="relative w-full max-w-md p-8 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-2xl backdrop-blur-2xl text-center space-y-6">
+  <div class="relative w-full max-w-md p-6 sm:p-8 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-2xl backdrop-blur-2xl text-center space-y-6">
     
     <!-- Ambient Background Glow -->
     <div class="absolute -top-20 -left-20 w-56 h-56 bg-brand-whiz/15 rounded-full blur-3xl pointer-events-none animate-glow"></div>
@@ -68,7 +68,7 @@
         <i class="fa-solid fa-shield-halved text-brand-whiz text-2xl" id="statusIcon"></i>
       </div>
       <h2 class="text-xl font-extrabold text-white tracking-tight" id="statusTitle">Whiz Studio Authentication</h2>
-      <p class="text-xs text-slate-400 mt-1.5" id="statusDesc">Finalizing secure Google OAuth handshake...</p>
+      <p class="text-xs text-slate-400 mt-1.5" id="statusDesc">Finalizing secure authentication handshake...</p>
     </div>
 
     <!-- Progress Indicator -->
@@ -82,12 +82,31 @@
       </div>
     </div>
 
+    <!-- 2FA Second Factor Verification Box (Hidden by default) -->
+    <div id="twoFactorBox" class="hidden text-left p-5 rounded-2xl bg-slate-950/80 border border-brand-whiz/30 space-y-4">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-brand-whiz/10 border border-brand-whiz/30 flex items-center justify-center text-brand-whiz shrink-0">
+          <i class="fa-solid fa-key text-xs"></i>
+        </div>
+        <div>
+          <h4 class="text-xs font-bold text-white uppercase tracking-wider">Two-Factor Authentication</h4>
+          <p class="text-[11px] text-slate-400">Enter the verification code from your authenticator app.</p>
+        </div>
+      </div>
+      <form id="form2FA" class="space-y-3">
+        <input type="text" id="input2FACode" maxlength="6" pattern="[0-9]{6}" inputmode="numeric" placeholder="123456" required class="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-center font-mono text-lg font-bold text-white tracking-widest focus:outline-none focus:border-brand-whiz">
+        <button type="submit" id="btn2FASubmit" class="w-full py-2.5 rounded-xl bg-brand-whiz hover:bg-emerald-600 text-white font-bold text-xs shadow-md transition-all">
+          Verify & Enter Workspace
+        </button>
+      </form>
+    </div>
+
     <!-- Error Box (Hidden by default) -->
     <div id="errorBox" class="hidden text-left p-4 rounded-2xl bg-rose-950/50 border border-rose-500/30 text-rose-200 space-y-3">
       <div class="flex items-start gap-3">
         <i class="fa-solid fa-circle-exclamation text-rose-400 text-base mt-0.5 shrink-0"></i>
         <div>
-          <h4 class="text-xs font-bold uppercase tracking-wider text-rose-300">Authentication Failed</h4>
+          <h4 class="text-xs font-bold uppercase tracking-wider text-rose-300">Authentication Notice</h4>
           <p class="text-xs text-rose-200 mt-1 leading-relaxed" id="errorMessage">Unable to complete sign-in. Please try again.</p>
         </div>
       </div>
@@ -103,7 +122,7 @@
     (function () {
       'use strict';
 
-      const CLERK_PUBLISHABLE_KEY = 'pk_test_cG9ldGljLWxpZ2VyLTQzNTUuY2xlcmsuYWNjb3VudHMuZGV2JA';
+      const CLERK_PUBLISHABLE_KEY = window.__CLERK_PUBLISHABLE_KEY__ || 'pk_test_cG9ldGljLWxpZ2VyLTQzNTUuY2xlcmsuYWNjb3VudHMuZGV2JA';
       const API_BASE = 'https://whiz-api.kaziaremon.workers.dev/api/v1';
 
       function updateStep(label, percent) {
@@ -127,95 +146,84 @@
         if (statusIcon) {
           statusIcon.className = 'fa-solid fa-triangle-exclamation text-rose-400 text-2xl';
         }
-        if (statusTitle) statusTitle.textContent = 'Authentication Error';
-        if (statusDesc) statusDesc.textContent = 'Could not establish secure session with Whiz Studio.';
+        if (statusTitle) statusTitle.textContent = 'Authentication Incomplete';
+        if (statusDesc) statusDesc.textContent = 'Please choose an option to continue.';
       }
 
-      async function executeCallback() {
-        if (!window.Clerk) {
-          setTimeout(executeCallback, 50);
-          return;
+      function show2FAPrompt(signInResource) {
+        const progressBox = document.getElementById('progressBox');
+        const twoFactorBox = document.getElementById('twoFactorBox');
+        const statusIcon = document.getElementById('statusIcon');
+        const statusTitle = document.getElementById('statusTitle');
+        const statusDesc = document.getElementById('statusDesc');
+
+        if (progressBox) progressBox.classList.add('hidden');
+        if (twoFactorBox) twoFactorBox.classList.remove('hidden');
+        if (statusIcon) statusIcon.className = 'fa-solid fa-shield-halved text-brand-whiz text-2xl';
+        if (statusTitle) statusTitle.textContent = 'Verification Required';
+        if (statusDesc) statusDesc.textContent = 'Complete second-factor verification to proceed.';
+
+        const form2FA = document.getElementById('form2FA');
+        form2FA.onsubmit = async (e) => {
+          e.preventDefault();
+          const code = (document.getElementById('input2FACode').value || '').trim();
+          const btn = document.getElementById('btn2FASubmit');
+          btn.disabled = true;
+          btn.textContent = 'Verifying...';
+
+          try {
+            const attempt = await signInResource.attemptSecondFactor({
+              strategy: 'totp',
+              code: code
+            });
+            if (attempt.status === 'complete' && attempt.createdSessionId) {
+              await window.Clerk.setActive({ session: attempt.createdSessionId });
+              twoFactorBox.classList.add('hidden');
+              progressBox.classList.remove('hidden');
+              finalizeAuth(window.Clerk.user);
+            } else {
+              showError('Invalid verification code. Please check your authenticator and try again.');
+            }
+          } catch (err) {
+            btn.disabled = false;
+            btn.textContent = 'Verify & Enter Workspace';
+            showError(err.message || 'Verification code rejected.');
+          }
+        };
+      }
+
+      async function finalizeAuth(user) {
+        if (!user) {
+          throw new Error('User identity could not be retrieved from active session.');
         }
 
+        updateStep('Synchronizing with Cloudflare Authority...', 80);
+
+        let sessionToken = null;
+        if (window.Clerk && window.Clerk.session) {
+          try {
+            sessionToken = await window.Clerk.session.getToken();
+          } catch (tErr) {
+            console.warn('Session token retrieval notice:', tErr);
+          }
+        }
+
+        const primaryEmail = (user.primaryEmailAddress ? user.primaryEmailAddress.emailAddress : '').toLowerCase();
+        const fullName = user.fullName || (user.firstName ? (user.firstName + ' ' + (user.lastName || '')).trim() : user.username) || 'Valued Client';
+
+        const syncHeaders = {
+          'Content-Type': 'application/json',
+          'X-Clerk-User-Id': user.id
+        };
+        if (sessionToken) {
+          syncHeaders['Authorization'] = 'Bearer ' + sessionToken;
+        }
+
+        // Idempotent provisioning & role lookup in Cloudflare D1
+        let userRole = 'client';
+        let isSuperAdmin = primaryEmail === 'kaziaremon@gmail.com';
+
         try {
-          updateStep('Initializing Clerk security environment...', 35);
-          if (!window.Clerk.loaded) {
-            await window.Clerk.load({
-              publishableKey: CLERK_PUBLISHABLE_KEY
-            });
-          }
-
-          updateStep('Validating OAuth callback credentials...', 55);
-
-          // 1. Process redirect callback
-          if (typeof window.Clerk.handleRedirectCallback === 'function') {
-            try {
-              await window.Clerk.handleRedirectCallback();
-            } catch (cbErr) {
-              console.warn('handleRedirectCallback notice:', cbErr);
-            }
-          }
-
-          // 2. Resolve active session & user
-          let user = window.Clerk.user;
-          const client = window.Clerk.client;
-
-          if (!user && client) {
-            // Check transferable signIn -> signUp
-            const signIn = client.signIn;
-            const signUp = client.signUp;
-
-            if (signIn && signIn.status === 'needs_first_factor') {
-              const fv = signIn.firstFactorVerification;
-              if (fv && fv.status === 'transferable') {
-                updateStep('Registering new Whiz Studio member...', 65);
-                const completeSignUp = await signUp.create({ transfer: true });
-                if (completeSignUp.status === 'complete') {
-                  await window.Clerk.setActive({ session: completeSignUp.createdSessionId });
-                  user = window.Clerk.user;
-                }
-              }
-            } else if (signUp && signUp.status === 'complete') {
-              await window.Clerk.setActive({ session: signUp.createdSessionId });
-              user = window.Clerk.user;
-            } else if (signIn && signIn.status === 'complete') {
-              await window.Clerk.setActive({ session: signIn.createdSessionId });
-              user = window.Clerk.user;
-            }
-          }
-
-          if (!user) {
-            user = window.Clerk.user;
-          }
-
-          if (!user) {
-            throw new Error('Authentication session could not be established. Please try signing in again.');
-          }
-
-          updateStep('Synchronizing with Cloudflare D1 Authority...', 80);
-
-          // 3. Obtain session token for authenticated authorization
-          let sessionToken = null;
-          if (window.Clerk.session) {
-            try {
-              sessionToken = await window.Clerk.session.getToken();
-            } catch (tErr) {
-              console.warn('Session token retrieval notice:', tErr);
-            }
-          }
-
-          const primaryEmail = user.primaryEmailAddress ? user.primaryEmailAddress.emailAddress : '';
-          const fullName = user.fullName || (user.firstName ? (user.firstName + ' ' + (user.lastName || '')).trim() : user.username) || 'Valued Client';
-
-          const syncHeaders = {
-            'Content-Type': 'application/json',
-            'X-Clerk-User-Id': user.id
-          };
-          if (sessionToken) {
-            syncHeaders['Authorization'] = 'Bearer ' + sessionToken;
-          }
-
-          // Idempotent provisioning & role lookup in Cloudflare D1
           const syncRes = await fetch(`${API_BASE}/auth/client-sync`, {
             method: 'POST',
             headers: syncHeaders,
@@ -226,23 +234,153 @@
             })
           }).then(r => r.json()).catch(() => ({}));
 
-          updateStep('Redirecting to your authorized workspace...', 98);
+          if (syncRes && syncRes.data && syncRes.data.user) {
+            userRole = syncRes.data.user.role || userRole;
+            isSuperAdmin = Boolean(syncRes.data.user.isSuperAdmin) || isSuperAdmin;
+          }
+        } catch (syncErr) {
+          console.warn('Cloudflare sync notice (fallback to default):', syncErr);
+        }
 
-          const profileUser = (syncRes && syncRes.data && syncRes.data.user) ? syncRes.data.user : null;
-          const userRole = profileUser ? profileUser.role : 'client';
-          const isSuperAdmin = profileUser ? Boolean(profileUser.isSuperAdmin) : (primaryEmail.toLowerCase() === 'kaziaremon@gmail.com');
+        updateStep('Opening your workspace...', 98);
 
-          // Clean URL parameters
-          const cleanUrl = window.location.origin + window.location.pathname;
-          window.history.replaceState({}, document.title, cleanUrl);
+        // Clean URL parameters from browser history
+        const cleanUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
 
-          setTimeout(() => {
-            if (userRole === 'owner' || userRole === 'admin' || userRole === 'super_admin' || isSuperAdmin) {
-              window.location.href = '/admin/dashboard';
-            } else {
-              window.location.href = '/client/dashboard';
+        setTimeout(() => {
+          if (userRole === 'owner' || userRole === 'admin' || userRole === 'super_admin' || isSuperAdmin) {
+            window.location.href = '/admin/dashboard';
+          } else {
+            window.location.href = '/client/dashboard';
+          }
+        }, 300);
+      }
+
+      async function executeCallback() {
+        if (!window.Clerk) {
+          setTimeout(executeCallback, 50);
+          return;
+        }
+
+        try {
+          updateStep('Initializing Clerk security environment...', 30);
+          if (!window.Clerk.loaded) {
+            await window.Clerk.load({
+              publishableKey: CLERK_PUBLISHABLE_KEY
+            });
+          }
+
+          updateStep('Validating OAuth callback credentials...', 50);
+
+          // 1. Process redirect callback using customNavigate interceptor to prevent reload loops
+          let interceptedUrl = null;
+          if (typeof window.Clerk.handleRedirectCallback === 'function') {
+            try {
+              await window.Clerk.handleRedirectCallback({
+                afterSignInUrl: undefined,
+                afterSignUpUrl: undefined
+              }, async (to) => {
+                interceptedUrl = to;
+              });
+            } catch (cbErr) {
+              console.warn('handleRedirectCallback notice:', cbErr);
             }
-          }, 350);
+          }
+
+          // 2. Resolve active session & user across all standard states
+          let user = window.Clerk.user;
+          const client = window.Clerk.client;
+
+          // Case A: User or Session already active
+          if (user) {
+            await finalizeAuth(user);
+            return;
+          }
+
+          if (window.Clerk.session && window.Clerk.session.user) {
+            await finalizeAuth(window.Clerk.session.user);
+            return;
+          }
+
+          if (!client) {
+            throw new Error('Clerk client context unavailable. Please try signing in again.');
+          }
+
+          // Case B: Existing Session in Client Sessions
+          const activeSession = client.sessions?.find(s => s.status === 'active') || client.sessions?.[0];
+          if (activeSession && activeSession.status === 'active' && activeSession.id) {
+            await window.Clerk.setActive({ session: activeSession.id });
+            await finalizeAuth(window.Clerk.user || activeSession.user);
+            return;
+          }
+
+          // Case C: SignIn resource in progress
+          if (client.signIn) {
+            const signIn = client.signIn;
+            if (signIn.status === 'complete' && signIn.createdSessionId) {
+              await window.Clerk.setActive({ session: signIn.createdSessionId });
+              await finalizeAuth(window.Clerk.user);
+              return;
+            } else if (signIn.status === 'needs_second_factor') {
+              show2FAPrompt(signIn);
+              return;
+            } else if (signIn.status === 'needs_first_factor') {
+              const fv = signIn.firstFactorVerification;
+              if (fv && fv.status === 'transferable') {
+                updateStep('Registering new member with Whiz Studio...', 65);
+                const completeSignUp = await client.signUp.create({ transfer: true });
+                if (completeSignUp.status === 'complete' && completeSignUp.createdSessionId) {
+                  await window.Clerk.setActive({ session: completeSignUp.createdSessionId });
+                  await finalizeAuth(window.Clerk.user);
+                  return;
+                } else if (completeSignUp.status === 'missing_requirements') {
+                  // Resolve missing username requirement if present
+                  if (completeSignUp.missingFields && completeSignUp.missingFields.includes('username')) {
+                    const rawEmail = completeSignUp.emailAddress || 'client';
+                    const basePart = rawEmail.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '');
+                    const candidate = `${basePart.slice(0, 16)}_${Math.random().toString(36).slice(2, 6)}`;
+                    const updated = await completeSignUp.update({ username: candidate });
+                    if (updated.status === 'complete' && updated.createdSessionId) {
+                      await window.Clerk.setActive({ session: updated.createdSessionId });
+                      await finalizeAuth(window.Clerk.user);
+                      return;
+                    }
+                  }
+                }
+              }
+            }
+          }
+
+          // Case D: Direct SignUp resource in progress
+          if (client.signUp) {
+            const signUp = client.signUp;
+            if (signUp.status === 'complete' && signUp.createdSessionId) {
+              await window.Clerk.setActive({ session: signUp.createdSessionId });
+              await finalizeAuth(window.Clerk.user);
+              return;
+            } else if (signUp.status === 'missing_requirements') {
+              if (signUp.missingFields && signUp.missingFields.includes('username')) {
+                const rawEmail = signUp.emailAddress || 'client';
+                const basePart = rawEmail.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '');
+                const candidate = `${basePart.slice(0, 16)}_${Math.random().toString(36).slice(2, 6)}`;
+                const updated = await signUp.update({ username: candidate });
+                if (updated.status === 'complete' && updated.createdSessionId) {
+                  await window.Clerk.setActive({ session: updated.createdSessionId });
+                  await finalizeAuth(window.Clerk.user);
+                  return;
+                }
+              }
+            }
+          }
+
+          // Case E: Check if session task is pending or re-check user
+          if (window.Clerk.user) {
+            await finalizeAuth(window.Clerk.user);
+            return;
+          }
+
+          throw new Error('Authentication session could not be established. Please try signing in again.');
 
         } catch (err) {
           console.error('SSO Callback Error:', err);

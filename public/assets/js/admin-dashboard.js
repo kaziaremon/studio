@@ -2191,6 +2191,22 @@
       });
     }
 
+    if (backdrop && drawer) {
+      backdrop.addEventListener('click', () => {
+        drawer.classList.add('-translate-x-full');
+        backdrop.classList.add('hidden');
+      });
+    }
+
+    if (drawer && backdrop) {
+      drawer.querySelectorAll('[data-dash-tab]').forEach(tabBtn => {
+        tabBtn.addEventListener('click', () => {
+          drawer.classList.add('-translate-x-full');
+          backdrop.classList.add('hidden');
+        });
+      });
+    }
+
     // Sign out buttons
     document.querySelectorAll('.btn-admin-signout').forEach(btn => {
       btn.addEventListener('click', async () => {
