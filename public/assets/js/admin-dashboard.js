@@ -538,6 +538,33 @@
     const cOrg = document.getElementById('clientCardOrgId');
     if (cOrg) cOrg.textContent = client.organization_id || 'None';
 
+    // Populate Preferred Currency in Financial Preferences
+    const clientCurrency = (client.currency || (client.country === 'Bangladesh' || (client.phone && client.phone.startsWith('+880')) ? 'BDT' : 'USD')).toUpperCase();
+    const currSelect = document.getElementById('clientPreferredCurrencySelect');
+    if (currSelect) currSelect.value = clientCurrency;
+    const currBadge = document.getElementById('clientPreferredCurrencyBadge');
+    if (currBadge) currBadge.textContent = clientCurrency;
+
+    // Wire Save Currency button
+    const saveCurrBtn = document.getElementById('btnSaveClientCurrency');
+    if (saveCurrBtn) {
+      saveCurrBtn.onclick = async () => {
+        const newCurr = currSelect.value;
+        setBtnLoading(saveCurrBtn, true, 'Saving...');
+        const updRes = await apiFetch(`/clients/${clientId}`, {
+          method: 'PUT',
+          body: JSON.stringify({ currency: newCurr })
+        });
+        setBtnLoading(saveCurrBtn, false);
+        if (updRes.ok) {
+          showToast(`Client billing currency updated to ${newCurr}!`, 'success');
+          if (currBadge) currBadge.textContent = newCurr;
+        } else {
+          showToast(updRes.data?.error || 'Failed to update currency.', 'error');
+        }
+      };
+    }
+
     // Financial calculations
     const totalBilledCents = (invoices || []).reduce((sum, inv) => sum + (inv.total_cents || 0), 0);
     const totalPaidCents = (payments || []).reduce((sum, p) => sum + (p.amount_cents || 0), 0);
@@ -2103,6 +2130,8 @@
       const submitBtn = f.querySelector('button[type="submit"]');
       const orgId = f.organizationId.value;
       const amountDollars = parseFloat(f.amount.value) || 0;
+      const currency = f.currency ? f.currency.value : 'USD';
+      const paymentDate = f.paymentDate && f.paymentDate.value ? f.paymentDate.value : new Date().toISOString().split('T')[0];
       const paymentMethod = f.paymentMethod.value;
       const paymentReference = f.paymentReference.value;
 
@@ -2112,16 +2141,17 @@
         method: 'POST',
         body: JSON.stringify({
           organizationId: orgId,
-          issueDate: new Date().toISOString().split('T')[0],
+          issueDate: paymentDate,
           dueDate: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
-          items: [{ description: 'Whiz Studio Retainer Service', quantity: 1, unitPriceCents: Math.round(amountDollars * 100) }]
+          currency,
+          items: [{ description: 'Whiz Studio Subscribed Retainer Service', quantity: 1, unitPriceCents: Math.round(amountDollars * 100) }]
         })
       });
 
       const invoiceId = invRes.data?.data?.invoiceId;
       if (!invoiceId) {
         setBtnLoading(submitBtn, false);
-        showToast('Failed to create invoice reference for payment.', 'error');
+        showToast(invRes.data?.error || 'Failed to create invoice reference for payment.', 'error');
         return;
       }
 
@@ -2130,8 +2160,8 @@
         body: JSON.stringify({
           invoiceId,
           amountCents: Math.round(amountDollars * 100),
-          currency: 'USD',
-          paymentDate: new Date().toISOString().split('T')[0],
+          currency,
+          paymentDate,
           paymentMethod,
           paymentReference
         })
@@ -2140,7 +2170,7 @@
       setBtnLoading(submitBtn, false);
 
       if (payRes.ok && payRes.data && payRes.data.success) {
-        showToast(`Payment of $${amountDollars.toFixed(2)} committed! Receipt ${payRes.data.data.receiptNumber} issued.`, 'success');
+        showToast(`Payment of ${formatCurrency(amountDollars * 100, currency)} committed! Receipt ${payRes.data.data.receiptNumber} issued.`, 'success');
         f.reset();
         document.getElementById('modalRecordPayment')?.classList.add('hidden');
         loadFinanceData();
