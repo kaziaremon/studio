@@ -1676,7 +1676,7 @@
               <!-- Field 3: Email Address -->
               <div>
                 <label for="clientRegEmail" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
-                  Email Address <span class="text-rose-500">*</span>
+                  Admin Username or Email <span class="text-rose-500">*</span>
                 </label>
                 <div class="relative">
                   <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
@@ -1823,6 +1823,50 @@
               </button>
             </div>
           </div>
+
+          <!-- SUB-VIEW E: CLIENT SECOND FACTOR / DEVICE VERIFICATION -->
+          <div id="clientSecondFactorView" class="hidden">
+            <div class="mb-5">
+              <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-brand-whiz/10 border border-brand-whiz/20 text-brand-whiz text-[11px] font-semibold mb-2">
+                <i class="fa-solid fa-shield-halved text-[10px]"></i>
+                <span id="client2faBadgeText">Identity Verification</span>
+              </div>
+              <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight" id="client2faTitle">Verify Your Identity</h2>
+              <p class="text-xs sm:text-sm text-slate-600 font-normal mt-1" id="client2faDescription">
+                Enter the 6-digit verification code sent to <span id="client2faTarget" class="font-bold text-slate-900"></span>.
+              </p>
+            </div>
+            <div class="space-y-4">
+              <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-2 text-center" id="client2faInputLabel">
+                  6-Digit Verification Code
+                </label>
+                <div id="client2faInputsContainer" class="flex justify-center gap-2 sm:gap-3">
+                  <input type="text" maxlength="1" inputmode="numeric" class="otp-box w-11 h-13 text-center text-xl font-extrabold rounded-xl border border-slate-300 bg-white/90 text-slate-900 focus:border-brand-whiz focus:ring-2 focus:ring-brand-whiz/30 outline-none transition-all shadow-xs" autocomplete="one-time-code">
+                  <input type="text" maxlength="1" inputmode="numeric" class="otp-box w-11 h-13 text-center text-xl font-extrabold rounded-xl border border-slate-300 bg-white/90 text-slate-900 focus:border-brand-whiz focus:ring-2 focus:ring-brand-whiz/30 outline-none transition-all shadow-xs">
+                  <input type="text" maxlength="1" inputmode="numeric" class="otp-box w-11 h-13 text-center text-xl font-extrabold rounded-xl border border-slate-300 bg-white/90 text-slate-900 focus:border-brand-whiz focus:ring-2 focus:ring-brand-whiz/30 outline-none transition-all shadow-xs">
+                  <input type="text" maxlength="1" inputmode="numeric" class="otp-box w-11 h-13 text-center text-xl font-extrabold rounded-xl border border-slate-300 bg-white/90 text-slate-900 focus:border-brand-whiz focus:ring-2 focus:ring-brand-whiz/30 outline-none transition-all shadow-xs">
+                  <input type="text" maxlength="1" inputmode="numeric" class="otp-box w-11 h-13 text-center text-xl font-extrabold rounded-xl border border-slate-300 bg-white/90 text-slate-900 focus:border-brand-whiz focus:ring-2 focus:ring-brand-whiz/30 outline-none transition-all shadow-xs">
+                  <input type="text" maxlength="1" inputmode="numeric" class="otp-box w-11 h-13 text-center text-xl font-extrabold rounded-xl border border-slate-300 bg-white/90 text-slate-900 focus:border-brand-whiz focus:ring-2 focus:ring-brand-whiz/30 outline-none transition-all shadow-xs">
+                </div>
+              </div>
+              <button type="button" id="clientVerify2faBtn" class="w-full py-3 px-5 rounded-xl text-sm font-bold btn-glass-primary shadow-sm hover:shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer mt-3">
+                <span>Verify Code & Continue</span>
+                <i class="fa-solid fa-arrow-right text-xs"></i>
+              </button>
+              <div id="client2faResendRow" class="flex items-center justify-between text-xs text-slate-600 pt-3 border-t border-slate-200/60">
+                <span>Didn't receive code?</span>
+                <button type="button" id="clientResend2faBtn" class="text-brand-whiz font-bold hover:underline cursor-pointer disabled:opacity-50">
+                  <span id="clientResend2faTimer">Resend in 60s</span>
+                </button>
+              </div>
+              <div class="text-center text-xs text-slate-600 font-medium pt-3 border-t border-slate-200/60">
+                <button type="button" id="client2faBackBtn" data-action="to-client-login" class="text-brand-whiz font-bold hover:underline cursor-pointer">
+                  <i class="fa-solid fa-arrow-left mr-1"></i> Back to Login
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- ===================================================================
@@ -1842,13 +1886,13 @@
               <!-- Field 1: Email Address -->
               <div>
                 <label for="adminEmail" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
-                  Email Address <span class="text-rose-500">*</span>
+                  Admin Username or Email <span class="text-rose-500">*</span>
                 </label>
                 <div class="relative">
                   <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
                     <i class="fa-solid fa-envelope text-xs"></i>
                   </span>
-                  <input type="email" id="adminEmail" name="adminEmail" placeholder="Enter your admin email" class="account-form-input w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-xl text-sm font-medium focus:ring-2 focus:ring-slate-900/30 border border-slate-300/80 bg-white/80" autocomplete="email">
+                  <input type="text" id="adminEmail" name="adminEmail" placeholder="admin@example.com or username" value="" class="account-form-input w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-xl text-sm font-medium focus:ring-2 focus:ring-slate-900/30 border border-slate-300/80 bg-white/80" autocomplete="email">
                 </div>
               </div>
 
@@ -2043,6 +2087,53 @@
               <button type="button" id="adminForgotBackBtn" data-action="to-admin-login" class="text-slate-800 font-bold hover:underline cursor-pointer">
                 <i class="fa-solid fa-arrow-left mr-1"></i> Back to Admin Login
               </button>
+            </div>
+          </div>
+
+          <!-- SUB-VIEW F: ADMIN SECOND FACTOR / DEVICE VERIFICATION -->
+          <div id="adminSecondFactorView" class="hidden">
+            <div class="mb-5">
+              <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-700 text-[11px] font-semibold mb-2">
+                <i class="fa-solid fa-shield-halved text-[10px]"></i>
+                <span id="admin2faBadgeText">Identity Verification Required</span>
+              </div>
+              <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight" id="admin2faTitle">Verify Your Identity</h2>
+              <p class="text-xs sm:text-sm text-slate-600 font-normal mt-1" id="admin2faDescription">
+                Enter the 6-digit verification code sent to <span id="admin2faTarget" class="font-bold text-slate-900"></span>.
+              </p>
+            </div>
+            <div class="space-y-4">
+              <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-2 text-center" id="admin2faInputLabel">
+                  6-Digit Security Code
+                </label>
+                <div id="admin2faInputsContainer" class="flex justify-center gap-2 sm:gap-3">
+                  <input type="text" maxlength="1" inputmode="numeric" class="otp-box w-11 h-13 text-center text-xl font-extrabold rounded-xl border border-slate-300 bg-white/90 text-slate-900 focus:border-slate-900 focus:ring-2 focus:ring-slate-900/20 outline-none transition-all shadow-xs" autocomplete="one-time-code">
+                  <input type="text" maxlength="1" inputmode="numeric" class="otp-box w-11 h-13 text-center text-xl font-extrabold rounded-xl border border-slate-300 bg-white/90 text-slate-900 focus:border-slate-900 focus:ring-2 focus:ring-slate-900/20 outline-none transition-all shadow-xs">
+                  <input type="text" maxlength="1" inputmode="numeric" class="otp-box w-11 h-13 text-center text-xl font-extrabold rounded-xl border border-slate-300 bg-white/90 text-slate-900 focus:border-slate-900 focus:ring-2 focus:ring-slate-900/20 outline-none transition-all shadow-xs">
+                  <input type="text" maxlength="1" inputmode="numeric" class="otp-box w-11 h-13 text-center text-xl font-extrabold rounded-xl border border-slate-300 bg-white/90 text-slate-900 focus:border-slate-900 focus:ring-2 focus:ring-slate-900/20 outline-none transition-all shadow-xs">
+                  <input type="text" maxlength="1" inputmode="numeric" class="otp-box w-11 h-13 text-center text-xl font-extrabold rounded-xl border border-slate-300 bg-white/90 text-slate-900 focus:border-slate-900 focus:ring-2 focus:ring-slate-900/20 outline-none transition-all shadow-xs">
+                  <input type="text" maxlength="1" inputmode="numeric" class="otp-box w-11 h-13 text-center text-xl font-extrabold rounded-xl border border-slate-300 bg-white/90 text-slate-900 focus:border-slate-900 focus:ring-2 focus:ring-slate-900/20 outline-none transition-all shadow-xs">
+                </div>
+                <div id="admin2faBackupContainer" class="hidden mt-3">
+                  <input type="text" id="admin2faBackupInput" placeholder="Enter backup code" class="account-form-input w-full px-4 py-2.5 rounded-xl text-sm font-medium border border-slate-300/80 bg-white/80 text-center font-mono tracking-wider">
+                </div>
+              </div>
+              <button type="button" id="adminVerify2faBtn" class="w-full py-3 px-5 rounded-xl text-sm font-bold bg-slate-900 hover:bg-slate-800 text-white shadow-sm hover:shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer mt-3 border border-slate-800">
+                <i class="fa-solid fa-shield-check text-xs text-brand-whiz"></i>
+                <span>Verify & Enter Admin Console</span>
+              </button>
+              <div id="admin2faResendRow" class="flex items-center justify-between text-xs text-slate-600 pt-3 border-t border-slate-200/60">
+                <span>Didn't receive code?</span>
+                <button type="button" id="adminResend2faBtn" class="text-slate-800 font-bold hover:underline cursor-pointer disabled:opacity-50">
+                  <span id="adminResend2faTimer">Resend in 60s</span>
+                </button>
+              </div>
+              <div class="text-center text-xs text-slate-600 font-medium pt-3 border-t border-slate-200/60">
+                <button type="button" id="admin2faBackBtn" data-action="to-admin-login" class="text-slate-800 font-bold hover:underline cursor-pointer">
+                  <i class="fa-solid fa-arrow-left mr-1"></i> Back to Admin Login
+                </button>
+              </div>
             </div>
           </div>
 

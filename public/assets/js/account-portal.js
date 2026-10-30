@@ -24,10 +24,12 @@
     userRole: 'guest', // 'guest' | 'client' | 'admin' | 'super_admin'
     currentModal: null, // null | 'portal' | 'clientDashboard' | 'adminDashboard'
     activeTab: 'client', // 'client' | 'admin'
-    clientSubView: 'login', // 'login' | 'register' | 'otp' | 'forgot'
-    adminSubView: 'login', // 'login' | 'activate' | 'otp' | 'credentials' | 'forgot'
+    clientSubView: 'login', // 'login' | 'register' | 'otp' | 'forgot' | '2fa'
+    adminSubView: 'login', // 'login' | 'activate' | 'otp' | 'credentials' | 'forgot' | '2fa'
     pendingSignUp: null,
     pendingSignIn: null,
+    admin2faFactor: null,
+    client2faFactor: null,
     activationEmail: '',
     resendCooldown: 0,
     resendInterval: null,
@@ -339,7 +341,8 @@
       login: document.getElementById('clientLoginView'),
       register: document.getElementById('clientRegisterView'),
       otp: document.getElementById('clientOtpView'),
-      forgot: document.getElementById('clientForgotView')
+      forgot: document.getElementById('clientForgotView'),
+      '2fa': document.getElementById('clientSecondFactorView')
     };
 
     Object.keys(views).forEach(key => {
@@ -352,6 +355,9 @@
     if (subview === 'otp') {
       clearOtpInputs('clientOtpInputsContainer');
       startResendTimer('clientResendOtpBtn', 'clientResendOtpTimer');
+    } else if (subview === '2fa') {
+      clearOtpInputs('client2faInputsContainer');
+      startResendTimer('clientResend2faBtn', 'clientResend2faTimer');
     } else if (subview === 'login') {
       setTimeout(() => {
         const input = document.getElementById('clientIdentifier');
@@ -379,7 +385,8 @@
       activate: document.getElementById('adminActivateEmailView'),
       otp: document.getElementById('adminOtpView'),
       credentials: document.getElementById('adminCredentialsView'),
-      forgot: document.getElementById('adminForgotView')
+      forgot: document.getElementById('adminForgotView'),
+      '2fa': document.getElementById('adminSecondFactorView')
     };
 
     Object.keys(views).forEach(key => {
@@ -392,6 +399,9 @@
     if (subview === 'otp') {
       clearOtpInputs('adminOtpInputsContainer');
       startResendTimer('adminResendOtpBtn', 'adminResendOtpTimer');
+    } else if (subview === '2fa') {
+      clearOtpInputs('admin2faInputsContainer');
+      startResendTimer('adminResend2faBtn', 'adminResend2faTimer');
     } else if (subview === 'activate') {
       setTimeout(() => {
         const input = document.getElementById('adminActivateEmail');
@@ -533,6 +543,12 @@
         closeModal('accountPortalModal');
         toast('Signed in successfully!', 'success');
         openClientDashboard();
+      } else if (signInAttempt.status === 'needs_second_factor' || signInAttempt.status === 'needs_client_trust') {
+        state.pendingSignIn = signInAttempt;
+        await setupClientSecondFactor(signInAttempt);
+      } else if (signInAttempt.status === 'needs_first_factor') {
+        state.pendingSignIn = signInAttempt;
+        await setupClientFirstFactor(signInAttempt);
       } else {
         showPortalAlert(`Authentication requires further verification (Status: ${signInAttempt.status}).`, 'warning');
       }
@@ -543,6 +559,140 @@
     } finally {
       state.isRequestInFlight = false;
       setBtnLoading(submitBtn, false);
+    }
+  }
+
+  // Client Second-Factor / Device Trust Setup
+  async function setupClientSecondFactor(signInAttempt) {
+    const factors = signInAttempt.supportedSecondFactors || [];
+    let factor = factors.find(f => f.strategy === 'email_code') || factors[0] || { strategy: 'email_code' };
+    state.client2faFactor = factor;
+
+    if (factor.strategy === 'email_code') {
+      try {
+        await signInAttempt.prepareSecondFactor({
+          strategy: 'email_code',
+          ...(factor.emailAddressId ? { emailAddressId: factor.emailAddressId } : {})
+        });
+      } catch (e) {
+        console.warn('prepareSecondFactor client warning:', e);
+      }
+      const targetEl = document.getElementById('client2faTarget');
+      const targetEmail = factor.safeIdentifier || signInAttempt.identifier || (window.Clerk?.user?.primaryEmailAddress?.emailAddress) || 'your email';
+      if (targetEl) targetEl.textContent = maskEmail(targetEmail);
+    }
+    switchClientSubView('2fa');
+    toast('Verification code sent to your email.', 'info');
+  }
+
+  // Client First-Factor Setup
+  async function setupClientFirstFactor(signInAttempt) {
+    const factors = signInAttempt.supportedFirstFactors || [];
+    const emailFactor = factors.find(f => f.strategy === 'email_code') || factors[0] || { strategy: 'email_code' };
+    state.client2faFactor = emailFactor;
+
+    try {
+      await signInAttempt.prepareFirstFactor({
+        strategy: 'email_code',
+        ...(emailFactor.emailAddressId ? { emailAddressId: emailFactor.emailAddressId } : {})
+      });
+    } catch (e) {
+      console.warn('prepareFirstFactor client warning:', e);
+    }
+    const targetEl = document.getElementById('client2faTarget');
+    const targetEmail = emailFactor.safeIdentifier || signInAttempt.identifier || 'your email';
+    if (targetEl) targetEl.textContent = maskEmail(targetEmail);
+    switchClientSubView('2fa');
+    toast('Verification code sent to your email.', 'info');
+  }
+
+  // Client Second-Factor Code Submit
+  async function handleClient2faSubmit() {
+    if (state.isRequestInFlight) return;
+    const signIn = state.pendingSignIn || window.Clerk?.client?.signIn;
+    if (!signIn) {
+      showPortalAlert('No pending authentication session found.', 'error');
+      switchClientSubView('login');
+      return;
+    }
+
+    const code = getOtpCode('client2faInputsContainer');
+    if (!code || code.length < 6) {
+      showPortalAlert('Please enter the 6-digit verification code.', 'error');
+      return;
+    }
+
+    state.isRequestInFlight = true;
+    const submitBtn = document.getElementById('clientVerify2faBtn');
+    setBtnLoading(submitBtn, true, 'Verifying...');
+    showPortalAlert('');
+
+    try {
+      const factor = state.client2faFactor || { strategy: 'email_code' };
+      let result;
+      if (signIn.status === 'needs_first_factor') {
+        result = await signIn.attemptFirstFactor({ strategy: factor.strategy, code });
+      } else {
+        result = await signIn.attemptSecondFactor({ strategy: factor.strategy, code });
+      }
+
+      if (result.status === 'complete') {
+        await window.Clerk.setActive({ session: result.createdSessionId });
+        const email = result.identifier || (window.Clerk.user?.primaryEmailAddress?.emailAddress) || '';
+        await apiFetch('/sync-client', {
+          method: 'POST',
+          body: JSON.stringify({
+            clerkUserId: result.createdUserId,
+            email,
+            fullName: window.Clerk.user ? (window.Clerk.user.fullName || window.Clerk.user.username) : 'Client'
+          })
+        });
+        await syncAuthState();
+        closeModal('accountPortalModal');
+        toast('Signed in successfully!', 'success');
+        openClientDashboard();
+      } else {
+        showPortalAlert(`Verification status: ${result.status}`, 'warning');
+      }
+    } catch (err) {
+      console.error('Client 2FA Error:', err);
+      const parsed = parseClerkError(err);
+      showPortalAlert(parsed.longMessage || parsed.message || 'Verification failed. Please try again.', 'error');
+      clearOtpInputs('client2faInputsContainer');
+    } finally {
+      state.isRequestInFlight = false;
+      setBtnLoading(submitBtn, false);
+    }
+  }
+
+  // Client Resend Second-Factor Code
+  async function handleClientResend2fa() {
+    if (state.isRequestInFlight || state.resendCooldown > 0) return;
+    const signIn = state.pendingSignIn || window.Clerk?.client?.signIn;
+    if (!signIn) return;
+
+    state.isRequestInFlight = true;
+    try {
+      const factor = state.client2faFactor || { strategy: 'email_code' };
+      if (signIn.status === 'needs_first_factor') {
+        await signIn.prepareFirstFactor({ strategy: factor.strategy, ...(factor.emailAddressId ? { emailAddressId: factor.emailAddressId } : {}) });
+      } else {
+        await signIn.prepareSecondFactor({ strategy: factor.strategy, ...(factor.emailAddressId ? { emailAddressId: factor.emailAddressId } : {}) });
+      }
+      toast('Verification code resent. Please check your email.', 'info');
+      startResendTimer('clientResend2faBtn', 'clientResend2faTimer', 60);
+      clearOtpInputs('client2faInputsContainer');
+    } catch (err) {
+      console.error('Client resend 2fa error:', err);
+      if (isRateLimitError(err)) {
+        toast('Too many requests. Please wait before requesting another code.', 'warning');
+        startResendTimer('clientResend2faBtn', 'clientResend2faTimer', 120);
+      } else {
+        const parsed = parseClerkError(err);
+        toast(parsed.message || 'Failed to resend code.', 'error');
+      }
+    } finally {
+      state.isRequestInFlight = false;
     }
   }
 
@@ -854,8 +1004,14 @@
         closeModal('accountPortalModal');
         toast('Welcome to Whiz Studio Admin Console', 'success');
         openAdminDashboard();
+      } else if (signInAttempt.status === 'needs_second_factor' || signInAttempt.status === 'needs_client_trust') {
+        state.pendingSignIn = signInAttempt;
+        await setupAdminSecondFactor(signInAttempt);
+      } else if (signInAttempt.status === 'needs_first_factor') {
+        state.pendingSignIn = signInAttempt;
+        await setupAdminFirstFactor(signInAttempt);
       } else {
-        showPortalAlert(`Admin authentication status: ${signInAttempt.status}`, 'warning');
+        showPortalAlert(`Admin authentication status: ${signInAttempt.status}. Please check your credentials or contact system administrator.`, 'warning');
       }
     } catch (err) {
       console.error('Admin Sign In Error:', err);
@@ -864,6 +1020,230 @@
     } finally {
       state.isRequestInFlight = false;
       setBtnLoading(submitBtn, false);
+    }
+  }
+
+  // Admin Second-Factor / Device Trust Setup
+  async function setupAdminSecondFactor(signInAttempt) {
+    const factors = signInAttempt.supportedSecondFactors || [];
+    console.log('[Admin 2FA] Status:', signInAttempt.status, 'Supported Factors:', factors);
+
+    // Prefer email_code, then totp, then phone_code, then backup_code
+    let factor = factors.find(f => f.strategy === 'email_code') ||
+                 factors.find(f => f.strategy === 'totp') ||
+                 factors.find(f => f.strategy === 'phone_code') ||
+                 factors.find(f => f.strategy === 'backup_code') ||
+                 factors[0] ||
+                 { strategy: 'email_code' };
+
+    state.admin2faFactor = factor;
+
+    const titleEl = document.getElementById('admin2faTitle');
+    const descEl = document.getElementById('admin2faDescription');
+    const badgeEl = document.getElementById('admin2faBadgeText');
+    const resendRow = document.getElementById('admin2faResendRow');
+    const inputsContainer = document.getElementById('admin2faInputsContainer');
+    const backupContainer = document.getElementById('admin2faBackupContainer');
+
+    if (factor.strategy === 'email_code') {
+      try {
+        await signInAttempt.prepareSecondFactor({
+          strategy: 'email_code',
+          ...(factor.emailAddressId ? { emailAddressId: factor.emailAddressId } : {})
+        });
+      } catch (prepErr) {
+        console.warn('Admin prepareSecondFactor warning:', prepErr);
+        if (isRateLimitError(prepErr)) {
+          toast('A security code was recently dispatched. Please check your email.', 'info');
+        }
+      }
+
+      const targetEmail = factor.safeIdentifier || signInAttempt.identifier || 'kaziaremon@gmail.com';
+      if (titleEl) titleEl.textContent = 'Verify Your Identity';
+      if (badgeEl) badgeEl.textContent = 'Device Verification';
+      if (descEl) {
+        descEl.innerHTML = `Enter the 6-digit verification code sent to <span id="admin2faTarget" class="font-bold text-slate-900">${maskEmail(targetEmail)}</span>.`;
+      }
+      if (resendRow) resendRow.classList.remove('hidden');
+      if (inputsContainer) inputsContainer.classList.remove('hidden');
+      if (backupContainer) backupContainer.classList.add('hidden');
+      switchAdminSubView('2fa');
+      toast('Verification code sent to your email.', 'info');
+    } else if (factor.strategy === 'totp') {
+      if (titleEl) titleEl.textContent = 'Authenticator Code';
+      if (badgeEl) badgeEl.textContent = 'Two-Factor Authentication';
+      if (descEl) descEl.textContent = 'Enter the 6-digit verification code generated by your authenticator app.';
+      if (resendRow) resendRow.classList.add('hidden');
+      if (inputsContainer) inputsContainer.classList.remove('hidden');
+      if (backupContainer) backupContainer.classList.add('hidden');
+      switchAdminSubView('2fa');
+    } else if (factor.strategy === 'backup_code') {
+      if (titleEl) titleEl.textContent = 'Backup Security Code';
+      if (badgeEl) badgeEl.textContent = 'Recovery Authentication';
+      if (descEl) descEl.textContent = 'Enter one of your saved backup security codes.';
+      if (resendRow) resendRow.classList.add('hidden');
+      if (inputsContainer) inputsContainer.classList.add('hidden');
+      if (backupContainer) backupContainer.classList.remove('hidden');
+      switchAdminSubView('2fa');
+    } else if (factor.strategy === 'phone_code') {
+      try {
+        await signInAttempt.prepareSecondFactor({
+          strategy: 'phone_code',
+          ...(factor.phoneNumberId ? { phoneNumberId: factor.phoneNumberId } : {})
+        });
+      } catch (prepErr) {
+        console.warn('Admin prepareSecondFactor phone warning:', prepErr);
+      }
+      if (titleEl) titleEl.textContent = 'SMS Verification';
+      if (badgeEl) badgeEl.textContent = 'Phone Verification';
+      if (descEl) descEl.textContent = 'Enter the 6-digit SMS verification code sent to your phone.';
+      if (resendRow) resendRow.classList.remove('hidden');
+      if (inputsContainer) inputsContainer.classList.remove('hidden');
+      if (backupContainer) backupContainer.classList.add('hidden');
+      switchAdminSubView('2fa');
+      toast('Verification code sent via SMS.', 'info');
+    } else {
+      switchAdminSubView('2fa');
+    }
+  }
+
+  // Admin First-Factor Setup (Fallback if First Factor email OTP is used)
+  async function setupAdminFirstFactor(signInAttempt) {
+    const factors = signInAttempt.supportedFirstFactors || [];
+    console.log('[Admin 1FA] Supported First Factors:', factors);
+    const emailFactor = factors.find(f => f.strategy === 'email_code') || factors[0] || { strategy: 'email_code' };
+    state.admin2faFactor = emailFactor;
+
+    try {
+      await signInAttempt.prepareFirstFactor({
+        strategy: 'email_code',
+        ...(emailFactor.emailAddressId ? { emailAddressId: emailFactor.emailAddressId } : {})
+      });
+    } catch (e) {
+      console.warn('prepareFirstFactor warning:', e);
+    }
+    const targetEmail = emailFactor.safeIdentifier || signInAttempt.identifier || 'kaziaremon@gmail.com';
+    const descEl = document.getElementById('admin2faDescription');
+    if (descEl) descEl.innerHTML = `Enter the 6-digit verification code sent to <span id="admin2faTarget" class="font-bold text-slate-900">${maskEmail(targetEmail)}</span>.`;
+    switchAdminSubView('2fa');
+    toast('Verification code sent to your email.', 'info');
+  }
+
+  // Admin Second-Factor Code Submit
+  async function handleAdmin2faSubmit() {
+    if (state.isRequestInFlight) return;
+    const signIn = state.pendingSignIn || window.Clerk?.client?.signIn;
+    if (!signIn) {
+      showPortalAlert('No pending authentication attempt found. Please enter your credentials again.', 'error');
+      switchAdminSubView('login');
+      return;
+    }
+
+    const factor = state.admin2faFactor || (signIn.supportedSecondFactors && signIn.supportedSecondFactors[0]) || { strategy: 'email_code' };
+    let code = '';
+    if (factor.strategy === 'backup_code') {
+      const backupInput = document.getElementById('admin2faBackupInput');
+      code = (backupInput?.value || '').trim();
+    } else {
+      code = getOtpCode('admin2faInputsContainer');
+    }
+
+    if (!code || (factor.strategy !== 'backup_code' && code.length < 6)) {
+      showPortalAlert('Please enter the complete 6-digit verification code.', 'error');
+      return;
+    }
+
+    state.isRequestInFlight = true;
+    const submitBtn = document.getElementById('adminVerify2faBtn');
+    setBtnLoading(submitBtn, true, 'Verifying Identity...');
+    showPortalAlert('');
+
+    try {
+      let result;
+      if (signIn.status === 'needs_first_factor') {
+        result = await signIn.attemptFirstFactor({
+          strategy: factor.strategy,
+          code
+        });
+      } else {
+        result = await signIn.attemptSecondFactor({
+          strategy: factor.strategy,
+          code
+        });
+      }
+
+      if (result.status === 'complete') {
+        await window.Clerk.setActive({ session: result.createdSessionId });
+        await syncAuthState();
+
+        if (state.userRole !== 'admin' && state.userRole !== 'super_admin') {
+          await window.Clerk.signOut();
+          showPortalAlert('Access Revoked: Server verified that your account does not possess administrative permissions.', 'error');
+          return;
+        }
+
+        closeModal('accountPortalModal');
+        toast('Admin identity verified. Welcome to Console!', 'success');
+        openAdminDashboard();
+      } else {
+        showPortalAlert(`Verification status: ${result.status}. Please check your verification code.`, 'warning');
+      }
+    } catch (err) {
+      console.error('Admin 2FA Verification Error:', err);
+      const parsed = parseClerkError(err);
+      if (parsed.code === 'verification_expired') {
+        showPortalAlert('Verification code has expired. Please click "Resend Code" to receive a new one.', 'error');
+        clearOtpInputs('admin2faInputsContainer');
+      } else if (parsed.code === 'verification_failed' || parsed.code === 'form_code_incorrect') {
+        showPortalAlert('Incorrect verification code. Please check your email and try again.', 'error');
+        clearOtpInputs('admin2faInputsContainer');
+      } else if (isRateLimitError(err)) {
+        showPortalAlert('Too many failed attempts. Please wait a moment before trying again.', 'error');
+      } else {
+        showPortalAlert(parsed.longMessage || parsed.message || 'Verification failed. Please try again.', 'error');
+      }
+    } finally {
+      state.isRequestInFlight = false;
+      setBtnLoading(submitBtn, false);
+    }
+  }
+
+  // Admin Resend Second-Factor Code
+  async function handleAdminResend2fa() {
+    if (state.isRequestInFlight || state.resendCooldown > 0) return;
+    const signIn = state.pendingSignIn || window.Clerk?.client?.signIn;
+    if (!signIn) return;
+
+    const factor = state.admin2faFactor || (signIn.supportedSecondFactors && signIn.supportedSecondFactors[0]) || { strategy: 'email_code' };
+    if (factor.strategy !== 'email_code' && factor.strategy !== 'phone_code') return;
+
+    state.isRequestInFlight = true;
+    try {
+      if (signIn.status === 'needs_first_factor') {
+        await signIn.prepareFirstFactor({
+          strategy: factor.strategy,
+          ...(factor.emailAddressId ? { emailAddressId: factor.emailAddressId } : {})
+        });
+      } else {
+        await signIn.prepareSecondFactor({
+          strategy: factor.strategy,
+          ...(factor.emailAddressId ? { emailAddressId: factor.emailAddressId } : {})
+        });
+      }
+      toast('Verification code sent. Please check your email.', 'info');
+      startResendTimer('adminResend2faBtn', 'adminResend2faTimer', 60);
+      clearOtpInputs('admin2faInputsContainer');
+    } catch (err) {
+      console.error('Resend 2FA Error:', err);
+      if (isRateLimitError(err)) {
+        toast('Too many requests. Please wait a moment before requesting another code.', 'warning');
+        startResendTimer('adminResend2faBtn', 'adminResend2faTimer', 120);
+      } else {
+        const parsed = parseClerkError(err);
+        toast(parsed.message || 'Failed to resend code.', 'error');
+      }
+    } finally {
+      state.isRequestInFlight = false;
     }
   }
 
@@ -1977,6 +2357,40 @@
     const adminForgotForm2 = document.getElementById('adminForgotStep2');
     if (adminForgotForm2) adminForgotForm2.addEventListener('submit', handleAdminForgotReset);
 
+    // Admin 2FA Listeners
+    const adminVerify2faBtn = document.getElementById('adminVerify2faBtn');
+    if (adminVerify2faBtn) adminVerify2faBtn.addEventListener('click', handleAdmin2faSubmit);
+
+    const adminResend2faBtn = document.getElementById('adminResend2faBtn');
+    if (adminResend2faBtn) adminResend2faBtn.addEventListener('click', handleAdminResend2fa);
+
+    const admin2faBackBtn = document.getElementById('admin2faBackBtn');
+    if (admin2faBackBtn) admin2faBackBtn.addEventListener('click', () => {
+      state.pendingSignIn = null;
+      switchAdminSubView('login');
+    });
+
+    bindOtpInputEvents('admin2faInputsContainer', () => {
+      handleAdmin2faSubmit();
+    });
+
+    // Client 2FA Listeners
+    const clientVerify2faBtn = document.getElementById('clientVerify2faBtn');
+    if (clientVerify2faBtn) clientVerify2faBtn.addEventListener('click', handleClient2faSubmit);
+
+    const clientResend2faBtn = document.getElementById('clientResend2faBtn');
+    if (clientResend2faBtn) clientResend2faBtn.addEventListener('click', handleClientResend2fa);
+
+    const client2faBackBtn = document.getElementById('client2faBackBtn');
+    if (client2faBackBtn) client2faBackBtn.addEventListener('click', () => {
+      state.pendingSignIn = null;
+      switchClientSubView('login');
+    });
+
+    bindOtpInputEvents('client2faInputsContainer', () => {
+      handleClient2faSubmit();
+    });
+
     // Bind OTP Inputs ONCE
     bindOtpInputEvents('clientOtpInputsContainer', () => {
       handleClientOtpSubmit();
@@ -2094,9 +2508,16 @@
         switchAdminSubView('forgot');
         return;
       }
-      if (e.target.closest('#adminForgotBackBtn')) {
+      if (e.target.closest('#adminForgotBackBtn, #admin2faBackBtn')) {
         e.preventDefault();
+        state.pendingSignIn = null;
         switchAdminSubView('login');
+        return;
+      }
+      if (e.target.closest('#client2faBackBtn')) {
+        e.preventDefault();
+        state.pendingSignIn = null;
+        switchClientSubView('login');
         return;
       }
 
