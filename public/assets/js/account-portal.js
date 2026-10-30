@@ -2345,17 +2345,6 @@
       btn.addEventListener('click', handleGoogleOAuth);
     });
 
-    // Google OAuth Listeners
-    const googleLoginBtn = document.getElementById('googleLoginBtn');
-    if (googleLoginBtn) googleLoginBtn.addEventListener('click', handleGoogleOAuth);
-
-    const googleRegisterBtn = document.getElementById('googleRegisterBtn');
-    if (googleRegisterBtn) googleRegisterBtn.addEventListener('click', handleGoogleOAuth);
-
-    document.querySelectorAll('.google-auth-btn').forEach(btn => {
-      btn.addEventListener('click', handleGoogleOAuth);
-    });
-
     const clientLoginForm = document.getElementById('clientLoginForm');
     if (clientLoginForm) clientLoginForm.addEventListener('submit', handleClientLogin);
 
