@@ -1843,9 +1843,7 @@
   // =========================================================================
 
   function openAdminDashboard() {
-    openModal('adminDashboardModal');
-    loadAdminDashboardData();
-    switchAdminDashboardTab('overview');
+    window.location.href = '/admin/dashboard';
   }
 
   function switchAdminDashboardTab(tabName) {
@@ -2139,100 +2137,66 @@
     }
   }
 
-  // Admin Security / Change Password Functions
-  function initAdminSecuritySettings() {
-    const emailTarget = document.getElementById('adminSecurityEmailTarget');
-    if (emailTarget && state.currentUser) {
-      const email = state.currentUser.primaryEmailAddress ? state.currentUser.primaryEmailAddress.emailAddress : '';
-      emailTarget.textContent = maskEmail(email);
-    }
-  }
+  // Admin Security / Task 1 Authenticated Password Change
+  function initAdminSecuritySettings() {}
 
-  async function handleAdminSecuritySendOtp() {
-    if (state.isRequestInFlight) return;
-    const btn = document.getElementById('adminSecuritySendOtpBtn');
-    if (!state.currentUser) return;
-    const email = state.currentUser.primaryEmailAddress ? state.currentUser.primaryEmailAddress.emailAddress : '';
-    if (!email) return;
-
-    state.isRequestInFlight = true;
-    setBtnLoading(btn, true, 'Sending Verification Code...');
-
-    try {
-      const signInAttempt = await window.Clerk.client.signIn.create({
-        strategy: 'reset_password_email_code',
-        identifier: email
-      });
-      state.pendingSignIn = signInAttempt;
-
-      document.getElementById('adminSecurityStep1').classList.add('hidden');
-      document.getElementById('adminSecurityStep2').classList.remove('hidden');
-      toast('Verification code sent to your email.', 'info');
-    } catch (err) {
-      console.error('Admin Security OTP Error:', err);
-      const parsed = parseClerkError(err);
-      toast(parsed.longMessage || parsed.message || 'Failed to dispatch verification code.', 'error');
-    } finally {
-      state.isRequestInFlight = false;
-      setBtnLoading(btn, false);
-    }
-  }
-
-  async function handleAdminSecurityResetSubmit(e) {
-    e.preventDefault();
+  async function handleAdminPasswordChange(e) {
+    if (e && e.preventDefault) e.preventDefault();
     if (state.isRequestInFlight) return;
 
-    const form = e.target;
-    const code = (form.code.value || '').trim();
-    const newPassword = form.newPassword.value;
-    const confirmPassword = form.confirmPassword.value;
-    const submitBtn = form.querySelector('button[type="submit"]');
+    const form = e.target || document.getElementById('adminChangePasswordForm');
+    if (!form) return;
 
-    if (!code || !newPassword) {
-      toast('Please enter both the verification code and your new password.', 'error');
+    const currentPassword = (form.currentPassword ? form.currentPassword.value : '').trim();
+    const newPassword = (form.newPassword ? form.newPassword.value : '').trim();
+    const confirmPassword = (form.confirmPassword ? form.confirmPassword.value : '').trim();
+    const submitBtn = form.querySelector('button[type="submit"]') || document.getElementById('adminUpdatePasswordBtn');
+
+    if (!currentPassword) {
+      toast('Please enter your current password.', 'error');
       return;
     }
-
-    if (newPassword.length < 15) {
-      toast('Admin password must be at least 15 characters long.', 'error');
+    if (!newPassword) {
+      toast('Please enter your new password.', 'error');
       return;
     }
-
+    if (newPassword.length < 8) {
+      toast('New password must be at least 8 characters long.', 'error');
+      return;
+    }
     if (newPassword !== confirmPassword) {
-      toast('Passwords do not match.', 'error');
+      toast('New password and confirm password do not match.', 'error');
+      return;
+    }
+    if (currentPassword === newPassword) {
+      toast('New password cannot be the same as your current password.', 'warning');
       return;
     }
 
     state.isRequestInFlight = true;
-    setBtnLoading(submitBtn, true, 'Verifying & Updating Password...');
+    if (submitBtn) setBtnLoading(submitBtn, true, 'Updating Password...');
 
     try {
-      if (!state.pendingSignIn) {
-        throw new Error('Verification session expired. Please request a new code.');
+      const user = window.Clerk?.user || state.currentUser;
+      if (!user) {
+        throw new Error('No authenticated user session found. Please sign in again.');
       }
 
-      const result = await state.pendingSignIn.attemptFirstFactor({
-        strategy: 'reset_password_email_code',
-        code,
-        password: newPassword
+      await user.updatePassword({
+        currentPassword,
+        newPassword,
+        signOutOfOtherSessions: true
       });
 
-      if (result.status === 'complete') {
-        await window.Clerk.setActive({ session: result.createdSessionId });
-        toast('Password updated successfully! Your new password is now active.', 'success');
-        form.reset();
-        document.getElementById('adminSecurityStep1').classList.remove('hidden');
-        document.getElementById('adminSecurityStep2').classList.add('hidden');
-      } else {
-        toast(`Verification status: ${result.status}`, 'warning');
-      }
+      toast('Password updated successfully! Other sessions have been signed out.', 'success');
+      form.reset();
     } catch (err) {
       console.error('Password Update Error:', err);
       const parsed = parseClerkError(err);
-      toast(parsed.longMessage || parsed.message || 'Failed to update password. Check your code.', 'error');
+      toast(parsed.longMessage || parsed.message || 'Failed to update password. Check your current password.', 'error');
     } finally {
       state.isRequestInFlight = false;
-      setBtnLoading(submitBtn, false);
+      if (submitBtn) setBtnLoading(submitBtn, false);
     }
   }
 
@@ -2441,21 +2405,8 @@
       if (btn) btn.addEventListener('click', () => switchAdminDashboardTab(tab));
     });
 
-    const adminSecuritySendOtpBtn = document.getElementById('adminSecuritySendOtpBtn');
-    if (adminSecuritySendOtpBtn) adminSecuritySendOtpBtn.addEventListener('click', handleAdminSecuritySendOtp);
-
-    const adminSecurityStep2 = document.getElementById('adminSecurityStep2');
-    if (adminSecurityStep2) adminSecurityStep2.addEventListener('submit', handleAdminSecurityResetSubmit);
-
-    const adminSecurityCancelBtn = document.getElementById('adminSecurityCancelBtn');
-    if (adminSecurityCancelBtn) {
-      adminSecurityCancelBtn.addEventListener('click', () => {
-        const step1 = document.getElementById('adminSecurityStep1');
-        const step2 = document.getElementById('adminSecurityStep2');
-        if (step1) step1.classList.remove('hidden');
-        if (step2) step2.classList.add('hidden');
-      });
-    }
+    const adminChangePasswordForm = document.getElementById('adminChangePasswordForm');
+    if (adminChangePasswordForm) adminChangePasswordForm.addEventListener('submit', handleAdminPasswordChange);
 
     const clientSearchInput = document.getElementById('adminClientSearchInput');
     if (clientSearchInput) {

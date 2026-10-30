@@ -179,6 +179,11 @@ export default {
       return Response.redirect(canonicalUrl.toString(), 301);
     }
 
+    // Admin Workspace Redirection
+    if (path === "/admin" || path === "/admin/") {
+      return Response.redirect(`${url.origin}/admin/dashboard`, 302);
+    }
+
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
