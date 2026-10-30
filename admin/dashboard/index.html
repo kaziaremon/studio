@@ -30,9 +30,9 @@
             brand: {
               whiz: '#147D64',
               primary: '#147D64',
-              dark: '#12212B',
+              dark: '#172B36',
               light: '#F8FAFC',
-              border: '#E4E9ED',
+              border: '#E3E9EF',
               muted: '#64748B',
               surface: '#FFFFFF',
               accent: '#00A86B'
@@ -76,7 +76,7 @@
         <i class="fa-solid fa-shield-halved text-brand-whiz text-2xl"></i>
       </div>
     </div>
-    <h2 class="text-xl font-extrabold text-[#12212B] tracking-tight">Whiz Studio Console</h2>
+    <h2 class="text-xl font-extrabold text-[#172B36] tracking-tight">Whiz Studio Console</h2>
     <p class="text-xs text-slate-500 mt-1.5 flex items-center gap-2">
       <i class="fa-solid fa-circle-notch fa-spin text-brand-whiz"></i>
       <span>Verifying Administrator Credentials & Cloudflare D1 Authority...</span>
@@ -90,12 +90,12 @@
     <div class="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center mb-5 text-rose-600 text-2xl">
       <i class="fa-solid fa-ban"></i>
     </div>
-    <h2 class="text-2xl font-black text-[#12212B]">Access Denied</h2>
+    <h2 class="text-2xl font-black text-[#172B36]">Access Denied</h2>
     <p class="text-sm text-slate-500 mt-2 max-w-md">
       Your authenticated account does not possess administrator permissions required to enter the Whiz Studio Super Admin Console.
     </p>
     <div class="flex items-center gap-3 mt-6">
-      <button type="button" class="btn-admin-signout px-5 py-2.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-[#12212B] border border-[#E4E9ED] cursor-pointer transition-all">
+      <button type="button" class="btn-admin-signout px-5 py-2.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-[#172B36] border border-[#E3E9EF] cursor-pointer transition-all">
         <i class="fa-solid fa-arrow-right-from-bracket mr-1.5"></i> Sign Out
       </button>
       <a href="/" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm cursor-pointer transition-all">
@@ -110,7 +110,7 @@
   <div id="dashboardMainLayout" class="hidden h-full flex flex-col overflow-hidden">
 
     <!-- TOP NAVIGATION BAR -->
-    <header class="h-16 border-b border-[#E4E9ED] bg-white/95 backdrop-blur-xl shrink-0 flex items-center justify-between px-4 sm:px-6 z-30 shadow-xs">
+    <header class="h-16 border-b border-[#E3E9EF] bg-white/95 backdrop-blur-xl shrink-0 flex items-center justify-between px-4 sm:px-6 z-30 shadow-xs">
       <div class="flex items-center space-x-3 sm:space-x-4">
         <!-- Mobile Drawer Hamburger Toggle -->
         <button type="button" id="mobileMenuToggleBtn" class="md:hidden w-9 h-9 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-600 hover:text-slate-900 cursor-pointer" aria-label="Open Navigation">
@@ -119,7 +119,7 @@
 
         <!-- Brand Icon & Breadcrumbs -->
         <div class="flex items-center space-x-3">
-          <a href="/" class="flex items-center space-x-2 text-[#12212B] font-black tracking-tight group">
+          <a href="/" class="flex items-center space-x-2 text-[#172B36] font-black tracking-tight group">
             <div class="w-8 h-8 rounded-xl bg-brand-whiz/10 border border-brand-whiz/30 flex items-center justify-center text-brand-whiz group-hover:scale-105 transition-transform">
               <i class="fa-solid fa-bolt text-xs"></i>
             </div>
@@ -137,10 +137,7 @@
       <!-- Top Right Controls -->
       <div class="flex items-center space-x-3">
         <!-- System Health Badge -->
-        <div class="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-semibold text-[#147D64]">
-          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span>Cloudflare Authoritative ($0)</span>
-        </div>
+        <!-- System status badge removed -->
 
         <!-- User Dropdown & Profile -->
         <div class="relative">
@@ -159,7 +156,7 @@
     <div class="flex-1 flex overflow-hidden">
 
       <!-- DESKTOP PERSISTENT SIDEBAR NAVIGATION -->
-      <aside class="hidden md:flex w-64 border-r border-[#E4E9ED] bg-white shrink-0 flex-col justify-between p-4 z-20 shadow-xs">
+      <aside class="hidden md:flex w-64 border-r border-[#E3E9EF] bg-white shrink-0 flex-col justify-between p-4 z-20 shadow-xs">
         <div class="space-y-6 overflow-y-auto">
           <!-- Section 1: Core Operations -->
           <div>
@@ -176,7 +173,7 @@
               <button type="button" data-dash-tab="services" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent transition-all cursor-pointer text-left">
                 <i class="fa-solid fa-layer-group text-xs w-4"></i>
                 <span class="flex-1">Service Management</span>
-                <span class="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-500/30">12 Srv</span>
+                <span class="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">12 Srv</span>
               </button>
               <button type="button" data-dash-tab="projects" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent transition-all cursor-pointer text-left">
                 <i class="fa-solid fa-folder-tree text-xs w-4"></i>
@@ -200,7 +197,7 @@
               <button type="button" data-dash-tab="receipt_template" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent transition-all cursor-pointer text-left">
                 <i class="fa-solid fa-receipt text-xs w-4"></i>
                 <span class="flex-1">Receipt Template</span>
-                <span class="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-500/30">Vector</span>
+                <span class="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">Vector</span>
               </button>
             </nav>
           </div>
@@ -212,7 +209,7 @@
               <button type="button" data-dash-tab="team" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent transition-all cursor-pointer text-left">
                 <i class="fa-solid fa-user-shield text-xs w-4"></i>
                 <span class="flex-1">User & Access Management</span>
-                <span class="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-500/30">Owner</span>
+                <span class="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">Owner</span>
               </button>
               <button type="button" data-dash-tab="support" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent transition-all cursor-pointer text-left">
                 <i class="fa-solid fa-inbox text-xs w-4"></i>
@@ -231,13 +228,13 @@
         </div>
 
         <!-- Sidebar Footer: User Card -->
-        <div class="pt-4 border-t border-[#E4E9ED]"><div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-2">
+        <div class="pt-4 border-t border-[#E3E9EF]"><div class="p-3 rounded-2xl bg-slate-50 border border-[#E3E9EF] space-y-2">
             <div class="flex items-center space-x-2.5">
               <div class="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center font-bold text-xs text-emerald-400 uppercase admin-display-initials">
                 SA
               </div>
               <div class="min-w-0 flex-1">
-                <p class="text-xs font-bold text-[#12212B] truncate admin-display-name">Administrator</p>
+                <p class="text-xs font-bold text-[#172B36] truncate admin-display-name">Administrator</p>
                 <p class="text-[11px] text-slate-500 font-mono truncate admin-display-username">@admin</p>
               </div>
             </div>
@@ -251,69 +248,69 @@
 
       <!-- MOBILE SLIDE-OUT DRAWER OVERLAY -->
       <div id="mobileDrawerBackdrop" class="hidden md:hidden fixed inset-0 z-40 bg-white/40 backdrop-blur-sm transition-opacity"></div>
-      <aside id="mobileDrawer" class="fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-[#E4E9ED] p-5 transform -translate-x-full transition-transform duration-300 ease-in-out md:hidden flex flex-col justify-between shadow-2xl">
+      <aside id="mobileDrawer" class="fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-[#E3E9EF] p-5 transform -translate-x-full transition-transform duration-300 ease-in-out md:hidden flex flex-col justify-between shadow-2xl">
         <div class="space-y-6 overflow-y-auto">
-          <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+          <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
             <div class="flex items-center space-x-2">
               <div class="w-7 h-7 rounded-lg bg-brand-whiz/10 border border-brand-whiz/30 flex items-center justify-center text-brand-whiz">
                 <i class="fa-solid fa-bolt text-xs"></i>
               </div>
-              <span class="font-extrabold text-sm text-[#12212B]">Whiz Studio</span>
+              <span class="font-extrabold text-sm text-[#172B36]">Whiz Studio</span>
             </div>
-            <button type="button" id="mobileDrawerCloseBtn" class="w-8 h-8 rounded-lg bg-white border border-[#E4E9ED] flex items-center justify-center text-slate-500 hover:text-[#12212B] cursor-pointer">
+            <button type="button" id="mobileDrawerCloseBtn" class="w-8 h-8 rounded-lg bg-white border border-[#E3E9EF] flex items-center justify-center text-slate-500 hover:text-[#172B36] cursor-pointer">
               <i class="fa-solid fa-xmark text-xs"></i>
             </button>
           </div>
           <nav class="space-y-1">
-            <button type="button" data-dash-tab="overview" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-[#12212B] hover:bg-slate-800/60 border border-transparent transition-all text-left">
+            <button type="button" data-dash-tab="overview" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36] hover:bg-slate-50 hover:text-[#172B36] border border-transparent transition-all text-left">
               <i class="fa-solid fa-gauge-high text-xs w-4"></i>
               <span>Overview & KPIs</span>
             </button>
-            <button type="button" data-dash-tab="clients" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-[#12212B] hover:bg-slate-800/60 border border-transparent transition-all text-left">
+            <button type="button" data-dash-tab="clients" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36] hover:bg-slate-50 hover:text-[#172B36] border border-transparent transition-all text-left">
               <i class="fa-solid fa-users text-xs w-4"></i>
               <span>Client Directory</span>
             </button>
-            <button type="button" data-dash-tab="services" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-[#12212B] hover:bg-slate-800/60 border border-transparent transition-all text-left">
+            <button type="button" data-dash-tab="services" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36] hover:bg-slate-50 hover:text-[#172B36] border border-transparent transition-all text-left">
               <i class="fa-solid fa-layer-group text-xs w-4"></i>
               <span>Service Management</span>
             </button>
-            <button type="button" data-dash-tab="projects" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-[#12212B] hover:bg-slate-800/60 border border-transparent transition-all text-left">
+            <button type="button" data-dash-tab="projects" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36] hover:bg-slate-50 hover:text-[#172B36] border border-transparent transition-all text-left">
               <i class="fa-solid fa-folder-tree text-xs w-4"></i>
               <span>Service Projects</span>
             </button>
-            <button type="button" data-dash-tab="tasks" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-[#12212B] hover:bg-slate-800/60 border border-transparent transition-all text-left">
+            <button type="button" data-dash-tab="tasks" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36] hover:bg-slate-50 hover:text-[#172B36] border border-transparent transition-all text-left">
               <i class="fa-solid fa-list-check text-xs w-4"></i>
               <span>Live Tasks</span>
             </button>
-            <button type="button" data-dash-tab="finance" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-[#12212B] hover:bg-slate-800/60 border border-transparent transition-all text-left">
+            <button type="button" data-dash-tab="finance" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36] hover:bg-slate-50 hover:text-[#172B36] border border-transparent transition-all text-left">
               <i class="fa-solid fa-money-bill-wave text-xs w-4"></i>
               <span>Payments & Ledger</span>
             </button>
-            <button type="button" data-dash-tab="receipt_template" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-[#12212B] hover:bg-slate-800/60 border border-transparent transition-all text-left">
+            <button type="button" data-dash-tab="receipt_template" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36] hover:bg-slate-50 hover:text-[#172B36] border border-transparent transition-all text-left">
               <i class="fa-solid fa-receipt text-xs w-4"></i>
               <span>Receipt Template</span>
             </button>
-            <button type="button" data-dash-tab="team" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-[#12212B] hover:bg-slate-800/60 border border-transparent transition-all text-left">
+            <button type="button" data-dash-tab="team" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36] hover:bg-slate-50 hover:text-[#172B36] border border-transparent transition-all text-left">
               <i class="fa-solid fa-user-shield text-xs w-4"></i>
               <span>User & Access Management</span>
             </button>
-            <button type="button" data-dash-tab="support" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-[#12212B] hover:bg-slate-800/60 border border-transparent transition-all text-left">
+            <button type="button" data-dash-tab="support" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36] hover:bg-slate-50 hover:text-[#172B36] border border-transparent transition-all text-left">
               <i class="fa-solid fa-inbox text-xs w-4"></i>
               <span>Support Requests</span>
             </button>
-            <button type="button" data-dash-tab="history" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-[#12212B] hover:bg-slate-800/60 border border-transparent transition-all text-left">
+            <button type="button" data-dash-tab="history" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36] hover:bg-slate-50 hover:text-[#172B36] border border-transparent transition-all text-left">
               <i class="fa-solid fa-clock-rotate-left text-xs w-4"></i>
               <span>Audit History</span>
             </button>
-            <button type="button" data-dash-tab="settings" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-[#12212B] hover:bg-slate-800/60 border border-transparent transition-all text-left">
+            <button type="button" data-dash-tab="settings" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36] hover:bg-slate-50 hover:text-[#172B36] border border-transparent transition-all text-left">
               <i class="fa-solid fa-key text-xs w-4"></i>
               <span>Account Security</span>
             </button>
           </nav>
         </div>
 
-        <div class="pt-4 border-t border-[#E4E9ED]">
-          <button type="button" class="btn-admin-signout w-full py-2.5 px-3 rounded-xl text-xs font-bold text-rose-400 bg-rose-950/30 border border-rose-500/30 flex items-center justify-center space-x-2">
+        <div class="pt-4 border-t border-[#E3E9EF]">
+          <button type="button" class="btn-admin-signout w-full py-2.5 px-3 rounded-xl text-xs font-bold text-rose-600 bg-rose-50 border border-rose-200 flex items-center justify-center space-x-2">
             <i class="fa-solid fa-arrow-right-from-bracket"></i>
             <span>Sign Out</span>
           </button>
@@ -329,16 +326,12 @@
                ================================================================= -->
           <div id="view_overview" class="space-y-6">
             <!-- Welcome Hero Banner -->
-            <div class="p-6 sm:p-8 rounded-3xl bg-white border border-[#E4E9ED] shadow-sm relative overflow-hidden">
+            <div class="p-6 sm:p-8 rounded-3xl bg-white border border-[#E3E9EF] shadow-sm relative overflow-hidden">
               <div class="absolute -right-10 -bottom-10 w-64 h-64 rounded-full bg-brand-whiz/10 blur-3xl pointer-events-none"></div>
               <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                  <div class="flex items-center space-x-2.5 mb-2">
-                    <span class="text-xs font-bold uppercase tracking-wider text-[#147D64] bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">Cloudflare Authoritative Engine</span>
-                    <span class="text-xs text-slate-500">|</span>
-                    <span class="text-xs text-slate-500">Zero-Storage Architecture</span>
-                  </div>
-                  <h1 class="text-2xl sm:text-3xl font-black text-[#12212B] tracking-tight">Super Admin Command Center</h1>
+                  <p class="text-[11px] font-bold uppercase tracking-wider text-[#147D64] mb-1">Super Admin Console</p>
+                  <h1 class="text-2xl sm:text-3xl font-black text-[#172B36] tracking-tight">Super Admin Command Center</h1>
                   <p class="text-xs sm:text-sm text-slate-500 mt-1 max-w-2xl">
                     100% Cloudflare-backed agency management. Notion is no longer called during live operations.
                   </p>
@@ -348,7 +341,7 @@
                     <i class="fa-solid fa-user-plus text-xs"></i>
                     <span>Add New Client</span>
                   </button>
-                  <button type="button" id="btnQuickRecordPayment" class="px-4 py-2.5 rounded-xl text-xs font-bold bg-white text-slate-800 hover:bg-slate-50 border border-[#E4E9ED] shadow-sm transition-all flex items-center space-x-2 cursor-pointer">
+                  <button type="button" id="btnQuickRecordPayment" class="px-4 py-2.5 rounded-xl text-xs font-bold bg-white text-slate-800 hover:bg-slate-50 border border-[#E3E9EF] shadow-sm transition-all flex items-center space-x-2 cursor-pointer">
                     <i class="fa-solid fa-receipt text-xs text-brand-whiz"></i>
                     <span>Record Payment</span>
                   </button>
@@ -358,43 +351,43 @@
 
             <!-- KPI Metric Cards Grid (6 Live Cloudflare D1 Counters) -->
             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5 sm:gap-4">
-              <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E4E9ED] shadow-sm hover:shadow-md transition-shadow space-y-1">
+              <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-sm hover:shadow-md transition-shadow space-y-1">
                 <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Clients</span>
-                <div class="text-2xl sm:text-3xl font-black text-[#12212B]" id="statTotalClients">0</div>
+                <div class="text-2xl sm:text-3xl font-black text-[#172B36]" id="statTotalClients">0</div>
                 <p class="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
                   <i class="fa-solid fa-users text-[9px]"></i> Active Relational
                 </p>
               </div>
 
-              <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E4E9ED] shadow-sm hover:shadow-md transition-shadow space-y-1">
+              <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-sm hover:shadow-md transition-shadow space-y-1">
                 <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Active Projects</span>
                 <div class="text-2xl sm:text-3xl font-black text-brand-whiz" id="statActiveProjects">0</div>
                 <p class="text-[10px] text-slate-500 font-medium">In-Progress Sprints</p>
               </div>
 
-              <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E4E9ED] shadow-sm hover:shadow-md transition-shadow space-y-1">
+              <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-sm hover:shadow-md transition-shadow space-y-1">
                 <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Active Services</span>
-                <div class="text-2xl sm:text-3xl font-black text-[#12212B]" id="statActiveServices">0</div>
+                <div class="text-2xl sm:text-3xl font-black text-[#172B36]" id="statActiveServices">0</div>
                 <p class="text-[10px] text-blue-600 font-semibold flex items-center gap-1">
                   <i class="fa-solid fa-layer-group text-[9px]"></i> Client Contracts
                 </p>
               </div>
 
-              <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E4E9ED] shadow-sm hover:shadow-md transition-shadow space-y-1">
+              <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-sm hover:shadow-md transition-shadow space-y-1">
                 <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Completed Tasks</span>
                 <div class="text-2xl sm:text-3xl font-black text-emerald-600" id="statCompletedTasks">0</div>
                 <p class="text-[10px] text-slate-500 font-medium">Delivered Checkpoints</p>
               </div>
 
-              <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E4E9ED] shadow-sm hover:shadow-md transition-shadow space-y-1">
+              <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-sm hover:shadow-md transition-shadow space-y-1">
                 <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Pending Tasks</span>
                 <div class="text-2xl sm:text-3xl font-black text-amber-600" id="statPendingTasks">0</div>
                 <p class="text-[10px] text-slate-500 font-medium">Scheduled Queue</p>
               </div>
 
-              <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E4E9ED] shadow-sm hover:shadow-md transition-shadow space-y-1">
+              <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-sm hover:shadow-md transition-shadow space-y-1">
                 <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Confirmed Revenue</span>
-                <div class="text-xl sm:text-2xl font-black text-[#12212B] truncate" id="statConfirmedRevenue">$0.00</div>
+                <div class="text-xl sm:text-2xl font-black text-[#172B36] truncate" id="statConfirmedRevenue">$0.00</div>
                 <p class="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
                   <i class="fa-solid fa-receipt text-[9px]"></i> Verified Ledger
                 </p>
@@ -404,10 +397,10 @@
             <!-- Visual Analytics & Charts Section (Driven by Live D1 Data) -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               <!-- Chart 1: Service Completion Distribution -->
-              <div class="p-5 sm:p-6 rounded-2xl bg-white border border-[#E4E9ED] shadow-sm space-y-3">
-                <div class="flex items-center justify-between pb-2 border-b border-[#E4E9ED]">
+              <div class="p-5 sm:p-6 rounded-2xl bg-white border border-[#E3E9EF] shadow-sm space-y-3">
+                <div class="flex items-center justify-between pb-2 border-b border-[#E3E9EF]">
                   <div>
-                    <h3 class="text-xs font-bold uppercase tracking-wider text-[#12212B]">Service Engagement Distribution</h3>
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-[#172B36]">Service Engagement Distribution</h3>
                     <p class="text-[11px] text-slate-500">Live service contracts breakdown across client base</p>
                   </div>
                   <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-brand-whiz border border-emerald-200">12 Catalog Items</span>
@@ -422,10 +415,10 @@
               </div>
 
               <!-- Chart 2: Project Progress Overview -->
-              <div class="p-5 sm:p-6 rounded-2xl bg-white border border-[#E4E9ED] shadow-sm space-y-3">
-                <div class="flex items-center justify-between pb-2 border-b border-[#E4E9ED]">
+              <div class="p-5 sm:p-6 rounded-2xl bg-white border border-[#E3E9EF] shadow-sm space-y-3">
+                <div class="flex items-center justify-between pb-2 border-b border-[#E3E9EF]">
                   <div>
-                    <h3 class="text-xs font-bold uppercase tracking-wider text-[#12212B]">Active Project Progress</h3>
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-[#172B36]">Active Project Progress</h3>
                     <p class="text-[11px] text-slate-500">Real-time completion percentage calculated from live tasks</p>
                   </div>
                   <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">Task-Driven</span>
@@ -440,10 +433,10 @@
               </div>
 
               <!-- Chart 3: Live Task Status Distribution -->
-              <div class="p-5 sm:p-6 rounded-2xl bg-white border border-[#E4E9ED] shadow-sm space-y-3">
-                <div class="flex items-center justify-between pb-2 border-b border-[#E4E9ED]">
+              <div class="p-5 sm:p-6 rounded-2xl bg-white border border-[#E3E9EF] shadow-sm space-y-3">
+                <div class="flex items-center justify-between pb-2 border-b border-[#E3E9EF]">
                   <div>
-                    <h3 class="text-xs font-bold uppercase tracking-wider text-[#12212B]">Live Task Pipeline</h3>
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-[#172B36]">Live Task Pipeline</h3>
                     <p class="text-[11px] text-slate-500">Breakdown of operational tasks across sprints</p>
                   </div>
                   <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200">240 Master SOPs</span>
@@ -458,10 +451,10 @@
               </div>
 
               <!-- Chart 4: Monthly Confirmed Revenue -->
-              <div class="p-5 sm:p-6 rounded-2xl bg-white border border-[#E4E9ED] shadow-sm space-y-3">
-                <div class="flex items-center justify-between pb-2 border-b border-[#E4E9ED]">
+              <div class="p-5 sm:p-6 rounded-2xl bg-white border border-[#E3E9EF] shadow-sm space-y-3">
+                <div class="flex items-center justify-between pb-2 border-b border-[#E3E9EF]">
                   <div>
-                    <h3 class="text-xs font-bold uppercase tracking-wider text-[#12212B]">Financial Inflow (D1 Verified)</h3>
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-[#172B36]">Financial Inflow (D1 Verified)</h3>
                     <p class="text-[11px] text-slate-500">Confirmed ledger payments recorded by Super Admin</p>
                   </div>
                   <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">Zero Fake Stats</span>
@@ -477,9 +470,9 @@
             </div>
 
             <!-- Recent System Activity Log -->
-            <div class="p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-sm space-y-4">
-              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
-                <h3 class="text-sm font-extrabold text-[#12212B] uppercase tracking-wider">Live Activity Audit Trail</h3>
+            <div class="p-6 rounded-3xl bg-white border border-[#E3E9EF] shadow-sm space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
+                <h3 class="text-sm font-extrabold text-[#172B36] uppercase tracking-wider">Live Activity Audit Trail</h3>
                 <span class="text-xs text-slate-500 font-mono">Cloudflare D1 Ledger</span>
               </div>
               <div id="overviewActivityList" class="space-y-2 text-xs">
@@ -494,7 +487,7 @@
           <div id="view_clients" class="hidden space-y-6">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
               <div>
-                <h2 class="text-2xl font-black text-[#12212B] tracking-tight">Client Directory</h2>
+                <h2 class="text-2xl font-black text-[#172B36] tracking-tight">Client Directory</h2>
                 <p class="text-xs text-slate-500">Manage client organizations and provision active service contracts with automated SOP tasks.</p>
               </div>
               <button type="button" id="btnOpenAddClientModal" class="px-4 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm hover:shadow-md transition-all flex items-center space-x-2 cursor-pointer self-start sm:self-auto">
@@ -507,10 +500,10 @@
             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <div class="relative flex-1">
                 <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
-                <input type="text" id="adminClientSearchInput" placeholder="Search clients by name, company, or email..." class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white border border-[#E4E9ED] text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-brand-whiz transition-all">
+                <input type="text" id="adminClientSearchInput" placeholder="Search clients by name, company, or email..." class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white border border-[#E3E9EF] text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-brand-whiz transition-all">
               </div>
               <div class="flex items-center gap-2">
-                <select id="adminClientStatusFilter" class="px-3.5 py-2.5 rounded-xl bg-white border border-[#E4E9ED] text-xs text-slate-700 focus:outline-none focus:border-brand-whiz">
+                <select id="adminClientStatusFilter" class="px-3.5 py-2.5 rounded-xl bg-white border border-[#E3E9EF] text-xs text-slate-700 focus:outline-none focus:border-brand-whiz">
                   <option value="active">Active Clients Only</option>
                   <option value="suspended">Suspended Clients</option>
                   <option value="all">All Clients</option>
@@ -519,10 +512,10 @@
             </div>
 
             <!-- Clients Table Card -->
-            <div class="rounded-3xl bg-white border border-[#E4E9ED] backdrop-blur-xl overflow-hidden shadow-xl">
+            <div class="rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl overflow-hidden shadow-xl">
               <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs text-slate-600 min-w-[680px]">
-                  <thead class="bg-slate-50/70 border-b border-[#E4E9ED] text-[11px] uppercase font-bold text-slate-500">
+                  <thead class="bg-slate-50/70 border-b border-[#E3E9EF] text-[11px] uppercase font-bold text-slate-500">
                     <tr>
                       <th class="px-6 py-3.5">Client & Company</th>
                       <th class="px-6 py-3.5">Email / Contact</th>
@@ -531,7 +524,7 @@
                       <th class="px-6 py-3.5 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody id="adminClientsTableBody" class="divide-y divide-slate-800/60">
+                  <tbody id="adminClientsTableBody" class="divide-y divide-[#E3E9EF]">
                     <tr>
                       <td colspan="5" class="px-6 py-8 text-center text-slate-500 italic">Loading client directory from Cloudflare D1...</td>
                     </tr>
@@ -546,21 +539,21 @@
                ================================================================= -->
           <div id="view_client_details" class="hidden space-y-6">
             <!-- Client Details Top Bar -->
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-[#E4E9ED]">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-[#E3E9EF]">
               <div class="flex items-center space-x-3">
-                <button type="button" id="btnBackToClients" class="w-9 h-9 rounded-xl bg-white hover:bg-slate-800 border border-[#E4E9ED] flex items-center justify-center text-slate-600 hover:text-[#12212B] transition-all cursor-pointer">
+                <button type="button" id="btnBackToClients" class="w-9 h-9 rounded-xl bg-white hover:bg-slate-100 border border-[#E3E9EF] flex items-center justify-center text-[#5F7180] hover:text-[#172B36] transition-all cursor-pointer">
                   <i class="fa-solid fa-arrow-left text-xs"></i>
                 </button>
                 <div>
                   <div class="flex items-center space-x-2.5">
-                    <h2 class="text-2xl font-black text-[#12212B] tracking-tight" id="clientDetailTitle">Client Details</h2>
-                    <span id="clientDetailStatusBadge" class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-950 text-emerald-400 border border-emerald-500/30">Active</span>
+                    <h2 class="text-2xl font-black text-[#172B36] tracking-tight" id="clientDetailTitle">Client Details</h2>
+                    <span id="clientDetailStatusBadge" class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">Active</span>
                   </div>
                   <p class="text-xs text-slate-500 mt-0.5" id="clientDetailSubtitle">Managing organization and operational services</p>
                 </div>
               </div>
               <div class="flex flex-wrap items-center gap-2.5">
-                <button type="button" id="btnOpenEditClientModal" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-white hover:bg-slate-800 text-slate-700 border border-[#E4E9ED] transition-all flex items-center gap-1.5 cursor-pointer">
+                <button type="button" id="btnOpenEditClientModal" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-white hover:bg-slate-50 text-[#172B36] border border-[#E3E9EF] transition-all flex items-center gap-1.5 cursor-pointer">
                   <i class="fa-solid fa-pen-to-square text-xs text-brand-whiz"></i>
                   <span>Edit Profile</span>
                 </button>
@@ -581,13 +574,13 @@
               <!-- Left Column: Profile Card & Governance -->
               <div class="space-y-6">
                 <!-- Section A: Client Profile Card -->
-                <div class="p-6 rounded-3xl bg-white border border-[#E4E9ED] backdrop-blur-xl space-y-4">
-                  <div class="flex items-center space-x-3 pb-3 border-b border-[#E4E9ED]">
+                <div class="p-6 rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl space-y-4">
+                  <div class="flex items-center space-x-3 pb-3 border-b border-[#E3E9EF]">
                     <div class="w-10 h-10 rounded-xl bg-brand-whiz/10 border border-brand-whiz/30 flex items-center justify-center font-bold text-sm text-brand-whiz uppercase" id="clientAvatarInitials">
                       CL
                     </div>
                     <div>
-                      <h3 class="text-sm font-bold text-[#12212B]" id="clientCardFullName">Client Name</h3>
+                      <h3 class="text-sm font-bold text-[#172B36]" id="clientCardFullName">Client Name</h3>
                       <p class="text-xs text-brand-whiz font-medium" id="clientCardCompanyName">Company Name</p>
                     </div>
                   </div>
@@ -616,16 +609,16 @@
                 </div>
 
                 <!-- Section D: Financial Summary Card -->
-                <div class="p-6 rounded-3xl bg-white border border-[#E4E9ED] backdrop-blur-xl space-y-3">
-                  <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 pb-2 border-b border-[#E4E9ED]">Financial Summary</h4>
+                <div class="p-6 rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl space-y-3">
+                  <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 pb-2 border-b border-[#E3E9EF]">Financial Summary</h4>
                   <div class="grid grid-cols-2 gap-3 text-xs">
-                    <div class="p-3 rounded-xl bg-slate-50/60 border border-[#E4E9ED]">
+                    <div class="p-3 rounded-xl bg-slate-50/60 border border-[#E3E9EF]">
                       <span class="text-[10px] text-slate-500 uppercase block">Total Paid</span>
                       <span class="text-sm font-mono font-bold text-emerald-400" id="clientCardTotalPaid">$0.00</span>
                     </div>
-                    <div class="p-3 rounded-xl bg-slate-50/60 border border-[#E4E9ED]">
+                    <div class="p-3 rounded-xl bg-slate-50/60 border border-[#E3E9EF]">
                       <span class="text-[10px] text-slate-500 uppercase block">Total Billed</span>
-                      <span class="text-sm font-mono font-bold text-[#12212B]" id="clientCardTotalBilled">$0.00</span>
+                      <span class="text-sm font-mono font-bold text-[#172B36]" id="clientCardTotalBilled">$0.00</span>
                     </div>
                   </div>
                 </div>
@@ -634,8 +627,8 @@
               <!-- Right 2 Columns: Assigned Services & Service Projects -->
               <div class="lg:col-span-2 space-y-6">
                 <!-- Section B: Assigned Services -->
-                <div class="p-6 rounded-3xl bg-white border border-[#E4E9ED] backdrop-blur-xl space-y-4">
-                  <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div class="p-6 rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl space-y-4">
+                  <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
                     <h3 class="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-2">
                       <i class="fa-solid fa-layer-group text-brand-whiz"></i>
                       <span>Assigned Services</span>
@@ -648,8 +641,8 @@
                 </div>
 
                 <!-- Section C: Projects with Real-time Progress -->
-                <div class="p-6 rounded-3xl bg-white border border-[#E4E9ED] backdrop-blur-xl space-y-4">
-                  <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div class="p-6 rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl space-y-4">
+                  <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
                     <h3 class="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-2">
                       <i class="fa-solid fa-folder-tree text-brand-whiz"></i>
                       <span>Operational Projects & Progress</span>
@@ -662,8 +655,8 @@
                 </div>
 
                 <!-- Recent Client Activity History -->
-                <div class="p-6 rounded-3xl bg-white border border-[#E4E9ED] backdrop-blur-xl space-y-3">
-                  <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 pb-2 border-b border-[#E4E9ED]">Audit & Modification History</h4>
+                <div class="p-6 rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl space-y-3">
+                  <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 pb-2 border-b border-[#E3E9EF]">Audit & Modification History</h4>
                   <div id="clientAuditHistoryList" class="space-y-2 text-xs">
                     <p class="text-slate-500 italic">Loading audit trail...</p>
                   </div>
@@ -679,7 +672,7 @@
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
               <div>
                 <div class="flex items-center space-x-2">
-                  <h2 class="text-2xl font-black text-[#12212B] tracking-tight">Service Catalog & SOP Blueprints</h2>
+                  <h2 class="text-2xl font-black text-[#172B36] tracking-tight">Service Catalog & SOP Blueprints</h2>
                   <span class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-500/40 font-bold">12 Active Services</span>
                 </div>
                 <p class="text-xs text-slate-500 mt-0.5">Authoritative service catalog. Edit descriptions, pricing, and inspect all 240 master SOP task blueprints.</p>
@@ -700,16 +693,16 @@
                VIEW: SOP TASK BLUEPRINT MANAGEMENT WORKSPACE (Phase 7)
                ================================================================= -->
           <div id="view_service_tasks" class="hidden space-y-6">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-[#E4E9ED]">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-[#E3E9EF]">
               <div class="flex items-center space-x-3">
-                <button type="button" id="btnBackToServices" class="w-9 h-9 rounded-xl bg-white hover:bg-slate-800 border border-[#E4E9ED] flex items-center justify-center text-slate-600 hover:text-[#12212B] transition-all cursor-pointer">
+                <button type="button" id="btnBackToServices" class="w-9 h-9 rounded-xl bg-white hover:bg-slate-100 border border-[#E3E9EF] flex items-center justify-center text-[#5F7180] hover:text-[#172B36] transition-all cursor-pointer">
                   <i class="fa-solid fa-arrow-left text-xs"></i>
                 </button>
                 <div>
                   <div class="flex items-center space-x-2.5">
                     <span id="serviceTasksCodeBadge" class="text-xs font-mono font-bold text-brand-whiz bg-brand-whiz/10 border border-brand-whiz/30 px-2 py-0.5 rounded">CODE</span>
-                    <h2 class="text-2xl font-black text-[#12212B] tracking-tight" id="serviceTasksTitle">Service Name</h2>
-                    <span id="serviceTasksVersionBadge" class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-600 border border-[#E4E9ED]">v1</span>
+                    <h2 class="text-2xl font-black text-[#172B36] tracking-tight" id="serviceTasksTitle">Service Name</h2>
+                    <span id="serviceTasksVersionBadge" class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-600 border border-[#E3E9EF]">v1</span>
                   </div>
                   <p class="text-xs text-slate-500 mt-0.5" id="serviceTasksDescription">Managing 20 Master SOP Task Blueprints in Cloudflare D1</p>
                 </div>
@@ -729,8 +722,8 @@
             <!-- 3 Phase Blueprint Sections (Beginning 7 + Intermediate 7 + Advanced 6) -->
             <div class="space-y-6">
               <!-- Beginning Phase -->
-              <div class="p-6 rounded-3xl bg-white border border-[#E4E9ED] backdrop-blur-xl space-y-4">
-                <div class="flex items-center justify-between pb-2 border-b border-[#E4E9ED]">
+              <div class="p-6 rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl space-y-4">
+                <div class="flex items-center justify-between pb-2 border-b border-[#E3E9EF]">
                   <h3 class="text-xs font-extrabold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
                     <i class="fa-solid fa-flag-checkered"></i>
                     <span>Phase 1: Beginning / Foundation SOPs</span>
@@ -743,8 +736,8 @@
               </div>
 
               <!-- Intermediate Phase -->
-              <div class="p-6 rounded-3xl bg-white border border-[#E4E9ED] backdrop-blur-xl space-y-4">
-                <div class="flex items-center justify-between pb-2 border-b border-[#E4E9ED]">
+              <div class="p-6 rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl space-y-4">
+                <div class="flex items-center justify-between pb-2 border-b border-[#E3E9EF]">
                   <h3 class="text-xs font-extrabold uppercase tracking-wider text-blue-400 flex items-center gap-2">
                     <i class="fa-solid fa-gears"></i>
                     <span>Phase 2: Intermediate / Execution SOPs</span>
@@ -757,8 +750,8 @@
               </div>
 
               <!-- Advanced Phase -->
-              <div class="p-6 rounded-3xl bg-white border border-[#E4E9ED] backdrop-blur-xl space-y-4">
-                <div class="flex items-center justify-between pb-2 border-b border-[#E4E9ED]">
+              <div class="p-6 rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl space-y-4">
+                <div class="flex items-center justify-between pb-2 border-b border-[#E3E9EF]">
                   <h3 class="text-xs font-extrabold uppercase tracking-wider text-purple-400 flex items-center gap-2">
                     <i class="fa-solid fa-chart-line"></i>
                     <span>Phase 3: Advanced / Optimization & Scaling SOPs</span>
@@ -777,14 +770,14 @@
                ================================================================= -->
           <div id="view_projects" class="hidden space-y-6">
             <div>
-              <h2 class="text-2xl font-black text-[#12212B] tracking-tight">Service Projects</h2>
+              <h2 class="text-2xl font-black text-[#172B36] tracking-tight">Service Projects</h2>
               <p class="text-xs text-slate-500">Live client project progress, synchronized automatically from completed operational tasks.</p>
             </div>
 
-            <div class="rounded-3xl bg-white border border-[#E4E9ED] backdrop-blur-xl overflow-hidden shadow-xl">
+            <div class="rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl overflow-hidden shadow-xl">
               <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs text-slate-600 min-w-[680px]">
-                  <thead class="bg-slate-50/70 border-b border-[#E4E9ED] text-[11px] uppercase font-bold text-slate-500">
+                  <thead class="bg-slate-50/70 border-b border-[#E3E9EF] text-[11px] uppercase font-bold text-slate-500">
                     <tr>
                       <th class="px-6 py-3.5">Project Name</th>
                       <th class="px-6 py-3.5">Client Organization</th>
@@ -794,7 +787,7 @@
                       <th class="px-6 py-3.5 text-right">Tasks Ratio</th>
                     </tr>
                   </thead>
-                  <tbody id="adminProjectsTableBody" class="divide-y divide-slate-800/60">
+                  <tbody id="adminProjectsTableBody" class="divide-y divide-[#E3E9EF]">
                     <tr>
                       <td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">Loading active projects...</td>
                     </tr>
@@ -810,22 +803,22 @@
           <div id="view_tasks" class="hidden space-y-6">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
               <div>
-                <h2 class="text-2xl font-black text-[#12212B] tracking-tight">Live Tasks & SOP Execution</h2>
+                <h2 class="text-2xl font-black text-[#172B36] tracking-tight">Live Tasks & SOP Execution</h2>
                 <p class="text-xs text-slate-500">Complete tasks to automatically advance project progress in real time.</p>
               </div>
               <div class="flex flex-wrap items-center gap-2.5">
                 <div class="relative">
                   <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                  <input type="text" id="taskSearchInput" placeholder="Search tasks by title, project, client..." class="pl-8 pr-3 py-1.5 rounded-xl bg-white border border-[#E4E9ED] text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-brand-whiz transition-all w-full sm:w-60">
+                  <input type="text" id="taskSearchInput" placeholder="Search tasks by title, project, client..." class="pl-8 pr-3 py-1.5 rounded-xl bg-white border border-[#E3E9EF] text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-brand-whiz transition-all w-full sm:w-60">
                 </div>
-                <select id="taskPriorityFilter" class="px-3 py-1.5 rounded-xl bg-white border border-[#E4E9ED] text-xs text-slate-700 focus:outline-none focus:border-brand-whiz">
+                <select id="taskPriorityFilter" class="px-3 py-1.5 rounded-xl bg-white border border-[#E3E9EF] text-xs text-slate-700 focus:outline-none focus:border-brand-whiz">
                   <option value="all">All Priorities</option>
                   <option value="urgent">Urgent</option>
                   <option value="high">High</option>
                   <option value="medium">Medium</option>
                   <option value="low">Low</option>
                 </select>
-                <div class="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 border border-[#E4E9ED]">
+                <div class="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 border border-[#E3E9EF]">
                   <button type="button" class="task-filter-btn px-3 py-1 rounded-lg text-xs font-bold bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 cursor-pointer transition-all" data-filter="all">All</button>
                   <button type="button" class="task-filter-btn px-3 py-1 rounded-lg text-xs font-medium text-slate-600 hover:text-brand-whiz cursor-pointer transition-all" data-filter="todo">Pending</button>
                   <button type="button" class="task-filter-btn px-3 py-1 rounded-lg text-xs font-medium text-slate-600 hover:text-brand-whiz cursor-pointer transition-all" data-filter="completed">Completed</button>
@@ -845,7 +838,7 @@
           <div id="view_finance" class="hidden space-y-6">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
               <div>
-                <h2 class="text-2xl font-black text-[#12212B] tracking-tight">Finance & Payment Ledger</h2>
+                <h2 class="text-2xl font-black text-[#172B36] tracking-tight">Finance & Payment Ledger</h2>
                 <p class="text-xs text-slate-500">Verifiable payment records and client balance reconciliation. Source of truth for receipt generation.</p>
               </div>
               <button type="button" id="btnOpenRecordPaymentModal" class="px-4 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm hover:shadow-md transition-all flex items-center space-x-2 cursor-pointer self-start sm:self-auto">
@@ -855,10 +848,10 @@
             </div>
 
             <!-- Payments Ledger Table -->
-            <div class="rounded-3xl bg-white border border-[#E4E9ED] backdrop-blur-xl overflow-hidden shadow-xl">
+            <div class="rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl overflow-hidden shadow-xl">
               <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs text-slate-600 min-w-[680px]">
-                  <thead class="bg-slate-50/70 border-b border-[#E4E9ED] text-[11px] uppercase font-bold text-slate-500">
+                  <thead class="bg-slate-50/70 border-b border-[#E3E9EF] text-[11px] uppercase font-bold text-slate-500">
                     <tr>
                       <th class="px-6 py-3.5">Receipt #</th>
                       <th class="px-6 py-3.5">Client & Invoice</th>
@@ -868,7 +861,7 @@
                       <th class="px-6 py-3.5 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody id="adminPaymentsTableBody" class="divide-y divide-slate-800/60">
+                  <tbody id="adminPaymentsTableBody" class="divide-y divide-[#E3E9EF]">
                     <tr>
                       <td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">Loading payment ledger from Cloudflare D1...</td>
                     </tr>
@@ -883,36 +876,36 @@
                ================================================================= -->
           <div id="view_receipt_template" class="hidden space-y-6">
             <div>
-              <h2 class="text-2xl font-black text-[#12212B] tracking-tight">Receipt Template Configuration</h2>
-              <p class="text-xs text-slate-500">Dynamic field mapping and in-browser vector PDF compilation test suite.</p>
+              <h2 class="text-2xl font-black text-[#172B36] tracking-tight">Receipt Template Configuration</h2>
+              <p class="text-xs text-slate-500">Configure and preview official payment receipts issued to clients..</p>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <!-- Left: Dynamic Field Mapping Table -->
-              <div class="p-6 rounded-3xl bg-white border border-[#E4E9ED] backdrop-blur-xl space-y-4">
-                <h3 class="text-sm font-extrabold text-[#12212B] uppercase tracking-wider pb-2 border-b border-[#E4E9ED]">Dynamic Template Fields</h3>
+              <div class="p-6 rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl space-y-4">
+                <h3 class="text-sm font-extrabold text-[#172B36] uppercase tracking-wider pb-2 border-b border-[#E3E9EF]">Dynamic Template Fields</h3>
                 <div class="space-y-2 text-xs">
-                  <div class="flex items-center justify-between p-2 rounded-lg bg-slate-50/60 border border-[#E4E9ED]">
+                  <div class="flex items-center justify-between p-2 rounded-lg bg-slate-50/60 border border-[#E3E9EF]">
                     <span class="font-mono text-brand-whiz">{{agency_name}}</span>
                     <span class="text-slate-500">Whiz Studio</span>
                   </div>
-                  <div class="flex items-center justify-between p-2 rounded-lg bg-slate-50/60 border border-[#E4E9ED]">
+                  <div class="flex items-center justify-between p-2 rounded-lg bg-slate-50/60 border border-[#E3E9EF]">
                     <span class="font-mono text-brand-whiz">{{client_name}}</span>
                     <span class="text-slate-500">Authorized Client Full Name</span>
                   </div>
-                  <div class="flex items-center justify-between p-2 rounded-lg bg-slate-50/60 border border-[#E4E9ED]">
+                  <div class="flex items-center justify-between p-2 rounded-lg bg-slate-50/60 border border-[#E3E9EF]">
                     <span class="font-mono text-brand-whiz">{{receipt_reference}}</span>
                     <span class="text-slate-500">Immutable REC-YYYYMM-XXXX</span>
                   </div>
-                  <div class="flex items-center justify-between p-2 rounded-lg bg-slate-50/60 border border-[#E4E9ED]">
+                  <div class="flex items-center justify-between p-2 rounded-lg bg-slate-50/60 border border-[#E3E9EF]">
                     <span class="font-mono text-brand-whiz">{{amount_paid}}</span>
                     <span class="text-slate-500">Verified Paid Minor Cents / 100</span>
                   </div>
-                  <div class="flex items-center justify-between p-2 rounded-lg bg-slate-50/60 border border-[#E4E9ED]">
+                  <div class="flex items-center justify-between p-2 rounded-lg bg-slate-50/60 border border-[#E3E9EF]">
                     <span class="font-mono text-brand-whiz">{{remaining_balance}}</span>
                     <span class="text-slate-500">Calculated Outstanding Balance</span>
                   </div>
-                  <div class="flex items-center justify-between p-2 rounded-lg bg-slate-50/60 border border-[#E4E9ED]">
+                  <div class="flex items-center justify-between p-2 rounded-lg bg-slate-50/60 border border-[#E3E9EF]">
                     <span class="font-mono text-brand-whiz">{{daily_quota}}</span>
                     <span class="text-emerald-400 font-bold">2 Generations / Day (Asia/Dhaka)</span>
                   </div>
@@ -920,10 +913,10 @@
               </div>
 
               <!-- Right: Preview & Test Generator -->
-              <div class="p-6 rounded-3xl bg-white border border-[#E4E9ED] backdrop-blur-xl space-y-4">
-                <h3 class="text-sm font-extrabold text-[#12212B] uppercase tracking-wider pb-2 border-b border-[#E4E9ED]">Browser Vector Compilation Preview</h3>
+              <div class="p-6 rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl space-y-4">
+                <h3 class="text-sm font-extrabold text-[#172B36] uppercase tracking-wider pb-2 border-b border-[#E3E9EF]">Preview Receipt</h3>
                 <p class="text-xs text-slate-500 leading-relaxed">
-                  Verify the on-demand vector compilation engine using <span class="text-[#12212B] font-mono">pdf-lib</span>. No PDF binaries are ever written to server storage.
+                  Preview how receipts appear before issuing to clients. PDFs are generated in your browser and never stored on servers.<span class="text-[#172B36] font-mono">pdf-lib</span>. No PDF binaries are ever written to server storage.
                 </p>
                 <div class="p-4 rounded-2xl bg-emerald-950/20 border border-emerald-500/30 text-xs text-emerald-300 space-y-1">
                   <p class="font-bold flex items-center gap-1.5">
@@ -946,11 +939,11 @@
           <div id="view_team" class="hidden space-y-6">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
               <div>
-                <h2 class="text-2xl font-black text-[#12212B] tracking-tight">User & Access Management</h2>
-                <p class="text-xs text-slate-500">Authoritative Cloudflare D1 identity, client directory & role governance ($0 Free Tier).</p>
+                <h2 class="text-2xl font-black text-[#172B36] tracking-tight">User & Access Management</h2>
+                <p class="text-xs text-slate-500">Manage platform users, roles, and access permissions.</p>
               </div>
               <div class="flex items-center gap-3">
-                <button type="button" id="btnRefreshUserDir" class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-slate-800 text-slate-600 border border-[#E4E9ED] flex items-center gap-2 cursor-pointer transition-all">
+                <button type="button" id="btnRefreshUserDir" class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-slate-800 text-slate-600 border border-[#E3E9EF] flex items-center gap-2 cursor-pointer transition-all">
                   <i class="fa-solid fa-arrows-rotate text-xs text-brand-whiz"></i>
                   <span>Refresh Directory</span>
                 </button>
@@ -958,15 +951,15 @@
             </div>
 
             <!-- Search & Filter Controls -->
-            <div class="p-4 rounded-2xl bg-white border border-[#E4E9ED] backdrop-blur-xl flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] backdrop-blur-xl flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <div class="relative flex-1">
                 <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500">
                   <i class="fa-solid fa-magnifying-glass text-xs"></i>
                 </span>
-                <input type="text" id="userDirectorySearch" placeholder="Search by name, email, or username..." class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B] placeholder-slate-500 focus:outline-none focus:border-brand-whiz transition-all">
+                <input type="text" id="userDirectorySearch" placeholder="Search by name, email, or username..." class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] placeholder-slate-500 focus:outline-none focus:border-brand-whiz transition-all">
               </div>
               <div class="flex items-center gap-2">
-                <select id="userDirectoryRoleFilter" class="px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-slate-600 focus:outline-none focus:border-brand-whiz">
+                <select id="userDirectoryRoleFilter" class="px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-slate-600 focus:outline-none focus:border-brand-whiz">
                   <option value="all">All Roles</option>
                   <option value="client">Clients Only</option>
                   <option value="admin">Admins Only</option>
@@ -976,8 +969,8 @@
             </div>
 
             <!-- User Directory Table Card -->
-            <div class="rounded-3xl bg-white border border-[#E4E9ED] backdrop-blur-xl overflow-hidden shadow-xl">
-              <div class="px-6 py-4 border-b border-[#E4E9ED] flex items-center justify-between">
+            <div class="rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl overflow-hidden shadow-xl">
+              <div class="px-6 py-4 border-b border-[#E3E9EF] flex items-center justify-between">
                 <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-600 flex items-center gap-2">
                   <i class="fa-solid fa-address-book text-brand-whiz"></i>
                   <span>Registered Accounts Directory</span>
@@ -986,7 +979,7 @@
               </div>
               <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs text-slate-600 min-w-[680px]">
-                  <thead class="bg-slate-50/70 border-b border-[#E4E9ED] text-[11px] uppercase font-bold text-slate-500">
+                  <thead class="bg-slate-50/70 border-b border-[#E3E9EF] text-[11px] uppercase font-bold text-slate-500">
                     <tr>
                       <th class="px-6 py-3.5">User</th>
                       <th class="px-6 py-3.5">Role</th>
@@ -996,7 +989,7 @@
                       <th class="px-6 py-3.5 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody id="userDirectoryTableBody" class="divide-y divide-slate-800/60">
+                  <tbody id="userDirectoryTableBody" class="divide-y divide-[#E3E9EF]">
                     <tr>
                       <td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">Loading users directory...</td>
                     </tr>
@@ -1006,14 +999,14 @@
             </div>
 
             <!-- Authorize Admin Form Card -->
-            <div class="p-6 rounded-3xl bg-white border border-[#E4E9ED] backdrop-blur-xl space-y-4">
+            <div class="p-6 rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl space-y-4">
               <div>
-                <h3 class="text-sm font-extrabold text-[#12212B] uppercase tracking-wider">Authorize Administrator Pre-Approval</h3>
+                <h3 class="text-sm font-extrabold text-[#172B36] uppercase tracking-wider">Authorize Administrator Pre-Approval</h3>
                 <p class="text-xs text-slate-500 mt-0.5">Pre-approve email addresses in Cloudflare D1 allowlist before onboarding.</p>
               </div>
               <form id="adminInviteForm" novalidate class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <input type="text" id="inviteFullName" name="fullName" placeholder="Administrator Full Name" class="px-4 py-2.5 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B] focus:outline-none focus:border-brand-whiz transition-all" required>
-                <input type="email" id="inviteEmail" name="email" placeholder="admin@example.com" class="px-4 py-2.5 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B] focus:outline-none focus:border-brand-whiz transition-all" required>
+                <input type="text" id="inviteFullName" name="fullName" placeholder="Administrator Full Name" class="px-4 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:outline-none focus:border-brand-whiz transition-all" required>
+                <input type="email" id="inviteEmail" name="email" placeholder="admin@example.com" class="px-4 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:outline-none focus:border-brand-whiz transition-all" required>
                 <button type="submit" class="py-2.5 px-4 rounded-xl text-xs font-bold btn-glass-primary shadow-sm hover:shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer">
                   <i class="fa-solid fa-user-shield text-xs"></i>
                   <span>Authorize Administrator</span>
@@ -1022,8 +1015,8 @@
             </div>
 
             <!-- Role Change Audit History Card -->
-            <div class="rounded-3xl bg-white border border-[#E4E9ED] backdrop-blur-xl overflow-hidden shadow-xl">
-              <div class="px-6 py-4 border-b border-[#E4E9ED] flex items-center justify-between">
+            <div class="rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl overflow-hidden shadow-xl">
+              <div class="px-6 py-4 border-b border-[#E3E9EF] flex items-center justify-between">
                 <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-600 flex items-center gap-2">
                   <i class="fa-solid fa-clock-rotate-left text-brand-whiz"></i>
                   <span>Role Transition Audit History</span>
@@ -1032,7 +1025,7 @@
               </div>
               <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs text-slate-600 min-w-[680px]">
-                  <thead class="bg-slate-50/70 border-b border-[#E4E9ED] text-[11px] uppercase font-bold text-slate-500">
+                  <thead class="bg-slate-50/70 border-b border-[#E3E9EF] text-[11px] uppercase font-bold text-slate-500">
                     <tr>
                       <th class="px-6 py-3.5">Timestamp</th>
                       <th class="px-6 py-3.5">Target Account</th>
@@ -1042,7 +1035,7 @@
                       <th class="px-6 py-3.5">Status</th>
                     </tr>
                   </thead>
-                  <tbody id="roleHistoryTableBody" class="divide-y divide-slate-800/60">
+                  <tbody id="roleHistoryTableBody" class="divide-y divide-[#E3E9EF]">
                     <tr>
                       <td colspan="6" class="px-6 py-6 text-center text-slate-500 italic">Loading audit trail...</td>
                     </tr>
@@ -1057,14 +1050,14 @@
                ================================================================= -->
           <div id="view_support" class="hidden space-y-6">
             <div>
-              <h2 class="text-2xl font-black text-[#12212B] tracking-tight">Client Support Desk</h2>
+              <h2 class="text-2xl font-black text-[#172B36] tracking-tight">Client Support Desk</h2>
               <p class="text-xs text-slate-500">Review and resolve priority client inquiries submitted through the portal.</p>
             </div>
 
-            <div class="rounded-3xl bg-white border border-[#E4E9ED] backdrop-blur-xl overflow-hidden shadow-xl">
+            <div class="rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl overflow-hidden shadow-xl">
               <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs text-slate-600 min-w-[680px]">
-                  <thead class="bg-slate-50/70 border-b border-[#E4E9ED] text-[11px] uppercase font-bold text-slate-500">
+                  <thead class="bg-slate-50/70 border-b border-[#E3E9EF] text-[11px] uppercase font-bold text-slate-500">
                     <tr>
                       <th class="px-6 py-3.5">Client & Email</th>
                       <th class="px-6 py-3.5">Subject</th>
@@ -1073,7 +1066,7 @@
                       <th class="px-6 py-3.5 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody id="adminSupportTableBody" class="divide-y divide-slate-800/60">
+                  <tbody id="adminSupportTableBody" class="divide-y divide-[#E3E9EF]">
                     <tr>
                       <td colspan="5" class="px-6 py-8 text-center text-slate-500 italic">Loading support tickets...</td>
                     </tr>
@@ -1088,11 +1081,11 @@
                ================================================================= -->
           <div id="view_history" class="hidden space-y-6">
             <div>
-              <h2 class="text-2xl font-black text-[#12212B] tracking-tight">Completion History & Audit Log</h2>
+              <h2 class="text-2xl font-black text-[#172B36] tracking-tight">Completion History & Audit Log</h2>
               <p class="text-xs text-slate-500">Permanent operational log of task completions and administrator actions in Cloudflare D1.</p>
             </div>
 
-            <div class="p-6 rounded-3xl bg-white border border-[#E4E9ED] backdrop-blur-xl space-y-3">
+            <div class="p-6 rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl space-y-3">
               <div id="adminFullHistoryList" class="space-y-2 text-xs">
                 <p class="text-slate-500 italic">Loading audit trail...</p>
               </div>
@@ -1104,18 +1097,18 @@
                ================================================================= -->
           <div id="view_settings" class="hidden space-y-6">
             <div>
-              <h2 class="text-2xl font-black text-[#12212B] tracking-tight">Account Security & Credentials</h2>
+              <h2 class="text-2xl font-black text-[#172B36] tracking-tight">Account Security & Credentials</h2>
               <p class="text-xs text-slate-500">Manage administrator authentication and update your permanent password directly via Clerk.</p>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div class="lg:col-span-2 p-6 sm:p-8 rounded-3xl bg-white border border-[#E4E9ED] backdrop-blur-xl space-y-6">
-                <div class="flex items-center space-x-3 pb-4 border-b border-[#E4E9ED]">
+              <div class="lg:col-span-2 p-6 sm:p-8 rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl space-y-6">
+                <div class="flex items-center space-x-3 pb-4 border-b border-[#E3E9EF]">
                   <div class="w-10 h-10 rounded-xl bg-brand-whiz/10 border border-brand-whiz/30 flex items-center justify-center text-brand-whiz">
                     <i class="fa-solid fa-lock text-sm"></i>
                   </div>
                   <div>
-                    <h3 class="text-base font-extrabold text-[#12212B]">Change Account Password</h3>
+                    <h3 class="text-base font-extrabold text-[#172B36]">Change Account Password</h3>
                     <p class="text-xs text-slate-500">Standard authenticated password change via official Clerk JS API.</p>
                   </div>
                 </div>
@@ -1128,8 +1121,8 @@
                       Current Password <span class="text-rose-400">*</span>
                     </label>
                     <div class="relative">
-                      <input type="password" id="adminCurrentPassword" name="currentPassword" placeholder="Enter your current password" class="w-full px-4 py-2.5 pr-11 rounded-xl bg-slate-50 border border-[#E4E9ED] text-sm text-[#12212B] focus:outline-none focus:border-brand-whiz transition-all font-mono" autocomplete="current-password" required>
-                      <button type="button" class="password-toggle-btn absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-[#12212B] cursor-pointer" data-target="adminCurrentPassword">
+                      <input type="password" id="adminCurrentPassword" name="currentPassword" placeholder="Enter your current password" class="w-full px-4 py-2.5 pr-11 rounded-xl bg-slate-50 border border-[#E3E9EF] text-sm text-[#172B36] focus:outline-none focus:border-brand-whiz transition-all font-mono" autocomplete="current-password" required>
+                      <button type="button" class="password-toggle-btn absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-[#172B36] cursor-pointer" data-target="adminCurrentPassword">
                         <i class="fa-solid fa-eye text-xs"></i>
                       </button>
                     </div>
@@ -1140,8 +1133,8 @@
                       New Permanent Password <span class="text-rose-400">*</span>
                     </label>
                     <div class="relative">
-                      <input type="password" id="adminNewPassword" name="newPassword" placeholder="Minimum 8-15 high-entropy characters" class="w-full px-4 py-2.5 pr-11 rounded-xl bg-slate-50 border border-[#E4E9ED] text-sm text-[#12212B] focus:outline-none focus:border-brand-whiz transition-all font-mono" autocomplete="new-password" required>
-                      <button type="button" class="password-toggle-btn absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-[#12212B] cursor-pointer" data-target="adminNewPassword">
+                      <input type="password" id="adminNewPassword" name="newPassword" placeholder="Minimum 8-15 high-entropy characters" class="w-full px-4 py-2.5 pr-11 rounded-xl bg-slate-50 border border-[#E3E9EF] text-sm text-[#172B36] focus:outline-none focus:border-brand-whiz transition-all font-mono" autocomplete="new-password" required>
+                      <button type="button" class="password-toggle-btn absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-[#172B36] cursor-pointer" data-target="adminNewPassword">
                         <i class="fa-solid fa-eye text-xs"></i>
                       </button>
                     </div>
@@ -1153,15 +1146,15 @@
                       Confirm New Password <span class="text-rose-400">*</span>
                     </label>
                     <div class="relative">
-                      <input type="password" id="adminConfirmNewPassword" name="confirmNewPassword" placeholder="Confirm your new password" class="w-full px-4 py-2.5 pr-11 rounded-xl bg-slate-50 border border-[#E4E9ED] text-sm text-[#12212B] focus:outline-none focus:border-brand-whiz transition-all font-mono" autocomplete="new-password" required>
-                      <button type="button" class="password-toggle-btn absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-[#12212B] cursor-pointer" data-target="adminConfirmNewPassword">
+                      <input type="password" id="adminConfirmNewPassword" name="confirmNewPassword" placeholder="Confirm your new password" class="w-full px-4 py-2.5 pr-11 rounded-xl bg-slate-50 border border-[#E3E9EF] text-sm text-[#172B36] focus:outline-none focus:border-brand-whiz transition-all font-mono" autocomplete="new-password" required>
+                      <button type="button" class="password-toggle-btn absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-[#172B36] cursor-pointer" data-target="adminConfirmNewPassword">
                         <i class="fa-solid fa-eye text-xs"></i>
                       </button>
                     </div>
                   </div>
 
                   <div class="flex items-center space-x-2.5 pt-2">
-                    <input type="checkbox" id="adminSignOutOfOthers" name="signOutOfOtherSessions" checked class="w-4 h-4 rounded text-brand-whiz bg-slate-50 border-[#E4E9ED] focus:ring-brand-whiz focus:ring-offset-slate-950 cursor-pointer">
+                    <input type="checkbox" id="adminSignOutOfOthers" name="signOutOfOtherSessions" checked class="w-4 h-4 rounded text-brand-whiz bg-slate-50 border-[#E3E9EF] focus:ring-brand-whiz focus:ring-offset-slate-950 cursor-pointer">
                     <label for="adminSignOutOfOthers" class="text-xs text-slate-600 select-none cursor-pointer">
                       Sign out of all other active sessions across devices
                     </label>
@@ -1175,8 +1168,8 @@
               </div>
 
               <!-- Metadata Column -->
-              <div class="p-6 rounded-3xl bg-white border border-[#E4E9ED] backdrop-blur-xl space-y-4">
-                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 pb-2 border-b border-[#E4E9ED]">Administrator Metadata</h3>
+              <div class="p-6 rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl space-y-4">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 pb-2 border-b border-[#E3E9EF]">Administrator Metadata</h3>
                 <div class="space-y-3 text-xs">
                   <div>
                     <span class="text-slate-500 block text-[11px] uppercase">Clerk User ID</span>
@@ -1184,7 +1177,7 @@
                   </div>
                   <div>
                     <span class="text-slate-500 block text-[11px] uppercase">Verified Email</span>
-                    <span id="secUserEmail" class="font-mono text-[#12212B] text-xs select-all">admin@example.com</span>
+                    <span id="secUserEmail" class="font-mono text-[#172B36] text-xs select-all">admin@example.com</span>
                   </div>
                   <div>
                     <span class="text-slate-500 block text-[11px] uppercase">Username</span>
@@ -1204,13 +1197,13 @@
        MODAL 1: ADD CLIENT WITH SERVICE SELECTION & AUTO-TASK PROVISIONING
        ========================================================================= -->
   <div id="modalAddClient" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
-    <div class="bg-white border border-[#E4E9ED] rounded-3xl max-w-2xl w-full p-5 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
-      <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
-        <h3 class="text-lg font-bold text-[#12212B] flex items-center gap-2">
+    <div class="bg-white border border-[#E3E9EF] rounded-3xl max-w-2xl w-full p-5 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
+        <h3 class="text-lg font-bold text-[#172B36] flex items-center gap-2">
           <i class="fa-solid fa-user-plus text-brand-whiz text-sm"></i>
           <span>Add New Client & Provision Services</span>
         </h3>
-        <button type="button" class="btn-close-modal text-slate-500 hover:text-[#12212B] cursor-pointer" data-modal="modalAddClient">
+        <button type="button" class="btn-close-modal text-slate-500 hover:text-[#172B36] cursor-pointer" data-modal="modalAddClient">
           <i class="fa-solid fa-xmark text-lg"></i>
         </button>
       </div>
@@ -1219,37 +1212,37 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Client Full Name *</label>
-            <input type="text" name="fullName" required placeholder="John Doe" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
+            <input type="text" name="fullName" required placeholder="John Doe" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Company / Brand Name *</label>
-            <input type="text" name="companyName" required placeholder="Acme Inc." class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
+            <input type="text" name="companyName" required placeholder="Acme Inc." class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
           </div>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Email Address *</label>
-            <input type="email" name="email" required placeholder="client@example.com" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
+            <input type="email" name="email" required placeholder="client@example.com" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Phone Number</label>
-            <input type="text" name="phone" placeholder="+1234567890" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
+            <input type="text" name="phone" placeholder="+1234567890" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
           </div>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">City</label>
-            <input type="text" name="city" id="addClientCity" placeholder="Dhaka" value="Dhaka" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
+            <input type="text" name="city" id="addClientCity" placeholder="Dhaka" value="Dhaka" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Country</label>
-            <input type="text" name="country" id="addClientCountry" placeholder="Bangladesh" value="Bangladesh" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
+            <input type="text" name="country" id="addClientCountry" placeholder="Bangladesh" value="Bangladesh" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Billing Currency *</label>
-            <select name="currency" id="addClientCurrency" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B] focus:border-brand-whiz">
+            <select name="currency" id="addClientCurrency" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:border-brand-whiz">
               <option value="BDT" selected>BDT — ৳ (Bangladeshi Taka)</option>
               <option value="USD">USD — $ (US Dollar)</option>
               <option value="GBP">GBP — £ (British Pound)</option>
@@ -1268,19 +1261,19 @@
 
         <div>
           <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Street Address / Headquarters</label>
-          <input type="text" name="address" placeholder="e.g. House 12, Road 4, Banani" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
+          <input type="text" name="address" placeholder="e.g. House 12, Road 4, Banani" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
         </div>
 
         <!-- Service Selection Checkboxes -->
         <div>
           <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Select Services to Provision (Auto-generates 20 SOP tasks each)</label>
-          <div id="addClientServicesCheckboxes" class="max-h-48 overflow-y-auto p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-2">
+          <div id="addClientServicesCheckboxes" class="max-h-48 overflow-y-auto p-3 rounded-2xl bg-slate-50 border border-[#E3E9EF] space-y-2">
             <!-- Dynamically populated -->
           </div>
         </div>
 
-        <div class="flex items-center justify-end space-x-3 pt-3 border-t border-[#E4E9ED]">
-          <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-[#12212B]" data-modal="modalAddClient">Cancel</button>
+        <div class="flex items-center justify-end space-x-3 pt-3 border-t border-[#E3E9EF]">
+          <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36]" data-modal="modalAddClient">Cancel</button>
           <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center gap-1.5 cursor-pointer">
             <i class="fa-solid fa-bolt text-xs"></i>
             <span>Create Client & Auto-Provision Tasks</span>
@@ -1294,13 +1287,13 @@
        MODAL: EDIT CLIENT PROFILE
        ========================================================================= -->
   <div id="modalEditClient" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
-    <div class="bg-white border border-[#E4E9ED] rounded-3xl max-w-xl w-full p-5 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
-      <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
-        <h3 class="text-lg font-bold text-[#12212B] flex items-center gap-2">
+    <div class="bg-white border border-[#E3E9EF] rounded-3xl max-w-xl w-full p-5 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
+        <h3 class="text-lg font-bold text-[#172B36] flex items-center gap-2">
           <i class="fa-solid fa-user-pen text-brand-whiz text-sm"></i>
           <span>Edit Client Business Profile</span>
         </h3>
-        <button type="button" class="btn-close-modal text-slate-500 hover:text-[#12212B] cursor-pointer" data-modal="modalEditClient">
+        <button type="button" class="btn-close-modal text-slate-500 hover:text-[#172B36] cursor-pointer" data-modal="modalEditClient">
           <i class="fa-solid fa-xmark text-lg"></i>
         </button>
       </div>
@@ -1310,52 +1303,52 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Full Name *</label>
-            <input type="text" name="fullName" id="editClientFullName" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
+            <input type="text" name="fullName" id="editClientFullName" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Company / Brand Name</label>
-            <input type="text" name="companyName" id="editClientCompanyName" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
+            <input type="text" name="companyName" id="editClientCompanyName" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
           </div>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Email Address *</label>
-            <input type="email" name="email" id="editClientEmail" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
+            <input type="email" name="email" id="editClientEmail" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Phone Number</label>
-            <input type="text" name="phone" id="editClientPhone" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
+            <input type="text" name="phone" id="editClientPhone" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
           </div>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">City</label>
-            <input type="text" name="city" id="editClientCity" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
+            <input type="text" name="city" id="editClientCity" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Country</label>
-            <input type="text" name="country" id="editClientCountry" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
+            <input type="text" name="country" id="editClientCountry" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
           </div>
         </div>
 
         <div>
           <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Address</label>
-          <input type="text" name="address" id="editClientAddress" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
+          <input type="text" name="address" id="editClientAddress" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
         </div>
 
         <div>
           <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Account Status</label>
-          <select name="status" id="editClientStatus" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
+          <select name="status" id="editClientStatus" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
             <option value="active">Active</option>
             <option value="suspended">Suspended</option>
             <option value="archived">Archived</option>
           </select>
         </div>
 
-        <div class="flex items-center justify-end space-x-3 pt-3 border-t border-[#E4E9ED]">
-          <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-[#12212B]" data-modal="modalEditClient">Cancel</button>
+        <div class="flex items-center justify-end space-x-3 pt-3 border-t border-[#E3E9EF]">
+          <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36]" data-modal="modalEditClient">Cancel</button>
           <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center gap-1.5 cursor-pointer">
             <i class="fa-solid fa-floppy-disk text-xs"></i>
             <span>Save Profile Changes</span>
@@ -1369,13 +1362,13 @@
        MODAL: ASSIGN SERVICE TO CLIENT
        ========================================================================= -->
   <div id="modalAssignService" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
-    <div class="bg-white border border-[#E4E9ED] rounded-3xl max-w-lg w-full p-5 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
-      <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
-        <h3 class="text-lg font-bold text-[#12212B] flex items-center gap-2">
+    <div class="bg-white border border-[#E3E9EF] rounded-3xl max-w-lg w-full p-5 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
+        <h3 class="text-lg font-bold text-[#172B36] flex items-center gap-2">
           <i class="fa-solid fa-layer-group text-brand-whiz text-sm"></i>
           <span>Assign Service to Client</span>
         </h3>
-        <button type="button" class="btn-close-modal text-slate-500 hover:text-[#12212B] cursor-pointer" data-modal="modalAssignService">
+        <button type="button" class="btn-close-modal text-slate-500 hover:text-[#172B36] cursor-pointer" data-modal="modalAssignService">
           <i class="fa-solid fa-xmark text-lg"></i>
         </button>
       </div>
@@ -1384,7 +1377,7 @@
         <input type="hidden" name="clientId" id="assignServiceClientId">
         <div>
           <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Select Catalog Service *</label>
-          <select name="serviceId" id="assignServiceSelect" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B] focus:outline-none focus:border-brand-whiz">
+          <select name="serviceId" id="assignServiceSelect" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:outline-none focus:border-brand-whiz">
             <option value="">Choose a service...</option>
           </select>
         </div>
@@ -1392,15 +1385,15 @@
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Package Tier</label>
-            <input type="text" name="packageName" value="Standard Retainer" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
+            <input type="text" name="packageName" value="Standard Retainer" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Price *</label>
-            <input type="number" step="0.01" name="priceDollars" id="assignServicePrice" value="1000" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B] font-mono">
+            <input type="number" step="0.01" name="priceDollars" id="assignServicePrice" value="1000" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-mono">
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Currency *</label>
-            <select name="currency" id="assignServiceCurrency" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B] focus:border-brand-whiz">
+            <select name="currency" id="assignServiceCurrency" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:border-brand-whiz">
               <option value="BDT">BDT — ৳</option>
               <option value="USD" selected>USD — $</option>
               <option value="GBP">GBP — £</option>
@@ -1420,16 +1413,16 @@
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Start Date</label>
-            <input type="date" name="startDate" id="assignServiceStartDate" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
+            <input type="date" name="startDate" id="assignServiceStartDate" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Target Completion</label>
-            <input type="date" name="deadline" id="assignServiceDeadline" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
+            <input type="date" name="deadline" id="assignServiceDeadline" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
           </div>
         </div>
 
-        <div class="flex items-center justify-end space-x-3 pt-3 border-t border-[#E4E9ED]">
-          <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-[#12212B] cursor-pointer" data-modal="modalAssignService">Cancel</button>
+        <div class="flex items-center justify-end space-x-3 pt-3 border-t border-[#E3E9EF]">
+          <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36] cursor-pointer" data-modal="modalAssignService">Cancel</button>
           <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center gap-1.5 cursor-pointer">
             <i class="fa-solid fa-bolt text-xs"></i>
             <span>Provision Service & Auto-Instantiate Tasks</span>
@@ -1449,7 +1442,7 @@
           <i class="fa-solid fa-trash-can text-lg"></i>
         </div>
         <div>
-          <h3 class="text-base font-bold text-[#12212B]">Delete Client Record</h3>
+          <h3 class="text-base font-bold text-[#172B36]">Delete Client Record</h3>
           <p class="text-[11px] text-rose-600/90 font-medium">Safe transactional removal & accounting compliance</p>
         </div>
       </div>
@@ -1458,7 +1451,7 @@
         Are you sure you want to delete <strong id="deleteClientTargetName" class="text-slate-900 font-bold">this client</strong>?
       </p>
 
-      <div class="p-3.5 rounded-xl bg-slate-50 border border-[#E4E9ED] text-[11px] text-slate-600 space-y-1.5">
+      <div class="p-3.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-[11px] text-slate-600 space-y-1.5">
         <p class="font-bold text-slate-800 text-xs">Impact of Deletion:</p>
         <div id="deleteClientRecordCounts" class="space-y-1">
           <p>• All active projects, deliverables, and tasks will be permanently removed.</p>
@@ -1472,7 +1465,7 @@
         <label for="deleteClientClerkOption" class="text-xs text-slate-600">Also delete associated Clerk login identity (if disposable test user)</label>
       </div>
 
-      <div class="pt-3 border-t border-[#E4E9ED] flex items-center justify-end space-x-3">
+      <div class="pt-3 border-t border-[#E3E9EF] flex items-center justify-end space-x-3">
         <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 cursor-pointer" data-modal="modalDeleteClient">Cancel</button>
         <button type="button" id="btnConfirmDeleteClient" class="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 shadow-sm flex items-center gap-1.5 cursor-pointer transition-all">
           <i class="fa-solid fa-trash-can text-xs"></i>
@@ -1486,13 +1479,13 @@
        MODAL: ADD NEW SERVICE (Phase 6)
        ========================================================================= -->
   <div id="modalAddService" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
-    <div class="bg-white border border-[#E4E9ED] rounded-3xl max-w-xl w-full p-5 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
-      <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
-        <h3 class="text-lg font-bold text-[#12212B] flex items-center gap-2">
+    <div class="bg-white border border-[#E3E9EF] rounded-3xl max-w-xl w-full p-5 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
+        <h3 class="text-lg font-bold text-[#172B36] flex items-center gap-2">
           <i class="fa-solid fa-plus text-brand-whiz text-sm"></i>
           <span>Add New Service to Catalog</span>
         </h3>
-        <button type="button" class="btn-close-modal text-slate-500 hover:text-[#12212B] cursor-pointer" data-modal="modalAddService">
+        <button type="button" class="btn-close-modal text-slate-500 hover:text-[#172B36] cursor-pointer" data-modal="modalAddService">
           <i class="fa-solid fa-xmark text-lg"></i>
         </button>
       </div>
@@ -1501,18 +1494,18 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Service Name *</label>
-            <input type="text" name="name" required placeholder="e.g. TikTok Ad Campaigns" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
+            <input type="text" name="name" required placeholder="e.g. TikTok Ad Campaigns" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Unique Service Code *</label>
-            <input type="text" name="code" required placeholder="e.g. TIKTOK_ADS" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B] font-mono uppercase">
+            <input type="text" name="code" required placeholder="e.g. TIKTOK_ADS" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-mono uppercase">
           </div>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Category *</label>
-            <select name="category" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
+            <select name="category" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
               <option value="Paid Advertising">Paid Advertising</option>
               <option value="Paid & Organic Social Media">Paid & Organic Social Media</option>
               <option value="Conversational Commerce">Conversational Commerce</option>
@@ -1525,22 +1518,22 @@
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Standard Retainer Price ($ USD) *</label>
-            <input type="number" step="1" name="standardPriceDollars" value="1000" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B] font-mono">
+            <input type="number" step="1" name="standardPriceDollars" value="1000" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-mono">
           </div>
         </div>
 
         <div>
           <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Default Package Name</label>
-          <input type="text" name="defaultPackage" value="Growth Retainer" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
+          <input type="text" name="defaultPackage" value="Growth Retainer" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
         </div>
 
         <div>
           <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Description & Overview</label>
-          <textarea name="description" rows="3" placeholder="Summary of what this service delivers to clients..." class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B] leading-relaxed"></textarea>
+          <textarea name="description" rows="3" placeholder="Summary of what this service delivers to clients..." class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] leading-relaxed"></textarea>
         </div>
 
-        <div class="flex items-center justify-end space-x-3 pt-3 border-t border-[#E4E9ED]">
-          <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-[#12212B]" data-modal="modalAddService">Cancel</button>
+        <div class="flex items-center justify-end space-x-3 pt-3 border-t border-[#E3E9EF]">
+          <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36]" data-modal="modalAddService">Cancel</button>
           <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center gap-1.5 cursor-pointer">
             <i class="fa-solid fa-plus text-xs"></i>
             <span>Create Service Record</span>
@@ -1554,13 +1547,13 @@
        MODAL: EDIT SERVICE METADATA
        ========================================================================= -->
   <div id="modalEditService" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
-    <div class="bg-white border border-[#E4E9ED] rounded-3xl max-w-xl w-full p-5 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
-      <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
-        <h3 class="text-lg font-bold text-[#12212B] flex items-center gap-2">
+    <div class="bg-white border border-[#E3E9EF] rounded-3xl max-w-xl w-full p-5 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
+        <h3 class="text-lg font-bold text-[#172B36] flex items-center gap-2">
           <i class="fa-solid fa-pen-to-square text-brand-whiz text-sm"></i>
           <span>Edit Service Master Definition</span>
         </h3>
-        <button type="button" class="btn-close-modal text-slate-500 hover:text-[#12212B] cursor-pointer" data-modal="modalEditService">
+        <button type="button" class="btn-close-modal text-slate-500 hover:text-[#172B36] cursor-pointer" data-modal="modalEditService">
           <i class="fa-solid fa-xmark text-lg"></i>
         </button>
       </div>
@@ -1570,42 +1563,42 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Service Name *</label>
-            <input type="text" name="name" id="editServiceName" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
+            <input type="text" name="name" id="editServiceName" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Service Code *</label>
-            <input type="text" name="code" id="editServiceCode" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B] font-mono uppercase">
+            <input type="text" name="code" id="editServiceCode" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-mono uppercase">
           </div>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Category</label>
-            <input type="text" name="category" id="editServiceCategory" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
+            <input type="text" name="category" id="editServiceCategory" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Price ($ USD) *</label>
-            <input type="number" step="1" name="standardPriceDollars" id="editServicePrice" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B] font-mono">
+            <input type="number" step="1" name="standardPriceDollars" id="editServicePrice" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-mono">
           </div>
         </div>
 
         <div>
           <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Default Package</label>
-          <input type="text" name="defaultPackage" id="editServicePackage" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
+          <input type="text" name="defaultPackage" id="editServicePackage" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
         </div>
 
         <div>
           <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Description</label>
-          <textarea name="description" id="editServiceDescription" rows="3" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B] leading-relaxed"></textarea>
+          <textarea name="description" id="editServiceDescription" rows="3" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] leading-relaxed"></textarea>
         </div>
 
         <div class="flex items-center space-x-2">
-          <input type="checkbox" name="isActive" id="editServiceIsActive" class="w-4 h-4 rounded text-brand-whiz bg-slate-50 border-[#E4E9ED] cursor-pointer">
+          <input type="checkbox" name="isActive" id="editServiceIsActive" class="w-4 h-4 rounded text-brand-whiz bg-slate-50 border-[#E3E9EF] cursor-pointer">
           <label for="editServiceIsActive" class="text-xs text-slate-600 cursor-pointer">Service is active in public catalog</label>
         </div>
 
-        <div class="flex items-center justify-end space-x-3 pt-3 border-t border-[#E4E9ED]">
-          <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-[#12212B] cursor-pointer" data-modal="modalEditService">Cancel</button>
+        <div class="flex items-center justify-end space-x-3 pt-3 border-t border-[#E3E9EF]">
+          <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36] cursor-pointer" data-modal="modalEditService">Cancel</button>
           <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center gap-1.5 cursor-pointer">
             <i class="fa-solid fa-floppy-disk text-xs"></i>
             <span>Save & Increment Version</span>
@@ -1619,13 +1612,13 @@
        MODAL: EDIT TASK BLUEPRINT (Phase 7 & 8)
        ========================================================================= -->
   <div id="modalEditBlueprint" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
-    <div class="bg-white border border-[#E4E9ED] rounded-3xl max-w-3xl w-full p-6 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] flex flex-col">
-      <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED] shrink-0">
-        <h3 class="text-lg font-bold text-[#12212B] flex items-center gap-2">
+    <div class="bg-white border border-[#E3E9EF] rounded-3xl max-w-3xl w-full p-6 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] flex flex-col">
+      <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF] shrink-0">
+        <h3 class="text-lg font-bold text-[#172B36] flex items-center gap-2">
           <i class="fa-solid fa-pen-nib text-brand-whiz text-sm"></i>
           <span>Edit Master SOP Task Blueprint</span>
         </h3>
-        <button type="button" class="btn-close-modal text-slate-500 hover:text-[#12212B] cursor-pointer" data-modal="modalEditBlueprint">
+        <button type="button" class="btn-close-modal text-slate-500 hover:text-[#172B36] cursor-pointer" data-modal="modalEditBlueprint">
           <i class="fa-solid fa-xmark text-lg"></i>
         </button>
       </div>
@@ -1636,18 +1629,18 @@
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Task Code *</label>
-            <input type="text" name="taskCode" id="editBlueprintTaskCode" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B] font-mono">
+            <input type="text" name="taskCode" id="editBlueprintTaskCode" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-mono">
           </div>
           <div class="sm:col-span-2">
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Task Title *</label>
-            <input type="text" name="title" id="editBlueprintTitle" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B] font-bold">
+            <input type="text" name="title" id="editBlueprintTitle" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-bold">
           </div>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Phase</label>
-            <select name="phase" id="editBlueprintPhase" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
+            <select name="phase" id="editBlueprintPhase" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
               <option value="Beginning">Beginning</option>
               <option value="Intermediate">Intermediate</option>
               <option value="Advanced">Advanced</option>
@@ -1655,7 +1648,7 @@
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Priority</label>
-            <select name="priority" id="editBlueprintPriority" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
+            <select name="priority" id="editBlueprintPriority" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
               <option value="urgent">Urgent</option>
               <option value="high">High</option>
               <option value="medium">Medium</option>
@@ -1664,42 +1657,42 @@
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Sort Order</label>
-            <input type="number" name="sortOrder" id="editBlueprintSortOrder" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B] font-mono">
+            <input type="number" name="sortOrder" id="editBlueprintSortOrder" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-mono">
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Est. Minutes</label>
-            <input type="number" name="estimatedMinutes" id="editBlueprintEstMinutes" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B] font-mono">
+            <input type="number" name="estimatedMinutes" id="editBlueprintEstMinutes" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-mono">
           </div>
         </div>
 
         <div>
           <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Why (Agency Operational Purpose)</label>
-          <textarea name="why" id="editBlueprintWhy" rows="2" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-slate-700 leading-relaxed"></textarea>
+          <textarea name="why" id="editBlueprintWhy" rows="2" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-slate-700 leading-relaxed"></textarea>
         </div>
 
         <div>
           <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Where to Go (Platform / Application Location)</label>
-          <input type="text" name="whereLocation" id="editBlueprintWhere" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
+          <input type="text" name="whereLocation" id="editBlueprintWhere" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
         </div>
 
         <div>
           <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Detailed Operational Steps</label>
-          <textarea name="steps" id="editBlueprintSteps" rows="5" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-slate-700 font-mono leading-relaxed"></textarea>
+          <textarea name="steps" id="editBlueprintSteps" rows="5" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-slate-700 font-mono leading-relaxed"></textarea>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Done When (Completion Standard)</label>
-            <textarea name="doneWhen" id="editBlueprintDoneWhen" rows="3" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-slate-700 leading-relaxed"></textarea>
+            <textarea name="doneWhen" id="editBlueprintDoneWhen" rows="3" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-slate-700 leading-relaxed"></textarea>
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">QA Criteria (Quality Review)</label>
-            <textarea name="qaCriteria" id="editBlueprintQACriteria" rows="3" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-emerald-300 leading-relaxed"></textarea>
+            <textarea name="qaCriteria" id="editBlueprintQACriteria" rows="3" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-emerald-300 leading-relaxed"></textarea>
           </div>
         </div>
 
-        <div class="flex items-center justify-end space-x-3 pt-3 border-t border-[#E4E9ED] shrink-0">
-          <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-[#12212B] cursor-pointer" data-modal="modalEditBlueprint">Cancel</button>
+        <div class="flex items-center justify-end space-x-3 pt-3 border-t border-[#E3E9EF] shrink-0">
+          <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36] cursor-pointer" data-modal="modalEditBlueprint">Cancel</button>
           <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center gap-1.5 cursor-pointer">
             <i class="fa-solid fa-floppy-disk text-xs"></i>
             <span>Save Changes to D1</span>
@@ -1713,13 +1706,13 @@
        MODAL: ADD NEW TASK BLUEPRINT
        ========================================================================= -->
   <div id="modalAddBlueprint" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
-    <div class="bg-white border border-[#E4E9ED] rounded-3xl max-w-2xl w-full p-5 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
-      <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
-        <h3 class="text-lg font-bold text-[#12212B] flex items-center gap-2">
+    <div class="bg-white border border-[#E3E9EF] rounded-3xl max-w-2xl w-full p-5 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
+        <h3 class="text-lg font-bold text-[#172B36] flex items-center gap-2">
           <i class="fa-solid fa-plus text-brand-whiz text-sm"></i>
           <span>Add New SOP Task Blueprint</span>
         </h3>
-        <button type="button" class="btn-close-modal text-slate-500 hover:text-[#12212B] cursor-pointer" data-modal="modalAddBlueprint">
+        <button type="button" class="btn-close-modal text-slate-500 hover:text-[#172B36] cursor-pointer" data-modal="modalAddBlueprint">
           <i class="fa-solid fa-xmark text-lg"></i>
         </button>
       </div>
@@ -1729,18 +1722,18 @@
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Task Code *</label>
-            <input type="text" name="taskCode" placeholder="e.g. FB-21" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B] font-mono uppercase">
+            <input type="text" name="taskCode" placeholder="e.g. FB-21" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-mono uppercase">
           </div>
           <div class="sm:col-span-2">
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Task Title *</label>
-            <input type="text" name="title" placeholder="Operational task title..." required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
+            <input type="text" name="title" placeholder="Operational task title..." required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
           </div>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Phase</label>
-            <select name="phase" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
+            <select name="phase" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
               <option value="Beginning">Beginning</option>
               <option value="Intermediate">Intermediate</option>
               <option value="Advanced">Advanced</option>
@@ -1748,7 +1741,7 @@
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Priority</label>
-            <select name="priority" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
+            <select name="priority" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
               <option value="urgent">Urgent</option>
               <option value="high">High</option>
               <option value="medium" selected>Medium</option>
@@ -1757,22 +1750,22 @@
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Est. Minutes</label>
-            <input type="number" name="estimatedMinutes" value="60" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B] font-mono">
+            <input type="number" name="estimatedMinutes" value="60" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-mono">
           </div>
         </div>
 
         <div>
           <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Detailed Steps</label>
-          <textarea name="steps" rows="4" placeholder="1. Open Business Manager&#10;2. Verify tracking pixel..." class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B] leading-relaxed"></textarea>
+          <textarea name="steps" rows="4" placeholder="1. Open Business Manager&#10;2. Verify tracking pixel..." class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] leading-relaxed"></textarea>
         </div>
 
         <div>
           <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">QA Criteria</label>
-          <input type="text" name="qaCriteria" placeholder="Verification checklist for QA approval..." class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-emerald-300">
+          <input type="text" name="qaCriteria" placeholder="Verification checklist for QA approval..." class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-emerald-300">
         </div>
 
-        <div class="flex items-center justify-end space-x-3 pt-3 border-t border-[#E4E9ED]">
-          <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-[#12212B]" data-modal="modalAddBlueprint">Cancel</button>
+        <div class="flex items-center justify-end space-x-3 pt-3 border-t border-[#E3E9EF]">
+          <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36]" data-modal="modalAddBlueprint">Cancel</button>
           <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center gap-1.5 cursor-pointer">
             <i class="fa-solid fa-plus text-xs"></i>
             <span>Add Blueprint Task</span>
@@ -1792,21 +1785,21 @@
           <i class="fa-solid fa-arrows-spin text-lg"></i>
         </div>
         <div>
-          <h3 class="text-base font-bold text-[#12212B]">Apply Template to Active Projects</h3>
+          <h3 class="text-base font-bold text-[#172B36]">Apply Template to Active Projects</h3>
           <p class="text-[11px] text-emerald-400">Safe Blueprint Synchronization</p>
         </div>
       </div>
       <p class="text-xs text-slate-600 leading-relaxed">
         This action will synchronize the latest active task blueprints of this service to all current active client projects.
       </p>
-      <div class="p-3 rounded-xl bg-slate-50 border border-[#E4E9ED] text-[11px] text-slate-500 space-y-1">
-        <p class="text-[#12212B] font-semibold">Integrity Guarantees:</p>
+      <div class="p-3 rounded-xl bg-slate-50 border border-[#E3E9EF] text-[11px] text-slate-500 space-y-1">
+        <p class="text-[#172B36] font-semibold">Integrity Guarantees:</p>
         <p>• Only missing tasks will be added to active projects.</p>
         <p>• No already-completed client tasks will be reset or overwritten.</p>
         <p>• Progress percentages will be cleanly recalculated based on updated total tasks.</p>
       </div>
       <div class="flex items-center justify-end space-x-3 pt-2">
-        <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-[#12212B] cursor-pointer" data-modal="modalApplyTemplate">Cancel</button>
+        <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36] cursor-pointer" data-modal="modalApplyTemplate">Cancel</button>
         <button type="button" id="btnConfirmApplyTemplate" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center gap-1.5 cursor-pointer">
           <i class="fa-solid fa-check text-xs"></i>
           <span>Confirm & Apply</span>
@@ -1819,13 +1812,13 @@
        MODAL: LIVE TASK DETAILS & EDIT (Phase 11)
        ========================================================================= -->
   <div id="modalLiveTaskDetail" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
-    <div class="bg-white border border-[#E4E9ED] rounded-3xl max-w-lg w-full p-5 sm:p-8 space-y-4 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
-      <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
-        <h3 class="text-base font-bold text-[#12212B] flex items-center gap-2" id="liveTaskModalTitle">
+    <div class="bg-white border border-[#E3E9EF] rounded-3xl max-w-lg w-full p-5 sm:p-8 space-y-4 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
+        <h3 class="text-base font-bold text-[#172B36] flex items-center gap-2" id="liveTaskModalTitle">
           <i class="fa-solid fa-list-check text-brand-whiz"></i>
           <span>Operational Task Details</span>
         </h3>
-        <button type="button" class="btn-close-modal text-slate-500 hover:text-[#12212B] cursor-pointer" data-modal="modalLiveTaskDetail">
+        <button type="button" class="btn-close-modal text-slate-500 hover:text-[#172B36] cursor-pointer" data-modal="modalLiveTaskDetail">
           <i class="fa-solid fa-xmark text-lg"></i>
         </button>
       </div>
@@ -1833,11 +1826,11 @@
       <div class="space-y-3 text-xs">
         <div>
           <span class="text-[10px] uppercase font-bold text-slate-500 block">Project & Organization</span>
-          <span class="text-[#12212B] font-medium" id="liveTaskModalProject">Project Name</span>
+          <span class="text-[#172B36] font-medium" id="liveTaskModalProject">Project Name</span>
         </div>
         <div>
           <span class="text-[10px] uppercase font-bold text-slate-500 block">Task Description & Instructions</span>
-          <p class="text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-xl border border-[#E4E9ED] whitespace-pre-line" id="liveTaskModalDesc">Instructions...</p>
+          <p class="text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-xl border border-[#E3E9EF] whitespace-pre-line" id="liveTaskModalDesc">Instructions...</p>
         </div>
         <div>
           <span class="text-[10px] uppercase font-bold text-slate-500 block">QA Review Standard</span>
@@ -1845,12 +1838,12 @@
         </div>
       </div>
 
-      <form id="formLiveTaskDetail" class="space-y-3 pt-2 border-t border-[#E4E9ED]">
+      <form id="formLiveTaskDetail" class="space-y-3 pt-2 border-t border-[#E3E9EF]">
         <input type="hidden" name="taskId" id="liveTaskId">
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Status</label>
-            <select name="status" id="liveTaskStatus" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
+            <select name="status" id="liveTaskStatus" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
               <option value="todo">Pending (Todo)</option>
               <option value="in_progress">In Progress</option>
               <option value="completed">Completed & Approved</option>
@@ -1858,7 +1851,7 @@
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Priority</label>
-            <select name="priority" id="liveTaskPriority" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
+            <select name="priority" id="liveTaskPriority" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
               <option value="urgent">Urgent</option>
               <option value="high">High</option>
               <option value="medium">Medium</option>
@@ -1869,11 +1862,11 @@
 
         <div>
           <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Internal Notes & Deliverable Evidence</label>
-          <textarea name="internalNotes" id="liveTaskNotes" rows="2" placeholder="Execution notes or verification link..." class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]"></textarea>
+          <textarea name="internalNotes" id="liveTaskNotes" rows="2" placeholder="Execution notes or verification link..." class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]"></textarea>
         </div>
 
         <div class="flex items-center justify-end space-x-3 pt-2">
-          <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-[#12212B] cursor-pointer" data-modal="modalLiveTaskDetail">Close</button>
+          <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36] cursor-pointer" data-modal="modalLiveTaskDetail">Close</button>
           <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center gap-1.5 cursor-pointer">
             <i class="fa-solid fa-floppy-disk text-xs"></i>
             <span>Update Task</span>
@@ -1887,13 +1880,13 @@
        MODAL: RECORD PAYMENT
        ========================================================================= -->
   <div id="modalRecordPayment" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
-    <div class="bg-white border border-[#E4E9ED] rounded-3xl max-w-xl w-full p-5 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
-      <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
-        <h3 class="text-lg font-bold text-[#12212B] flex items-center gap-2">
+    <div class="bg-white border border-[#E3E9EF] rounded-3xl max-w-xl w-full p-5 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
+        <h3 class="text-lg font-bold text-[#172B36] flex items-center gap-2">
           <i class="fa-solid fa-receipt text-brand-whiz text-sm"></i>
           <span>Record Confirmed Payment</span>
         </h3>
-        <button type="button" class="btn-close-modal text-slate-500 hover:text-[#12212B] cursor-pointer" data-modal="modalRecordPayment">
+        <button type="button" class="btn-close-modal text-slate-500 hover:text-[#172B36] cursor-pointer" data-modal="modalRecordPayment">
           <i class="fa-solid fa-xmark text-lg"></i>
         </button>
       </div>
@@ -1901,7 +1894,7 @@
       <form id="formRecordPayment" class="space-y-4">
         <div>
           <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Client Organization *</label>
-          <select name="organizationId" id="paymentClientSelect" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
+          <select name="organizationId" id="paymentClientSelect" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
             <option value="">Select client...</option>
           </select>
         </div>
@@ -1909,11 +1902,11 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Amount *</label>
-            <input type="number" step="0.01" name="amount" id="paymentAmountInput" required placeholder="1000.00" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B] font-mono">
+            <input type="number" step="0.01" name="amount" id="paymentAmountInput" required placeholder="1000.00" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-mono">
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Currency *</label>
-            <select name="currency" id="paymentCurrencySelect" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B] focus:border-brand-whiz">
+            <select name="currency" id="paymentCurrencySelect" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:border-brand-whiz">
               <option value="BDT">BDT — ৳ (Bangladeshi Taka)</option>
               <option value="USD" selected>USD — $ (US Dollar)</option>
               <option value="GBP">GBP — £ (British Pound)</option>
@@ -1944,11 +1937,11 @@
 
         <div>
           <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Payment Reference / Transaction ID *</label>
-          <input type="text" name="paymentReference" required placeholder="TXN-98472948" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B] font-mono">
+          <input type="text" name="paymentReference" required placeholder="TXN-98472948" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-mono">
         </div>
 
-        <div class="flex items-center justify-end space-x-3 pt-3 border-t border-[#E4E9ED]">
-          <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-[#12212B]" data-modal="modalRecordPayment">Cancel</button>
+        <div class="flex items-center justify-end space-x-3 pt-3 border-t border-[#E3E9EF]">
+          <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36]" data-modal="modalRecordPayment">Cancel</button>
           <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center gap-1.5 cursor-pointer">
             <i class="fa-solid fa-check text-xs"></i>
             <span>Commit Payment to Ledger</span>
@@ -1962,13 +1955,13 @@
        MODAL: ROLE PROMOTION / DEMOTION CONFIRMATION
        ========================================================================= -->
   <div id="modalRoleChange" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
-    <div class="bg-white border border-[#E4E9ED] rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
-      <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
-        <h3 class="text-base font-bold text-[#12212B] flex items-center gap-2" id="modalRoleChangeTitle">
+    <div class="bg-white border border-[#E3E9EF] rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
+        <h3 class="text-base font-bold text-[#172B36] flex items-center gap-2" id="modalRoleChangeTitle">
           <i class="fa-solid fa-user-shield text-brand-whiz"></i>
           <span>Confirm Role Change</span>
         </h3>
-        <button type="button" class="btn-close-modal text-slate-500 hover:text-[#12212B] cursor-pointer" data-modal="modalRoleChange">
+        <button type="button" class="btn-close-modal text-slate-500 hover:text-[#172B36] cursor-pointer" data-modal="modalRoleChange">
           <i class="fa-solid fa-xmark text-lg"></i>
         </button>
       </div>
@@ -1980,10 +1973,10 @@
         <input type="hidden" id="roleChangeTargetRole" name="targetRole">
         <div>
           <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Reason for Immutable Audit Log *</label>
-          <input type="text" id="roleChangeReason" name="reason" placeholder="e.g. Promoted to administrator per executive authorization" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B] focus:outline-none focus:border-brand-whiz">
+          <input type="text" id="roleChangeReason" name="reason" placeholder="e.g. Promoted to administrator per executive authorization" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:outline-none focus:border-brand-whiz">
         </div>
-        <div class="flex items-center justify-end space-x-3 pt-3 border-t border-[#E4E9ED]">
-          <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-[#12212B] cursor-pointer" data-modal="modalRoleChange">Cancel</button>
+        <div class="flex items-center justify-end space-x-3 pt-3 border-t border-[#E3E9EF]">
+          <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36] cursor-pointer" data-modal="modalRoleChange">Cancel</button>
           <button type="submit" id="btnSubmitRoleChange" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center gap-1.5 cursor-pointer">
             <i class="fa-solid fa-check text-xs"></i>
             <span>Confirm & Update Role</span>

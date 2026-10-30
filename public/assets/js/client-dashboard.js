@@ -91,11 +91,11 @@
 
     const toast = document.createElement('div');
     toast.id = 'clientGlobalToast';
-    const bgClass = type === 'error' ? 'bg-rose-950/90 border-rose-500/50 text-rose-200' :
-                    type === 'success' ? 'bg-emerald-950/90 border-emerald-500/50 text-emerald-200' :
-                    'bg-white/95 border-[#E4E9ED] text-slate-700';
-    const icon = type === 'error' ? 'fa-triangle-exclamation text-rose-400' :
-                 type === 'success' ? 'fa-circle-check text-emerald-400' :
+    const bgClass = type === 'error' ? 'bg-white border-rose-400 text-[#172B36]' :
+                    type === 'success' ? 'bg-white border-emerald-400 text-[#172B36]' :
+                    'bg-white border-[#E3E9EF] text-[#172B36]';
+    const icon = type === 'error' ? 'fa-triangle-exclamation text-rose-500' :
+                 type === 'success' ? 'fa-circle-check text-emerald-500' :
                  'fa-circle-info text-brand-whiz';
 
     toast.className = `fixed bottom-20 lg:bottom-6 right-4 sm:right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl border shadow-2xl backdrop-blur-xl text-xs font-medium transition-all transform translate-y-2 opacity-0 ${bgClass}`;
@@ -227,7 +227,7 @@
 
     if (state.services.length === 0) {
       list.innerHTML = `
-        <div class="p-6 sm:p-8 rounded-2xl bg-slate-50 border border-[#E4E9ED] text-center text-xs text-slate-500 space-y-2">
+        <div class="p-6 sm:p-8 rounded-2xl bg-slate-50 border border-[#E3E9EF] text-center text-xs text-slate-500 space-y-2">
           <i class="fa-solid fa-shapes text-2xl text-slate-600 block mb-1"></i>
           <p>No active marketing services attached to your organization yet.</p>
           <a href="/#services" class="inline-block mt-2 px-3 py-1.5 rounded-lg bg-brand-whiz/20 text-brand-whiz hover:bg-brand-whiz/30 font-semibold transition-all">
@@ -237,23 +237,23 @@
       `;
     } else {
       list.innerHTML = state.services.map(s => `
-        <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E4E9ED] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 hover:border-[#E4E9ED] transition-all">
+        <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 hover:border-[#E3E9EF] transition-all">
           <div class="flex items-center space-x-3.5 min-w-0">
             <div class="w-10 h-10 rounded-xl bg-brand-whiz/15 text-brand-whiz border border-brand-whiz/30 flex items-center justify-center font-bold text-sm shrink-0">
               <i class="fa-solid fa-bolt"></i>
             </div>
             <div class="min-w-0">
-              <h4 class="text-xs sm:text-sm font-bold text-[#12212B] truncate">${s.service_name || s.serviceName || s.package_name || 'Agency Service'}</h4>
+              <h4 class="text-xs sm:text-sm font-bold text-[#172B36] truncate">${s.service_name || s.serviceName || s.package_name || 'Agency Service'}</h4>
               <p class="text-[11px] text-slate-500 flex items-center gap-2 mt-0.5">
-                <span>Status: <strong class="text-emerald-400 uppercase">${s.status || 'Active'}</strong></span>
+                <span>Status: <strong class="text-emerald-700 uppercase">${s.status || 'Active'}</strong></span>
                 <span>•</span>
                 <span>Tier: <strong class="text-slate-600">${s.package_name || 'Standard'}</strong></span>
               </p>
             </div>
           </div>
-          <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4 pt-2 sm:pt-0 border-t sm:border-t-0 border-[#E4E9ED]">
-            <span class="text-xs sm:text-sm font-mono font-bold text-[#12212B]">$${(((s.price_cents || s.priceCents || 0)) / 100).toFixed(2)}</span>
-            <button type="button" data-client-tab="services" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-700 text-[11px] font-semibold transition-all">
+          <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4 pt-2 sm:pt-0 border-t sm:border-t-0 border-[#E3E9EF]">
+            <span class="text-xs sm:text-sm font-mono font-bold text-[#172B36]">$${(((s.price_cents || s.priceCents || 0)) / 100).toFixed(2)}</span>
+            <button type="button" data-client-tab="services" class="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 text-[#172B36] text-[11px] font-semibold transition-all border border-[#E3E9EF]">
               Details
             </button>
           </div>
@@ -271,7 +271,7 @@
 
     if (state.services.length === 0) {
       list.innerHTML = `
-        <div class="p-8 rounded-2xl bg-white border border-[#E4E9ED] text-center text-xs text-slate-500 space-y-2">
+        <div class="p-8 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 space-y-2">
           <i class="fa-solid fa-layer-group text-2xl text-slate-600 block mb-1"></i>
           <p>No active services provisioned for this account.</p>
           <a href="/#services" class="inline-block mt-2 px-3.5 py-1.5 rounded-xl bg-brand-whiz text-white font-bold transition-all">
@@ -285,14 +285,14 @@
     list.innerHTML = state.services.map(s => {
       const price = (((s.price_cents || s.priceCents || 0)) / 100).toFixed(2);
       return `
-        <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] space-y-4 hover:border-[#E4E9ED] transition-all">
+        <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E3E9EF] space-y-4 hover:border-[#E3E9EF] transition-all">
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div class="flex items-center space-x-3.5">
               <div class="w-11 h-11 rounded-2xl bg-brand-whiz/15 text-brand-whiz border border-brand-whiz/30 flex items-center justify-center font-bold text-base shrink-0">
                 <i class="fa-solid fa-shapes"></i>
               </div>
               <div>
-                <h4 class="text-sm sm:text-base font-bold text-[#12212B]">${s.service_name || s.serviceName || 'Marketing Service'}</h4>
+                <h4 class="text-sm sm:text-base font-bold text-[#172B36]">${s.service_name || s.serviceName || 'Marketing Service'}</h4>
                 <span class="text-xs text-slate-500">${s.package_name || 'Standard Agency Package'}</span>
               </div>
             </div>
@@ -300,11 +300,11 @@
               <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
                 ${s.status || 'Active'}
               </span>
-              <span class="text-sm font-mono font-black text-[#12212B]">${formatCurrency((s.price_cents || s.priceCents || 0), s.currency || "USD")}</span>
+              <span class="text-sm font-mono font-black text-[#172B36]">${formatCurrency((s.price_cents || s.priceCents || 0), s.currency || "USD")}</span>
             </div>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-white p-4 rounded-2xl border border-[#E4E9ED]">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-white p-4 rounded-2xl border border-[#E3E9EF]">
             <div>
               <span class="text-[10px] uppercase font-bold text-slate-500 block">Deliverables Scope</span>
               <p class="text-slate-600 mt-0.5 leading-relaxed">${s.deliverables || s.scope || 'Full agency execution and verified milestone handoffs.'}</p>
@@ -328,7 +328,7 @@
 
     if (state.projects.length === 0) {
       list.innerHTML = `
-        <div class="p-8 rounded-2xl bg-white border border-[#E4E9ED] text-center text-xs text-slate-500 space-y-2">
+        <div class="p-8 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 space-y-2">
           <i class="fa-solid fa-list-check text-2xl text-slate-600 block mb-1"></i>
           <p>No active project campaigns provisioned yet.</p>
         </div>
@@ -339,10 +339,10 @@
     list.innerHTML = state.projects.map(p => {
       const progress = Math.min(100, Math.max(0, p.progress_percent || p.progressPercent || 0));
       return `
-        <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] space-y-4 hover:border-[#E4E9ED] transition-all">
+        <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E3E9EF] space-y-4 hover:border-[#E3E9EF] transition-all">
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
             <div>
-              <h4 class="text-sm sm:text-base font-bold text-[#12212B] flex items-center gap-2">
+              <h4 class="text-sm sm:text-base font-bold text-[#172B36] flex items-center gap-2">
                 <i class="fa-solid fa-diagram-project text-brand-whiz text-xs"></i>
                 <span>${p.name || p.project_name || 'Campaign Execution'}</span>
               </h4>
@@ -354,12 +354,12 @@
           </div>
 
           <!-- Progress Bar & Percentage -->
-          <div class="space-y-2 bg-white p-4 rounded-2xl border border-[#E4E9ED]">
+          <div class="space-y-2 bg-white p-4 rounded-2xl border border-[#E3E9EF]">
             <div class="flex items-center justify-between text-xs">
               <span class="text-slate-500 font-medium">Deliverables Checkpoints</span>
               <span class="font-mono font-bold text-brand-whiz text-sm">${progress}%</span>
             </div>
-            <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden border border-[#E4E9ED]">
+            <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden border border-[#E3E9EF]">
               <div class="bg-gradient-to-r from-brand-whiz to-emerald-400 h-full rounded-full transition-all duration-500" style="width: ${progress}%"></div>
             </div>
           </div>
@@ -378,7 +378,7 @@
 
     if (records.length === 0) {
       list.innerHTML = `
-        <div class="p-8 rounded-2xl bg-white border border-[#E4E9ED] text-center text-xs text-slate-500 space-y-2">
+        <div class="p-8 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 space-y-2">
           <i class="fa-solid fa-file-invoice-dollar text-2xl text-slate-600 block mb-1"></i>
           <p>No payment records or invoices issued yet.</p>
         </div>
@@ -387,10 +387,10 @@
     }
 
     list.innerHTML = `
-      <div class="rounded-3xl bg-white border border-[#E4E9ED] overflow-hidden">
+      <div class="rounded-3xl bg-white border border-[#E3E9EF] overflow-hidden">
         <div class="overflow-x-auto">
           <table class="w-full text-left text-xs text-slate-600 min-w-[650px]">
-            <thead class="bg-slate-50/80 border-b border-[#E4E9ED] text-[11px] uppercase font-bold text-slate-500">
+            <thead class="bg-slate-50/80 border-b border-[#E3E9EF] text-[11px] uppercase font-bold text-slate-500">
               <tr>
                 <th class="p-4">Receipt / Invoice #</th>
                 <th class="p-4">Date</th>
@@ -400,7 +400,7 @@
                 <th class="p-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-[#E4E9ED]">
+            <tbody class="divide-y divide-[#E3E9EF]">
               ${records.map(r => {
                 const num = r.receipt_number || r.receiptNumber || r.invoice_number || 'INV-1001';
                 const date = r.payment_date || r.issue_date || '2026-10-30';
@@ -408,9 +408,9 @@
                 const paymentId = r.id;
                 return `
                   <tr class="hover:bg-slate-50 transition-colors">
-                    <td class="p-4 font-mono font-bold text-[#12212B]">${num}</td>
+                    <td class="p-4 font-mono font-bold text-[#172B36]">${num}</td>
                     <td class="p-4 text-slate-500">${date}</td>
-                    <td class="p-4 font-mono font-bold text-emerald-400">${formatCurrency((r.amount_cents || r.total_cents || 0), r.currency || "USD")}</td>
+                    <td class="p-4 font-mono font-bold text-emerald-600">${formatCurrency((r.amount_cents || r.total_cents || 0), r.currency || "USD")}</td>
                     <td class="p-4 uppercase text-[11px] text-slate-500">${r.payment_method || 'Online'}</td>
                     <td class="p-4">
                       <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
@@ -546,7 +546,7 @@
       });
 
       // Footer notice
-      page.drawText('Verified by Whiz Studio Cloudflare D1 Authority Engine • 100% Free Tier Architecture', {
+      page.drawText('Officially issued by Whiz Studio Agency • whizstudio.art', {
         x: 50,
         y: 50,
         size: 8,

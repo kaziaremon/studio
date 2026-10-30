@@ -101,23 +101,23 @@
 
     const toast = document.createElement('div');
     const colors = {
-      success: 'bg-emerald-950/90 border-emerald-500/50 text-emerald-200 shadow-emerald-950/40',
-      error: 'bg-rose-950/90 border-rose-500/50 text-rose-200 shadow-rose-950/40',
-      info: 'bg-slate-900/90 border-brand-whiz/40 text-slate-200 shadow-black/40',
-      warn: 'bg-amber-950/90 border-amber-500/50 text-amber-200 shadow-amber-950/40'
+      success: 'bg-white border-emerald-400 text-[#172B36] shadow-emerald-100/60',
+      error: 'bg-white border-rose-400 text-[#172B36] shadow-rose-100/60',
+      info: 'bg-white border-[#147D64]/50 text-[#172B36] shadow-slate-100/60',
+      warn: 'bg-white border-amber-400 text-[#172B36] shadow-amber-100/60'
     };
     const icons = {
-      success: 'fa-circle-check text-emerald-400',
-      error: 'fa-circle-exclamation text-rose-400',
-      info: 'fa-circle-info text-brand-whiz',
-      warn: 'fa-triangle-exclamation text-amber-400'
+      success: 'fa-circle-check text-emerald-500',
+      error: 'fa-circle-exclamation text-rose-500',
+      info: 'fa-circle-info text-[#147D64]',
+      warn: 'fa-triangle-exclamation text-amber-500'
     };
 
     toast.className = `p-4 rounded-2xl border backdrop-blur-xl shadow-xl flex items-start space-x-3 text-xs transition-all duration-300 transform translate-y-2 pointer-events-auto ${colors[type] || colors.info}`;
     toast.innerHTML = `
       <i class="fa-solid ${icons[type] || icons.info} text-sm mt-0.5 shrink-0"></i>
       <div class="flex-1 font-medium leading-relaxed">${message}</div>
-      <button type="button" class="text-slate-400 hover:text-white cursor-pointer ml-2">
+      <button type="button" class="text-slate-400 hover:text-[#172B36] cursor-pointer ml-2">
         <i class="fa-solid fa-xmark text-xs"></i>
       </button>
     `;
@@ -398,10 +398,10 @@
           actEl.innerHTML = '<p class="text-slate-500 italic p-4 text-center">No recent system activity recorded in D1.</p>';
         } else {
           actEl.innerHTML = d.recentActivity.map(a => `
-            <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-[#E4E9ED]">
+            <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-[#E3E9EF]">
               <div class="flex items-center space-x-2.5">
                 <span class="w-2 h-2 rounded-full bg-brand-whiz"></span>
-                <span class="font-bold text-[#12212B] uppercase text-[10px]">${a.action}</span>
+                <span class="font-bold text-[#172B36] uppercase text-[10px]">${a.action}</span>
                 <span class="text-slate-500 text-xs">${a.resource_type || ''}</span>
               </div>
               <span class="text-[11px] text-slate-400 font-mono">${new Date(a.created_at).toLocaleTimeString()}</span>
@@ -445,25 +445,25 @@
       const isArchived = c.status === 'archived';
       const isSuspended = c.status === 'suspended';
 
-      let statusBadge = '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-950 text-emerald-400 border border-emerald-500/30">Active</span>';
+      let statusBadge = '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">Active</span>';
       if (isArchived) {
-        statusBadge = '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-950 text-amber-400 border border-amber-500/30">Archived</span>';
+        statusBadge = '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-200">Archived</span>';
       } else if (isSuspended) {
-        statusBadge = '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-rose-950 text-rose-400 border border-rose-500/30">Suspended</span>';
+        statusBadge = '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-rose-50 text-rose-700 border border-rose-200">Suspended</span>';
       }
 
       return `
-        <tr class="hover:bg-slate-50 transition-colors border-b border-[#E4E9ED]">
+        <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
           <td class="px-6 py-4">
-            <div class="font-bold text-white text-sm">${c.full_name || 'Client'}</div>
+            <div class="font-bold text-[#172B36] text-sm">${c.full_name || 'Client'}</div>
             <div class="text-xs text-brand-whiz font-medium">${c.company_name || 'Independent Business'}</div>
             <div class="text-[10px] text-slate-500 font-mono mt-0.5">${c.id}</div>
           </td>
-          <td class="px-6 py-4 font-mono text-slate-300">
+          <td class="px-6 py-4 font-mono text-[#5F7180]">
             <div>${c.email}</div>
             <div class="text-[11px] text-slate-500">${c.phone || 'No phone'}</div>
           </td>
-          <td class="px-6 py-4 text-slate-400 text-xs">
+          <td class="px-6 py-4 text-[#5F7180] text-xs">
             ${c.city || 'Dhaka'}, ${c.country || 'Bangladesh'}
           </td>
           <td class="px-6 py-4">
@@ -553,7 +553,7 @@
     if (srvList) {
       if (services.length === 0) {
         srvList.innerHTML = `
-          <div class="p-6 rounded-2xl bg-slate-950/60 border border-slate-800 text-center text-xs text-slate-400 space-y-2">
+          <div class="p-6 rounded-2xl bg-slate-50 border border-[#E3E9EF] text-center text-xs text-[#5F7180] space-y-2">
             <i class="fa-solid fa-shapes text-2xl text-slate-600 block mb-1"></i>
             <p>No services assigned to this client organization yet.</p>
             <button type="button" class="btn-open-assign-service-inline mt-2 px-3.5 py-1.5 rounded-xl bg-brand-whiz/15 text-brand-whiz hover:bg-brand-whiz/30 font-bold transition-all cursor-pointer">
@@ -566,14 +566,14 @@
         });
       } else {
         srvList.innerHTML = services.map(s => `
-          <div class="p-4 rounded-2xl bg-white border border-[#E4E9ED] flex items-center justify-between gap-4 shadow-xs">
+          <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] flex items-center justify-between gap-4 shadow-xs">
             <div class="flex items-center space-x-3 min-w-0">
               <div class="w-9 h-9 rounded-xl bg-brand-whiz/15 text-brand-whiz border border-brand-whiz/30 flex items-center justify-center font-bold text-xs shrink-0">
                 <i class="fa-solid fa-bolt"></i>
               </div>
               <div class="min-w-0">
-                <div class="text-xs font-bold text-white truncate">${s.service_name}</div>
-                <div class="text-[11px] text-slate-400 flex items-center gap-2">
+                <div class="text-xs font-bold text-[#172B36] truncate">${s.service_name}</div>
+                <div class="text-[11px] text-[#5F7180] flex items-center gap-2">
                   <span>${s.package_name || 'Standard Retainer'}</span>
                   <span>•</span>
                   <span>Started: ${s.start_date || 'N/A'}</span>
@@ -582,7 +582,7 @@
             </div>
             <div class="flex items-center space-x-3 shrink-0">
               <span class="text-xs font-mono font-bold text-brand-whiz">${formatCurrency(p.amount_cents || 0, p.currency || "USD")}((s.price_cents || 0) / 100).toFixed(0)}</span>
-              <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${s.status === 'active' ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/20' : 'bg-slate-900 text-slate-400 border border-slate-800'}">${s.status}</span>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${s.status === 'active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-50 text-slate-600 border border-slate-200'}">${s.status}</span>
               ${s.status === 'active' ? `
                 <button type="button" class="btn-cancel-client-service text-slate-500 hover:text-rose-400 p-1 cursor-pointer transition-colors" data-cs="${s.id}" title="Cancel Service">
                   <i class="fa-solid fa-ban text-xs"></i>
@@ -620,16 +620,16 @@
         prjList.innerHTML = projects.map(p => {
           const percent = p.progress_percent || 0;
           return `
-            <div class="p-4 rounded-2xl bg-white border border-[#E4E9ED] space-y-2.5 shadow-xs">
+            <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] space-y-2.5 shadow-xs">
               <div class="flex items-center justify-between">
                 <div>
-                  <h4 class="text-xs font-bold text-white">${p.name}</h4>
-                  <p class="text-[11px] text-slate-400 font-mono">${p.service_name || 'Standard Engagement'}</p>
+                  <h4 class="text-xs font-bold text-[#172B36]">${p.name}</h4>
+                  <p class="text-[11px] text-[#5F7180] font-mono">${p.service_name || 'Standard Engagement'}</p>
                 </div>
-                <span class="px-2.5 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-950 text-emerald-400 border border-emerald-500/20">${p.status}</span>
+                <span class="px-2.5 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">${p.status}</span>
               </div>
               <div class="flex items-center space-x-3">
-                <div class="flex-1 bg-slate-100 h-2 rounded-full overflow-hidden border border-[#E4E9ED]">
+                <div class="flex-1 bg-slate-100 h-2 rounded-full overflow-hidden border border-[#E3E9EF]">
                   <div class="bg-gradient-to-r from-brand-whiz to-emerald-400 h-full rounded-full transition-all duration-500" style="width: ${percent}%"></div>
                 </div>
                 <span class="text-xs font-mono font-bold text-brand-whiz">${percent}%</span>
@@ -648,13 +648,13 @@
         audList.innerHTML = '<p class="text-slate-500 italic text-xs">No audit logs for this client yet.</p>';
       } else {
         audList.innerHTML = auditLogs.map(a => `
-          <div class="flex items-center justify-between p-2 rounded-xl bg-slate-950/50 border border-slate-800/80 text-[11px]">
+          <div class="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-[11px]">
             <div class="flex items-center space-x-2">
               <span class="w-1.5 h-1.5 rounded-full bg-brand-whiz"></span>
-              <span class="font-bold text-white uppercase">${a.action}</span>
-              <span class="text-slate-400">${a.user_email || 'System'}</span>
+              <span class="font-bold text-[#172B36] uppercase">${a.action}</span>
+              <span class="text-[#5F7180]">${a.user_email || 'System'}</span>
             </div>
-            <span class="text-slate-500 font-mono">${new Date(a.created_at).toLocaleDateString()}</span>
+            <span class="text-[#5F7180] font-mono">${new Date(a.created_at).toLocaleDateString()}</span>
           </div>
         `).join('');
       }
@@ -672,26 +672,26 @@
     if (res.ok && res.data && res.data.data) {
       state.servicesCache = res.data.data;
       grid.innerHTML = state.servicesCache.map(s => `
-        <div class="p-5 rounded-3xl bg-white border border-[#E4E9ED] flex flex-col justify-between space-y-4 hover:border-brand-whiz/50 hover:shadow-md transition-all shadow-xs group">
+        <div class="p-5 rounded-3xl bg-white border border-[#E3E9EF] flex flex-col justify-between space-y-4 hover:border-brand-whiz/50 hover:shadow-md transition-all shadow-xs group">
           <div class="space-y-2.5">
             <div class="flex items-center justify-between">
               <div class="flex items-center space-x-2">
                 <span class="text-[10px] font-black uppercase tracking-wider text-brand-whiz bg-brand-whiz/10 px-2 py-0.5 rounded-md border border-brand-whiz/20">${s.code}</span>
                 <span class="text-[10px] font-mono text-slate-500">v${s.version || 1}</span>
               </div>
-              <span class="text-xs font-mono font-bold text-[#12212B]">$${((s.standard_price_cents || 100000) / 100).toFixed(0)}</span>
+              <span class="text-xs font-mono font-bold text-[#172B36]">$${((s.standard_price_cents || 100000) / 100).toFixed(0)}</span>
             </div>
-            <h3 class="text-base font-extrabold text-[#12212B] group-hover:text-brand-whiz transition-colors">${s.name}</h3>
+            <h3 class="text-base font-extrabold text-[#172B36] group-hover:text-brand-whiz transition-colors">${s.name}</h3>
             <p class="text-xs text-slate-400 line-clamp-2 leading-relaxed">${s.description || 'Comprehensive operational service package.'}</p>
           </div>
 
-          <div class="pt-3 border-t border-[#E4E9ED] flex items-center justify-between gap-2">
+          <div class="pt-3 border-t border-[#E3E9EF] flex items-center justify-between gap-2">
             <div class="text-[11px] text-slate-400 flex items-center gap-1.5 font-semibold">
               <i class="fa-solid fa-list-check text-brand-whiz text-xs"></i>
               <span>${s.blueprint_count || 20} SOP Tasks</span>
             </div>
             <div class="flex items-center gap-1.5">
-              <button type="button" class="btn-manage-service px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-50 hover:bg-[#EAF7F1] text-slate-700 hover:text-brand-whiz border border-[#E4E9ED] cursor-pointer transition-all" data-id="${s.id}">
+              <button type="button" class="btn-manage-service px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-50 hover:bg-[#EAF7F1] text-slate-700 hover:text-brand-whiz border border-[#E3E9EF] cursor-pointer transition-all" data-id="${s.id}">
                 Manage
               </button>
               <button type="button" class="btn-view-service-tasks px-3 py-1.5 rounded-xl text-xs font-bold btn-glass-primary shadow-xs cursor-pointer transition-all" data-id="${s.id}">
@@ -775,23 +775,23 @@
     container.innerHTML = list.map(bp => {
       const isDeactivated = bp.is_active === 0;
       const priorityColors = {
-        urgent: 'bg-rose-950 text-rose-400 border-rose-500/30',
-        high: 'bg-amber-950 text-amber-400 border-amber-500/30',
-        medium: 'bg-blue-950 text-blue-400 border-blue-500/30',
-        low: 'bg-slate-900 text-slate-400 border-slate-700'
+        urgent: 'bg-rose-50 text-rose-700 border-rose-200',
+        high: 'bg-amber-50 text-amber-700 border-amber-200',
+        medium: 'bg-blue-50 text-blue-700 border-blue-200',
+        low: 'bg-slate-50 text-slate-600 border-slate-200'
       };
 
       return `
-        <div class="p-4 rounded-2xl bg-slate-950/70 border ${isDeactivated ? 'border-rose-900/40 opacity-60' : 'border-slate-800'} space-y-3">
+        <div class="p-4 rounded-2xl bg-white border ${isDeactivated ? 'border-rose-200 opacity-60' : 'border-[#E3E9EF]'} space-y-3">
           <div class="flex items-center justify-between gap-3">
             <div class="flex items-center space-x-2.5 min-w-0">
               <span class="text-xs font-mono font-bold text-brand-whiz bg-brand-whiz/10 border border-brand-whiz/30 px-2 py-0.5 rounded shrink-0">${bp.task_code}</span>
-              <h4 class="text-xs font-bold text-white truncate ${isDeactivated ? 'line-through text-slate-500' : ''}">${bp.title}</h4>
+              <h4 class="text-xs font-bold text-[#172B36] truncate ${isDeactivated ? 'line-through text-slate-400' : ''}">${bp.title}</h4>
             </div>
             <div class="flex items-center space-x-2 shrink-0">
               <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded border ${priorityColors[bp.priority] || priorityColors.medium}">${bp.priority}</span>
               <span class="text-[11px] font-mono text-slate-400 hidden sm:inline-block">${bp.estimated_minutes || 60}m</span>
-              <button type="button" class="btn-edit-blueprint px-3 py-1 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 cursor-pointer transition-all" data-id="${bp.id}">
+              <button type="button" class="btn-edit-blueprint px-3 py-1 rounded-lg text-xs font-bold bg-slate-50 hover:bg-slate-100 text-[#172B36] border border-[#E3E9EF] cursor-pointer transition-all" data-id="${bp.id}">
                 <i class="fa-solid fa-pen-to-square text-[10px] mr-1"></i> Edit
               </button>
               <button type="button" class="btn-duplicate-blueprint p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer transition-all" data-id="${bp.id}" title="Duplicate Blueprint">
@@ -806,17 +806,17 @@
           <!-- Structured Operational Details (Phase 8) -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px] pt-1 border-t border-slate-900">
             <div>
-              <span class="text-slate-500 font-semibold block">WHY (Strategic Objective):</span>
-              <p class="text-slate-300 leading-relaxed">${bp.why || bp.instructions || 'Standard operational activity.'}</p>
+              <span class="text-[#5F7180] font-semibold block">WHY (Strategic Objective):</span>
+              <p class="text-[#5F7180] leading-relaxed">${bp.why || bp.instructions || 'Standard operational activity.'}</p>
             </div>
             <div>
-              <span class="text-slate-500 font-semibold block">DONE WHEN (Measurable Standard):</span>
-              <p class="text-slate-300 leading-relaxed">${bp.done_when || 'Verified milestone output.'}</p>
+              <span class="text-[#5F7180] font-semibold block">DONE WHEN (Measurable Standard):</span>
+              <p class="text-[#5F7180] leading-relaxed">${bp.done_when || 'Verified milestone output.'}</p>
             </div>
           </div>
 
-          <div class="text-[11px] text-emerald-400/90 font-medium bg-emerald-950/20 p-2 rounded-xl border border-emerald-500/20">
-            <span class="font-bold uppercase text-[10px] tracking-wider text-emerald-400">QA Criteria:</span> ${bp.qa_criteria || 'Verified standard output.'}
+          <div class="text-[11px] text-emerald-700 font-medium bg-emerald-50 p-2 rounded-xl border border-emerald-200">
+            <span class="font-bold uppercase text-[10px] tracking-wider text-emerald-700">QA Criteria:</span> ${bp.qa_criteria || 'Verified standard output.'}
           </div>
         </div>
       `;
@@ -925,16 +925,16 @@
       tbody.innerHTML = projects.map(p => {
         const percent = p.progress_percent || 0;
         return `
-          <tr class="hover:bg-slate-50 transition-colors border-b border-[#E4E9ED]">
-            <td class="px-6 py-4 font-bold text-[#12212B]">${p.name}</td>
+          <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
+            <td class="px-6 py-4 font-bold text-[#172B36]">${p.name}</td>
             <td class="px-6 py-4 text-slate-400">${p.organization_name || 'Organization'}</td>
             <td class="px-6 py-4 font-mono text-xs text-brand-whiz">${p.service_name || 'Service'}</td>
             <td class="px-6 py-4">
               <div class="flex items-center space-x-2">
-                <div class="w-24 bg-slate-100 h-2 border border-[#E4E9ED] rounded-full overflow-hidden">
+                <div class="w-24 bg-slate-100 h-2 border border-[#E3E9EF] rounded-full overflow-hidden">
                   <div class="bg-brand-whiz h-full rounded-full transition-all duration-500" style="width: ${percent}%"></div>
                 </div>
-                <span class="text-xs font-mono font-bold text-[#12212B]">${percent}%</span>
+                <span class="text-xs font-mono font-bold text-[#172B36]">${percent}%</span>
               </div>
             </td>
             <td class="px-6 py-4">
@@ -1062,10 +1062,10 @@
       }
 
       tbody.innerHTML = payments.map(p => `
-        <tr class="hover:bg-slate-50 transition-colors border-b border-[#E4E9ED]">
+        <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
           <td class="px-6 py-4 font-mono font-bold text-brand-whiz">${p.receipt_number}</td>
           <td class="px-6 py-4">
-            <div class="font-bold text-[#12212B]">${p.organization_name || 'Client'}</div>
+            <div class="font-bold text-[#172B36]">${p.organization_name || 'Client'}</div>
             <div class="text-[11px] text-slate-500 font-mono">${p.invoice_number || 'INV-DIRECT'}</div>
           </td>
           <td class="px-6 py-4 font-mono font-bold text-brand-whiz">${formatCurrency(p.amount_cents || 0, p.currency || "USD")}((p.amount_cents || 0) / 100).toFixed(2)}</td>
@@ -1181,7 +1181,7 @@
       }
 
       return `
-        <tr class="hover:bg-slate-50 transition-colors border-b border-[#E4E9ED]">
+        <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
           <td class="px-6 py-4">
             <div class="flex items-center space-x-3">
               <div class="w-8 h-8 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-xs text-white uppercase shrink-0">
@@ -1227,7 +1227,7 @@
         : '<span class="px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-slate-900 text-slate-300 border border-slate-700">client</span>';
 
       return `
-        <tr class="hover:bg-slate-50 transition-colors border-b border-[#E4E9ED]">
+        <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
           <td class="px-6 py-3.5 text-xs text-slate-400 font-mono">${h.action_timestamp || 'N/A'}</td>
           <td class="px-6 py-3.5">
             <div class="font-bold text-white text-xs">${h.target_name || 'User'}</div>
@@ -1286,7 +1286,7 @@
         return;
       }
       tbody.innerHTML = tickets.map(t => `
-        <tr class="hover:bg-slate-50 transition-colors border-b border-[#E4E9ED]">
+        <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
           <td class="px-6 py-4">
             <div class="font-bold text-white">${t.full_name || 'Client'}</div>
             <div class="text-xs text-slate-400">${t.email}</div>
