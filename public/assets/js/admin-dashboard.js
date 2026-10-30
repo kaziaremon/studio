@@ -11,6 +11,40 @@
   const API_BASE = 'https://whiz-api.kaziaremon.workers.dev/api/v1';
 
   // Global State
+  
+  const CURRENCY_CONFIG = {
+    BDT: { symbol: '৳', name: 'Bangladeshi Taka', locale: 'bn-BD', decimals: 2 },
+    USD: { symbol: '$', name: 'US Dollar', locale: 'en-US', decimals: 2 },
+    GBP: { symbol: '£', name: 'British Pound', locale: 'en-GB', decimals: 2 },
+    EUR: { symbol: '€', name: 'Euro', locale: 'de-DE', decimals: 2 },
+    AED: { symbol: 'AED', name: 'UAE Dirham', locale: 'ar-AE', decimals: 2 },
+    SAR: { symbol: 'SAR', name: 'Saudi Riyal', locale: 'ar-SA', decimals: 2 },
+    CAD: { symbol: 'CA$', name: 'Canadian Dollar', locale: 'en-CA', decimals: 2 },
+    AUD: { symbol: 'A$', name: 'Australian Dollar', locale: 'en-AU', decimals: 2 },
+    SGD: { symbol: 'S$', name: 'Singapore Dollar', locale: 'en-SG', decimals: 2 },
+    INR: { symbol: '₹', name: 'Indian Rupee', locale: 'en-IN', decimals: 2 },
+    JPY: { symbol: '¥', name: 'Japanese Yen', locale: 'ja-JP', decimals: 0 },
+    MYR: { symbol: 'RM', name: 'Malaysian Ringgit', locale: 'ms-MY', decimals: 2 }
+  };
+
+  function formatCurrency(amountCents, currencyCode = 'USD') {
+    const code = (currencyCode || 'USD').toUpperCase();
+    const conf = CURRENCY_CONFIG[code] || { symbol: code, locale: 'en-US', decimals: 2 };
+    const divisor = conf.decimals === 0 ? 1 : 100;
+    const value = (Number(amountCents) || 0) / divisor;
+
+    try {
+      return new Intl.NumberFormat(conf.locale, {
+        style: 'currency',
+        currency: code,
+        minimumFractionDigits: conf.decimals,
+        maximumFractionDigits: conf.decimals
+      }).format(value);
+    } catch (e) {
+      return conf.symbol + value.toFixed(conf.decimals);
+    }
+  }
+
   const state = {
     currentUser: null,
     adminProfile: null,
@@ -345,7 +379,16 @@
       if (pendTasks) pendTasks.textContent = d.pendingTasks || 0;
 
       const revEl = document.getElementById('statConfirmedRevenue');
-      if (revEl) revEl.textContent = '$' + ((d.confirmedRevenueCents || 0) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      if (revEl) {
+        const revByCurr = d.confirmedRevenueByCurrency || d.revenueByCurrency || [];
+        if (revByCurr.length === 0) {
+          revEl.textContent = '$0.00';
+        } else if (revByCurr.length === 1) {
+          revEl.textContent = formatCurrency(revByCurr[0].total, revByCurr[0].currency);
+        } else {
+          revEl.innerHTML = revByCurr.map(c => `<span class="inline-block mr-2">${formatCurrency(c.total, c.currency)}</span>`).join(' • ');
+        }
+      }
 
       renderCharts(d);
 
@@ -410,7 +453,7 @@
       }
 
       return `
-        <tr class="hover:bg-slate-800/40 transition-colors">
+        <tr class="hover:bg-slate-50 transition-colors border-b border-[#E4E9ED]">
           <td class="px-6 py-4">
             <div class="font-bold text-white text-sm">${c.full_name || 'Client'}</div>
             <div class="text-xs text-brand-whiz font-medium">${c.company_name || 'Independent Business'}</div>
@@ -523,7 +566,7 @@
         });
       } else {
         srvList.innerHTML = services.map(s => `
-          <div class="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 flex items-center justify-between gap-4">
+          <div class="p-4 rounded-2xl bg-white border border-[#E4E9ED] flex items-center justify-between gap-4 shadow-xs">
             <div class="flex items-center space-x-3 min-w-0">
               <div class="w-9 h-9 rounded-xl bg-brand-whiz/15 text-brand-whiz border border-brand-whiz/30 flex items-center justify-center font-bold text-xs shrink-0">
                 <i class="fa-solid fa-bolt"></i>
@@ -538,7 +581,7 @@
               </div>
             </div>
             <div class="flex items-center space-x-3 shrink-0">
-              <span class="text-xs font-mono font-bold text-emerald-400">$${((s.price_cents || 0) / 100).toFixed(0)}</span>
+              <span class="text-xs font-mono font-bold text-brand-whiz">${formatCurrency(p.amount_cents || 0, p.currency || "USD")}((s.price_cents || 0) / 100).toFixed(0)}</span>
               <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${s.status === 'active' ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/20' : 'bg-slate-900 text-slate-400 border border-slate-800'}">${s.status}</span>
               ${s.status === 'active' ? `
                 <button type="button" class="btn-cancel-client-service text-slate-500 hover:text-rose-400 p-1 cursor-pointer transition-colors" data-cs="${s.id}" title="Cancel Service">
@@ -577,7 +620,7 @@
         prjList.innerHTML = projects.map(p => {
           const percent = p.progress_percent || 0;
           return `
-            <div class="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-2.5">
+            <div class="p-4 rounded-2xl bg-white border border-[#E4E9ED] space-y-2.5 shadow-xs">
               <div class="flex items-center justify-between">
                 <div>
                   <h4 class="text-xs font-bold text-white">${p.name}</h4>
@@ -586,7 +629,7 @@
                 <span class="px-2.5 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-950 text-emerald-400 border border-emerald-500/20">${p.status}</span>
               </div>
               <div class="flex items-center space-x-3">
-                <div class="flex-1 bg-slate-900 h-2 rounded-full overflow-hidden border border-slate-800">
+                <div class="flex-1 bg-slate-100 h-2 rounded-full overflow-hidden border border-[#E4E9ED]">
                   <div class="bg-gradient-to-r from-brand-whiz to-emerald-400 h-full rounded-full transition-all duration-500" style="width: ${percent}%"></div>
                 </div>
                 <span class="text-xs font-mono font-bold text-brand-whiz">${percent}%</span>
@@ -629,26 +672,26 @@
     if (res.ok && res.data && res.data.data) {
       state.servicesCache = res.data.data;
       grid.innerHTML = state.servicesCache.map(s => `
-        <div class="p-5 rounded-3xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-xl flex flex-col justify-between space-y-4 hover:border-brand-whiz/50 transition-all shadow-lg group">
+        <div class="p-5 rounded-3xl bg-white border border-[#E4E9ED] flex flex-col justify-between space-y-4 hover:border-brand-whiz/50 hover:shadow-md transition-all shadow-xs group">
           <div class="space-y-2.5">
             <div class="flex items-center justify-between">
               <div class="flex items-center space-x-2">
                 <span class="text-[10px] font-black uppercase tracking-wider text-brand-whiz bg-brand-whiz/10 px-2 py-0.5 rounded-md border border-brand-whiz/20">${s.code}</span>
                 <span class="text-[10px] font-mono text-slate-500">v${s.version || 1}</span>
               </div>
-              <span class="text-xs font-mono font-bold text-white">$${((s.standard_price_cents || 100000) / 100).toFixed(0)}</span>
+              <span class="text-xs font-mono font-bold text-[#12212B]">$${((s.standard_price_cents || 100000) / 100).toFixed(0)}</span>
             </div>
-            <h3 class="text-base font-extrabold text-white group-hover:text-brand-whiz transition-colors">${s.name}</h3>
+            <h3 class="text-base font-extrabold text-[#12212B] group-hover:text-brand-whiz transition-colors">${s.name}</h3>
             <p class="text-xs text-slate-400 line-clamp-2 leading-relaxed">${s.description || 'Comprehensive operational service package.'}</p>
           </div>
 
-          <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
+          <div class="pt-3 border-t border-[#E4E9ED] flex items-center justify-between gap-2">
             <div class="text-[11px] text-slate-400 flex items-center gap-1.5 font-semibold">
               <i class="fa-solid fa-list-check text-brand-whiz text-xs"></i>
               <span>${s.blueprint_count || 20} SOP Tasks</span>
             </div>
             <div class="flex items-center gap-1.5">
-              <button type="button" class="btn-manage-service px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 cursor-pointer transition-all" data-id="${s.id}">
+              <button type="button" class="btn-manage-service px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-50 hover:bg-[#EAF7F1] text-slate-700 hover:text-brand-whiz border border-[#E4E9ED] cursor-pointer transition-all" data-id="${s.id}">
                 Manage
               </button>
               <button type="button" class="btn-view-service-tasks px-3 py-1.5 rounded-xl text-xs font-bold btn-glass-primary shadow-xs cursor-pointer transition-all" data-id="${s.id}">
@@ -882,16 +925,16 @@
       tbody.innerHTML = projects.map(p => {
         const percent = p.progress_percent || 0;
         return `
-          <tr class="hover:bg-slate-800/40 transition-colors">
-            <td class="px-6 py-4 font-bold text-white">${p.name}</td>
+          <tr class="hover:bg-slate-50 transition-colors border-b border-[#E4E9ED]">
+            <td class="px-6 py-4 font-bold text-[#12212B]">${p.name}</td>
             <td class="px-6 py-4 text-slate-400">${p.organization_name || 'Organization'}</td>
             <td class="px-6 py-4 font-mono text-xs text-brand-whiz">${p.service_name || 'Service'}</td>
             <td class="px-6 py-4">
               <div class="flex items-center space-x-2">
-                <div class="w-24 bg-slate-800 h-2 rounded-full overflow-hidden">
+                <div class="w-24 bg-slate-100 h-2 border border-[#E4E9ED] rounded-full overflow-hidden">
                   <div class="bg-brand-whiz h-full rounded-full transition-all duration-500" style="width: ${percent}%"></div>
                 </div>
-                <span class="text-xs font-mono font-bold text-white">${percent}%</span>
+                <span class="text-xs font-mono font-bold text-[#12212B]">${percent}%</span>
               </div>
             </td>
             <td class="px-6 py-4">
@@ -947,6 +990,19 @@
           </div>
         `;
       }).join('');
+
+      
+      // Wire task search and priority filters
+      const taskSearch = document.getElementById('taskSearchInput');
+      if (taskSearch && !taskSearch.dataset.bound) {
+        taskSearch.dataset.bound = 'true';
+        taskSearch.addEventListener('input', () => loadTasksData(state.currentTaskFilter || 'all'));
+      }
+      const taskPriority = document.getElementById('taskPriorityFilter');
+      if (taskPriority && !taskPriority.dataset.bound) {
+        taskPriority.dataset.bound = 'true';
+        taskPriority.addEventListener('change', () => loadTasksData(state.currentTaskFilter || 'all'));
+      }
 
       // Wire task checkbox completion
       list.querySelectorAll('.task-checkbox').forEach(cb => {
@@ -1006,13 +1062,13 @@
       }
 
       tbody.innerHTML = payments.map(p => `
-        <tr class="hover:bg-slate-800/40 transition-colors">
+        <tr class="hover:bg-slate-50 transition-colors border-b border-[#E4E9ED]">
           <td class="px-6 py-4 font-mono font-bold text-brand-whiz">${p.receipt_number}</td>
           <td class="px-6 py-4">
-            <div class="font-bold text-white">${p.organization_name || 'Client'}</div>
+            <div class="font-bold text-[#12212B]">${p.organization_name || 'Client'}</div>
             <div class="text-[11px] text-slate-500 font-mono">${p.invoice_number || 'INV-DIRECT'}</div>
           </td>
-          <td class="px-6 py-4 font-mono font-bold text-emerald-400">$${((p.amount_cents || 0) / 100).toFixed(2)}</td>
+          <td class="px-6 py-4 font-mono font-bold text-brand-whiz">${formatCurrency(p.amount_cents || 0, p.currency || "USD")}((p.amount_cents || 0) / 100).toFixed(2)}</td>
           <td class="px-6 py-4 uppercase text-slate-400 text-xs">${p.payment_method || 'CARD'}</td>
           <td class="px-6 py-4 text-slate-400 text-xs">${p.payment_date || 'N/A'}</td>
           <td class="px-6 py-4 text-right">
@@ -1125,7 +1181,7 @@
       }
 
       return `
-        <tr class="hover:bg-slate-800/40 transition-colors">
+        <tr class="hover:bg-slate-50 transition-colors border-b border-[#E4E9ED]">
           <td class="px-6 py-4">
             <div class="flex items-center space-x-3">
               <div class="w-8 h-8 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-xs text-white uppercase shrink-0">
@@ -1171,7 +1227,7 @@
         : '<span class="px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-slate-900 text-slate-300 border border-slate-700">client</span>';
 
       return `
-        <tr class="hover:bg-slate-800/40 transition-colors">
+        <tr class="hover:bg-slate-50 transition-colors border-b border-[#E4E9ED]">
           <td class="px-6 py-3.5 text-xs text-slate-400 font-mono">${h.action_timestamp || 'N/A'}</td>
           <td class="px-6 py-3.5">
             <div class="font-bold text-white text-xs">${h.target_name || 'User'}</div>
@@ -1230,7 +1286,7 @@
         return;
       }
       tbody.innerHTML = tickets.map(t => `
-        <tr class="hover:bg-slate-800/40 transition-colors">
+        <tr class="hover:bg-slate-50 transition-colors border-b border-[#E4E9ED]">
           <td class="px-6 py-4">
             <div class="font-bold text-white">${t.full_name || 'Client'}</div>
             <div class="text-xs text-slate-400">${t.email}</div>

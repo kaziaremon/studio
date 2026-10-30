@@ -813,10 +813,23 @@
                 <h2 class="text-2xl font-black text-[#12212B] tracking-tight">Live Tasks & SOP Execution</h2>
                 <p class="text-xs text-slate-500">Complete tasks to automatically advance project progress in real time.</p>
               </div>
-              <div class="flex items-center gap-2">
-                <button type="button" class="task-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-[#12212B] cursor-pointer" data-filter="all">All</button>
-                <button type="button" class="task-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:text-[#12212B] cursor-pointer" data-filter="todo">Pending</button>
-                <button type="button" class="task-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:text-[#12212B] cursor-pointer" data-filter="completed">Completed</button>
+              <div class="flex flex-wrap items-center gap-2.5">
+                <div class="relative">
+                  <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                  <input type="text" id="taskSearchInput" placeholder="Search tasks by title, project, client..." class="pl-8 pr-3 py-1.5 rounded-xl bg-white border border-[#E4E9ED] text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-brand-whiz transition-all w-full sm:w-60">
+                </div>
+                <select id="taskPriorityFilter" class="px-3 py-1.5 rounded-xl bg-white border border-[#E4E9ED] text-xs text-slate-700 focus:outline-none focus:border-brand-whiz">
+                  <option value="all">All Priorities</option>
+                  <option value="urgent">Urgent</option>
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                </select>
+                <div class="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 border border-[#E4E9ED]">
+                  <button type="button" class="task-filter-btn px-3 py-1 rounded-lg text-xs font-bold bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 cursor-pointer transition-all" data-filter="all">All</button>
+                  <button type="button" class="task-filter-btn px-3 py-1 rounded-lg text-xs font-medium text-slate-600 hover:text-brand-whiz cursor-pointer transition-all" data-filter="todo">Pending</button>
+                  <button type="button" class="task-filter-btn px-3 py-1 rounded-lg text-xs font-medium text-slate-600 hover:text-brand-whiz cursor-pointer transition-all" data-filter="completed">Completed</button>
+                </div>
               </div>
             </div>
 
@@ -1225,14 +1238,31 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">City</label>
-            <input type="text" name="city" placeholder="Dhaka" value="Dhaka" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
+            <input type="text" name="city" id="addClientCity" placeholder="Dhaka" value="Dhaka" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Country</label>
-            <input type="text" name="country" placeholder="Bangladesh" value="Bangladesh" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
+            <input type="text" name="country" id="addClientCountry" placeholder="Bangladesh" value="Bangladesh" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Billing Currency *</label>
+            <select name="currency" id="addClientCurrency" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B] focus:border-brand-whiz">
+              <option value="BDT" selected>BDT — ৳ (Bangladeshi Taka)</option>
+              <option value="USD">USD — $ (US Dollar)</option>
+              <option value="GBP">GBP — £ (British Pound)</option>
+              <option value="EUR">EUR — € (Euro)</option>
+              <option value="AED">AED — د.إ (UAE Dirham)</option>
+              <option value="SAR">SAR — ر.س (Saudi Riyal)</option>
+              <option value="CAD">CAD — CA$ (Canadian Dollar)</option>
+              <option value="AUD">AUD — A$ (Australian Dollar)</option>
+              <option value="SGD">SGD — S$ (Singapore Dollar)</option>
+              <option value="INR">INR — ₹ (Indian Rupee)</option>
+              <option value="JPY">JPY — ¥ (Japanese Yen)</option>
+              <option value="MYR">MYR — RM (Malaysian Ringgit)</option>
+            </select>
           </div>
         </div>
 
@@ -1359,14 +1389,31 @@
           </select>
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Package Name</label>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Package Tier</label>
             <input type="text" name="packageName" value="Standard Retainer" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B]">
           </div>
           <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Contract Amount ($ USD) *</label>
-            <input type="number" step="1" name="priceDollars" id="assignServicePrice" value="1000" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B] font-mono">
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Price *</label>
+            <input type="number" step="0.01" name="priceDollars" id="assignServicePrice" value="1000" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B] font-mono">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Currency *</label>
+            <select name="currency" id="assignServiceCurrency" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B] focus:border-brand-whiz">
+              <option value="BDT">BDT — ৳</option>
+              <option value="USD" selected>USD — $</option>
+              <option value="GBP">GBP — £</option>
+              <option value="EUR">EUR — €</option>
+              <option value="AED">AED — د.إ</option>
+              <option value="SAR">SAR — ر.س</option>
+              <option value="CAD">CAD — CA$</option>
+              <option value="AUD">AUD — A$</option>
+              <option value="SGD">SGD — S$</option>
+              <option value="INR">INR — ₹</option>
+              <option value="JPY">JPY — ¥</option>
+              <option value="MYR">MYR — RM</option>
+            </select>
           </div>
         </div>
 
@@ -1427,7 +1474,7 @@
 
       <div class="pt-3 border-t border-[#E4E9ED] flex items-center justify-end space-x-3">
         <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 cursor-pointer" data-modal="modalDeleteClient">Cancel</button>
-        <button type="button" id="btnConfirmDeleteClient" class="px-5 py-2.5 rounded-xl text-xs font-bold text-[#12212B] bg-rose-600 hover:bg-rose-700 shadow-sm flex items-center gap-1.5 cursor-pointer transition-all">
+        <button type="button" id="btnConfirmDeleteClient" class="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 shadow-sm flex items-center gap-1.5 cursor-pointer transition-all">
           <i class="fa-solid fa-trash-can text-xs"></i>
           <span>Permanently Delete Client</span>
         </button>
@@ -1859,13 +1906,32 @@
           </select>
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Amount ($ USD) *</label>
-            <input type="number" step="0.01" name="amount" required placeholder="1000.00" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B] font-mono">
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Amount *</label>
+            <input type="number" step="0.01" name="amount" id="paymentAmountInput" required placeholder="1000.00" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B] font-mono">
           </div>
           <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Payment Method</label>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Currency *</label>
+            <select name="currency" id="paymentCurrencySelect" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E4E9ED] text-xs text-[#12212B] focus:border-brand-whiz">
+              <option value="BDT">BDT — ৳ (Bangladeshi Taka)</option>
+              <option value="USD" selected>USD — $ (US Dollar)</option>
+              <option value="GBP">GBP — £ (British Pound)</option>
+              <option value="EUR">EUR — € (Euro)</option>
+              <option value="AED">AED — د.إ (UAE Dirham)</option>
+              <option value="SAR">SAR — ر.س (Saudi Riyal)</option>
+              <option value="CAD">CAD — CA$ (Canadian Dollar)</option>
+              <option value="AUD">AUD — A$ (Australian Dollar)</option>
+              <option value="SGD">SGD — S$ (Singapore Dollar)</option>
+              <option value="INR">INR — ₹ (Indian Rupee)</option>
+              <option value="JPY">JPY — ¥ (Japanese Yen)</option>
+              <option value="MYR">MYR — RM (Malaysian Ringgit)</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Payment Method (5 Canonical Methods Only)</label>
             <select name="paymentMethod" required class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-300 text-xs text-slate-900 focus:ring-2 focus:ring-[#147D64]/20 focus:border-[#147D64]">
               <option value="bank_transfer">Bank Transfer / Wire Transfer</option>
               <option value="card">Credit / Debit Card</option>

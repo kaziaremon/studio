@@ -48,6 +48,9 @@
     }
   </script>
 
+  <!-- Chart.js 4.4.1 for Live Workspace Visualizations -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
   <!-- pdf-lib Browser-side Vector PDF Generation (100% Free, Zero Server Storage) -->
   <script src="https://unpkg.com/pdf-lib@1.17.9/dist/pdf-lib.min.js"></script>
 
@@ -92,39 +95,157 @@
           <div class="w-8 h-8 rounded-xl bg-brand-whiz/15 border border-brand-whiz/40 flex items-center justify-center text-brand-whiz">
             <i class="fa-solid fa-shapes text-sm"></i>
           </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
+              </div>
+            </div>
+          </div>
           <div>
             <span class="text-xs font-black tracking-tight text-[#12212B] block">WHIZ STUDIO</span>
             <span class="text-[9px] uppercase font-bold tracking-widest text-brand-whiz block">Client Portal</span>
           </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-        <button type="button" id="clientMobileCloseBtn" class="w-8 h-8 rounded-xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-center text-slate-500 hover:text-[#12212B] cursor-pointer" aria-label="Close navigation">
+        <button type="button" id="clientMobileCloseBtn" class="w-8 h-8 rounded-xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-center text-slate-500 hover:text-brand-whiz cursor-pointer" aria-label="Close navigation">
           <i class="fa-solid fa-xmark text-sm"></i>
         </button>
       </div>
 
       <!-- Drawer Nav Links -->
       <nav class="space-y-1.5">
-        <button type="button" data-client-tab="overview" class="w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl text-xs font-semibold transition-all border text-slate-500 border-transparent hover:text-[#12212B] hover:bg-slate-800/60 text-left">
+        <button type="button" data-client-tab="overview" class="w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl text-xs font-semibold transition-all border text-slate-500 border-transparent hover:text-brand-whiz hover:bg-[#EAF7F1] hover:text-brand-whiz text-left">
           <i class="fa-solid fa-chart-pie w-4 text-center"></i>
           <span>Workspace Overview</span>
         </button>
-        <button type="button" data-client-tab="services" class="w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl text-xs font-semibold transition-all border text-slate-500 border-transparent hover:text-[#12212B] hover:bg-slate-800/60 text-left">
+        <button type="button" data-client-tab="services" class="w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl text-xs font-semibold transition-all border text-slate-500 border-transparent hover:text-brand-whiz hover:bg-[#EAF7F1] hover:text-brand-whiz text-left">
           <i class="fa-solid fa-layer-group w-4 text-center"></i>
           <span>My Active Services</span>
         </button>
-        <button type="button" data-client-tab="tasks" class="w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl text-xs font-semibold transition-all border text-slate-500 border-transparent hover:text-[#12212B] hover:bg-slate-800/60 text-left">
+        <button type="button" data-client-tab="tasks" class="w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl text-xs font-semibold transition-all border text-slate-500 border-transparent hover:text-brand-whiz hover:bg-[#EAF7F1] hover:text-brand-whiz text-left">
           <i class="fa-solid fa-list-check w-4 text-center"></i>
           <span>Deliverables & Tasks</span>
         </button>
-        <button type="button" data-client-tab="finance" class="w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl text-xs font-semibold transition-all border text-slate-500 border-transparent hover:text-[#12212B] hover:bg-slate-800/60 text-left">
+        <button type="button" data-client-tab="finance" class="w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl text-xs font-semibold transition-all border text-slate-500 border-transparent hover:text-brand-whiz hover:bg-[#EAF7F1] hover:text-brand-whiz text-left">
           <i class="fa-solid fa-file-invoice-dollar w-4 text-center"></i>
           <span>Invoices & Receipts</span>
         </button>
-        <button type="button" data-client-tab="support" class="w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl text-xs font-semibold transition-all border text-slate-500 border-transparent hover:text-[#12212B] hover:bg-slate-800/60 text-left">
+        <button type="button" data-client-tab="support" class="w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl text-xs font-semibold transition-all border text-slate-500 border-transparent hover:text-brand-whiz hover:bg-[#EAF7F1] hover:text-brand-whiz text-left">
           <i class="fa-solid fa-headset w-4 text-center"></i>
           <span>Support & Requests</span>
         </button>
-        <button type="button" data-client-tab="settings" class="w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl text-xs font-semibold transition-all border text-slate-500 border-transparent hover:text-[#12212B] hover:bg-slate-800/60 text-left">
+        <button type="button" data-client-tab="settings" class="w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl text-xs font-semibold transition-all border text-slate-500 border-transparent hover:text-brand-whiz hover:bg-[#EAF7F1] hover:text-brand-whiz text-left">
           <i class="fa-solid fa-sliders w-4 text-center"></i>
           <span>Account Settings</span>
         </button>
@@ -146,9 +267,127 @@
           <div class="w-8 h-8 rounded-full bg-brand-whiz/20 border border-brand-whiz/30 flex items-center justify-center text-brand-whiz text-xs font-bold shrink-0 userAvatarText">
             CL
           </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
+              </div>
+            </div>
+          </div>
           <div class="min-w-0 flex-1">
             <span class="text-xs font-bold text-[#12212B] block truncate clientDisplayName">Client</span>
             <span class="text-[10px] text-slate-500 block truncate clientDisplayEmail">client@whizstudio.art</span>
+          </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
+              </div>
+            </div>
           </div>
         </div>
         <button type="button" class="btn-client-signout w-full py-2 rounded-xl text-center text-xs font-semibold text-rose-400 bg-rose-950/20 hover:bg-rose-950/40 border border-rose-500/20 transition-all flex items-center justify-center gap-1.5">
@@ -169,36 +408,154 @@
           <div class="w-9 h-9 rounded-xl bg-brand-whiz/15 border border-brand-whiz/40 flex items-center justify-center text-brand-whiz shadow-lg shadow-brand-whiz/10">
             <i class="fa-solid fa-shapes text-base"></i>
           </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
+              </div>
+            </div>
+          </div>
           <div>
             <span class="text-sm font-black tracking-tight text-[#12212B] block">WHIZ STUDIO</span>
             <span class="text-[10px] uppercase font-bold tracking-widest text-brand-whiz block -mt-0.5">Client Portal</span>
+          </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
+              </div>
+            </div>
           </div>
         </a>
       </div>
 
       <!-- Navigation Links -->
       <nav class="flex-1 p-4 space-y-1.5 overflow-y-auto">
-        <button type="button" data-client-tab="overview" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all border text-slate-500 border-transparent hover:text-[#12212B] hover:bg-slate-800/60">
+        <button type="button" data-client-tab="overview" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all border text-slate-500 border-transparent hover:text-brand-whiz hover:bg-[#EAF7F1] hover:text-brand-whiz">
           <i class="fa-solid fa-chart-pie w-4 text-center"></i>
           <span>Workspace Overview</span>
         </button>
-        <button type="button" data-client-tab="services" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all border text-slate-500 border-transparent hover:text-[#12212B] hover:bg-slate-800/60">
+        <button type="button" data-client-tab="services" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all border text-slate-500 border-transparent hover:text-brand-whiz hover:bg-[#EAF7F1] hover:text-brand-whiz">
           <i class="fa-solid fa-layer-group w-4 text-center"></i>
           <span>My Active Services</span>
         </button>
-        <button type="button" data-client-tab="tasks" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all border text-slate-500 border-transparent hover:text-[#12212B] hover:bg-slate-800/60">
+        <button type="button" data-client-tab="tasks" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all border text-slate-500 border-transparent hover:text-brand-whiz hover:bg-[#EAF7F1] hover:text-brand-whiz">
           <i class="fa-solid fa-list-check w-4 text-center"></i>
           <span>Deliverables & Tasks</span>
         </button>
-        <button type="button" data-client-tab="finance" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all border text-slate-500 border-transparent hover:text-[#12212B] hover:bg-slate-800/60">
+        <button type="button" data-client-tab="finance" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all border text-slate-500 border-transparent hover:text-brand-whiz hover:bg-[#EAF7F1] hover:text-brand-whiz">
           <i class="fa-solid fa-file-invoice-dollar w-4 text-center"></i>
           <span>Invoices & Receipts</span>
         </button>
-        <button type="button" data-client-tab="support" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all border text-slate-500 border-transparent hover:text-[#12212B] hover:bg-slate-800/60">
+        <button type="button" data-client-tab="support" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all border text-slate-500 border-transparent hover:text-brand-whiz hover:bg-[#EAF7F1] hover:text-brand-whiz">
           <i class="fa-solid fa-headset w-4 text-center"></i>
           <span>Support & Requests</span>
         </button>
-        <button type="button" data-client-tab="settings" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all border text-slate-500 border-transparent hover:text-[#12212B] hover:bg-slate-800/60">
+        <button type="button" data-client-tab="settings" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all border text-slate-500 border-transparent hover:text-brand-whiz hover:bg-[#EAF7F1] hover:text-brand-whiz">
           <i class="fa-solid fa-sliders w-4 text-center"></i>
           <span>Account Settings</span>
         </button>
@@ -219,9 +576,186 @@
             <div class="w-8 h-8 rounded-full bg-brand-whiz/20 border border-brand-whiz/30 flex items-center justify-center text-brand-whiz text-xs font-bold userAvatarText">
               CL
             </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
+              </div>
+            </div>
+          </div>
             <div class="min-w-0">
               <span class="text-xs font-bold text-[#12212B] block truncate clientDisplayName">Loading...</span>
               <span class="text-[10px] text-slate-500 block truncate clientDisplayEmail">loading...</span>
+            </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
+              </div>
+            </div>
+          </div>
+          </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
+              </div>
             </div>
           </div>
           <button type="button" class="btn-client-signout text-slate-500 hover:text-rose-400 transition-colors p-1" title="Sign Out">
@@ -242,7 +776,7 @@
             <i class="fa-solid fa-bars text-sm"></i>
           </button>
 
-          <a href="/" class="text-xs text-slate-500 hover:text-[#12212B] flex items-center gap-1.5 transition-colors">
+          <a href="/" class="text-xs text-slate-500 hover:text-brand-whiz flex items-center gap-1.5 transition-colors">
             <i class="fa-solid fa-arrow-left text-[10px]"></i>
             <span class="hidden sm:inline">Whiz Studio</span>
           </a>
@@ -270,9 +804,127 @@
               <h2 class="text-lg sm:text-xl font-black text-[#12212B]">Welcome, <span class="client-greeting-name text-brand-whiz">Client</span></h2>
               <p class="text-xs text-slate-500 mt-1 leading-relaxed">Track your subscribed marketing services, deliverable milestones, and payment receipts.</p>
             </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
+              </div>
+            </div>
+          </div>
             <a href="/#services" class="w-full sm:w-auto text-center px-4 py-2.5 rounded-xl text-xs font-bold bg-brand-whiz hover:bg-emerald-600 text-white transition-all shadow-md shrink-0">
               <i class="fa-solid fa-plus mr-1"></i> Explore Services
             </a>
+          </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
+              </div>
+            </div>
           </div>
 
           <!-- Quick Stats Cards (Responsive Grid) -->
@@ -282,15 +934,251 @@
               <div class="text-2xl font-black text-[#12212B]" id="statActiveServices">0</div>
               <p class="text-[11px] text-slate-500">Live agency contracts</p>
             </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
+              </div>
+            </div>
+          </div>
             <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E4E9ED] space-y-1.5">
               <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Tasks Completed</span>
               <div class="text-2xl font-black text-brand-whiz" id="statCompletedTasks">0</div>
               <p class="text-[11px] text-slate-500">Delivered milestone checkpoints</p>
             </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
+              </div>
+            </div>
+          </div>
             <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E4E9ED] space-y-1.5">
               <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Invoices & Receipts</span>
               <div class="text-2xl font-black text-[#12212B]" id="statInvoicesCount">0</div>
               <p class="text-[11px] text-slate-500">Verified payment records</p>
+            </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
+              </div>
+            </div>
+          </div>
+          </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
+              </div>
             </div>
           </div>
 
@@ -304,10 +1192,246 @@
                 View All <i class="fa-solid fa-arrow-right text-[10px] ml-0.5"></i>
               </button>
             </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
+              </div>
+            </div>
+          </div>
             <div id="overviewServicesList" class="space-y-3">
               <div class="p-6 rounded-2xl bg-slate-50 border border-[#E4E9ED] text-center text-xs text-slate-500">
                 <i class="fa-solid fa-circle-notch fa-spin text-brand-whiz text-base mb-2"></i>
                 <p>Loading your client services...</p>
+              </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
+              </div>
+            </div>
+          </div>
+            </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
+              </div>
+            </div>
+          </div>
+          </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
               </div>
             </div>
           </div>
@@ -319,10 +1443,187 @@
             <h3 class="text-sm sm:text-base font-bold text-[#12212B]">Your Service Portfolio</h3>
             <span class="text-xs text-slate-500" id="servicesPortfolioCount">0 Active</span>
           </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
+              </div>
+            </div>
+          </div>
           <div id="servicesFullList" class="space-y-3">
             <div class="p-8 rounded-2xl bg-white border border-[#E4E9ED] text-center text-xs text-slate-500">
               <i class="fa-solid fa-circle-notch fa-spin text-brand-whiz text-lg mb-2"></i>
               <p>Loading subscribed services...</p>
+            </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
+              </div>
+            </div>
+          </div>
+          </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -333,10 +1634,187 @@
             <h3 class="text-sm sm:text-base font-bold text-[#12212B]">Deliverables & Progress Checkpoints</h3>
             <span class="text-xs text-slate-500" id="tasksDeliverablesCount">0 Projects</span>
           </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
+              </div>
+            </div>
+          </div>
           <div id="tasksFullList" class="space-y-4">
             <div class="p-8 rounded-2xl bg-white border border-[#E4E9ED] text-center text-xs text-slate-500">
               <i class="fa-solid fa-circle-notch fa-spin text-brand-whiz text-lg mb-2"></i>
               <p>Loading campaign progress...</p>
+            </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
+              </div>
+            </div>
+          </div>
+          </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -347,10 +1825,187 @@
             <h3 class="text-sm sm:text-base font-bold text-[#12212B]">Invoices & Payment Receipts</h3>
             <span class="text-xs text-slate-500" id="financeReceiptsCount">0 Records</span>
           </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
+              </div>
+            </div>
+          </div>
           <div id="financeFullList" class="space-y-3">
             <div class="p-8 rounded-2xl bg-white border border-[#E4E9ED] text-center text-xs text-slate-500">
               <i class="fa-solid fa-circle-notch fa-spin text-brand-whiz text-lg mb-2"></i>
               <p>Loading financial records...</p>
+            </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
+              </div>
+            </div>
+          </div>
+          </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -365,9 +2020,245 @@
                 <span class="text-slate-500 block text-[10px] uppercase font-bold">Email Support</span>
                 <a href="mailto:support@whizstudio.art" class="text-[#12212B] font-semibold block text-sm hover:text-brand-whiz transition-colors">support@whizstudio.art</a>
               </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
+              </div>
+            </div>
+          </div>
               <div class="p-4 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
                 <span class="text-slate-500 block text-[10px] uppercase font-bold">Official Hotline</span>
                 <a href="tel:+8801815127022" class="text-[#12212B] font-semibold block text-sm hover:text-brand-whiz transition-colors">+8801815127022</a>
+              </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
+              </div>
+            </div>
+          </div>
+            </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
+              </div>
+            </div>
+          </div>
+          </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
               </div>
             </div>
           </div>
@@ -382,17 +2273,371 @@
                 <span class="text-slate-500 block text-[10px] uppercase font-bold">Full Name</span>
                 <span class="text-[#12212B] font-semibold block mt-1 client-greeting-name">-</span>
               </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
+              </div>
+            </div>
+          </div>
               <div class="p-3.5 rounded-xl bg-slate-50 border border-[#E4E9ED]">
                 <span class="text-slate-500 block text-[10px] uppercase font-bold">Primary Email</span>
                 <span class="text-[#12212B] font-semibold block mt-1 truncate" id="settingsEmail">-</span>
               </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
+              </div>
+            </div>
+          </div>
               <div class="p-3.5 rounded-xl bg-slate-50 border border-[#E4E9ED]">
                 <span class="text-slate-500 block text-[10px] uppercase font-bold">Clerk Identity Identifier</span>
                 <span class="text-slate-600 font-mono text-[11px] block mt-1 truncate select-all" id="settingsClerkId">-</span>
               </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
+              </div>
+            </div>
+          </div>
               <div class="p-3.5 rounded-xl bg-slate-50 border border-[#E4E9ED]">
                 <span class="text-slate-500 block text-[10px] uppercase font-bold">Platform Authorization Tier</span>
                 <span class="text-emerald-400 font-bold block mt-1 uppercase" id="settingsRole">Client</span>
+              </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
+              </div>
+            </div>
+          </div>
+            </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
+              </div>
+            </div>
+          </div>
+          </div>
+
+          <!-- Visualizations: Progress Donut & Financial Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left: Campaign Deliverables Completion Donut -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-whiz"></i> Overall Campaign Completion
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Aggregate milestone deliverables progress</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-brand-whiz" id="clientOverallProgressBadge">0%</span>
+              </div>
+              <div class="relative h-52 flex items-center justify-center">
+                <canvas id="chartClientCompletion"></canvas>
+                <div id="chartClientEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <i class="fa-solid fa-shapes text-3xl text-slate-400 mb-2"></i>
+                  <p class="text-xs text-slate-500">No active campaign services assigned yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Payment & Balance Summary -->
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#E4E9ED]">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#12212B] flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-brand-whiz"></i> Payment & Balance Status
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Audited financial records & receipts</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">D1 Confirmed</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Total</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryTotalBilled">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-800 block">Confirmed Paid</span>
+                  <div class="text-base sm:text-lg font-black text-brand-whiz" id="clientSummaryTotalPaid">$0.00</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E4E9ED] space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-500 block">Remaining Due</span>
+                  <div class="text-base sm:text-lg font-black text-[#12212B]" id="clientSummaryBalance">$0.00</div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-slate-50 border border-[#E4E9ED] flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i class="fa-solid fa-file-pdf text-brand-whiz"></i>
+                  <span>Need official proof of payment?</span>
+                </div>
+                <button type="button" data-client-tab="finance" class="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF7F1] text-brand-whiz border border-brand-whiz/30 font-bold transition-all text-xs cursor-pointer">
+                  Download Receipts
+                </button>
               </div>
             </div>
           </div>
@@ -402,23 +2647,23 @@
 
       <!-- Mobile Bottom Navigation Bar (Fast 1-Thumb Access) -->
       <nav class="lg:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-xl border-t border-[#E4E9ED] shadow-lg flex items-center justify-around py-2 px-1 z-30 pb-safe">
-        <button type="button" data-client-tab="overview" class="flex flex-col items-center gap-1 py-1 px-3 text-[10px] font-semibold text-slate-500 hover:text-[#12212B] transition-colors" aria-label="Overview">
+        <button type="button" data-client-tab="overview" class="flex flex-col items-center gap-1 py-1 px-3 text-[10px] font-semibold text-slate-500 hover:text-brand-whiz transition-colors" aria-label="Overview">
           <i class="fa-solid fa-chart-pie text-sm"></i>
           <span>Overview</span>
         </button>
-        <button type="button" data-client-tab="services" class="flex flex-col items-center gap-1 py-1 px-3 text-[10px] font-semibold text-slate-500 hover:text-[#12212B] transition-colors" aria-label="Services">
+        <button type="button" data-client-tab="services" class="flex flex-col items-center gap-1 py-1 px-3 text-[10px] font-semibold text-slate-500 hover:text-brand-whiz transition-colors" aria-label="Services">
           <i class="fa-solid fa-layer-group text-sm"></i>
           <span>Services</span>
         </button>
-        <button type="button" data-client-tab="tasks" class="flex flex-col items-center gap-1 py-1 px-3 text-[10px] font-semibold text-slate-500 hover:text-[#12212B] transition-colors" aria-label="Tasks">
+        <button type="button" data-client-tab="tasks" class="flex flex-col items-center gap-1 py-1 px-3 text-[10px] font-semibold text-slate-500 hover:text-brand-whiz transition-colors" aria-label="Tasks">
           <i class="fa-solid fa-list-check text-sm"></i>
           <span>Tasks</span>
         </button>
-        <button type="button" data-client-tab="finance" class="flex flex-col items-center gap-1 py-1 px-3 text-[10px] font-semibold text-slate-500 hover:text-[#12212B] transition-colors" aria-label="Receipts">
+        <button type="button" data-client-tab="finance" class="flex flex-col items-center gap-1 py-1 px-3 text-[10px] font-semibold text-slate-500 hover:text-brand-whiz transition-colors" aria-label="Receipts">
           <i class="fa-solid fa-file-invoice-dollar text-sm"></i>
           <span>Receipts</span>
         </button>
-        <button type="button" data-client-tab="settings" class="flex flex-col items-center gap-1 py-1 px-3 text-[10px] font-semibold text-slate-500 hover:text-[#12212B] transition-colors" aria-label="Settings">
+        <button type="button" data-client-tab="settings" class="flex flex-col items-center gap-1 py-1 px-3 text-[10px] font-semibold text-slate-500 hover:text-brand-whiz transition-colors" aria-label="Settings">
           <i class="fa-solid fa-sliders text-sm"></i>
           <span>Account</span>
         </button>

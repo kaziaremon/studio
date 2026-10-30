@@ -10,6 +10,42 @@
   const CLERK_PUBLISHABLE_KEY = window.__CLERK_PUBLISHABLE_KEY__ || 'pk_test_cG9ldGljLWxpZ2VyLTQzNTUuY2xlcmsuYWNjb3VudHMuZGV2JA';
   const API_BASE = 'https://whiz-api.kaziaremon.workers.dev/api/v1';
 
+  
+  const CURRENCY_CONFIG = {
+    BDT: { symbol: '৳', name: 'Bangladeshi Taka', locale: 'bn-BD', decimals: 2 },
+    USD: { symbol: '$', name: 'US Dollar', locale: 'en-US', decimals: 2 },
+    GBP: { symbol: '£', name: 'British Pound', locale: 'en-GB', decimals: 2 },
+    EUR: { symbol: '€', name: 'Euro', locale: 'de-DE', decimals: 2 },
+    AED: { symbol: 'AED', name: 'UAE Dirham', locale: 'ar-AE', decimals: 2 },
+    SAR: { symbol: 'SAR', name: 'Saudi Riyal', locale: 'ar-SA', decimals: 2 },
+    CAD: { symbol: 'CA$', name: 'Canadian Dollar', locale: 'en-CA', decimals: 2 },
+    AUD: { symbol: 'A$', name: 'Australian Dollar', locale: 'en-AU', decimals: 2 },
+    SGD: { symbol: 'S$', name: 'Singapore Dollar', locale: 'en-SG', decimals: 2 },
+    INR: { symbol: '₹', name: 'Indian Rupee', locale: 'en-IN', decimals: 2 },
+    JPY: { symbol: '¥', name: 'Japanese Yen', locale: 'ja-JP', decimals: 0 },
+    MYR: { symbol: 'RM', name: 'Malaysian Ringgit', locale: 'ms-MY', decimals: 2 }
+  };
+
+  function formatCurrency(amountCents, currencyCode = 'USD') {
+    const code = (currencyCode || 'USD').toUpperCase();
+    const conf = CURRENCY_CONFIG[code] || { symbol: code, locale: 'en-US', decimals: 2 };
+    const divisor = conf.decimals === 0 ? 1 : 100;
+    const value = (Number(amountCents) || 0) / divisor;
+
+    try {
+      return new Intl.NumberFormat(conf.locale, {
+        style: 'currency',
+        currency: code,
+        minimumFractionDigits: conf.decimals,
+        maximumFractionDigits: conf.decimals
+      }).format(value);
+    } catch (e) {
+      return conf.symbol + value.toFixed(conf.decimals);
+    }
+  }
+
+  let clientChart = null;
+
   const state = {
     currentUser: null,
     clientProfile: null,
@@ -261,10 +297,10 @@
               </div>
             </div>
             <div class="flex items-center gap-2.5">
-              <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-emerald-950 text-emerald-400 border border-emerald-500/30">
+              <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
                 ${s.status || 'Active'}
               </span>
-              <span class="text-sm font-mono font-black text-[#12212B]">$${price}</span>
+              <span class="text-sm font-mono font-black text-[#12212B]">${formatCurrency((s.price_cents || s.priceCents || 0), s.currency || "USD")}</span>
             </div>
           </div>
 
@@ -312,7 +348,7 @@
               </h4>
               <p class="text-xs text-slate-500 mt-0.5">Target Completion: <strong class="text-slate-600">${p.deadline || 'Scheduled'}</strong></p>
             </div>
-            <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-emerald-950 text-emerald-400 border border-emerald-500/30">
+            <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
               ${p.status || 'Active'}
             </span>
           </div>
@@ -323,7 +359,7 @@
               <span class="text-slate-500 font-medium">Deliverables Checkpoints</span>
               <span class="font-mono font-bold text-brand-whiz text-sm">${progress}%</span>
             </div>
-            <div class="w-full bg-slate-950 rounded-full h-2.5 overflow-hidden border border-[#E4E9ED]">
+            <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden border border-[#E4E9ED]">
               <div class="bg-gradient-to-r from-brand-whiz to-emerald-400 h-full rounded-full transition-all duration-500" style="width: ${progress}%"></div>
             </div>
           </div>
@@ -354,7 +390,7 @@
       <div class="rounded-3xl bg-white border border-[#E4E9ED] overflow-hidden">
         <div class="overflow-x-auto">
           <table class="w-full text-left text-xs text-slate-600 min-w-[650px]">
-            <thead class="bg-slate-950/70 border-b border-[#E4E9ED] text-[11px] uppercase font-bold text-slate-500">
+            <thead class="bg-slate-50/80 border-b border-[#E4E9ED] text-[11px] uppercase font-bold text-slate-500">
               <tr>
                 <th class="p-4">Receipt / Invoice #</th>
                 <th class="p-4">Date</th>
@@ -364,7 +400,7 @@
                 <th class="p-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-[#1A2332]">
+            <tbody class="divide-y divide-[#E4E9ED]">
               ${records.map(r => {
                 const num = r.receipt_number || r.receiptNumber || r.invoice_number || 'INV-1001';
                 const date = r.payment_date || r.issue_date || '2026-10-30';
@@ -374,10 +410,10 @@
                   <tr class="hover:bg-slate-50 transition-colors">
                     <td class="p-4 font-mono font-bold text-[#12212B]">${num}</td>
                     <td class="p-4 text-slate-500">${date}</td>
-                    <td class="p-4 font-mono font-bold text-emerald-400">$${amount}</td>
+                    <td class="p-4 font-mono font-bold text-emerald-400">${formatCurrency((r.amount_cents || r.total_cents || 0), r.currency || "USD")}</td>
                     <td class="p-4 uppercase text-[11px] text-slate-500">${r.payment_method || 'Online'}</td>
                     <td class="p-4">
-                      <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-950 text-emerald-400 border border-emerald-500/30">
+                      <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
                         Paid
                       </span>
                     </td>

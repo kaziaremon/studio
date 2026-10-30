@@ -1718,9 +1718,7 @@
   // =========================================================================
 
   function openClientDashboard() {
-    openModal('clientDashboardModal');
-    loadClientDashboardData();
-    switchClientDashboardTab('overview');
+    window.location.href = '/client/dashboard';
   }
 
   function switchClientDashboardTab(tabName) {
