@@ -336,6 +336,11 @@
 
         <!-- Main Call-to-Action -->
         <div class="flex items-center space-x-2 sm:space-x-3">
+          <button id="myAccountNavBtn" type="button" class="inline-flex items-center justify-center px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm text-slate-800 hover:text-brand-whiz bg-white/50 hover:bg-white/80 border border-white/60 hover:border-emerald-300 transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-whiz/50 active:scale-[0.98] cursor-pointer" aria-haspopup="dialog" aria-expanded="false" aria-controls="accountPortalModal">
+            <i class="fa-solid fa-circle-user text-xs sm:text-sm mr-1.5 text-brand-whiz"></i>
+            <span>My Account</span>
+          </button>
+
           <a href="#contact" class="hidden sm:inline-flex items-center justify-center px-5 py-2.5 rounded-xl font-bold text-sm btn-glass-primary shadow-sm">
             <span>Contact with Us</span>
             <i class="fa-solid fa-arrow-right text-xs ml-2"></i>
@@ -357,6 +362,10 @@
         <a href="#articles" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]">Articles</a>
         <a href="#testimonials" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]">Reviews</a>
         <a href="#faq" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]">FAQ</a>
+        <button id="myAccountMobileNavBtn" type="button" class="mobile-nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 hover:text-brand-whiz bg-white/70 hover:bg-white border border-white/80 transition-all min-h-[44px] w-full max-w-xs mt-1 shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-whiz/50 active:scale-[0.98] cursor-pointer" aria-haspopup="dialog" aria-expanded="false" aria-controls="accountPortalModal">
+          <i class="fa-solid fa-circle-user text-xs mr-2 text-brand-whiz"></i>
+          <span>My Account</span>
+        </button>
         <a href="#contact" class="mobile-nav-link inline-flex items-center justify-center text-center px-7 py-3 rounded-full text-sm font-bold text-white bg-brand-whiz hover:bg-emerald-700 shadow-sm mt-2 min-h-[44px]">Contact with Us</a>
       </div>
     </div>
@@ -1513,7 +1522,283 @@
     </div>
   </div>
 
+    <!-- =========================================================================
+       MODAL 3: MY ACCOUNT PORTAL (CLIENT & ADMIN DUAL-PORTAL SYSTEM)
+       Strict Frontend-Only UI Architecture (Ready for future Backend Connection)
+       ========================================================================= -->
+  <div id="accountPortalModal" class="hidden fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-6 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="accountModalTitle">
+    <!-- Backdrop Overlay (Liquid Glass Specular Blur) -->
+    <div class="modal-backdrop fixed inset-0" id="accountModalBackdrop" aria-hidden="true"></div>
+
+    <!-- Main Modal Surface Container -->
+    <div id="accountModalContent" class="relative bg-white/95 backdrop-blur-2xl border border-white/80 rounded-3xl shadow-2xl max-w-md w-full z-10 max-h-[92vh] flex flex-col overflow-hidden text-slate-900 transition-all">
+      
+      <!-- Top Pinned Bar: Close Button & Brand Badges -->
+      <div class="px-6 pt-6 pb-2 sm:px-8 sm:pt-8 flex items-center justify-between relative shrink-0">
+        <!-- Visual Brand Indicator -->
+        <div class="flex items-center space-x-2.5">
+          <div class="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-center shadow-xs">
+            <i class="fa-solid fa-circle-user text-base text-brand-whiz" id="accountPortalHeaderIcon"></i>
+          </div>
+          <div>
+            <span id="accountPortalHeaderBadge" class="text-[11px] font-extrabold uppercase tracking-wider text-emerald-950 bg-emerald-100/90 px-3 py-0.5 rounded-full border border-emerald-300/80">Client Portal</span>
+          </div>
+        </div>
+
+        <!-- Accessible Top-Right Close Button -->
+        <button id="accountModalCloseBtn" type="button" class="w-9 h-9 rounded-full bg-slate-100/90 hover:bg-slate-200 text-slate-500 hover:text-slate-800 border border-slate-200/80 flex items-center justify-center transition-all shadow-xs focus:outline-none focus:ring-2 focus:ring-brand-whiz/50 cursor-pointer" aria-label="Close Account Portal">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+
+      <!-- Scrollable Inner Content Area -->
+      <div class="px-6 pb-6 sm:px-8 sm:pb-8 pt-3 overflow-y-auto custom-modal-scroll flex-1">
+        
+        <!-- Tab Selector: Client | Admin -->
+        <div class="grid grid-cols-2 p-1.5 bg-slate-100/90 rounded-2xl border border-slate-200/70 mb-5 relative" role="tablist" aria-label="Account Category">
+          <!-- Client Tab (Default Active) -->
+          <button id="tabClientBtn" type="button" role="tab" aria-selected="true" aria-controls="clientViewContainer" class="account-tab-btn flex-1 flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 bg-white text-slate-900 shadow-sm border border-slate-200/80 cursor-pointer">
+            <i class="fa-solid fa-user text-xs text-brand-whiz"></i>
+            <span>Client</span>
+          </button>
+
+          <!-- Admin Tab -->
+          <button id="tabAdminBtn" type="button" role="tab" aria-selected="false" aria-controls="adminViewContainer" class="account-tab-btn flex-1 flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 text-slate-600 hover:text-slate-900 hover:bg-white/50 border border-transparent cursor-pointer">
+            <i class="fa-solid fa-lock text-xs"></i>
+            <span>Admin</span>
+          </button>
+        </div>
+
+        <!-- Temporary Informational / Validation Alert Box -->
+        <div id="accountPortalAlert" class="hidden mb-4 p-3.5 rounded-xl text-xs font-semibold border flex items-start space-x-2.5 transition-all duration-200" role="alert" aria-live="polite"></div>
+
+        <!-- ===================================================================
+             1. CLIENT VIEW CONTAINER (LOGIN & REGISTRATION)
+             =================================================================== -->
+        <div id="clientViewContainer" class="transition-all">
+          
+          <!-- SUB-VIEW A: CLIENT LOGIN INTERFACE -->
+          <div id="clientLoginView">
+            <div class="mb-5">
+              <h2 id="accountModalTitle" class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">Welcome Back</h2>
+              <p class="text-xs sm:text-sm text-slate-600 font-normal mt-1">Sign in to your client account.</p>
+            </div>
+
+            <!-- Client Login Form -->
+            <form id="clientLoginForm" novalidate class="space-y-4">
+              <!-- Field 1: Username or Email -->
+              <div>
+                <label for="clientIdentifier" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                  Username or Email <span class="text-rose-500">*</span>
+                </label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                    <i class="fa-solid fa-user text-xs"></i>
+                  </span>
+                  <input type="text" id="clientIdentifier" name="identifier" placeholder="Enter your username or email" class="account-form-input w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-xl text-sm font-medium focus:ring-2 focus:ring-brand-whiz/40 border border-slate-300/80 bg-white/80" autocomplete="username">
+                </div>
+              </div>
+
+              <!-- Field 2: Password -->
+              <div>
+                <div class="flex items-center justify-between mb-1.5">
+                  <label for="clientPassword" class="block text-xs font-semibold uppercase tracking-wider text-slate-700">
+                    Password <span class="text-rose-500">*</span>
+                  </label>
+                </div>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                    <i class="fa-solid fa-lock text-xs"></i>
+                  </span>
+                  <input type="password" id="clientPassword" name="password" data-password-field="true" placeholder="Enter your password" class="account-form-input w-full pl-10 pr-11 py-2.5 sm:py-3 rounded-xl text-sm font-medium focus:ring-2 focus:ring-brand-whiz/40 border border-slate-300/80 bg-white/80" autocomplete="current-password">
+                  <button type="button" class="password-toggle-btn absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 focus:outline-none transition-colors cursor-pointer" data-target="clientPassword" aria-label="Show password">
+                    <i class="fa-solid fa-eye text-slate-400 hover:text-slate-700 transition-colors"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Primary Button: Login -->
+              <button type="submit" class="w-full py-3 px-5 rounded-xl text-sm font-bold btn-glass-primary shadow-sm hover:shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer mt-2">
+                <span>Login</span>
+                <i class="fa-solid fa-arrow-right text-xs"></i>
+              </button>
+            </form>
+
+            <!-- Switch to Registration Link -->
+            <div class="text-center text-xs sm:text-sm text-slate-600 font-medium mt-5 pt-4 border-t border-slate-200/60">
+              Don't have an account? 
+              <button type="button" id="toRegisterBtn" class="text-brand-whiz font-bold hover:underline hover:text-emerald-700 ml-1 cursor-pointer transition-colors focus:outline-none focus:ring-1 focus:ring-brand-whiz rounded">
+                Register Now
+              </button>
+            </div>
+          </div>
+
+          <!-- SUB-VIEW B: CLIENT REGISTRATION INTERFACE -->
+          <div id="clientRegisterView" class="hidden">
+            <div class="mb-5">
+              <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">Create Your Account</h2>
+              <p class="text-xs sm:text-sm text-slate-600 font-normal mt-1">Fill in your details to create your client profile.</p>
+            </div>
+
+            <!-- Client Registration Form -->
+            <form id="clientRegisterForm" novalidate class="space-y-3.5">
+              <!-- Field 1: Full Name -->
+              <div>
+                <label for="clientFullName" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
+                  Full Name <span class="text-rose-500">*</span>
+                </label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                    <i class="fa-solid fa-id-card text-xs"></i>
+                  </span>
+                  <input type="text" id="clientFullName" name="fullName" placeholder="Enter your full name" class="account-form-input w-full pl-10 pr-4 py-2 sm:py-2.5 rounded-xl text-sm font-medium focus:ring-2 focus:ring-brand-whiz/40 border border-slate-300/80 bg-white/80" autocomplete="name">
+                </div>
+              </div>
+
+              <!-- Field 2: Username -->
+              <div>
+                <label for="clientRegUsername" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
+                  Username <span class="text-rose-500">*</span>
+                </label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                    <i class="fa-solid fa-at text-xs"></i>
+                  </span>
+                  <input type="text" id="clientRegUsername" name="username" placeholder="Choose a username" class="account-form-input w-full pl-10 pr-4 py-2 sm:py-2.5 rounded-xl text-sm font-medium focus:ring-2 focus:ring-brand-whiz/40 border border-slate-300/80 bg-white/80" autocomplete="username">
+                </div>
+              </div>
+
+              <!-- Field 3: Email Address -->
+              <div>
+                <label for="clientRegEmail" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
+                  Email Address <span class="text-rose-500">*</span>
+                </label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                    <i class="fa-solid fa-envelope text-xs"></i>
+                  </span>
+                  <input type="email" id="clientRegEmail" name="email" placeholder="Enter your email address" class="account-form-input w-full pl-10 pr-4 py-2 sm:py-2.5 rounded-xl text-sm font-medium focus:ring-2 focus:ring-brand-whiz/40 border border-slate-300/80 bg-white/80" autocomplete="email">
+                </div>
+              </div>
+
+              <!-- Field 4: Password -->
+              <div>
+                <label for="clientRegPassword" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
+                  Password <span class="text-rose-500">*</span>
+                </label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                    <i class="fa-solid fa-lock text-xs"></i>
+                  </span>
+                  <input type="password" id="clientRegPassword" name="password" data-password-field="true" placeholder="Enter your password" class="account-form-input w-full pl-10 pr-11 py-2 sm:py-2.5 rounded-xl text-sm font-medium focus:ring-2 focus:ring-brand-whiz/40 border border-slate-300/80 bg-white/80" autocomplete="new-password">
+                  <button type="button" class="password-toggle-btn absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 focus:outline-none transition-colors cursor-pointer" data-target="clientRegPassword" aria-label="Show password">
+                    <i class="fa-solid fa-eye text-slate-400 hover:text-slate-700 transition-colors"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Field 5: Confirm Password -->
+              <div>
+                <label for="clientRegConfirmPassword" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
+                  Confirm Password <span class="text-rose-500">*</span>
+                </label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                    <i class="fa-solid fa-shield-check text-xs"></i>
+                  </span>
+                  <input type="password" id="clientRegConfirmPassword" name="confirmPassword" data-password-field="true" placeholder="Confirm your password" class="account-form-input w-full pl-10 pr-11 py-2 sm:py-2.5 rounded-xl text-sm font-medium focus:ring-2 focus:ring-brand-whiz/40 border border-slate-300/80 bg-white/80" autocomplete="new-password">
+                  <button type="button" class="password-toggle-btn absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 focus:outline-none transition-colors cursor-pointer" data-target="clientRegConfirmPassword" aria-label="Show password">
+                    <i class="fa-solid fa-eye text-slate-400 hover:text-slate-700 transition-colors"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Primary Button: Create Account -->
+              <button type="submit" class="w-full py-3 px-5 rounded-xl text-sm font-bold btn-glass-primary shadow-sm hover:shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer mt-2">
+                <span>Create Account</span>
+                <i class="fa-solid fa-arrow-right text-xs"></i>
+              </button>
+            </form>
+
+            <!-- Switch to Login Link -->
+            <div class="text-center text-xs sm:text-sm text-slate-600 font-medium mt-4 pt-4 border-t border-slate-200/60">
+              Already have an account? 
+              <button type="button" id="toLoginBtn" class="text-brand-whiz font-bold hover:underline hover:text-emerald-700 ml-1 cursor-pointer transition-colors focus:outline-none focus:ring-1 focus:ring-brand-whiz rounded">
+                Login
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===================================================================
+             2. ADMIN VIEW CONTAINER (ADMIN LOGIN ONLY - ZERO REGISTRATION)
+             =================================================================== -->
+        <div id="adminViewContainer" class="hidden transition-all">
+          <div class="mb-5">
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">Admin Login</h2>
+            <p class="text-xs sm:text-sm text-slate-600 font-normal mt-1">Authorized team members only.</p>
+          </div>
+
+          <!-- Admin Login Form -->
+          <form id="adminLoginForm" novalidate class="space-y-4">
+            <!-- Field 1: Email Address -->
+            <div>
+              <label for="adminEmail" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                Email Address <span class="text-rose-500">*</span>
+              </label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                  <i class="fa-solid fa-envelope text-xs"></i>
+                </span>
+                <input type="email" id="adminEmail" name="adminEmail" placeholder="Enter your admin email" class="account-form-input w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-xl text-sm font-medium focus:ring-2 focus:ring-slate-900/30 border border-slate-300/80 bg-white/80" autocomplete="email">
+              </div>
+            </div>
+
+            <!-- Field 2: Password -->
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <label for="adminPassword" class="block text-xs font-semibold uppercase tracking-wider text-slate-700">
+                  Password <span class="text-rose-500">*</span>
+                </label>
+              </div>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                  <i class="fa-solid fa-lock text-xs"></i>
+                </span>
+                <input type="password" id="adminPassword" name="adminPassword" data-password-field="true" placeholder="Enter your password" class="account-form-input w-full pl-10 pr-11 py-2.5 sm:py-3 rounded-xl text-sm font-medium focus:ring-2 focus:ring-slate-900/30 border border-slate-300/80 bg-white/80" autocomplete="current-password">
+                <button type="button" class="password-toggle-btn absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 focus:outline-none transition-colors cursor-pointer" data-target="adminPassword" aria-label="Show password">
+                  <i class="fa-solid fa-eye text-slate-400 hover:text-slate-700 transition-colors"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Primary Button: Admin Login -->
+            <button type="submit" class="w-full py-3 px-5 rounded-xl text-sm font-bold bg-slate-900 hover:bg-slate-800 text-white shadow-sm hover:shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer mt-2 border border-slate-800">
+              <i class="fa-solid fa-shield-halved text-xs text-brand-whiz"></i>
+              <span>Login</span>
+            </button>
+          </form>
+
+          <!-- Admin Footer: Strictly internal personnel badge -->
+          <div class="text-center text-xs text-slate-500 font-medium mt-5 pt-4 border-t border-slate-200/60 flex items-center justify-center space-x-1.5">
+            <i class="fa-solid fa-lock text-[11px] text-slate-400"></i>
+            <span>Secured access portal for internal personnel</span>
+          </div>
+        </div>
+
+        <!-- Trust & Security Micro-Footer -->
+        <div class="mt-5 pt-3 text-center text-[11px] text-slate-600 border-t border-slate-100 flex items-center justify-center space-x-1.5">
+          <i class="fa-solid fa-shield-halved text-[10px] text-brand-whiz"></i>
+          <span>Whiz Studio Secure Account System</span>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
   <!-- Main JavaScript Application Logic -->
   <script src="assets/js/main.js"></script>
+  <!-- Account Portal Controller -->
+  <script src="assets/js/account-portal.js"></script>
 </body>
 </html>
