@@ -653,3 +653,106 @@ select.glass-input option:hover {
   outline: 2px solid var(--brand-whiz);
   border-radius: 8px;
 }
+
+/* ==========================================================================
+   CLERK AUTHENTICATION, OTP & SAAS DASHBOARDS (CLIENT & ADMIN)
+   ========================================================================== */
+.otp-input-box {
+  width: 44px;
+  height: 52px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-align: center;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1.5px solid rgba(203, 213, 225, 0.9);
+  color: #0F172A;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  outline: none;
+}
+
+@media (max-width: 640px) {
+  .otp-input-box {
+    width: 38px;
+    height: 48px;
+    font-size: 1.25rem;
+  }
+}
+
+.otp-input-box:focus {
+  background: #FFFFFF;
+  border-color: #00A86B;
+  box-shadow: 0 0 0 3px rgba(0, 168, 107, 0.25), 0 2px 4px rgba(0, 168, 107, 0.08);
+}
+
+.dashboard-sidebar-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  border-radius: 14px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #475569;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  user-select: none;
+  border: 1px solid transparent;
+}
+
+.dashboard-sidebar-item:hover {
+  color: #00A86B;
+  background: rgba(0, 168, 107, 0.08);
+}
+
+.dashboard-sidebar-item.active {
+  color: #00A86B;
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(0, 168, 107, 0.3);
+  box-shadow: 0 4px 14px rgba(0, 168, 107, 0.1), inset 0 1px 1px #FFFFFF;
+  font-weight: 700;
+}
+
+.admin-sidebar-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  border-radius: 14px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #94A3B8;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  user-select: none;
+  border: 1px solid transparent;
+}
+
+.admin-sidebar-item:hover {
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.admin-sidebar-item.active {
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  font-weight: 700;
+}
+
+.dashboard-glass-card {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 20px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+}
+
+.admin-glass-card {
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
