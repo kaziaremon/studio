@@ -90,6 +90,17 @@
       ...(options.headers || {})
     };
 
+    if (window.Clerk && window.Clerk.session) {
+      try {
+        const token = await window.Clerk.session.getToken();
+        if (token) {
+          headers['Authorization'] = 'Bearer ' + token;
+        }
+      } catch (e) {
+        console.warn('Could not retrieve Clerk session token:', e);
+      }
+    }
+
     if (window.Clerk && window.Clerk.user) {
       headers['X-Clerk-User-Id'] = window.Clerk.user.id;
     }
@@ -2600,12 +2611,14 @@
 
       await syncAuthState();
 
-      // Check if returning from Google OAuth redirect
+      // Check if returning from Google OAuth redirect or redirected for login
       const url = new URL(window.location.href);
       if (url.searchParams.get('auth_redirect') === 'true' && window.Clerk.user) {
         url.searchParams.delete('auth_redirect');
         window.history.replaceState({}, document.title, url.pathname + (url.search ? url.search : ''));
         routeAuthenticatedUser('Google authentication verified successfully!');
+      } else if (url.searchParams.has('login') && !window.Clerk.user) {
+        openModal('accountPortalModal');
       }
     } catch (err) {
       console.error('Clerk Initialization Error:', err);

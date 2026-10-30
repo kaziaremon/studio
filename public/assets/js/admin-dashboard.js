@@ -89,6 +89,17 @@
       ...(options.headers || {})
     };
 
+    if (window.Clerk && window.Clerk.session) {
+      try {
+        const token = await window.Clerk.session.getToken();
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+      } catch (e) {
+        console.warn('Could not retrieve Clerk session token:', e);
+      }
+    }
+
     if (window.Clerk && window.Clerk.user) {
       headers['X-Clerk-User-Id'] = window.Clerk.user.id;
     }
@@ -1157,12 +1168,15 @@ ${bp.instructions}
     }
 
     try {
-      if (!window.Clerk.isReady()) {
-        await window.Clerk.load();
+      if (!window.Clerk.loaded) {
+        await window.Clerk.load({
+          publishableKey: CLERK_PUBLISHABLE_KEY
+        });
       }
 
       const user = window.Clerk.user;
       if (!user) {
+        console.warn('No active Clerk user found, redirecting to login...');
         window.location.href = '/?login=admin';
         return;
       }
@@ -1172,6 +1186,7 @@ ${bp.instructions}
       // Verify Administrator Authorization with Cloudflare Backend API
       const res = await apiFetch('/portal/me');
       if (!res.ok || !res.data || !res.data.success || !res.data.data || !res.data.data.user) {
+        console.error('Admin verification failed from API:', res);
         if (authGuard) authGuard.classList.add('hidden');
         if (accessDenied) accessDenied.classList.remove('hidden');
         return;
@@ -1180,14 +1195,21 @@ ${bp.instructions}
       const profile = res.data.data.user;
       state.adminProfile = profile;
 
-      if (profile.role !== 'owner' && profile.role !== 'admin' && profile.role !== 'super_admin') {
+      const isAuthorized = 
+        profile.role === 'owner' || 
+        profile.role === 'admin' || 
+        profile.role === 'super_admin' || 
+        Boolean(profile.isSuperAdmin);
+
+      if (!isAuthorized) {
+        console.warn('Authenticated user does not possess admin permissions:', profile);
         if (authGuard) authGuard.classList.add('hidden');
         if (accessDenied) accessDenied.classList.remove('hidden');
         return;
       }
 
       // Populate user info in UI
-      const name = profile.full_name || user.fullName || 'Super Admin';
+      const name = profile.fullName || profile.full_name || user.fullName || 'Super Admin';
       const email = profile.email || (user.primaryEmailAddress ? user.primaryEmailAddress.emailAddress : '');
       const username = user.username ? `@${user.username}` : (user.id.slice(0, 12) + '...');
 
@@ -1200,6 +1222,7 @@ ${bp.instructions}
 
       // Show Main Layout
       if (authGuard) authGuard.classList.add('hidden');
+      if (accessDenied) accessDenied.classList.add('hidden');
       if (mainLayout) mainLayout.classList.remove('hidden');
 
       // Initialize initial tab
