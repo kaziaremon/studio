@@ -564,25 +564,33 @@
 
   // Client Second-Factor / Device Trust Setup
   async function setupClientSecondFactor(signInAttempt) {
-    const factors = signInAttempt.supportedSecondFactors || [];
-    let factor = factors.find(f => f.strategy === 'email_code') || factors[0] || { strategy: 'email_code' };
-    state.client2faFactor = factor;
+    try {
+      const factors = signInAttempt.supportedSecondFactors || [];
+      let factor = factors.find(f => f.strategy === 'email_code') || factors[0] || { strategy: 'email_code' };
+      state.client2faFactor = factor;
 
-    if (factor.strategy === 'email_code') {
-      try {
-        await signInAttempt.prepareSecondFactor({
-          strategy: 'email_code',
-          ...(factor.emailAddressId ? { emailAddressId: factor.emailAddressId } : {})
-        });
-      } catch (e) {
-        console.warn('prepareSecondFactor client warning:', e);
+      switchClientSubView('2fa');
+
+      if (factor.strategy === 'email_code') {
+        const targetEl = document.getElementById('client2faTarget');
+        const targetEmail = factor.safeIdentifier || signInAttempt.identifier || (window.Clerk?.user?.primaryEmailAddress?.emailAddress) || 'your email';
+        if (targetEl) targetEl.textContent = maskEmail(targetEmail);
+
+        try {
+          await signInAttempt.prepareSecondFactor({
+            strategy: 'email_code',
+            ...(factor.emailAddressId ? { emailAddressId: factor.emailAddressId } : {})
+          });
+          toast('Verification code sent to your email.', 'info');
+        } catch (e) {
+          console.warn('prepareSecondFactor client warning:', e);
+          toast('Please enter the verification code sent to your email.', 'info');
+        }
       }
-      const targetEl = document.getElementById('client2faTarget');
-      const targetEmail = factor.safeIdentifier || signInAttempt.identifier || (window.Clerk?.user?.primaryEmailAddress?.emailAddress) || 'your email';
-      if (targetEl) targetEl.textContent = maskEmail(targetEmail);
+    } catch (err) {
+      console.error('setupClientSecondFactor error:', err);
+      switchClientSubView('2fa');
     }
-    switchClientSubView('2fa');
-    toast('Verification code sent to your email.', 'info');
   }
 
   // Client First-Factor Setup
@@ -1004,14 +1012,24 @@
         closeModal('accountPortalModal');
         toast('Welcome to Whiz Studio Admin Console', 'success');
         openAdminDashboard();
-      } else if (signInAttempt.status === 'needs_second_factor' || signInAttempt.status === 'needs_client_trust') {
+      } else if (
+        signInAttempt.status === 'needs_second_factor' ||
+        signInAttempt.status === 'needs_client_trust' ||
+        (signInAttempt.supportedSecondFactors && signInAttempt.supportedSecondFactors.length > 0)
+      ) {
         state.pendingSignIn = signInAttempt;
         await setupAdminSecondFactor(signInAttempt);
-      } else if (signInAttempt.status === 'needs_first_factor') {
+      } else if (
+        signInAttempt.status === 'needs_first_factor' ||
+        (signInAttempt.supportedFirstFactors && signInAttempt.supportedFirstFactors.length > 0)
+      ) {
         state.pendingSignIn = signInAttempt;
         await setupAdminFirstFactor(signInAttempt);
       } else {
-        showPortalAlert(`Admin authentication status: ${signInAttempt.status}. Please check your credentials or contact system administrator.`, 'warning');
+        // Resilient fallback: transition to verification rather than leaving user stuck
+        console.warn('[Admin Auth] Unhandled status:', signInAttempt.status, '- attempting 2FA flow');
+        state.pendingSignIn = signInAttempt;
+        await setupAdminSecondFactor(signInAttempt);
       }
     } catch (err) {
       console.error('Admin Sign In Error:', err);
@@ -1025,85 +1043,90 @@
 
   // Admin Second-Factor / Device Trust Setup
   async function setupAdminSecondFactor(signInAttempt) {
-    const factors = signInAttempt.supportedSecondFactors || [];
-    console.log('[Admin 2FA] Status:', signInAttempt.status, 'Supported Factors:', factors);
+    try {
+      const factors = signInAttempt.supportedSecondFactors || [];
+      console.log('[Admin 2FA] Status:', signInAttempt.status, 'Supported Factors:', factors);
 
-    // Prefer email_code, then totp, then phone_code, then backup_code
-    let factor = factors.find(f => f.strategy === 'email_code') ||
-                 factors.find(f => f.strategy === 'totp') ||
-                 factors.find(f => f.strategy === 'phone_code') ||
-                 factors.find(f => f.strategy === 'backup_code') ||
-                 factors[0] ||
-                 { strategy: 'email_code' };
+      // Prefer email_code, then totp, then phone_code, then backup_code
+      let factor = factors.find(f => f.strategy === 'email_code') ||
+                   factors.find(f => f.strategy === 'totp') ||
+                   factors.find(f => f.strategy === 'phone_code') ||
+                   factors.find(f => f.strategy === 'backup_code') ||
+                   factors[0] ||
+                   { strategy: 'email_code' };
 
-    state.admin2faFactor = factor;
+      state.admin2faFactor = factor;
 
-    const titleEl = document.getElementById('admin2faTitle');
-    const descEl = document.getElementById('admin2faDescription');
-    const badgeEl = document.getElementById('admin2faBadgeText');
-    const resendRow = document.getElementById('admin2faResendRow');
-    const inputsContainer = document.getElementById('admin2faInputsContainer');
-    const backupContainer = document.getElementById('admin2faBackupContainer');
+      // Switch to 2FA view immediately so the UI transitions right away
+      switchAdminSubView('2fa');
 
-    if (factor.strategy === 'email_code') {
-      try {
-        await signInAttempt.prepareSecondFactor({
-          strategy: 'email_code',
-          ...(factor.emailAddressId ? { emailAddressId: factor.emailAddressId } : {})
-        });
-      } catch (prepErr) {
-        console.warn('Admin prepareSecondFactor warning:', prepErr);
-        if (isRateLimitError(prepErr)) {
-          toast('A security code was recently dispatched. Please check your email.', 'info');
+      const titleEl = document.getElementById('admin2faTitle');
+      const descEl = document.getElementById('admin2faDescription');
+      const badgeEl = document.getElementById('admin2faBadgeText');
+      const resendRow = document.getElementById('admin2faResendRow');
+      const inputsContainer = document.getElementById('admin2faInputsContainer');
+      const backupContainer = document.getElementById('admin2faBackupContainer');
+
+      if (factor.strategy === 'email_code') {
+        const targetEmail = factor.safeIdentifier || signInAttempt.identifier || 'kaziaremon@gmail.com';
+        if (titleEl) titleEl.textContent = 'Verify Your Identity';
+        if (badgeEl) badgeEl.textContent = 'Device Verification';
+        if (descEl) {
+          descEl.innerHTML = `Enter the 6-digit verification code sent to <span id="admin2faTarget" class="font-bold text-slate-900">${maskEmail(targetEmail)}</span>.`;
         }
-      }
+        if (resendRow) resendRow.classList.remove('hidden');
+        if (inputsContainer) inputsContainer.classList.remove('hidden');
+        if (backupContainer) backupContainer.classList.add('hidden');
 
-      const targetEmail = factor.safeIdentifier || signInAttempt.identifier || 'kaziaremon@gmail.com';
-      if (titleEl) titleEl.textContent = 'Verify Your Identity';
-      if (badgeEl) badgeEl.textContent = 'Device Verification';
-      if (descEl) {
-        descEl.innerHTML = `Enter the 6-digit verification code sent to <span id="admin2faTarget" class="font-bold text-slate-900">${maskEmail(targetEmail)}</span>.`;
+        try {
+          await signInAttempt.prepareSecondFactor({
+            strategy: 'email_code',
+            ...(factor.emailAddressId ? { emailAddressId: factor.emailAddressId } : {})
+          });
+          toast('Verification code sent to your email.', 'info');
+        } catch (prepErr) {
+          console.warn('Admin prepareSecondFactor warning:', prepErr);
+          if (isRateLimitError(prepErr)) {
+            toast('A security code was recently dispatched. Please check your email.', 'info');
+          } else {
+            toast('Please check your email for the verification code.', 'info');
+          }
+        }
+      } else if (factor.strategy === 'totp') {
+        if (titleEl) titleEl.textContent = 'Authenticator Code';
+        if (badgeEl) badgeEl.textContent = 'Two-Factor Authentication';
+        if (descEl) descEl.textContent = 'Enter the 6-digit verification code generated by your authenticator app.';
+        if (resendRow) resendRow.classList.add('hidden');
+        if (inputsContainer) inputsContainer.classList.remove('hidden');
+        if (backupContainer) backupContainer.classList.add('hidden');
+      } else if (factor.strategy === 'backup_code') {
+        if (titleEl) titleEl.textContent = 'Backup Security Code';
+        if (badgeEl) badgeEl.textContent = 'Recovery Authentication';
+        if (descEl) descEl.textContent = 'Enter one of your saved backup security codes.';
+        if (resendRow) resendRow.classList.add('hidden');
+        if (inputsContainer) inputsContainer.classList.add('hidden');
+        if (backupContainer) backupContainer.classList.remove('hidden');
+      } else if (factor.strategy === 'phone_code') {
+        try {
+          await signInAttempt.prepareSecondFactor({
+            strategy: 'phone_code',
+            ...(factor.phoneNumberId ? { phoneNumberId: factor.phoneNumberId } : {})
+          });
+        } catch (prepErr) {
+          console.warn('Admin prepareSecondFactor phone warning:', prepErr);
+        }
+        if (titleEl) titleEl.textContent = 'SMS Verification';
+        if (badgeEl) badgeEl.textContent = 'Phone Verification';
+        if (descEl) descEl.textContent = 'Enter the 6-digit SMS verification code sent to your phone.';
+        if (resendRow) resendRow.classList.remove('hidden');
+        if (inputsContainer) inputsContainer.classList.remove('hidden');
+        if (backupContainer) backupContainer.classList.add('hidden');
+        toast('Verification code sent via SMS.', 'info');
       }
-      if (resendRow) resendRow.classList.remove('hidden');
-      if (inputsContainer) inputsContainer.classList.remove('hidden');
-      if (backupContainer) backupContainer.classList.add('hidden');
+    } catch (e) {
+      console.error('setupAdminSecondFactor fatal error:', e);
       switchAdminSubView('2fa');
-      toast('Verification code sent to your email.', 'info');
-    } else if (factor.strategy === 'totp') {
-      if (titleEl) titleEl.textContent = 'Authenticator Code';
-      if (badgeEl) badgeEl.textContent = 'Two-Factor Authentication';
-      if (descEl) descEl.textContent = 'Enter the 6-digit verification code generated by your authenticator app.';
-      if (resendRow) resendRow.classList.add('hidden');
-      if (inputsContainer) inputsContainer.classList.remove('hidden');
-      if (backupContainer) backupContainer.classList.add('hidden');
-      switchAdminSubView('2fa');
-    } else if (factor.strategy === 'backup_code') {
-      if (titleEl) titleEl.textContent = 'Backup Security Code';
-      if (badgeEl) badgeEl.textContent = 'Recovery Authentication';
-      if (descEl) descEl.textContent = 'Enter one of your saved backup security codes.';
-      if (resendRow) resendRow.classList.add('hidden');
-      if (inputsContainer) inputsContainer.classList.add('hidden');
-      if (backupContainer) backupContainer.classList.remove('hidden');
-      switchAdminSubView('2fa');
-    } else if (factor.strategy === 'phone_code') {
-      try {
-        await signInAttempt.prepareSecondFactor({
-          strategy: 'phone_code',
-          ...(factor.phoneNumberId ? { phoneNumberId: factor.phoneNumberId } : {})
-        });
-      } catch (prepErr) {
-        console.warn('Admin prepareSecondFactor phone warning:', prepErr);
-      }
-      if (titleEl) titleEl.textContent = 'SMS Verification';
-      if (badgeEl) badgeEl.textContent = 'Phone Verification';
-      if (descEl) descEl.textContent = 'Enter the 6-digit SMS verification code sent to your phone.';
-      if (resendRow) resendRow.classList.remove('hidden');
-      if (inputsContainer) inputsContainer.classList.remove('hidden');
-      if (backupContainer) backupContainer.classList.add('hidden');
-      switchAdminSubView('2fa');
-      toast('Verification code sent via SMS.', 'info');
-    } else {
-      switchAdminSubView('2fa');
+      showPortalAlert('Please enter the 6-digit verification code sent to your email.', 'info');
     }
   }
 
