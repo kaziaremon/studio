@@ -44,6 +44,16 @@
     }
   }
 
+  function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
   let clientChart = null;
 
   const state = {
@@ -53,7 +63,14 @@
     services: [],
     projects: [],
     invoices: [],
-    payments: []
+    payments: [],
+    finance: null,
+    overallProgress: 0,
+    organizations: [],
+    selectedOrganizationId: null,
+    completionChart: null,
+    refreshIntervalId: null,
+    isRefreshing: false
   };
 
   async function apiFetch(endpoint, options = {}) {
@@ -61,6 +78,10 @@
       'Content-Type': 'application/json',
       ...(options.headers || {})
     };
+
+    if (state.selectedOrganizationId) {
+      headers['X-Organization-Id'] = state.selectedOrganizationId;
+    }
 
     if (window.Clerk && window.Clerk.session) {
       try {
@@ -166,15 +187,19 @@
   }
 
   // Load All Workspace Data
-  async function loadClientData() {
+  async function loadClientData(isSilent = false) {
+    state.isRefreshing = true;
     try {
       const overviewRes = await apiFetch('/portal/client-overview');
       if (overviewRes.ok && overviewRes.data && overviewRes.data.success && overviewRes.data.data) {
         const d = overviewRes.data.data;
-        state.services = d.activeServices || [];
-        state.projects = d.activeProjects || [];
-        state.payments = d.recentPayments || [];
+        state.services = d.activeServices || d.services || [];
+        state.projects = d.activeProjects || d.projects || [];
+        state.payments = d.recentPayments || d.payments || [];
         state.invoices = d.invoices || [];
+        state.finance = d.finance || null;
+        state.overallProgress = Math.round(Number(d.overallProgressPercent || 0));
+        state.organizations = d.organizations || [];
 
         renderClientOverview();
         renderServicesPortfolio();
@@ -189,10 +214,10 @@
         ]);
 
         if (srvRes.ok && srvRes.data && srvRes.data.data) {
-          state.services = srvRes.data.data.services || [];
+          state.services = srvRes.data.data.services || srvRes.data.data || [];
         }
         if (projRes.ok && projRes.data && projRes.data.data) {
-          state.projects = projRes.data.data.projects || [];
+          state.projects = projRes.data.data.projects || projRes.data.data || [];
         }
         if (finRes.ok && finRes.data && finRes.data.data) {
           state.invoices = finRes.data.data.invoices || [];
@@ -206,6 +231,8 @@
       }
     } catch (e) {
       console.warn('Data preload notice:', e);
+    } finally {
+      state.isRefreshing = false;
     }
   }
 
@@ -217,10 +244,80 @@
 
     if (statActive) statActive.textContent = state.services.length;
     if (statTasks) {
-      const completedCount = state.projects.reduce((acc, p) => acc + (p.completedTasksCount || (p.progress_percent > 0 ? 1 : 0)), 0);
-      statTasks.textContent = completedCount;
+      const totalCompleted = state.projects.reduce((acc, p) => acc + (p.completedTasksCount || 0), 0);
+      const totalTasks = state.projects.reduce((acc, p) => acc + (p.totalTasksCount || 0), 0);
+      statTasks.textContent = totalTasks > 0 ? `${totalCompleted}/${totalTasks}` : `${totalCompleted}`;
     }
     if (statInv) statInv.textContent = state.payments.length || state.invoices.length;
+
+    // Overall Progress Badge & Donut Chart
+    const progressBadge = document.getElementById('clientOverallProgressBadge');
+    if (progressBadge) progressBadge.textContent = `${state.overallProgress}%`;
+
+    const canvas = document.getElementById('chartClientCompletion');
+    const emptyState = document.getElementById('chartClientEmptyState');
+    if (canvas) {
+      if (state.services.length === 0) {
+        if (emptyState) emptyState.classList.remove('hidden');
+        if (state.completionChart) {
+          state.completionChart.destroy();
+          state.completionChart = null;
+        }
+      } else {
+        if (emptyState) emptyState.classList.add('hidden');
+        if (typeof Chart !== 'undefined') {
+          if (state.completionChart) {
+            state.completionChart.destroy();
+          }
+          const ctx = canvas.getContext('2d');
+          state.completionChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+              labels: ['Completed', 'Remaining'],
+              datasets: [{
+                data: [state.overallProgress, Math.max(0, 100 - state.overallProgress)],
+                backgroundColor: ['#147D64', '#E3E9EF'],
+                borderWidth: 0,
+                hoverOffset: 2
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              cutout: '76%',
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  callbacks: {
+                    label: (item) => ` ${item.label}: ${item.raw}%`
+                  }
+                }
+              }
+            }
+          });
+        }
+      }
+    }
+
+    // Financial Summary Status
+    const primaryCurr = state.finance?.currency || 'USD';
+    const totalBilledEl = document.getElementById('clientSummaryTotalBilled');
+    const totalPaidEl = document.getElementById('clientSummaryTotalPaid');
+    const balanceEl = document.getElementById('clientSummaryBalance');
+    const contractValEl = document.getElementById('clientSummaryContractValue');
+
+    if (contractValEl) {
+      contractValEl.textContent = formatCurrency(state.finance?.contractValueCents || 0, primaryCurr);
+    }
+    if (totalBilledEl) {
+      totalBilledEl.textContent = formatCurrency(state.finance?.totalInvoicedCents || 0, primaryCurr);
+    }
+    if (totalPaidEl) {
+      totalPaidEl.textContent = formatCurrency(state.finance?.totalPaidCents || 0, primaryCurr);
+    }
+    if (balanceEl) {
+      balanceEl.textContent = formatCurrency(state.finance?.outstandingBalanceCents || 0, primaryCurr);
+    }
 
     const list = document.getElementById('overviewServicesList');
     if (!list) return;
@@ -236,29 +333,39 @@
         </div>
       `;
     } else {
-      list.innerHTML = state.services.map(s => `
-        <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 hover:border-[#E3E9EF] transition-all">
-          <div class="flex items-center space-x-3.5 min-w-0">
-            <div class="w-10 h-10 rounded-xl bg-brand-whiz/15 text-brand-whiz border border-brand-whiz/30 flex items-center justify-center font-bold text-sm shrink-0">
-              <i class="fa-solid fa-bolt"></i>
+      list.innerHTML = state.services.map(s => {
+        const progress = Math.round(Number(s.progress_percent || s.progressPercent || 0));
+        const price = formatCurrency(s.price_cents || s.priceCents || 0, s.currency || primaryCurr);
+        return `
+          <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 hover:border-brand-whiz/40 hover:shadow-xs transition-all">
+            <div class="flex items-center space-x-3.5 min-w-0">
+              <div class="w-10 h-10 rounded-xl bg-brand-whiz/15 text-brand-whiz border border-brand-whiz/30 flex items-center justify-center font-bold text-sm shrink-0">
+                <i class="fa-solid fa-bolt"></i>
+              </div>
+              <div class="min-w-0">
+                <h4 class="text-xs sm:text-sm font-bold text-[#172B36] truncate">${escapeHtml(s.service_name || s.serviceName || 'Agency Service')}</h4>
+                <p class="text-[11px] text-slate-500 flex items-center gap-2 mt-0.5">
+                  <span>Status: <strong class="text-emerald-700 uppercase">${escapeHtml(s.status || 'Active')}</strong></span>
+                  <span>•</span>
+                  <span>Tier: <strong class="text-slate-600">${escapeHtml(s.package_name || s.packageName || 'Standard Retainer')}</strong></span>
+                  <span>•</span>
+                  <span>Progress: <strong class="text-brand-whiz font-mono">${progress}%</strong></span>
+                </p>
+              </div>
             </div>
-            <div class="min-w-0">
-              <h4 class="text-xs sm:text-sm font-bold text-[#172B36] truncate">${s.service_name || s.serviceName || s.package_name || 'Agency Service'}</h4>
-              <p class="text-[11px] text-slate-500 flex items-center gap-2 mt-0.5">
-                <span>Status: <strong class="text-emerald-700 uppercase">${s.status || 'Active'}</strong></span>
-                <span>•</span>
-                <span>Tier: <strong class="text-slate-600">${s.package_name || 'Standard'}</strong></span>
-              </p>
+            <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4 pt-2 sm:pt-0 border-t sm:border-t-0 border-[#E3E9EF]">
+              <span class="text-xs sm:text-sm font-mono font-bold text-[#172B36]">${price}</span>
+              <button type="button" data-client-tab="services" class="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-[#EAF7F1] text-[#172B36] hover:text-brand-whiz text-[11px] font-semibold transition-all border border-[#E3E9EF] cursor-pointer">
+                Details
+              </button>
             </div>
           </div>
-          <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4 pt-2 sm:pt-0 border-t sm:border-t-0 border-[#E3E9EF]">
-            <span class="text-xs sm:text-sm font-mono font-bold text-[#172B36]">$${(((s.price_cents || s.priceCents || 0)) / 100).toFixed(2)}</span>
-            <button type="button" data-client-tab="services" class="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 text-[#172B36] text-[11px] font-semibold transition-all border border-[#E3E9EF]">
-              Details
-            </button>
-          </div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
+
+      list.querySelectorAll('[data-client-tab]').forEach(btn => {
+        btn.addEventListener('click', () => switchTab(btn.dataset.clientTab));
+      });
     }
   }
 
@@ -283,35 +390,47 @@
     }
 
     list.innerHTML = state.services.map(s => {
-      const price = (((s.price_cents || s.priceCents || 0)) / 100).toFixed(2);
+      const price = formatCurrency(s.price_cents || s.priceCents || 0, s.currency || 'USD');
+      const progress = Math.round(Number(s.progress_percent || s.progressPercent || 0));
       return `
-        <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E3E9EF] space-y-4 hover:border-[#E3E9EF] transition-all">
+        <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E3E9EF] space-y-4 hover:border-brand-whiz/40 hover:shadow-sm transition-all">
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div class="flex items-center space-x-3.5">
               <div class="w-11 h-11 rounded-2xl bg-brand-whiz/15 text-brand-whiz border border-brand-whiz/30 flex items-center justify-center font-bold text-base shrink-0">
                 <i class="fa-solid fa-shapes"></i>
               </div>
               <div>
-                <h4 class="text-sm sm:text-base font-bold text-[#172B36]">${s.service_name || s.serviceName || 'Marketing Service'}</h4>
-                <span class="text-xs text-slate-500">${s.package_name || 'Standard Agency Package'}</span>
+                <h4 class="text-sm sm:text-base font-bold text-[#172B36]">${escapeHtml(s.service_name || s.serviceName || 'Marketing Service')}</h4>
+                <span class="text-xs text-slate-500">${escapeHtml(s.package_name || s.packageName || 'Standard Agency Package')}</span>
               </div>
             </div>
             <div class="flex items-center gap-2.5">
               <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
-                ${s.status || 'Active'}
+                ${escapeHtml(s.status || 'Active')}
               </span>
-              <span class="text-sm font-mono font-black text-[#172B36]">${formatCurrency((s.price_cents || s.priceCents || 0), s.currency || "USD")}</span>
+              <span class="text-sm font-mono font-black text-[#172B36]">${price}</span>
+            </div>
+          </div>
+
+          <!-- Progress Bar & Milestone Info -->
+          <div class="space-y-2 bg-slate-50/70 p-4 rounded-2xl border border-[#E3E9EF]">
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-slate-600 font-semibold">Service Delivery Milestone Completion</span>
+              <span class="font-mono font-bold text-brand-whiz text-sm">${progress}%</span>
+            </div>
+            <div class="w-full bg-slate-200/70 rounded-full h-2.5 overflow-hidden border border-[#E3E9EF]">
+              <div class="bg-gradient-to-r from-brand-whiz to-emerald-400 h-full rounded-full transition-all duration-500" style="width: ${progress}%"></div>
             </div>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-white p-4 rounded-2xl border border-[#E3E9EF]">
             <div>
               <span class="text-[10px] uppercase font-bold text-slate-500 block">Deliverables Scope</span>
-              <p class="text-slate-600 mt-0.5 leading-relaxed">${s.deliverables || s.scope || 'Full agency execution and verified milestone handoffs.'}</p>
+              <p class="text-slate-600 mt-0.5 leading-relaxed">${escapeHtml(s.deliverables || s.scope || 'Full agency execution and verified milestone handoffs.')}</p>
             </div>
             <div>
               <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Timeline</span>
-              <p class="text-slate-600 mt-0.5">Start: ${s.start_date || 'Active'} • Target: ${s.deadline || 'Ongoing'}</p>
+              <p class="text-slate-600 mt-0.5">Start: ${escapeHtml(s.start_date || s.startDate || 'Active')} • Target: ${escapeHtml(s.deadline || 'Ongoing')}</p>
             </div>
           </div>
         </div>
@@ -319,7 +438,7 @@
     }).join('');
   }
 
-  // 3. Render Deliverables & Project Progress
+  // 3. Render Deliverables & Project Progress (INTERNAL SOP TASKS REMAIN HIDDEN)
   function renderDeliverablesTasks() {
     const list = document.getElementById('tasksFullList');
     const countEl = document.getElementById('tasksDeliverablesCount');
@@ -337,29 +456,34 @@
     }
 
     list.innerHTML = state.projects.map(p => {
-      const progress = Math.min(100, Math.max(0, p.progress_percent || p.progressPercent || 0));
+      const progress = Math.min(100, Math.max(0, Math.round(Number(p.progress_percent || p.progressPercent || 0))));
+      const completed = Number(p.completedTasksCount || 0);
+      const total = Number(p.totalTasksCount || 0);
       return `
-        <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E3E9EF] space-y-4 hover:border-[#E3E9EF] transition-all">
+        <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E3E9EF] space-y-4 hover:border-brand-whiz/40 hover:shadow-xs transition-all">
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
             <div>
               <h4 class="text-sm sm:text-base font-bold text-[#172B36] flex items-center gap-2">
                 <i class="fa-solid fa-diagram-project text-brand-whiz text-xs"></i>
-                <span>${p.name || p.project_name || 'Campaign Execution'}</span>
+                <span>${escapeHtml(p.name || p.projectName || 'Campaign Execution')}</span>
               </h4>
-              <p class="text-xs text-slate-500 mt-0.5">Target Completion: <strong class="text-slate-600">${p.deadline || 'Scheduled'}</strong></p>
+              <p class="text-xs text-slate-500 mt-0.5">Target Completion: <strong class="text-slate-600">${escapeHtml(p.deadline || 'Scheduled')}</strong></p>
             </div>
             <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
-              ${p.status || 'Active'}
+              ${escapeHtml(p.status || 'Active')}
             </span>
           </div>
 
           <!-- Progress Bar & Percentage -->
-          <div class="space-y-2 bg-white p-4 rounded-2xl border border-[#E3E9EF]">
+          <div class="space-y-2 bg-slate-50/70 p-4 rounded-2xl border border-[#E3E9EF]">
             <div class="flex items-center justify-between text-xs">
-              <span class="text-slate-500 font-medium">Deliverables Checkpoints</span>
-              <span class="font-mono font-bold text-brand-whiz text-sm">${progress}%</span>
+              <span class="text-slate-600 font-semibold">Campaign Deliverables Progress</span>
+              <div class="flex items-center gap-2">
+                ${total > 0 ? `<span class="text-[11px] font-mono text-slate-400">(${completed}/${total} Checkpoints)</span>` : ''}
+                <span class="font-mono font-bold text-brand-whiz text-sm">${progress}%</span>
+              </div>
             </div>
-            <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden border border-[#E3E9EF]">
+            <div class="w-full bg-slate-200/70 rounded-full h-2.5 overflow-hidden border border-[#E3E9EF]">
               <div class="bg-gradient-to-r from-brand-whiz to-emerald-400 h-full rounded-full transition-all duration-500" style="width: ${progress}%"></div>
             </div>
           </div>
@@ -368,7 +492,7 @@
     }).join('');
   }
 
-  // 4. Render Finance & Invoices
+  // 4. Render Finance, Multi-Currency Ledger & Invoices
   function renderFinanceReceipts() {
     const list = document.getElementById('financeFullList');
     const countEl = document.getElementById('financeReceiptsCount');
@@ -376,18 +500,59 @@
     if (countEl) countEl.textContent = `${records.length} Records`;
     if (!list) return;
 
+    // Multi-Currency Breakdown Cards
+    let currencyCardsHtml = '';
+    if (state.finance && state.finance.byCurrency) {
+      const currs = Object.values(state.finance.byCurrency);
+      if (currs.length > 0) {
+        currencyCardsHtml = `
+          <div class="grid grid-cols-1 sm:grid-cols-${Math.min(currs.length, 3)} gap-4 mb-6">
+            ${currs.map(c => `
+              <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs space-y-2">
+                <div class="flex items-center justify-between pb-2 border-b border-[#E3E9EF]">
+                  <span class="text-xs font-black uppercase text-brand-whiz bg-brand-whiz/10 px-2 py-0.5 rounded-md border border-brand-whiz/20">${escapeHtml(c.currency)}</span>
+                  <span class="text-[10px] uppercase font-bold text-slate-500">Currency Summary</span>
+                </div>
+                <div class="space-y-1.5 text-xs">
+                  <div class="flex justify-between">
+                    <span class="text-slate-500">Contract Value:</span>
+                    <span class="font-bold text-[#172B36] font-mono">${formatCurrency(c.contractValueCents || 0, c.currency)}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-slate-500">Total Invoiced:</span>
+                    <span class="font-mono text-slate-700">${formatCurrency(c.totalInvoicedCents || 0, c.currency)}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-slate-500">Confirmed Paid:</span>
+                    <span class="font-bold text-emerald-600 font-mono">${formatCurrency(c.totalConfirmedPaidCents || 0, c.currency)}</span>
+                  </div>
+                  <div class="flex justify-between pt-1 border-t border-slate-100">
+                    <span class="text-slate-600 font-semibold">Outstanding Due:</span>
+                    <span class="font-bold text-amber-600 font-mono">${formatCurrency(c.outstandingBalanceCents || 0, c.currency)}</span>
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+    }
+
     if (records.length === 0) {
       list.innerHTML = `
+        ${currencyCardsHtml}
         <div class="p-8 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 space-y-2">
-          <i class="fa-solid fa-file-invoice-dollar text-2xl text-slate-600 block mb-1"></i>
-          <p>No payment records or invoices issued yet.</p>
+          <i class="fa-solid fa-file-invoice-dollar text-2xl text-slate-400 block mb-1"></i>
+          <p>No individual payment transactions or invoices published yet.</p>
+          <p class="text-[11px] text-slate-400">Your provisioned service contract amounts are recorded in the ledger above.</p>
         </div>
       `;
       return;
     }
 
     list.innerHTML = `
-      <div class="rounded-3xl bg-white border border-[#E3E9EF] overflow-hidden">
+      ${currencyCardsHtml}
+      <div class="rounded-3xl bg-white border border-[#E3E9EF] overflow-hidden shadow-xs">
         <div class="overflow-x-auto">
           <table class="w-full text-left text-xs text-slate-600 min-w-[650px]">
             <thead class="bg-slate-50/80 border-b border-[#E3E9EF] text-[11px] uppercase font-bold text-slate-500">
@@ -403,22 +568,21 @@
             <tbody class="divide-y divide-[#E3E9EF]">
               ${records.map(r => {
                 const num = r.receipt_number || r.receiptNumber || r.invoice_number || 'INV-1001';
-                const date = r.payment_date || r.issue_date || '2026-10-30';
-                const amount = (((r.amount_cents || r.total_cents || 0)) / 100).toFixed(2);
+                const date = r.payment_date || r.paymentDate || r.issue_date || 'N/A';
                 const paymentId = r.id;
                 return `
                   <tr class="hover:bg-slate-50 transition-colors">
-                    <td class="p-4 font-mono font-bold text-[#172B36]">${num}</td>
-                    <td class="p-4 text-slate-500">${date}</td>
-                    <td class="p-4 font-mono font-bold text-emerald-600">${formatCurrency((r.amount_cents || r.total_cents || 0), r.currency || "USD")}</td>
-                    <td class="p-4 uppercase text-[11px] text-slate-500">${r.payment_method || 'Online'}</td>
+                    <td class="p-4 font-mono font-bold text-[#172B36]">${escapeHtml(num)}</td>
+                    <td class="p-4 text-slate-500">${escapeHtml(date)}</td>
+                    <td class="p-4 font-mono font-bold text-emerald-600">${formatCurrency((r.amount_cents || r.amountCents || r.total_cents || r.totalCents || 0), r.currency || "USD")}</td>
+                    <td class="p-4 uppercase text-[11px] text-slate-500">${escapeHtml(r.payment_method || r.paymentMethod || 'Online')}</td>
                     <td class="p-4">
                       <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
                         Paid
                       </span>
                     </td>
                     <td class="p-4 text-right">
-                      <button type="button" class="btn-download-client-receipt px-3 py-1.5 rounded-xl bg-brand-whiz/15 hover:bg-brand-whiz/25 text-brand-whiz border border-brand-whiz/30 text-xs font-bold transition-all" data-payment-id="${paymentId}" data-receipt-num="${num}">
+                      <button type="button" class="btn-download-client-receipt px-3 py-1.5 rounded-xl bg-brand-whiz/15 hover:bg-brand-whiz/25 text-brand-whiz border border-brand-whiz/30 text-xs font-bold transition-all cursor-pointer shadow-xs" data-payment-id="${paymentId}" data-receipt-num="${num}">
                         <i class="fa-solid fa-download mr-1"></i> PDF Receipt
                       </button>
                     </td>
@@ -989,12 +1153,47 @@
     // 3. Sign Out Buttons
     document.querySelectorAll('.btn-client-signout').forEach(btn => {
       btn.addEventListener('click', async () => {
+        if (state.refreshIntervalId) clearInterval(state.refreshIntervalId);
         if (window.Clerk) {
           await window.Clerk.signOut();
         }
         window.location.href = '/';
       });
     });
+
+    // 4. Manual Live Refresh / Sync Button
+    document.getElementById('btnRefreshClientDashboard')?.addEventListener('click', async () => {
+      const icon = document.getElementById('btnRefreshClientIcon');
+      if (icon) icon.classList.add('fa-spin');
+      try {
+        await loadClientData();
+        showToast('Dashboard synchronized with Cloudflare D1.', 'success');
+      } catch (e) {
+        showToast('Failed to refresh data.', 'error');
+      } finally {
+        if (icon) icon.classList.remove('fa-spin');
+      }
+    });
+
+    // 5. Automatic Revalidation & Bounded Polling (Phase 8: Free Tier Compliant)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && !state.isRefreshing && state.currentUser) {
+        loadClientData(true);
+      }
+    });
+
+    window.addEventListener('focus', () => {
+      if (!state.isRefreshing && state.currentUser) {
+        loadClientData(true);
+      }
+    });
+
+    if (state.refreshIntervalId) clearInterval(state.refreshIntervalId);
+    state.refreshIntervalId = setInterval(() => {
+      if (document.visibilityState === 'visible' && !state.isRefreshing && state.currentUser) {
+        loadClientData(true);
+      }
+    }, 25000);
 
     checkAuthAndInit();
   }
