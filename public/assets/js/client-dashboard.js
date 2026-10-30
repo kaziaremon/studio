@@ -57,7 +57,7 @@
     toast.id = 'clientGlobalToast';
     const bgClass = type === 'error' ? 'bg-rose-950/90 border-rose-500/50 text-rose-200' :
                     type === 'success' ? 'bg-emerald-950/90 border-emerald-500/50 text-emerald-200' :
-                    'bg-slate-900/90 border-slate-700 text-slate-200';
+                    'bg-white/95 border-[#E4E9ED] text-slate-700';
     const icon = type === 'error' ? 'fa-triangle-exclamation text-rose-400' :
                  type === 'success' ? 'fa-circle-check text-emerald-400' :
                  'fa-circle-info text-brand-whiz';
@@ -94,19 +94,19 @@
         // Bottom bar styling
         if (isTarget) {
           btn.classList.add('text-brand-whiz');
-          btn.classList.remove('text-slate-400');
+          btn.classList.remove('text-slate-500');
         } else {
           btn.classList.remove('text-brand-whiz');
-          btn.classList.add('text-slate-400');
+          btn.classList.add('text-slate-500');
         }
       } else {
         // Desktop and Drawer sidebar buttons
         if (isTarget) {
           btn.classList.add('bg-brand-whiz/15', 'text-brand-whiz', 'border-brand-whiz/30');
-          btn.classList.remove('text-slate-400', 'border-transparent');
+          btn.classList.remove('text-slate-500', 'border-transparent');
         } else {
           btn.classList.remove('bg-brand-whiz/15', 'text-brand-whiz', 'border-brand-whiz/30');
-          btn.classList.add('text-slate-400', 'border-transparent');
+          btn.classList.add('text-slate-500', 'border-transparent');
         }
       }
     });
@@ -191,7 +191,7 @@
 
     if (state.services.length === 0) {
       list.innerHTML = `
-        <div class="p-6 sm:p-8 rounded-2xl bg-slate-900/40 border border-slate-800 text-center text-xs text-slate-400 space-y-2">
+        <div class="p-6 sm:p-8 rounded-2xl bg-slate-50 border border-[#E4E9ED] text-center text-xs text-slate-500 space-y-2">
           <i class="fa-solid fa-shapes text-2xl text-slate-600 block mb-1"></i>
           <p>No active marketing services attached to your organization yet.</p>
           <a href="/#services" class="inline-block mt-2 px-3 py-1.5 rounded-lg bg-brand-whiz/20 text-brand-whiz hover:bg-brand-whiz/30 font-semibold transition-all">
@@ -201,23 +201,23 @@
       `;
     } else {
       list.innerHTML = state.services.map(s => `
-        <div class="p-4 sm:p-5 rounded-2xl bg-slate-900/60 border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 hover:border-slate-700 transition-all">
+        <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E4E9ED] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 hover:border-[#E4E9ED] transition-all">
           <div class="flex items-center space-x-3.5 min-w-0">
             <div class="w-10 h-10 rounded-xl bg-brand-whiz/15 text-brand-whiz border border-brand-whiz/30 flex items-center justify-center font-bold text-sm shrink-0">
               <i class="fa-solid fa-bolt"></i>
             </div>
             <div class="min-w-0">
-              <h4 class="text-xs sm:text-sm font-bold text-white truncate">${s.service_name || s.serviceName || s.package_name || 'Agency Service'}</h4>
-              <p class="text-[11px] text-slate-400 flex items-center gap-2 mt-0.5">
+              <h4 class="text-xs sm:text-sm font-bold text-[#12212B] truncate">${s.service_name || s.serviceName || s.package_name || 'Agency Service'}</h4>
+              <p class="text-[11px] text-slate-500 flex items-center gap-2 mt-0.5">
                 <span>Status: <strong class="text-emerald-400 uppercase">${s.status || 'Active'}</strong></span>
                 <span>•</span>
-                <span>Tier: <strong class="text-slate-300">${s.package_name || 'Standard'}</strong></span>
+                <span>Tier: <strong class="text-slate-600">${s.package_name || 'Standard'}</strong></span>
               </p>
             </div>
           </div>
-          <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800/80">
-            <span class="text-xs sm:text-sm font-mono font-bold text-white">$${(((s.price_cents || s.priceCents || 0)) / 100).toFixed(2)}</span>
-            <button type="button" data-client-tab="services" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold transition-all">
+          <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4 pt-2 sm:pt-0 border-t sm:border-t-0 border-[#E4E9ED]">
+            <span class="text-xs sm:text-sm font-mono font-bold text-[#12212B]">$${(((s.price_cents || s.priceCents || 0)) / 100).toFixed(2)}</span>
+            <button type="button" data-client-tab="services" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-700 text-[11px] font-semibold transition-all">
               Details
             </button>
           </div>
@@ -235,7 +235,7 @@
 
     if (state.services.length === 0) {
       list.innerHTML = `
-        <div class="p-8 rounded-2xl bg-[#0B111A] border border-[#1A2332] text-center text-xs text-slate-400 space-y-2">
+        <div class="p-8 rounded-2xl bg-white border border-[#E4E9ED] text-center text-xs text-slate-500 space-y-2">
           <i class="fa-solid fa-layer-group text-2xl text-slate-600 block mb-1"></i>
           <p>No active services provisioned for this account.</p>
           <a href="/#services" class="inline-block mt-2 px-3.5 py-1.5 rounded-xl bg-brand-whiz text-white font-bold transition-all">
@@ -249,33 +249,33 @@
     list.innerHTML = state.services.map(s => {
       const price = (((s.price_cents || s.priceCents || 0)) / 100).toFixed(2);
       return `
-        <div class="p-5 sm:p-6 rounded-3xl bg-[#0B111A] border border-[#1A2332] space-y-4 hover:border-slate-700 transition-all">
+        <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] space-y-4 hover:border-[#E4E9ED] transition-all">
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div class="flex items-center space-x-3.5">
               <div class="w-11 h-11 rounded-2xl bg-brand-whiz/15 text-brand-whiz border border-brand-whiz/30 flex items-center justify-center font-bold text-base shrink-0">
                 <i class="fa-solid fa-shapes"></i>
               </div>
               <div>
-                <h4 class="text-sm sm:text-base font-bold text-white">${s.service_name || s.serviceName || 'Marketing Service'}</h4>
-                <span class="text-xs text-slate-400">${s.package_name || 'Standard Agency Package'}</span>
+                <h4 class="text-sm sm:text-base font-bold text-[#12212B]">${s.service_name || s.serviceName || 'Marketing Service'}</h4>
+                <span class="text-xs text-slate-500">${s.package_name || 'Standard Agency Package'}</span>
               </div>
             </div>
             <div class="flex items-center gap-2.5">
               <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-emerald-950 text-emerald-400 border border-emerald-500/30">
                 ${s.status || 'Active'}
               </span>
-              <span class="text-sm font-mono font-black text-white">$${price}</span>
+              <span class="text-sm font-mono font-black text-[#12212B]">$${price}</span>
             </div>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-slate-900/60 p-4 rounded-2xl border border-slate-800">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-white p-4 rounded-2xl border border-[#E4E9ED]">
             <div>
               <span class="text-[10px] uppercase font-bold text-slate-500 block">Deliverables Scope</span>
-              <p class="text-slate-300 mt-0.5 leading-relaxed">${s.deliverables || s.scope || 'Full agency execution and verified milestone handoffs.'}</p>
+              <p class="text-slate-600 mt-0.5 leading-relaxed">${s.deliverables || s.scope || 'Full agency execution and verified milestone handoffs.'}</p>
             </div>
             <div>
               <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Timeline</span>
-              <p class="text-slate-300 mt-0.5">Start: ${s.start_date || 'Active'} • Target: ${s.deadline || 'Ongoing'}</p>
+              <p class="text-slate-600 mt-0.5">Start: ${s.start_date || 'Active'} • Target: ${s.deadline || 'Ongoing'}</p>
             </div>
           </div>
         </div>
@@ -292,7 +292,7 @@
 
     if (state.projects.length === 0) {
       list.innerHTML = `
-        <div class="p-8 rounded-2xl bg-[#0B111A] border border-[#1A2332] text-center text-xs text-slate-400 space-y-2">
+        <div class="p-8 rounded-2xl bg-white border border-[#E4E9ED] text-center text-xs text-slate-500 space-y-2">
           <i class="fa-solid fa-list-check text-2xl text-slate-600 block mb-1"></i>
           <p>No active project campaigns provisioned yet.</p>
         </div>
@@ -303,14 +303,14 @@
     list.innerHTML = state.projects.map(p => {
       const progress = Math.min(100, Math.max(0, p.progress_percent || p.progressPercent || 0));
       return `
-        <div class="p-5 sm:p-6 rounded-3xl bg-[#0B111A] border border-[#1A2332] space-y-4 hover:border-slate-700 transition-all">
+        <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E4E9ED] space-y-4 hover:border-[#E4E9ED] transition-all">
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
             <div>
-              <h4 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+              <h4 class="text-sm sm:text-base font-bold text-[#12212B] flex items-center gap-2">
                 <i class="fa-solid fa-diagram-project text-brand-whiz text-xs"></i>
                 <span>${p.name || p.project_name || 'Campaign Execution'}</span>
               </h4>
-              <p class="text-xs text-slate-400 mt-0.5">Target Completion: <strong class="text-slate-300">${p.deadline || 'Scheduled'}</strong></p>
+              <p class="text-xs text-slate-500 mt-0.5">Target Completion: <strong class="text-slate-600">${p.deadline || 'Scheduled'}</strong></p>
             </div>
             <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-emerald-950 text-emerald-400 border border-emerald-500/30">
               ${p.status || 'Active'}
@@ -318,12 +318,12 @@
           </div>
 
           <!-- Progress Bar & Percentage -->
-          <div class="space-y-2 bg-slate-900/60 p-4 rounded-2xl border border-slate-800">
+          <div class="space-y-2 bg-white p-4 rounded-2xl border border-[#E4E9ED]">
             <div class="flex items-center justify-between text-xs">
-              <span class="text-slate-400 font-medium">Deliverables Checkpoints</span>
+              <span class="text-slate-500 font-medium">Deliverables Checkpoints</span>
               <span class="font-mono font-bold text-brand-whiz text-sm">${progress}%</span>
             </div>
-            <div class="w-full bg-slate-950 rounded-full h-2.5 overflow-hidden border border-slate-800">
+            <div class="w-full bg-slate-950 rounded-full h-2.5 overflow-hidden border border-[#E4E9ED]">
               <div class="bg-gradient-to-r from-brand-whiz to-emerald-400 h-full rounded-full transition-all duration-500" style="width: ${progress}%"></div>
             </div>
           </div>
@@ -342,7 +342,7 @@
 
     if (records.length === 0) {
       list.innerHTML = `
-        <div class="p-8 rounded-2xl bg-[#0B111A] border border-[#1A2332] text-center text-xs text-slate-400 space-y-2">
+        <div class="p-8 rounded-2xl bg-white border border-[#E4E9ED] text-center text-xs text-slate-500 space-y-2">
           <i class="fa-solid fa-file-invoice-dollar text-2xl text-slate-600 block mb-1"></i>
           <p>No payment records or invoices issued yet.</p>
         </div>
@@ -351,10 +351,10 @@
     }
 
     list.innerHTML = `
-      <div class="rounded-3xl bg-[#0B111A] border border-[#1A2332] overflow-hidden">
+      <div class="rounded-3xl bg-white border border-[#E4E9ED] overflow-hidden">
         <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs text-slate-300 min-w-[650px]">
-            <thead class="bg-slate-950/70 border-b border-[#1A2332] text-[11px] uppercase font-bold text-slate-400">
+          <table class="w-full text-left text-xs text-slate-600 min-w-[650px]">
+            <thead class="bg-slate-950/70 border-b border-[#E4E9ED] text-[11px] uppercase font-bold text-slate-500">
               <tr>
                 <th class="p-4">Receipt / Invoice #</th>
                 <th class="p-4">Date</th>
@@ -371,11 +371,11 @@
                 const amount = (((r.amount_cents || r.total_cents || 0)) / 100).toFixed(2);
                 const paymentId = r.id;
                 return `
-                  <tr class="hover:bg-slate-900/40 transition-colors">
-                    <td class="p-4 font-mono font-bold text-white">${num}</td>
-                    <td class="p-4 text-slate-400">${date}</td>
+                  <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="p-4 font-mono font-bold text-[#12212B]">${num}</td>
+                    <td class="p-4 text-slate-500">${date}</td>
                     <td class="p-4 font-mono font-bold text-emerald-400">$${amount}</td>
-                    <td class="p-4 uppercase text-[11px] text-slate-400">${r.payment_method || 'Online'}</td>
+                    <td class="p-4 uppercase text-[11px] text-slate-500">${r.payment_method || 'Online'}</td>
                     <td class="p-4">
                       <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-950 text-emerald-400 border border-emerald-500/30">
                         Paid

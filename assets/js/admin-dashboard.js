@@ -172,6 +172,159 @@
   // =========================================================================
   // 1. OVERVIEW DATA
   // =========================================================================
+    let charts = {
+    services: null,
+    projects: null,
+    tasks: null,
+    revenue: null
+  };
+
+  function renderCharts(d) {
+    if (typeof Chart === 'undefined') return;
+
+    // 1. Service Distribution
+    const serviceCtx = document.getElementById('chartServiceDistribution');
+    const serviceEmpty = document.getElementById('chartServiceEmptyState');
+    if (serviceCtx) {
+      if (charts.services) charts.services.destroy();
+      const items = d.serviceDistribution || [];
+      if (items.length === 0) {
+        serviceCtx.style.display = 'none';
+        if (serviceEmpty) serviceEmpty.classList.remove('hidden');
+      } else {
+        serviceCtx.style.display = 'block';
+        if (serviceEmpty) serviceEmpty.classList.add('hidden');
+        charts.services = new Chart(serviceCtx, {
+          type: 'doughnut',
+          data: {
+            labels: items.map(i => i.name),
+            datasets: [{
+              data: items.map(i => i.count),
+              backgroundColor: ['#147D64', '#06B6D4', '#3B82F6', '#8B5CF6', '#F59E0B', '#10B981'],
+              borderWidth: 2,
+              borderColor: '#FFFFFF'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10, family: 'Inter' }, color: '#64748B' } }
+            }
+          }
+        });
+      }
+    }
+
+    // 2. Project Progress
+    const projCtx = document.getElementById('chartProjectProgress');
+    const projEmpty = document.getElementById('chartProjectEmptyState');
+    if (projCtx) {
+      if (charts.projects) charts.projects.destroy();
+      const projects = d.projectProgress || [];
+      if (projects.length === 0) {
+        projCtx.style.display = 'none';
+        if (projEmpty) projEmpty.classList.remove('hidden');
+      } else {
+        projCtx.style.display = 'block';
+        if (projEmpty) projEmpty.classList.add('hidden');
+        charts.projects = new Chart(projCtx, {
+          type: 'bar',
+          data: {
+            labels: projects.map(p => p.name.length > 20 ? p.name.substring(0, 18) + '...' : p.name),
+            datasets: [{
+              label: 'Progress %',
+              data: projects.map(p => p.progress_percent || 0),
+              backgroundColor: '#147D64',
+              borderRadius: 6
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            scales: {
+              x: { min: 0, max: 100, ticks: { callback: v => v + '%', color: '#64748B', font: { size: 10 } }, grid: { color: '#F1F5F9' } },
+              y: { ticks: { color: '#1E293B', font: { size: 10 } }, grid: { display: false } }
+            },
+            plugins: { legend: { display: false } }
+          }
+        });
+      }
+    }
+
+    // 3. Task Status Distribution
+    const taskCtx = document.getElementById('chartTaskStatus');
+    const taskEmpty = document.getElementById('chartTaskEmptyState');
+    if (taskCtx) {
+      if (charts.tasks) charts.tasks.destroy();
+      const tasks = d.taskStatusDistribution || [];
+      const totalTasks = tasks.reduce((acc, t) => acc + (t.count || 0), 0);
+      if (totalTasks === 0) {
+        taskCtx.style.display = 'none';
+        if (taskEmpty) taskEmpty.classList.remove('hidden');
+      } else {
+        taskCtx.style.display = 'block';
+        if (taskEmpty) taskEmpty.classList.add('hidden');
+        charts.tasks = new Chart(taskCtx, {
+          type: 'doughnut',
+          data: {
+            labels: tasks.map(t => (t.status || 'todo').toUpperCase()),
+            datasets: [{
+              data: tasks.map(t => t.count),
+              backgroundColor: ['#10B981', '#3B82F6', '#F59E0B', '#94A3B8'],
+              borderWidth: 2,
+              borderColor: '#FFFFFF'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10, family: 'Inter' }, color: '#64748B' } }
+            }
+          }
+        });
+      }
+    }
+
+    // 4. Monthly Revenue
+    const revCtx = document.getElementById('chartMonthlyRevenue');
+    const revEmpty = document.getElementById('chartRevenueEmptyState');
+    if (revCtx) {
+      if (charts.revenue) charts.revenue.destroy();
+      const revenueCents = d.confirmedRevenueCents || 0;
+      if (revenueCents === 0) {
+        revCtx.style.display = 'none';
+        if (revEmpty) revEmpty.classList.remove('hidden');
+      } else {
+        revCtx.style.display = 'block';
+        if (revEmpty) revEmpty.classList.add('hidden');
+        charts.revenue = new Chart(revCtx, {
+          type: 'bar',
+          data: {
+            labels: ['Current Month'],
+            datasets: [{
+              label: 'Confirmed Payments ($ USD)',
+              data: [revenueCents / 100],
+              backgroundColor: '#10B981',
+              borderRadius: 8
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              y: { ticks: { callback: v => '$' + v, color: '#64748B', font: { size: 10 } }, grid: { color: '#F1F5F9' } },
+              x: { ticks: { color: '#1E293B', font: { size: 10 } }, grid: { display: false } }
+            },
+            plugins: { legend: { display: false } }
+          }
+        });
+      }
+    }
+  }
+
   async function loadOverviewData() {
     const res = await apiFetch('/portal/admin/stats');
     if (res.ok && res.data && res.data.data) {
@@ -182,19 +335,33 @@
       const actCount = document.getElementById('statActiveProjects');
       if (actCount) actCount.textContent = d.activeProjects || 0;
 
+      const srvCount = document.getElementById('statActiveServices');
+      if (srvCount) srvCount.textContent = d.activeServices || 0;
+
+      const compTasks = document.getElementById('statCompletedTasks');
+      if (compTasks) compTasks.textContent = d.completedTasks || 0;
+
+      const pendTasks = document.getElementById('statPendingTasks');
+      if (pendTasks) pendTasks.textContent = d.pendingTasks || 0;
+
+      const revEl = document.getElementById('statConfirmedRevenue');
+      if (revEl) revEl.textContent = '$' + ((d.confirmedRevenueCents || 0) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+      renderCharts(d);
+
       const actEl = document.getElementById('overviewActivityList');
       if (actEl && d.recentActivity) {
         if (d.recentActivity.length === 0) {
-          actEl.innerHTML = '<p class="text-slate-500 italic">No recent system activity recorded in D1.</p>';
+          actEl.innerHTML = '<p class="text-slate-500 italic p-4 text-center">No recent system activity recorded in D1.</p>';
         } else {
           actEl.innerHTML = d.recentActivity.map(a => `
-            <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-950/40 border border-slate-800/80">
+            <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-[#E4E9ED]">
               <div class="flex items-center space-x-2.5">
                 <span class="w-2 h-2 rounded-full bg-brand-whiz"></span>
-                <span class="font-bold text-white uppercase text-[10px]">${a.action}</span>
-                <span class="text-slate-400 text-xs">${a.resource_type}</span>
+                <span class="font-bold text-[#12212B] uppercase text-[10px]">${a.action}</span>
+                <span class="text-slate-500 text-xs">${a.resource_type || ''}</span>
               </div>
-              <span class="text-[11px] text-slate-500 font-mono">${new Date(a.created_at).toLocaleTimeString()}</span>
+              <span class="text-[11px] text-slate-400 font-mono">${new Date(a.created_at).toLocaleTimeString()}</span>
             </div>
           `).join('');
         }
@@ -300,25 +467,15 @@
     if (subEl) subEl.textContent = `${client.full_name} (${client.email})`;
 
     const statusBadge = document.getElementById('clientDetailStatusBadge');
-    const btnArchive = document.getElementById('btnArchiveClientAction');
-    const btnRestore = document.getElementById('btnRestoreClientAction');
-
-    if (client.status === 'archived') {
-      if (statusBadge) {
-        statusBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-950 text-amber-400 border border-amber-500/30';
-        statusBadge.textContent = 'Archived';
-      }
-      if (btnArchive) btnArchive.classList.add('hidden');
-      if (btnRestore) btnRestore.classList.remove('hidden');
-    } else {
-      if (statusBadge) {
-        statusBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-950 text-emerald-400 border border-emerald-500/30';
+    if (statusBadge) {
+      if (client.status === 'suspended') {
+        statusBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-rose-50 text-rose-700 border border-rose-200';
+        statusBadge.textContent = 'Suspended';
+      } else {
+        statusBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200';
         statusBadge.textContent = client.status || 'Active';
       }
-      if (btnArchive) btnArchive.classList.remove('hidden');
-      if (btnRestore) btnRestore.classList.add('hidden');
     }
-
     // Profile Card
     const initials = (client.full_name || 'CL').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
     const avInit = document.getElementById('clientAvatarInitials');
