@@ -11,15 +11,15 @@
   <!-- Clerk JavaScript SDK (Hobby / Free Tier Production CDN) -->
   <script async crossorigin="anonymous" data-clerk-publishable-key="pk_test_cG9ldGljLWxpZ2VyLTQzNTUuY2xlcmsuYWNjb3VudHMuZGV2JA" src="https://poetic-liger-4355.clerk.accounts.dev/npm/@clerk/clerk-js@5/dist/clerk.browser.js" type="text/javascript"></script>
 
-  <!-- Google Fonts: Inter & Plus Jakarta Sans -->
+  <!-- Google Fonts: Inter & Plus Jakarta Sans & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <!-- FontAwesome 6 -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
-  <!-- Tailwind CSS via CDN with Brand Color Tokens -->
+  <!-- Tailwind CSS via CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -46,7 +46,7 @@
     }
   </script>
 
-  <!-- pdf-lib Browser-side Vector PDF Generation (100% Free, Zero Server Storage) -->
+  <!-- pdf-lib for Pure Client-Side Vector PDF Generation (Zero Server Storage) -->
   <script src="https://unpkg.com/pdf-lib@1.17.9/dist/pdf-lib.min.js"></script>
 
   <!-- Liquid Glass Theme Styles -->
@@ -231,11 +231,11 @@
           <div class="p-3 rounded-2xl bg-slate-900/60 border border-slate-800/80 space-y-2">
             <div class="flex items-center space-x-2.5">
               <div class="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center font-bold text-xs text-emerald-400 uppercase admin-display-initials">
-                KE
+                SA
               </div>
               <div class="min-w-0 flex-1">
-                <p class="text-xs font-bold text-white truncate admin-display-name">Kazi Emon</p>
-                <p class="text-[11px] text-slate-400 font-mono truncate admin-display-username">@kaziaremon</p>
+                <p class="text-xs font-bold text-white truncate admin-display-name">Administrator</p>
+                <p class="text-[11px] text-slate-400 font-mono truncate admin-display-username">@admin</p>
               </div>
             </div>
             <button type="button" class="btn-admin-signout w-full py-2 px-3 rounded-xl text-[11px] font-bold text-slate-400 hover:text-rose-400 hover:bg-slate-800/80 border border-slate-800 transition-all flex items-center justify-center space-x-1.5 cursor-pointer">
@@ -248,22 +248,21 @@
 
       <!-- MOBILE SLIDE-OUT DRAWER OVERLAY -->
       <div id="mobileDrawerBackdrop" class="hidden md:hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-sm transition-opacity"></div>
-      <aside id="mobileDrawer" class="md:hidden fixed inset-y-0 left-0 z-50 w-72 bg-[#0B0F17] border-r border-slate-800 transform -translate-x-full transition-transform duration-300 flex flex-col justify-between p-5">
+      <aside id="mobileDrawer" class="fixed inset-y-0 left-0 z-50 w-72 bg-slate-950 border-r border-slate-800 p-5 transform -translate-x-full transition-transform duration-300 ease-in-out md:hidden flex flex-col justify-between">
         <div class="space-y-6 overflow-y-auto">
-          <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-800">
             <div class="flex items-center space-x-2">
-              <div class="w-8 h-8 rounded-xl bg-brand-whiz/10 border border-brand-whiz/30 flex items-center justify-center text-brand-whiz">
+              <div class="w-7 h-7 rounded-lg bg-brand-whiz/10 border border-brand-whiz/30 flex items-center justify-center text-brand-whiz">
                 <i class="fa-solid fa-bolt text-xs"></i>
               </div>
               <span class="font-extrabold text-sm text-white">Whiz Studio</span>
             </div>
-            <button type="button" id="mobileDrawerCloseBtn" class="w-8 h-8 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer">
-              <i class="fa-solid fa-xmark text-sm"></i>
+            <button type="button" id="mobileDrawerCloseBtn" class="w-8 h-8 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white cursor-pointer">
+              <i class="fa-solid fa-xmark text-xs"></i>
             </button>
           </div>
-
-          <nav class="space-y-1.5">
-            <button type="button" data-dash-tab="overview" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-bold bg-brand-whiz/15 text-brand-whiz border border-brand-whiz/30 transition-all text-left">
+          <nav class="space-y-1">
+            <button type="button" data-dash-tab="overview" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 border border-transparent transition-all text-left">
               <i class="fa-solid fa-gauge-high text-xs w-4"></i>
               <span>Overview & KPIs</span>
             </button>
@@ -411,10 +410,19 @@
               </button>
             </div>
 
-            <!-- Client Search -->
-            <div class="relative">
-              <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
-              <input type="text" id="adminClientSearchInput" placeholder="Search clients by name, company, or email..." class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900/80 border border-slate-800 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand-whiz transition-all">
+            <!-- Client Search & Status Filter -->
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <div class="relative flex-1">
+                <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                <input type="text" id="adminClientSearchInput" placeholder="Search clients by name, company, or email..." class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900/80 border border-slate-800 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand-whiz transition-all">
+              </div>
+              <div class="flex items-center gap-2">
+                <select id="adminClientStatusFilter" class="px-3.5 py-2.5 rounded-xl bg-slate-900/80 border border-slate-800 text-xs text-slate-300 focus:outline-none focus:border-brand-whiz">
+                  <option value="active">Active Clients Only</option>
+                  <option value="archived">Archived Clients</option>
+                  <option value="all">All Clients</option>
+                </select>
+              </div>
             </div>
 
             <!-- Clients Table Card -->
@@ -441,7 +449,141 @@
           </div>
 
           <!-- =================================================================
-               TAB 3: EDITABLE SERVICE MANAGEMENT (12 SERVICES + 240 SOP BLUEPRINTS)
+               VIEW: CLIENT MANAGEMENT WORKSPACE (Phase 3)
+               ================================================================= -->
+          <div id="view_client_details" class="hidden space-y-6">
+            <!-- Client Details Top Bar -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-800/80">
+              <div class="flex items-center space-x-3">
+                <button type="button" id="btnBackToClients" class="w-9 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 flex items-center justify-center text-slate-300 hover:text-white transition-all cursor-pointer">
+                  <i class="fa-solid fa-arrow-left text-xs"></i>
+                </button>
+                <div>
+                  <div class="flex items-center space-x-2.5">
+                    <h2 class="text-2xl font-black text-white tracking-tight" id="clientDetailTitle">Client Details</h2>
+                    <span id="clientDetailStatusBadge" class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-950 text-emerald-400 border border-emerald-500/30">Active</span>
+                  </div>
+                  <p class="text-xs text-slate-400 mt-0.5" id="clientDetailSubtitle">Managing organization and operational services</p>
+                </div>
+              </div>
+              <div class="flex flex-wrap items-center gap-2.5">
+                <button type="button" id="btnOpenEditClientModal" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700/80 transition-all flex items-center gap-1.5 cursor-pointer">
+                  <i class="fa-solid fa-pen-to-square text-xs text-brand-whiz"></i>
+                  <span>Edit Profile</span>
+                </button>
+                <button type="button" id="btnOpenAssignServiceClientModal" class="px-3.5 py-2 rounded-xl text-xs font-bold btn-glass-primary shadow-sm hover:shadow-md transition-all flex items-center gap-1.5 cursor-pointer">
+                  <i class="fa-solid fa-plus text-xs"></i>
+                  <span>Assign Service</span>
+                </button>
+                <button type="button" id="btnArchiveClientAction" class="px-3.5 py-2 rounded-xl text-xs font-bold text-amber-400 bg-amber-950/30 hover:bg-amber-950/60 border border-amber-500/30 transition-all flex items-center gap-1.5 cursor-pointer">
+                  <i class="fa-solid fa-box-archive text-xs"></i>
+                  <span>Archive Client</span>
+                </button>
+                <button type="button" id="btnRestoreClientAction" class="hidden px-3.5 py-2 rounded-xl text-xs font-bold text-emerald-400 bg-emerald-950/40 hover:bg-emerald-950/70 border border-emerald-500/30 transition-all flex items-center gap-1.5 cursor-pointer">
+                  <i class="fa-solid fa-rotate-left text-xs"></i>
+                  <span>Restore Client</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Client Info Cards Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <!-- Left Column: Profile Card & Governance -->
+              <div class="space-y-6">
+                <!-- Section A: Client Profile Card -->
+                <div class="p-6 rounded-3xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-xl space-y-4">
+                  <div class="flex items-center space-x-3 pb-3 border-b border-slate-800">
+                    <div class="w-10 h-10 rounded-xl bg-brand-whiz/10 border border-brand-whiz/30 flex items-center justify-center font-bold text-sm text-brand-whiz uppercase" id="clientAvatarInitials">
+                      CL
+                    </div>
+                    <div>
+                      <h3 class="text-sm font-bold text-white" id="clientCardFullName">Client Name</h3>
+                      <p class="text-xs text-brand-whiz font-medium" id="clientCardCompanyName">Company Name</p>
+                    </div>
+                  </div>
+                  <div class="space-y-2.5 text-xs">
+                    <div>
+                      <span class="text-[10px] uppercase font-bold text-slate-500 block">Verified Email</span>
+                      <span class="text-slate-200 font-mono" id="clientCardEmail">email@example.com</span>
+                    </div>
+                    <div>
+                      <span class="text-[10px] uppercase font-bold text-slate-500 block">Phone</span>
+                      <span class="text-slate-200" id="clientCardPhone">+880...</span>
+                    </div>
+                    <div>
+                      <span class="text-[10px] uppercase font-bold text-slate-500 block">Location & Address</span>
+                      <span class="text-slate-200" id="clientCardLocation">Dhaka, Bangladesh</span>
+                    </div>
+                    <div>
+                      <span class="text-[10px] uppercase font-bold text-slate-500 block">Clerk User ID</span>
+                      <span class="text-slate-400 font-mono text-[11px] break-all select-all" id="clientCardClerkId">user_...</span>
+                    </div>
+                    <div>
+                      <span class="text-[10px] uppercase font-bold text-slate-500 block">D1 Organization ID</span>
+                      <span class="text-slate-400 font-mono text-[11px] select-all" id="clientCardOrgId">org_...</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Section D: Financial Summary Card -->
+                <div class="p-6 rounded-3xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-xl space-y-3">
+                  <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 pb-2 border-b border-slate-800">Financial Summary</h4>
+                  <div class="grid grid-cols-2 gap-3 text-xs">
+                    <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800">
+                      <span class="text-[10px] text-slate-500 uppercase block">Total Paid</span>
+                      <span class="text-sm font-mono font-bold text-emerald-400" id="clientCardTotalPaid">$0.00</span>
+                    </div>
+                    <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800">
+                      <span class="text-[10px] text-slate-500 uppercase block">Total Billed</span>
+                      <span class="text-sm font-mono font-bold text-white" id="clientCardTotalBilled">$0.00</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right 2 Columns: Assigned Services & Service Projects -->
+              <div class="lg:col-span-2 space-y-6">
+                <!-- Section B: Assigned Services -->
+                <div class="p-6 rounded-3xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-xl space-y-4">
+                  <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                      <i class="fa-solid fa-layer-group text-brand-whiz"></i>
+                      <span>Assigned Services</span>
+                    </h3>
+                    <span class="text-xs text-slate-500 font-mono" id="clientServicesCount">0 Active</span>
+                  </div>
+                  <div id="clientAssignedServicesList" class="space-y-3">
+                    <p class="text-slate-500 italic text-xs">Loading services...</p>
+                  </div>
+                </div>
+
+                <!-- Section C: Projects with Real-time Progress -->
+                <div class="p-6 rounded-3xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-xl space-y-4">
+                  <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                      <i class="fa-solid fa-folder-tree text-brand-whiz"></i>
+                      <span>Operational Projects & Progress</span>
+                    </h3>
+                    <span class="text-xs text-slate-500 font-mono" id="clientProjectsCount">0 Projects</span>
+                  </div>
+                  <div id="clientProjectsList" class="space-y-3">
+                    <p class="text-slate-500 italic text-xs">Loading projects...</p>
+                  </div>
+                </div>
+
+                <!-- Recent Client Activity History -->
+                <div class="p-6 rounded-3xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-xl space-y-3">
+                  <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 pb-2 border-b border-slate-800">Audit & Modification History</h4>
+                  <div id="clientAuditHistoryList" class="space-y-2 text-xs">
+                    <p class="text-slate-500 italic">Loading audit trail...</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- =================================================================
+               TAB 3: SERVICE MANAGEMENT (12 SERVICES + 240 BLUEPRINTS)
                ================================================================= -->
           <div id="view_services" class="hidden space-y-6">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
@@ -460,8 +602,83 @@
 
             <!-- Services Grid -->
             <div id="adminServicesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              <!-- Dynamically populated from /api/v1/services/catalog -->
               <p class="text-slate-500 italic col-span-3">Loading master services from Cloudflare D1...</p>
+            </div>
+          </div>
+
+          <!-- =================================================================
+               VIEW: SOP TASK BLUEPRINT MANAGEMENT WORKSPACE (Phase 7)
+               ================================================================= -->
+          <div id="view_service_tasks" class="hidden space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-800/80">
+              <div class="flex items-center space-x-3">
+                <button type="button" id="btnBackToServices" class="w-9 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 flex items-center justify-center text-slate-300 hover:text-white transition-all cursor-pointer">
+                  <i class="fa-solid fa-arrow-left text-xs"></i>
+                </button>
+                <div>
+                  <div class="flex items-center space-x-2.5">
+                    <span id="serviceTasksCodeBadge" class="text-xs font-mono font-bold text-brand-whiz bg-brand-whiz/10 border border-brand-whiz/30 px-2 py-0.5 rounded">CODE</span>
+                    <h2 class="text-2xl font-black text-white tracking-tight" id="serviceTasksTitle">Service Name</h2>
+                    <span id="serviceTasksVersionBadge" class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">v1</span>
+                  </div>
+                  <p class="text-xs text-slate-400 mt-0.5" id="serviceTasksDescription">Managing 20 Master SOP Task Blueprints in Cloudflare D1</p>
+                </div>
+              </div>
+              <div class="flex flex-wrap items-center gap-2.5">
+                <button type="button" id="btnOpenAddBlueprintModal" class="px-3.5 py-2 rounded-xl text-xs font-bold btn-glass-primary shadow-sm hover:shadow-md transition-all flex items-center gap-1.5 cursor-pointer">
+                  <i class="fa-solid fa-plus text-xs"></i>
+                  <span>Add New Task</span>
+                </button>
+                <button type="button" id="btnOpenApplyTemplateModal" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-emerald-400 border border-emerald-500/30 transition-all flex items-center gap-1.5 cursor-pointer">
+                  <i class="fa-solid fa-arrows-spin text-xs"></i>
+                  <span>Apply to Active Projects</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- 3 Phase Blueprint Sections (Beginning 7 + Intermediate 7 + Advanced 6) -->
+            <div class="space-y-6">
+              <!-- Beginning Phase -->
+              <div class="p-6 rounded-3xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-xl space-y-4">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+                  <h3 class="text-xs font-extrabold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
+                    <i class="fa-solid fa-flag-checkered"></i>
+                    <span>Phase 1: Beginning / Foundation SOPs</span>
+                  </h3>
+                  <span class="text-[11px] font-mono text-slate-400" id="phaseBeginningCount">7 Tasks</span>
+                </div>
+                <div id="blueprintsPhaseBeginning" class="space-y-3">
+                  <p class="text-slate-500 italic text-xs">Loading foundation tasks...</p>
+                </div>
+              </div>
+
+              <!-- Intermediate Phase -->
+              <div class="p-6 rounded-3xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-xl space-y-4">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+                  <h3 class="text-xs font-extrabold uppercase tracking-wider text-blue-400 flex items-center gap-2">
+                    <i class="fa-solid fa-gears"></i>
+                    <span>Phase 2: Intermediate / Execution SOPs</span>
+                  </h3>
+                  <span class="text-[11px] font-mono text-slate-400" id="phaseIntermediateCount">7 Tasks</span>
+                </div>
+                <div id="blueprintsPhaseIntermediate" class="space-y-3">
+                  <p class="text-slate-500 italic text-xs">Loading intermediate tasks...</p>
+                </div>
+              </div>
+
+              <!-- Advanced Phase -->
+              <div class="p-6 rounded-3xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-xl space-y-4">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+                  <h3 class="text-xs font-extrabold uppercase tracking-wider text-purple-400 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>Phase 3: Advanced / Optimization & Scaling SOPs</span>
+                  </h3>
+                  <span class="text-[11px] font-mono text-slate-400" id="phaseAdvancedCount">6 Tasks</span>
+                </div>
+                <div id="blueprintsPhaseAdvanced" class="space-y-3">
+                  <p class="text-slate-500 italic text-xs">Loading advanced tasks...</p>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -507,9 +724,9 @@
                 <p class="text-xs text-slate-400">Complete tasks to automatically advance project progress in real time.</p>
               </div>
               <div class="flex items-center gap-2">
-                <button type="button" class="task-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-white" data-filter="all">All</button>
-                <button type="button" class="task-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white" data-filter="todo">Pending</button>
-                <button type="button" class="task-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white" data-filter="completed">Completed</button>
+                <button type="button" class="task-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-white cursor-pointer" data-filter="all">All</button>
+                <button type="button" class="task-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white cursor-pointer" data-filter="todo">Pending</button>
+                <button type="button" class="task-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white cursor-pointer" data-filter="completed">Completed</button>
               </div>
             </div>
 
@@ -918,6 +1135,22 @@
           </div>
         </div>
 
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">City</label>
+            <input type="text" name="city" placeholder="Dhaka" value="Dhaka" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Country</label>
+            <input type="text" name="country" placeholder="Bangladesh" value="Bangladesh" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Street Address / Headquarters</label>
+          <input type="text" name="address" placeholder="e.g. House 12, Road 4, Banani" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white">
+        </div>
+
         <!-- Service Selection Checkboxes -->
         <div>
           <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">Select Services to Provision (Auto-generates 20 SOP tasks each)</label>
@@ -938,31 +1171,574 @@
   </div>
 
   <!-- =========================================================================
-       MODAL 2: INSPECT & EDIT TASK BLUEPRINTS FOR A SERVICE
+       MODAL: EDIT CLIENT PROFILE
        ========================================================================= -->
-  <div id="modalInspectBlueprints" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
-    <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-4xl w-full p-6 sm:p-8 space-y-5 shadow-2xl max-h-[90vh] flex flex-col">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-800 shrink-0">
-        <div>
-          <h3 class="text-lg font-bold text-white flex items-center gap-2" id="modalBlueprintsTitle">
-            <i class="fa-solid fa-list-check text-brand-whiz text-sm"></i>
-            <span>Master SOP Task Blueprints</span>
-          </h3>
-          <p class="text-xs text-slate-400" id="modalBlueprintsSubtitle">Inspecting 20 standard tasks for service</p>
-        </div>
-        <button type="button" class="btn-close-modal text-slate-400 hover:text-white cursor-pointer" data-modal="modalInspectBlueprints">
+  <div id="modalEditClient" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-xl w-full p-6 sm:p-8 space-y-5 shadow-2xl">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-user-pen text-brand-whiz text-sm"></i>
+          <span>Edit Client Business Profile</span>
+        </h3>
+        <button type="button" class="btn-close-modal text-slate-400 hover:text-white cursor-pointer" data-modal="modalEditClient">
           <i class="fa-solid fa-xmark text-lg"></i>
         </button>
       </div>
 
-      <div class="flex-1 overflow-y-auto space-y-3" id="modalBlueprintsList">
-        <!-- Dynamically rendered tasks -->
+      <form id="formEditClient" class="space-y-4">
+        <input type="hidden" name="clientId" id="editClientId">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Full Name *</label>
+            <input type="text" name="fullName" id="editClientFullName" required class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Company / Brand Name</label>
+            <input type="text" name="companyName" id="editClientCompanyName" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Email Address *</label>
+            <input type="email" name="email" id="editClientEmail" required class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Phone Number</label>
+            <input type="text" name="phone" id="editClientPhone" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">City</label>
+            <input type="text" name="city" id="editClientCity" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Country</label>
+            <input type="text" name="country" id="editClientCountry" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Address</label>
+          <input type="text" name="address" id="editClientAddress" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Account Status</label>
+          <select name="status" id="editClientStatus" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white">
+            <option value="active">Active</option>
+            <option value="suspended">Suspended</option>
+            <option value="archived">Archived</option>
+          </select>
+        </div>
+
+        <div class="flex items-center justify-end space-x-3 pt-3 border-t border-slate-800">
+          <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white" data-modal="modalEditClient">Cancel</button>
+          <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-floppy-disk text-xs"></i>
+            <span>Save Profile Changes</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL: ASSIGN SERVICE TO CLIENT
+       ========================================================================= -->
+  <div id="modalAssignService" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-5 shadow-2xl">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-layer-group text-brand-whiz text-sm"></i>
+          <span>Assign Service to Client</span>
+        </h3>
+        <button type="button" class="btn-close-modal text-slate-400 hover:text-white cursor-pointer" data-modal="modalAssignService">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="formAssignService" class="space-y-4">
+        <input type="hidden" name="clientId" id="assignServiceClientId">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Select Catalog Service *</label>
+          <select name="serviceId" id="assignServiceSelect" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:border-brand-whiz">
+            <option value="">Choose a service...</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Package Name</label>
+            <input type="text" name="packageName" value="Standard Retainer" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Contract Amount ($ USD) *</label>
+            <input type="number" step="1" name="priceDollars" id="assignServicePrice" value="1000" required class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white font-mono">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Start Date</label>
+            <input type="date" name="startDate" id="assignServiceStartDate" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Target Completion</label>
+            <input type="date" name="deadline" id="assignServiceDeadline" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white">
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end space-x-3 pt-3 border-t border-slate-800">
+          <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white cursor-pointer" data-modal="modalAssignService">Cancel</button>
+          <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-bolt text-xs"></i>
+            <span>Provision Service & Auto-Instantiate Tasks</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL: CONFIRM ARCHIVE CLIENT
+       ========================================================================= -->
+  <div id="modalArchiveClient" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
+    <div class="bg-slate-900 border border-amber-500/30 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center space-x-3 text-amber-400">
+        <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center">
+          <i class="fa-solid fa-box-archive text-lg"></i>
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-white">Archive Client Record</h3>
+          <p class="text-[11px] text-amber-400/80">Soft-archive with total data preservation</p>
+        </div>
+      </div>
+      <p class="text-xs text-slate-300 leading-relaxed">
+        Are you sure you want to archive <strong id="archiveClientTargetName" class="text-white">this client</strong>?
+      </p>
+      <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-[11px] text-slate-400 space-y-1">
+        <p class="text-emerald-400 font-semibold"><i class="fa-solid fa-shield-check mr-1"></i> Data Safety Guarantee:</p>
+        <p>• Removes client from the active directory view.</p>
+        <p>• Preserves all historical financial records, invoices, and payments.</p>
+        <p>• Preserves all project progress and completed task history.</p>
+        <p>• Can be safely restored at any time by authorized administrators.</p>
+      </div>
+      <div class="flex items-center justify-end space-x-3 pt-2">
+        <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white cursor-pointer" data-modal="modalArchiveClient">Cancel</button>
+        <button type="button" id="btnConfirmArchiveClient" class="px-5 py-2.5 rounded-xl text-xs font-bold text-amber-300 bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/40 shadow-sm flex items-center gap-1.5 cursor-pointer">
+          <i class="fa-solid fa-box-archive text-xs"></i>
+          <span>Confirm Archive</span>
+        </button>
       </div>
     </div>
   </div>
 
   <!-- =========================================================================
-       MODAL 3: RECORD PAYMENT
+       MODAL: ADD NEW SERVICE (Phase 6)
+       ========================================================================= -->
+  <div id="modalAddService" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-xl w-full p-6 sm:p-8 space-y-5 shadow-2xl">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-plus text-brand-whiz text-sm"></i>
+          <span>Add New Service to Catalog</span>
+        </h3>
+        <button type="button" class="btn-close-modal text-slate-400 hover:text-white cursor-pointer" data-modal="modalAddService">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="formAddService" class="space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Service Name *</label>
+            <input type="text" name="name" required placeholder="e.g. TikTok Ad Campaigns" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Unique Service Code *</label>
+            <input type="text" name="code" required placeholder="e.g. TIKTOK_ADS" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white font-mono uppercase">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Category *</label>
+            <select name="category" required class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white">
+              <option value="Paid Advertising">Paid Advertising</option>
+              <option value="Paid & Organic Social Media">Paid & Organic Social Media</option>
+              <option value="Conversational Commerce">Conversational Commerce</option>
+              <option value="Video Media">Video Media</option>
+              <option value="Visual Search & SEO">Visual Search & SEO</option>
+              <option value="Enterprise Growth">Enterprise Growth</option>
+              <option value="Performance Media Engineering">Performance Media Engineering</option>
+              <option value="Professional Branding">Professional Branding</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Standard Retainer Price ($ USD) *</label>
+            <input type="number" step="1" name="standardPriceDollars" value="1000" required class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white font-mono">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Default Package Name</label>
+          <input type="text" name="defaultPackage" value="Growth Retainer" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Description & Overview</label>
+          <textarea name="description" rows="3" placeholder="Summary of what this service delivers to clients..." class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white leading-relaxed"></textarea>
+        </div>
+
+        <div class="flex items-center justify-end space-x-3 pt-3 border-t border-slate-800">
+          <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white" data-modal="modalAddService">Cancel</button>
+          <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-plus text-xs"></i>
+            <span>Create Service Record</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL: EDIT SERVICE METADATA
+       ========================================================================= -->
+  <div id="modalEditService" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-xl w-full p-6 sm:p-8 space-y-5 shadow-2xl">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-pen-to-square text-brand-whiz text-sm"></i>
+          <span>Edit Service Master Definition</span>
+        </h3>
+        <button type="button" class="btn-close-modal text-slate-400 hover:text-white cursor-pointer" data-modal="modalEditService">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="formEditService" class="space-y-4">
+        <input type="hidden" name="serviceId" id="editServiceId">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Service Name *</label>
+            <input type="text" name="name" id="editServiceName" required class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Service Code *</label>
+            <input type="text" name="code" id="editServiceCode" required class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white font-mono uppercase">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Category</label>
+            <input type="text" name="category" id="editServiceCategory" required class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Price ($ USD) *</label>
+            <input type="number" step="1" name="standardPriceDollars" id="editServicePrice" required class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white font-mono">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Default Package</label>
+          <input type="text" name="defaultPackage" id="editServicePackage" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Description</label>
+          <textarea name="description" id="editServiceDescription" rows="3" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white leading-relaxed"></textarea>
+        </div>
+
+        <div class="flex items-center space-x-2">
+          <input type="checkbox" name="isActive" id="editServiceIsActive" class="w-4 h-4 rounded text-brand-whiz bg-slate-950 border-slate-700 cursor-pointer">
+          <label for="editServiceIsActive" class="text-xs text-slate-300 cursor-pointer">Service is active in public catalog</label>
+        </div>
+
+        <div class="flex items-center justify-end space-x-3 pt-3 border-t border-slate-800">
+          <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white cursor-pointer" data-modal="modalEditService">Cancel</button>
+          <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-floppy-disk text-xs"></i>
+            <span>Save & Increment Version</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL: EDIT TASK BLUEPRINT (Phase 7 & 8)
+       ========================================================================= -->
+  <div id="modalEditBlueprint" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-3xl w-full p-6 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] flex flex-col">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800 shrink-0">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-pen-nib text-brand-whiz text-sm"></i>
+          <span>Edit Master SOP Task Blueprint</span>
+        </h3>
+        <button type="button" class="btn-close-modal text-slate-400 hover:text-white cursor-pointer" data-modal="modalEditBlueprint">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="formEditBlueprint" class="space-y-4 overflow-y-auto flex-1 pr-1">
+        <input type="hidden" name="blueprintId" id="editBlueprintId">
+        
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Task Code *</label>
+            <input type="text" name="taskCode" id="editBlueprintTaskCode" required class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white font-mono">
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Task Title *</label>
+            <input type="text" name="title" id="editBlueprintTitle" required class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white font-bold">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Phase</label>
+            <select name="phase" id="editBlueprintPhase" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white">
+              <option value="Beginning">Beginning</option>
+              <option value="Intermediate">Intermediate</option>
+              <option value="Advanced">Advanced</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Priority</label>
+            <select name="priority" id="editBlueprintPriority" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white">
+              <option value="urgent">Urgent</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Sort Order</label>
+            <input type="number" name="sortOrder" id="editBlueprintSortOrder" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white font-mono">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Est. Minutes</label>
+            <input type="number" name="estimatedMinutes" id="editBlueprintEstMinutes" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white font-mono">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Why (Agency Operational Purpose)</label>
+          <textarea name="why" id="editBlueprintWhy" rows="2" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-slate-200 leading-relaxed"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Where to Go (Platform / Application Location)</label>
+          <input type="text" name="whereLocation" id="editBlueprintWhere" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Detailed Operational Steps</label>
+          <textarea name="steps" id="editBlueprintSteps" rows="5" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-slate-200 font-mono leading-relaxed"></textarea>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Done When (Completion Standard)</label>
+            <textarea name="doneWhen" id="editBlueprintDoneWhen" rows="3" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-slate-200 leading-relaxed"></textarea>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">QA Criteria (Quality Review)</label>
+            <textarea name="qaCriteria" id="editBlueprintQACriteria" rows="3" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-emerald-300 leading-relaxed"></textarea>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end space-x-3 pt-3 border-t border-slate-800 shrink-0">
+          <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white cursor-pointer" data-modal="modalEditBlueprint">Cancel</button>
+          <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-floppy-disk text-xs"></i>
+            <span>Save Changes to D1</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL: ADD NEW TASK BLUEPRINT
+       ========================================================================= -->
+  <div id="modalAddBlueprint" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-2xl w-full p-6 sm:p-8 space-y-5 shadow-2xl">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-plus text-brand-whiz text-sm"></i>
+          <span>Add New SOP Task Blueprint</span>
+        </h3>
+        <button type="button" class="btn-close-modal text-slate-400 hover:text-white cursor-pointer" data-modal="modalAddBlueprint">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="formAddBlueprint" class="space-y-4">
+        <input type="hidden" name="serviceId" id="addBlueprintServiceId">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Task Code *</label>
+            <input type="text" name="taskCode" placeholder="e.g. FB-21" required class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white font-mono uppercase">
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Task Title *</label>
+            <input type="text" name="title" placeholder="Operational task title..." required class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Phase</label>
+            <select name="phase" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white">
+              <option value="Beginning">Beginning</option>
+              <option value="Intermediate">Intermediate</option>
+              <option value="Advanced">Advanced</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Priority</label>
+            <select name="priority" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white">
+              <option value="urgent">Urgent</option>
+              <option value="high">High</option>
+              <option value="medium" selected>Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Est. Minutes</label>
+            <input type="number" name="estimatedMinutes" value="60" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white font-mono">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Detailed Steps</label>
+          <textarea name="steps" rows="4" placeholder="1. Open Business Manager&#10;2. Verify tracking pixel..." class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white leading-relaxed"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">QA Criteria</label>
+          <input type="text" name="qaCriteria" placeholder="Verification checklist for QA approval..." class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-emerald-300">
+        </div>
+
+        <div class="flex items-center justify-end space-x-3 pt-3 border-t border-slate-800">
+          <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white" data-modal="modalAddBlueprint">Cancel</button>
+          <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-plus text-xs"></i>
+            <span>Add Blueprint Task</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL: APPLY TEMPLATE TO ACTIVE PROJECTS (Phase 9)
+       ========================================================================= -->
+  <div id="modalApplyTemplate" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
+    <div class="bg-slate-900 border border-emerald-500/30 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center space-x-3 text-emerald-400">
+        <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
+          <i class="fa-solid fa-arrows-spin text-lg"></i>
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-white">Apply Template to Active Projects</h3>
+          <p class="text-[11px] text-emerald-400">Safe Blueprint Synchronization</p>
+        </div>
+      </div>
+      <p class="text-xs text-slate-300 leading-relaxed">
+        This action will synchronize the latest active task blueprints of this service to all current active client projects.
+      </p>
+      <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 text-[11px] text-slate-400 space-y-1">
+        <p class="text-white font-semibold">Integrity Guarantees:</p>
+        <p>• Only missing tasks will be added to active projects.</p>
+        <p>• No already-completed client tasks will be reset or overwritten.</p>
+        <p>• Progress percentages will be cleanly recalculated based on updated total tasks.</p>
+      </div>
+      <div class="flex items-center justify-end space-x-3 pt-2">
+        <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white cursor-pointer" data-modal="modalApplyTemplate">Cancel</button>
+        <button type="button" id="btnConfirmApplyTemplate" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center gap-1.5 cursor-pointer">
+          <i class="fa-solid fa-check text-xs"></i>
+          <span>Confirm & Apply</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL: LIVE TASK DETAILS & EDIT (Phase 11)
+       ========================================================================= -->
+  <div id="modalLiveTaskDetail" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <h3 class="text-base font-bold text-white flex items-center gap-2" id="liveTaskModalTitle">
+          <i class="fa-solid fa-list-check text-brand-whiz"></i>
+          <span>Operational Task Details</span>
+        </h3>
+        <button type="button" class="btn-close-modal text-slate-400 hover:text-white cursor-pointer" data-modal="modalLiveTaskDetail">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <span class="text-[10px] uppercase font-bold text-slate-500 block">Project & Organization</span>
+          <span class="text-white font-medium" id="liveTaskModalProject">Project Name</span>
+        </div>
+        <div>
+          <span class="text-[10px] uppercase font-bold text-slate-500 block">Task Description & Instructions</span>
+          <p class="text-slate-300 leading-relaxed bg-slate-950 p-3 rounded-xl border border-slate-800 whitespace-pre-line" id="liveTaskModalDesc">Instructions...</p>
+        </div>
+        <div>
+          <span class="text-[10px] uppercase font-bold text-slate-500 block">QA Review Standard</span>
+          <p class="text-emerald-400 font-medium" id="liveTaskModalQA">Standard criteria</p>
+        </div>
+      </div>
+
+      <form id="formLiveTaskDetail" class="space-y-3 pt-2 border-t border-slate-800">
+        <input type="hidden" name="taskId" id="liveTaskId">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Status</label>
+            <select name="status" id="liveTaskStatus" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white">
+              <option value="todo">Pending (Todo)</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed & Approved</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Priority</label>
+            <select name="priority" id="liveTaskPriority" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white">
+              <option value="urgent">Urgent</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Internal Notes & Deliverable Evidence</label>
+          <textarea name="internalNotes" id="liveTaskNotes" rows="2" placeholder="Execution notes or verification link..." class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white"></textarea>
+        </div>
+
+        <div class="flex items-center justify-end space-x-3 pt-2">
+          <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white cursor-pointer" data-modal="modalLiveTaskDetail">Close</button>
+          <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-floppy-disk text-xs"></i>
+            <span>Update Task</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL: RECORD PAYMENT
        ========================================================================= -->
   <div id="modalRecordPayment" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
     <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-xl w-full p-6 sm:p-8 space-y-5 shadow-2xl">
@@ -1016,40 +1792,9 @@
     </div>
   </div>
 
-  <!-- MODAL: ROLE PROMOTION / DEMOTION CONFIRMATION -->
-  <div id="modalRoleChange" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
-    <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-        <h3 class="text-base font-bold text-white flex items-center gap-2" id="modalRoleChangeTitle">
-          <i class="fa-solid fa-user-shield text-brand-whiz"></i>
-          <span>Confirm Role Change</span>
-        </h3>
-        <button type="button" class="btn-close-modal text-slate-400 hover:text-white cursor-pointer" data-modal="modalRoleChange">
-          <i class="fa-solid fa-xmark text-lg"></i>
-        </button>
-      </div>
-      <p class="text-xs text-slate-300 leading-relaxed" id="modalRoleChangeDesc">
-        Are you sure you want to change this account's permissions?
-      </p>
-      <form id="formRoleChange" class="space-y-3.5">
-        <input type="hidden" id="roleChangeUserId" name="userId">
-        <input type="hidden" id="roleChangeTargetRole" name="targetRole">
-        <div>
-          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Reason for Immutable Audit Log *</label>
-          <input type="text" id="roleChangeReason" name="reason" placeholder="e.g. Promoted to administrator per executive authorization" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:border-brand-whiz">
-        </div>
-        <div class="flex items-center justify-end space-x-3 pt-3 border-t border-slate-800">
-          <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white cursor-pointer" data-modal="modalRoleChange">Cancel</button>
-          <button type="submit" id="btnSubmitRoleChange" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center gap-1.5 cursor-pointer">
-            <i class="fa-solid fa-check text-xs"></i>
-            <span>Confirm & Update Role</span>
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- MODAL: ROLE PROMOTION / DEMOTION CONFIRMATION -->
+  <!-- =========================================================================
+       MODAL: ROLE PROMOTION / DEMOTION CONFIRMATION
+       ========================================================================= -->
   <div id="modalRoleChange" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
     <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
       <div class="flex items-center justify-between pb-3 border-b border-slate-800">
@@ -1086,6 +1831,6 @@
   <div id="toastContainer" class="fixed bottom-5 right-5 z-[200] flex flex-col space-y-2 pointer-events-none max-w-sm w-full"></div>
 
   <!-- Admin Dashboard JavaScript Controller -->
-  <script src="/assets/js/admin-dashboard.js?v=20261030_v4"></script>
+  <script src="/assets/js/admin-dashboard.js?v=20261030_v5"></script>
 </body>
 </html>
