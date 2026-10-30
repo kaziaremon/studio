@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-[#04070C] text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Authenticating | Whiz Studio</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" href="/favicon.png">
+
+  <!-- Clerk JavaScript SDK (Hobby / Free Tier Production CDN) -->
+  <script async crossorigin="anonymous" data-clerk-publishable-key="pk_test_cG9ldGljLWxpZ2VyLTQzNTUuY2xlcmsuYWNjb3VudHMuZGV2JA" src="https://poetic-liger-4355.clerk.accounts.dev/npm/@clerk/clerk-js@5/dist/clerk.browser.js" type="text/javascript"></script>
+
+  <!-- Google Fonts: Inter & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+
+  <!-- FontAwesome 6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              whiz: '#00A86B',
+              dark: '#04070C',
+              surface: '#0B111A',
+              card: '#0F1722',
+              border: '#1A2332',
+              accent: '#10B981'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Poppins', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    @keyframes pulse-glow {
+      0%, 100% { opacity: 0.4; transform: scale(1); }
+      50% { opacity: 0.8; transform: scale(1.05); }
+    }
+    .animate-glow { animation: pulse-glow 3s infinite ease-in-out; }
+  </style>
+</head>
+<body class="h-full bg-[#04070C] text-slate-100 flex items-center justify-center font-sans antialiased selection:bg-brand-whiz selection:text-white p-4">
+
+  <!-- Main Container -->
+  <div class="relative w-full max-w-md p-8 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-2xl backdrop-blur-2xl text-center space-y-6">
+    
+    <!-- Ambient Background Glow -->
+    <div class="absolute -top-20 -left-20 w-56 h-56 bg-brand-whiz/15 rounded-full blur-3xl pointer-events-none animate-glow"></div>
+    <div class="absolute -bottom-20 -right-20 w-56 h-56 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none animate-glow" style="animation-delay: 1.5s;"></div>
+
+    <!-- Whiz Brand Header -->
+    <div class="relative flex flex-col items-center">
+      <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-brand-whiz/20 to-emerald-400/10 border border-brand-whiz/30 flex items-center justify-center shadow-lg shadow-brand-whiz/10 mb-4">
+        <i class="fa-solid fa-shield-halved text-brand-whiz text-2xl" id="statusIcon"></i>
+      </div>
+      <h2 class="text-xl font-extrabold text-white tracking-tight" id="statusTitle">Whiz Studio Authentication</h2>
+      <p class="text-xs text-slate-400 mt-1.5" id="statusDesc">Finalizing secure Google OAuth handshake...</p>
+    </div>
+
+    <!-- Progress Indicator -->
+    <div id="progressBox" class="space-y-3">
+      <div class="w-full bg-slate-950/80 rounded-full h-1.5 overflow-hidden border border-slate-800/80">
+        <div class="bg-gradient-to-r from-brand-whiz to-emerald-400 h-full rounded-full transition-all duration-500" id="progressBar" style="width: 25%"></div>
+      </div>
+      <div class="flex items-center justify-center gap-2 text-xs text-slate-400 font-medium">
+        <i class="fa-solid fa-circle-notch fa-spin text-brand-whiz text-xs" id="spinnerIcon"></i>
+        <span id="stepLabel">Verifying identity with Clerk...</span>
+      </div>
+    </div>
+
+    <!-- Error Box (Hidden by default) -->
+    <div id="errorBox" class="hidden text-left p-4 rounded-2xl bg-rose-950/50 border border-rose-500/30 text-rose-200 space-y-3">
+      <div class="flex items-start gap-3">
+        <i class="fa-solid fa-circle-exclamation text-rose-400 text-base mt-0.5 shrink-0"></i>
+        <div>
+          <h4 class="text-xs font-bold uppercase tracking-wider text-rose-300">Authentication Failed</h4>
+          <p class="text-xs text-rose-200 mt-1 leading-relaxed" id="errorMessage">Unable to complete sign-in. Please try again.</p>
+        </div>
+      </div>
+      <div class="pt-2 border-t border-rose-500/20 flex gap-2">
+        <a href="/?login=true" class="flex-1 text-center py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-white border border-slate-700 transition-all">
+          <i class="fa-solid fa-arrow-left mr-1"></i> Return to Sign In
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      const CLERK_PUBLISHABLE_KEY = 'pk_test_cG9ldGljLWxpZ2VyLTQzNTUuY2xlcmsuYWNjb3VudHMuZGV2JA';
+      const API_BASE = 'https://whiz-api.kaziaremon.workers.dev/api/v1';
+
+      function updateStep(label, percent) {
+        const stepLabel = document.getElementById('stepLabel');
+        const progressBar = document.getElementById('progressBar');
+        if (stepLabel) stepLabel.textContent = label;
+        if (progressBar) progressBar.style.width = percent + '%';
+      }
+
+      function showError(message) {
+        const progressBox = document.getElementById('progressBox');
+        const errorBox = document.getElementById('errorBox');
+        const errorMessage = document.getElementById('errorMessage');
+        const statusIcon = document.getElementById('statusIcon');
+        const statusTitle = document.getElementById('statusTitle');
+        const statusDesc = document.getElementById('statusDesc');
+
+        if (progressBox) progressBox.classList.add('hidden');
+        if (errorBox) errorBox.classList.remove('hidden');
+        if (errorMessage) errorMessage.textContent = message || 'OAuth authentication failed.';
+        if (statusIcon) {
+          statusIcon.className = 'fa-solid fa-triangle-exclamation text-rose-400 text-2xl';
+        }
+        if (statusTitle) statusTitle.textContent = 'Authentication Error';
+        if (statusDesc) statusDesc.textContent = 'Could not establish secure session with Whiz Studio.';
+      }
+
+      async function executeCallback() {
+        if (!window.Clerk) {
+          setTimeout(executeCallback, 50);
+          return;
+        }
+
+        try {
+          updateStep('Initializing Clerk security environment...', 35);
+          if (!window.Clerk.loaded) {
+            await window.Clerk.load({
+              publishableKey: CLERK_PUBLISHABLE_KEY
+            });
+          }
+
+          updateStep('Validating OAuth callback credentials...', 55);
+
+          // 1. Process redirect callback
+          if (typeof window.Clerk.handleRedirectCallback === 'function') {
+            try {
+              await window.Clerk.handleRedirectCallback();
+            } catch (cbErr) {
+              console.warn('handleRedirectCallback notice:', cbErr);
+            }
+          }
+
+          // 2. Resolve active session & user
+          let user = window.Clerk.user;
+          const client = window.Clerk.client;
+
+          if (!user && client) {
+            // Check transferable signIn -> signUp
+            const signIn = client.signIn;
+            const signUp = client.signUp;
+
+            if (signIn && signIn.status === 'needs_first_factor') {
+              const fv = signIn.firstFactorVerification;
+              if (fv && fv.status === 'transferable') {
+                updateStep('Registering new Whiz Studio member...', 65);
+                const completeSignUp = await signUp.create({ transfer: true });
+                if (completeSignUp.status === 'complete') {
+                  await window.Clerk.setActive({ session: completeSignUp.createdSessionId });
+                  user = window.Clerk.user;
+                }
+              }
+            } else if (signUp && signUp.status === 'complete') {
+              await window.Clerk.setActive({ session: signUp.createdSessionId });
+              user = window.Clerk.user;
+            } else if (signIn && signIn.status === 'complete') {
+              await window.Clerk.setActive({ session: signIn.createdSessionId });
+              user = window.Clerk.user;
+            }
+          }
+
+          if (!user) {
+            user = window.Clerk.user;
+          }
+
+          if (!user) {
+            throw new Error('Authentication session could not be established. Please try signing in again.');
+          }
+
+          updateStep('Synchronizing with Cloudflare D1 Authority...', 80);
+
+          // 3. Obtain session token for authenticated authorization
+          let sessionToken = null;
+          if (window.Clerk.session) {
+            try {
+              sessionToken = await window.Clerk.session.getToken();
+            } catch (tErr) {
+              console.warn('Session token retrieval notice:', tErr);
+            }
+          }
+
+          const primaryEmail = user.primaryEmailAddress ? user.primaryEmailAddress.emailAddress : '';
+          const fullName = user.fullName || (user.firstName ? (user.firstName + ' ' + (user.lastName || '')).trim() : user.username) || 'Valued Client';
+
+          const syncHeaders = {
+            'Content-Type': 'application/json',
+            'X-Clerk-User-Id': user.id
+          };
+          if (sessionToken) {
+            syncHeaders['Authorization'] = 'Bearer ' + sessionToken;
+          }
+
+          // Idempotent provisioning & role lookup in Cloudflare D1
+          const syncRes = await fetch(`${API_BASE}/auth/client-sync`, {
+            method: 'POST',
+            headers: syncHeaders,
+            body: JSON.stringify({
+              clerkUserId: user.id,
+              email: primaryEmail,
+              fullName: fullName
+            })
+          }).then(r => r.json()).catch(() => ({}));
+
+          updateStep('Redirecting to your authorized workspace...', 98);
+
+          const profileUser = (syncRes && syncRes.data && syncRes.data.user) ? syncRes.data.user : null;
+          const userRole = profileUser ? profileUser.role : 'client';
+          const isSuperAdmin = profileUser ? Boolean(profileUser.isSuperAdmin) : (primaryEmail.toLowerCase() === 'kaziaremon@gmail.com');
+
+          // Clean URL parameters
+          const cleanUrl = window.location.origin + window.location.pathname;
+          window.history.replaceState({}, document.title, cleanUrl);
+
+          setTimeout(() => {
+            if (userRole === 'owner' || userRole === 'admin' || userRole === 'super_admin' || isSuperAdmin) {
+              window.location.href = '/admin/dashboard';
+            } else {
+              window.location.href = '/client/dashboard';
+            }
+          }, 350);
+
+        } catch (err) {
+          console.error('SSO Callback Error:', err);
+          showError(err.message || 'An error occurred while validating authentication credentials.');
+        }
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', executeCallback);
+      } else {
+        executeCallback();
+      }
+    })();
+  </script>
+</body>
+</html>

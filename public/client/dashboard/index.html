@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-[#04070C] text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Whiz Studio | Client Workspace</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" href="/favicon.png">
+
+  <!-- Clerk JavaScript SDK (Hobby / Free Tier Production CDN) -->
+  <script async crossorigin="anonymous" data-clerk-publishable-key="pk_test_cG9ldGljLWxpZ2VyLTQzNTUuY2xlcmsuYWNjb3VudHMuZGV2JA" src="https://poetic-liger-4355.clerk.accounts.dev/npm/@clerk/clerk-js@5/dist/clerk.browser.js" type="text/javascript"></script>
+
+  <!-- Google Fonts: Inter & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- FontAwesome 6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              whiz: '#00A86B',
+              dark: '#04070C',
+              surface: '#0B111A',
+              card: '#0F1722',
+              border: '#1A2332',
+              accent: '#10B981'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Poppins', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- pdf-lib Browser-side Vector PDF Generation (100% Free, Zero Server Storage) -->
+  <script src="https://unpkg.com/pdf-lib@1.17.9/dist/pdf-lib.min.js"></script>
+
+  <!-- Liquid Glass Theme Styles -->
+  <link rel="stylesheet" href="/assets/css/liquid-glass.css?v=2.6">
+
+  <style>
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(11, 17, 26, 0.5); }
+    ::-webkit-scrollbar-thumb { background: rgba(51, 65, 85, 0.6); border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(71, 85, 105, 0.9); }
+  </style>
+</head>
+<body class="h-full bg-[#04070C] text-slate-100 flex flex-col font-sans antialiased selection:bg-brand-whiz selection:text-white">
+
+  <!-- Preloader & Auth Guard -->
+  <div id="clientAuthGuard" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#04070C] text-center p-6 transition-opacity duration-300">
+    <div class="relative w-16 h-16 mb-5">
+      <div class="absolute inset-0 rounded-2xl bg-brand-whiz/20 border border-brand-whiz/40 animate-ping"></div>
+      <div class="relative w-16 h-16 rounded-2xl bg-slate-900 border border-slate-700/80 flex items-center justify-center shadow-xl">
+        <i class="fa-solid fa-user text-brand-whiz text-2xl"></i>
+      </div>
+    </div>
+    <h2 class="text-xl font-extrabold text-white tracking-tight">Whiz Studio Client Workspace</h2>
+    <p class="text-xs text-slate-400 mt-1.5 flex items-center gap-2">
+      <i class="fa-solid fa-circle-notch fa-spin text-brand-whiz"></i>
+      <span>Verifying Authentication Credentials & Workspace Access...</span>
+    </p>
+  </div>
+
+  <!-- Main Layout -->
+  <div id="clientMainLayout" class="hidden flex h-full overflow-hidden">
+
+    <!-- Desktop Sidebar -->
+    <aside class="hidden lg:flex flex-col w-64 bg-[#0B111A] border-r border-[#1A2332] shrink-0 select-none">
+      <!-- Brand Logo Header -->
+      <div class="p-6 border-b border-[#1A2332] flex items-center space-x-3">
+        <a href="/" class="flex items-center space-x-2.5">
+          <div class="w-9 h-9 rounded-xl bg-brand-whiz/15 border border-brand-whiz/40 flex items-center justify-center text-brand-whiz shadow-lg shadow-brand-whiz/10">
+            <i class="fa-solid fa-shapes text-base"></i>
+          </div>
+          <div>
+            <span class="text-sm font-black tracking-tight text-white block">WHIZ STUDIO</span>
+            <span class="text-[10px] uppercase font-bold tracking-widest text-brand-whiz block -mt-0.5">Client Portal</span>
+          </div>
+        </a>
+      </div>
+
+      <!-- Navigation Links -->
+      <nav class="flex-1 p-4 space-y-1.5 overflow-y-auto">
+        <button type="button" data-client-tab="overview" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all border text-slate-400 border-transparent hover:text-white hover:bg-slate-800/60">
+          <i class="fa-solid fa-chart-pie w-4 text-center"></i>
+          <span>Workspace Overview</span>
+        </button>
+        <button type="button" data-client-tab="services" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all border text-slate-400 border-transparent hover:text-white hover:bg-slate-800/60">
+          <i class="fa-solid fa-layer-group w-4 text-center"></i>
+          <span>My Active Services</span>
+        </button>
+        <button type="button" data-client-tab="tasks" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all border text-slate-400 border-transparent hover:text-white hover:bg-slate-800/60">
+          <i class="fa-solid fa-list-check w-4 text-center"></i>
+          <span>Deliverables & Tasks</span>
+        </button>
+        <button type="button" data-client-tab="finance" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all border text-slate-400 border-transparent hover:text-white hover:bg-slate-800/60">
+          <i class="fa-solid fa-file-invoice-dollar w-4 text-center"></i>
+          <span>Invoices & Receipts</span>
+        </button>
+        <button type="button" data-client-tab="support" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all border text-slate-400 border-transparent hover:text-white hover:bg-slate-800/60">
+          <i class="fa-solid fa-headset w-4 text-center"></i>
+          <span>Support & Requests</span>
+        </button>
+        <button type="button" data-client-tab="settings" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all border text-slate-400 border-transparent hover:text-white hover:bg-slate-800/60">
+          <i class="fa-solid fa-sliders w-4 text-center"></i>
+          <span>Account Settings</span>
+        </button>
+      </nav>
+
+      <!-- Admin Switch Pill (Shown if user also has admin privileges) -->
+      <div id="adminPortalLinkContainer" class="hidden p-4 border-t border-[#1A2332]">
+        <a href="/admin/dashboard" class="flex items-center justify-between p-3 rounded-xl bg-brand-whiz/10 border border-brand-whiz/30 text-brand-whiz text-xs font-bold hover:bg-brand-whiz/20 transition-all">
+          <span class="flex items-center gap-2"><i class="fa-solid fa-shield-halved"></i> Super Admin Console</span>
+          <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+        </a>
+      </div>
+
+      <!-- User Profile Card -->
+      <div class="p-4 border-t border-[#1A2332] bg-[#080D14]">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-3 min-w-0">
+            <div class="w-8 h-8 rounded-full bg-brand-whiz/20 border border-brand-whiz/30 flex items-center justify-center text-brand-whiz text-xs font-bold" id="userAvatarText">
+              CL
+            </div>
+            <div class="min-w-0">
+              <span class="text-xs font-bold text-white block truncate" id="clientDisplayName">Loading...</span>
+              <span class="text-[10px] text-slate-400 block truncate" id="clientDisplayEmail">loading...</span>
+            </div>
+          </div>
+          <button type="button" class="btn-client-signout text-slate-400 hover:text-rose-400 transition-colors p-1" title="Sign Out">
+            <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#04070C]">
+
+      <!-- Top Header Bar -->
+      <header class="h-16 border-b border-[#1A2332] bg-[#0B111A]/80 backdrop-blur-md px-6 flex items-center justify-between shrink-0">
+        <div class="flex items-center space-x-3">
+          <a href="/" class="text-xs text-slate-400 hover:text-white flex items-center gap-1.5 transition-colors">
+            <i class="fa-solid fa-arrow-left text-[10px]"></i>
+            <span>Whiz Studio</span>
+          </a>
+          <span class="text-slate-600">/</span>
+          <span class="text-xs font-bold text-white uppercase tracking-wider" id="breadcrumbActiveTab">Overview</span>
+        </div>
+        <div class="flex items-center space-x-3">
+          <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-950/80 text-emerald-400 border border-emerald-500/30">
+            <i class="fa-solid fa-circle-check text-[9px] mr-1"></i> Client Verified
+          </span>
+          <button type="button" class="btn-client-signout px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 transition-all">
+            <i class="fa-solid fa-arrow-right-from-bracket mr-1"></i> Sign Out
+          </button>
+        </div>
+      </header>
+
+      <!-- Content Views Container -->
+      <div class="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6">
+
+        <!-- VIEW: OVERVIEW -->
+        <div id="view_overview" class="space-y-6">
+          <div class="p-6 rounded-3xl bg-gradient-to-r from-slate-900 to-[#0F1722] border border-[#1A2332] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h2 class="text-xl font-black text-white">Welcome to Your Workspace, <span class="client-greeting-name text-brand-whiz">Client</span></h2>
+              <p class="text-xs text-slate-400 mt-1">Track your subscribed marketing services, deliverable milestones, and payment receipts.</p>
+            </div>
+            <a href="/#services" class="px-4 py-2 rounded-xl text-xs font-bold bg-brand-whiz hover:bg-emerald-600 text-white transition-all shadow-md">
+              <i class="fa-solid fa-plus mr-1"></i> Explore Services
+            </a>
+          </div>
+
+          <!-- Quick Stats Cards -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="p-5 rounded-2xl bg-[#0B111A] border border-[#1A2332] space-y-2">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Active Services</span>
+              <div class="text-2xl font-black text-white" id="statActiveServices">0</div>
+              <p class="text-[11px] text-slate-500">Live agency contracts</p>
+            </div>
+            <div class="p-5 rounded-2xl bg-[#0B111A] border border-[#1A2332] space-y-2">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Tasks Completed</span>
+              <div class="text-2xl font-black text-brand-whiz" id="statCompletedTasks">0</div>
+              <p class="text-[11px] text-slate-500">Delivered milestone checkpoints</p>
+            </div>
+            <div class="p-5 rounded-2xl bg-[#0B111A] border border-[#1A2332] space-y-2">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Invoices & Receipts</span>
+              <div class="text-2xl font-black text-white" id="statInvoicesCount">0</div>
+              <p class="text-[11px] text-slate-500">Verified payment records</p>
+            </div>
+          </div>
+
+          <!-- Services List -->
+          <div class="p-6 rounded-3xl bg-[#0B111A] border border-[#1A2332] space-y-4">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-layer-group text-brand-whiz"></i> Subscribed Marketing Services
+            </h3>
+            <div id="overviewServicesList" class="space-y-3">
+              <div class="p-6 rounded-2xl bg-slate-900/50 border border-slate-800 text-center text-xs text-slate-400">
+                <i class="fa-solid fa-circle-notch fa-spin text-brand-whiz text-base mb-2"></i>
+                <p>Loading your client services...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- VIEW: SERVICES -->
+        <div id="view_services" class="hidden space-y-4">
+          <h3 class="text-base font-bold text-white">Your Service Portfolio</h3>
+          <div id="servicesFullList" class="space-y-3"></div>
+        </div>
+
+        <!-- VIEW: TASKS -->
+        <div id="view_tasks" class="hidden space-y-4">
+          <h3 class="text-base font-bold text-white">Deliverables & Progress Checkpoints</h3>
+          <div id="tasksFullList" class="space-y-3"></div>
+        </div>
+
+        <!-- VIEW: FINANCE -->
+        <div id="view_finance" class="hidden space-y-4">
+          <h3 class="text-base font-bold text-white">Invoices & Payment Receipts</h3>
+          <div id="financeFullList" class="space-y-3"></div>
+        </div>
+
+        <!-- VIEW: SUPPORT -->
+        <div id="view_support" class="hidden space-y-4">
+          <h3 class="text-base font-bold text-white">Support & Agency Contact</h3>
+          <div class="p-6 rounded-3xl bg-[#0B111A] border border-[#1A2332] space-y-4 text-xs text-slate-300">
+            <p>Need custom deliverables, modifications, or direct assistance from your dedicated account manager?</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div class="p-4 rounded-xl bg-slate-900 border border-slate-800">
+                <span class="text-slate-400 block text-[10px] uppercase font-bold">Email Support</span>
+                <span class="text-white font-semibold block mt-1">support@whizstudio.art</span>
+              </div>
+              <div class="p-4 rounded-xl bg-slate-900 border border-slate-800">
+                <span class="text-slate-400 block text-[10px] uppercase font-bold">Official Hotline</span>
+                <span class="text-white font-semibold block mt-1">+8801815127022</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- VIEW: SETTINGS -->
+        <div id="view_settings" class="hidden space-y-4">
+          <h3 class="text-base font-bold text-white">Account Details</h3>
+          <div class="p-6 rounded-3xl bg-[#0B111A] border border-[#1A2332] space-y-4 text-xs text-slate-300">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <span class="text-slate-400 block text-[10px] uppercase font-bold">Full Name</span>
+                <span class="text-white font-semibold block mt-1 client-greeting-name">-</span>
+              </div>
+              <div>
+                <span class="text-slate-400 block text-[10px] uppercase font-bold">Primary Email</span>
+                <span class="text-white font-semibold block mt-1" id="settingsEmail">-</span>
+              </div>
+              <div>
+                <span class="text-slate-400 block text-[10px] uppercase font-bold">Clerk Identity Identifier</span>
+                <span class="text-slate-300 font-mono text-[11px] block mt-1" id="settingsClerkId">-</span>
+              </div>
+              <div>
+                <span class="text-slate-400 block text-[10px] uppercase font-bold">Platform Authorization Tier</span>
+                <span class="text-emerald-400 font-bold block mt-1 uppercase" id="settingsRole">Client</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Client Dashboard Controller Script -->
+  <script src="/assets/js/client-dashboard.js?v=20261030_v1"></script>
+</body>
+</html>

@@ -522,8 +522,10 @@
         window.location.href = '/admin/dashboard';
       }, 350);
     } else {
-      toast(customSuccessMessage || 'Signed in successfully!', 'success');
-      openClientDashboard();
+      toast(customSuccessMessage || 'Signed in successfully! Loading your workspace...', 'success');
+      setTimeout(() => {
+        window.location.href = '/client/dashboard';
+      }, 350);
     }
   }
 
@@ -536,14 +538,27 @@
 
     try {
       showPortalAlert('');
-      const redirectUrl = window.location.origin + '/?auth_redirect=true';
-      const redirectUrlComplete = window.location.origin + '/?auth_redirect=true';
+      const redirectUrl = window.location.origin + '/sso-callback';
+      const redirectUrlComplete = window.location.origin + '/sso-callback';
 
-      await window.Clerk.client.signIn.authenticateWithRedirect({
-        strategy: 'oauth_google',
-        redirectUrl,
-        redirectUrlComplete
-      });
+      const isRegisterTab = state.clientSubView === 'register';
+      const primaryClient = isRegisterTab ? window.Clerk.client.signUp : window.Clerk.client.signIn;
+      const fallbackClient = isRegisterTab ? window.Clerk.client.signIn : window.Clerk.client.signUp;
+
+      try {
+        await primaryClient.authenticateWithRedirect({
+          strategy: 'oauth_google',
+          redirectUrl,
+          redirectUrlComplete
+        });
+      } catch (authErr) {
+        console.warn('Primary OAuth client redirect notice, attempting fallback:', authErr);
+        await fallbackClient.authenticateWithRedirect({
+          strategy: 'oauth_google',
+          redirectUrl,
+          redirectUrlComplete
+        });
+      }
     } catch (err) {
       console.error('Google OAuth Error:', err);
       const parsed = parseClerkError(err);
@@ -2613,10 +2628,26 @@
 
       // Check if returning from Google OAuth redirect or redirected for login
       const url = new URL(window.location.href);
-      if (url.searchParams.get('auth_redirect') === 'true' && window.Clerk.user) {
+      const isOAuthReturn = url.searchParams.get('auth_redirect') === 'true' || 
+                            url.searchParams.has('__clerk_status') ||
+                            url.searchParams.has('__clerk_created_session') ||
+                            window.location.hash.includes('__clerk');
+
+      if (isOAuthReturn) {
+        try {
+          if (typeof window.Clerk.handleRedirectCallback === 'function') {
+            await window.Clerk.handleRedirectCallback();
+          }
+        } catch (cbErr) {
+          console.warn('OAuth redirect callback notice:', cbErr);
+        }
         url.searchParams.delete('auth_redirect');
+        url.searchParams.delete('__clerk_status');
+        url.searchParams.delete('__clerk_created_session');
         window.history.replaceState({}, document.title, url.pathname + (url.search ? url.search : ''));
-        routeAuthenticatedUser('Google authentication verified successfully!');
+        if (window.Clerk.user) {
+          await routeAuthenticatedUser('Google authentication verified successfully!');
+        }
       } else if (url.searchParams.has('login') && !window.Clerk.user) {
         openModal('accountPortalModal');
       }
