@@ -442,14 +442,11 @@
     }
 
     tbody.innerHTML = clients.map(c => {
-      const isArchived = c.status === 'archived';
       const isSuspended = c.status === 'suspended';
 
       let statusBadge = '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">Active</span>';
-      if (isArchived) {
-        statusBadge = '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-200">Archived</span>';
-      } else if (isSuspended) {
-        statusBadge = '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-rose-50 text-rose-700 border border-rose-200">Suspended</span>';
+      if (isSuspended) {
+        statusBadge = '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-200">Suspended</span>';
       }
 
       return `
@@ -510,13 +507,20 @@
     if (subEl) subEl.textContent = `${client.full_name} (${client.email})`;
 
     const statusBadge = document.getElementById('clientDetailStatusBadge');
+    const btnSuspend = document.getElementById('btnSuspendClientAction');
+    const btnReactivate = document.getElementById('btnReactivateClientAction');
+
     if (statusBadge) {
       if (client.status === 'suspended') {
-        statusBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-rose-50 text-rose-700 border border-rose-200';
+        statusBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-200';
         statusBadge.textContent = 'Suspended';
+        btnSuspend?.classList.add('hidden');
+        btnReactivate?.classList.remove('hidden');
       } else {
         statusBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200';
         statusBadge.textContent = client.status || 'Active';
+        btnSuspend?.classList.remove('hidden');
+        btnReactivate?.classList.add('hidden');
       }
     }
     // Profile Card
@@ -1159,6 +1163,7 @@
 
     const query = (document.getElementById('userDirectorySearch')?.value || '').toLowerCase().trim();
     const roleFilter = document.getElementById('userDirectoryRoleFilter')?.value || 'all';
+    const statusFilter = document.getElementById('userDirectoryStatusFilter')?.value || 'all';
 
     let filtered = state.usersCache.filter(u => {
       const matchesQuery = !query || 
@@ -1171,7 +1176,9 @@
         (roleFilter === 'admin' && u.role === 'admin') ||
         (roleFilter === 'owner' && (u.role === 'owner' || u.role === 'super_admin'));
 
-      return matchesQuery && matchesRole;
+      const matchesStatus = statusFilter === 'all' || u.status === statusFilter;
+
+      return matchesQuery && matchesRole && matchesStatus;
     });
 
     if (countEl) countEl.textContent = `${filtered.length} account${filtered.length === 1 ? '' : 's'}`;
@@ -1187,44 +1194,59 @@
 
       let roleBadge = '';
       if (isOwner || u.role === 'owner' || u.role === 'super_admin') {
-        roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"><i class="fa-solid fa-crown text-[9px]"></i> Owner</span>';
+        roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-crown text-[9px]"></i> Owner</span>';
       } else if (u.role === 'admin') {
-        roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-blue-500/10 text-blue-400 border border-blue-500/30"><i class="fa-solid fa-shield-halved text-[9px]"></i> Admin</span>';
+        roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-blue-50 text-blue-700 border border-blue-200"><i class="fa-solid fa-shield-halved text-[9px]"></i> Admin</span>';
       } else {
-        roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-slate-800 text-slate-300 border border-slate-700"><i class="fa-solid fa-user text-[9px]"></i> Client</span>';
+        roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-slate-100 text-slate-700 border border-slate-200"><i class="fa-solid fa-user text-[9px]"></i> Client</span>';
       }
 
       const statusBadge = u.status === 'active' 
-        ? '<span class="px-2.5 py-0.5 rounded text-[10px] font-bold uppercase text-emerald-400 bg-emerald-950/60 border border-emerald-500/20">active</span>'
-        : '<span class="px-2.5 py-0.5 rounded text-[10px] font-bold uppercase text-amber-400 bg-amber-950/60 border border-amber-500/20">suspended</span>';
+        ? '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase text-emerald-700 bg-emerald-50 border border-emerald-200">Active</span>'
+        : '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase text-amber-700 bg-amber-50 border border-amber-200">Suspended</span>';
 
       let actionsHtml = '';
       if (isOwner) {
-        actionsHtml = '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-mono font-bold text-emerald-400 bg-emerald-950/40 border border-emerald-500/30"><i class="fa-solid fa-lock text-[10px]"></i> Locked (Founding Owner)</span>';
-      } else if (u.role === 'admin') {
-        actionsHtml = `<button type="button" class="btn-role-action px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 border border-amber-500/30 transition-all cursor-pointer" data-id="${u.id}" data-role="client" data-email="${u.email}" data-name="${u.full_name || u.email}"><i class="fa-solid fa-arrow-down mr-1 text-[10px]"></i>Demote to Client</button>`;
+        actionsHtml = '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-mono font-bold text-emerald-700 bg-emerald-50 border border-emerald-200"><i class="fa-solid fa-lock text-[10px]"></i> Founding Owner</span>';
+      } else if (u.status === 'suspended') {
+        actionsHtml = `
+          <div class="flex items-center justify-end gap-1.5">
+            ${u.role === 'client' ? `<button type="button" class="btn-user-view-details px-2.5 py-1 rounded-lg text-xs font-bold bg-white hover:bg-slate-50 text-[#172B36] border border-[#E3E9EF] cursor-pointer" data-id="${u.id}"><i class="fa-solid fa-eye mr-1 text-brand-whiz"></i>Details</button>` : ''}
+            <button type="button" class="btn-user-reactivate px-2.5 py-1 rounded-lg text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 cursor-pointer" data-id="${u.id}"><i class="fa-solid fa-play mr-1"></i>Reactivate</button>
+            <button type="button" class="btn-user-delete px-2.5 py-1 rounded-lg text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 cursor-pointer" data-id="${u.id}" data-name="${u.full_name || u.email}"><i class="fa-solid fa-trash-can mr-1"></i>Delete</button>
+          </div>
+        `;
       } else {
-        actionsHtml = `<button type="button" class="btn-role-action px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 transition-all cursor-pointer" data-id="${u.id}" data-role="admin" data-email="${u.email}" data-name="${u.full_name || u.email}"><i class="fa-solid fa-arrow-up mr-1 text-[10px]"></i>Promote to Admin</button>`;
+        const roleBtn = u.role === 'admin'
+          ? `<button type="button" class="btn-role-action px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition-all cursor-pointer" data-id="${u.id}" data-role="client" data-email="${u.email}" data-name="${u.full_name || u.email}"><i class="fa-solid fa-arrow-down mr-1 text-[10px]"></i>Demote</button>`
+          : `<button type="button" class="btn-role-action px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition-all cursor-pointer" data-id="${u.id}" data-role="admin" data-email="${u.email}" data-name="${u.full_name || u.email}"><i class="fa-solid fa-arrow-up mr-1 text-[10px]"></i>Promote</button>`;
+
+        actionsHtml = `
+          <div class="flex items-center justify-end gap-1.5">
+            ${roleBtn}
+            <button type="button" class="btn-user-suspend px-2.5 py-1 rounded-lg text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 cursor-pointer" data-id="${u.id}"><i class="fa-solid fa-pause mr-1"></i>Suspend</button>
+          </div>
+        `;
       }
 
       return `
         <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
           <td class="px-6 py-4">
             <div class="flex items-center space-x-3">
-              <div class="w-8 h-8 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-xs text-white uppercase shrink-0">
+              <div class="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-xs text-[#172B36] uppercase shrink-0">
                 ${initials}
               </div>
               <div class="min-w-0">
-                <div class="font-bold text-white truncate">${u.full_name || 'Registered User'}</div>
-                <div class="text-xs text-slate-400 font-mono truncate">${u.email}</div>
-                ${u.clerk_user_id ? `<div class="text-[10px] text-slate-500 font-mono truncate mt-0.5">${u.clerk_user_id}</div>` : ''}
+                <div class="font-bold text-[#172B36] truncate">${u.full_name || 'Registered User'}</div>
+                <div class="text-xs text-slate-500 font-mono truncate">${u.email}</div>
+                ${u.clerk_user_id ? `<div class="text-[10px] text-slate-400 font-mono truncate mt-0.5">${u.clerk_user_id}</div>` : ''}
               </div>
             </div>
           </td>
           <td class="px-6 py-4">${roleBadge}</td>
           <td class="px-6 py-4">${statusBadge}</td>
-          <td class="px-6 py-4 text-slate-300 text-xs">${u.company_name || '<span class="text-slate-600 italic">None</span>'}</td>
-          <td class="px-6 py-4 text-slate-400 text-xs font-mono">${u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}</td>
+          <td class="px-6 py-4 text-slate-600 text-xs">${u.company_name || '<span class="text-slate-400 italic">None</span>'}</td>
+          <td class="px-6 py-4 text-slate-500 text-xs font-mono">${u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}</td>
           <td class="px-6 py-4 text-right">${actionsHtml}</td>
         </tr>
       `;
@@ -1234,6 +1256,59 @@
     tbody.querySelectorAll('.btn-role-action').forEach(btn => {
       btn.addEventListener('click', () => {
         openRoleChangeModal(btn.dataset.id, btn.dataset.role, btn.dataset.email, btn.dataset.name);
+      });
+    });
+
+    tbody.querySelectorAll('.btn-user-view-details').forEach(btn => {
+      btn.addEventListener('click', () => {
+        openClientDetails(btn.dataset.id);
+      });
+    });
+
+    tbody.querySelectorAll('.btn-user-reactivate').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        const res = await apiFetch(`/clients/${btn.dataset.id}/reactivate`, { method: 'POST' });
+        if (res.ok && res.data && res.data.success) {
+          showToast('Account reactivated successfully.', 'success');
+          loadTeamData();
+          loadClientsData();
+        } else {
+          showToast(res.data?.error || 'Failed to reactivate account.', 'error');
+          btn.disabled = false;
+        }
+      });
+    });
+
+    tbody.querySelectorAll('.btn-user-suspend').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Are you sure you want to suspend this account? Access will be paused.')) return;
+        btn.disabled = true;
+        const res = await apiFetch(`/clients/${btn.dataset.id}/suspend`, { method: 'POST' });
+        if (res.ok && res.data && res.data.success) {
+          showToast('Account suspended.', 'success');
+          loadTeamData();
+          loadClientsData();
+        } else {
+          showToast(res.data?.error || 'Failed to suspend account.', 'error');
+          btn.disabled = false;
+        }
+      });
+    });
+
+    tbody.querySelectorAll('.btn-user-delete').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm(`Are you sure you want to permanently delete account '${btn.dataset.name}'? All test data will be removed.`)) return;
+        btn.disabled = true;
+        const res = await apiFetch(`/clients/${btn.dataset.id}?delete_clerk=true`, { method: 'DELETE' });
+        if (res.ok && res.data && res.data.success) {
+          showToast('Account permanently deleted.', 'success');
+          loadTeamData();
+          loadClientsData();
+        } else {
+          showToast(res.data?.error || 'Failed to delete account.', 'error');
+          btn.disabled = false;
+        }
       });
     });
   }
@@ -1372,11 +1447,17 @@
   }
 
   // =========================================================================
-  // PURE BROWSER PDF GENERATION (pdf-lib, Zero Server Storage)
+  // OFFICIAL DOCUMENT & PDF GENERATION (pdf-lib, Zero Server Storage)
+  // Matching Supplied High-Fidelity Whiz Studio Template
   // =========================================================================
-  async function generateReceiptPdfInBrowser(data) {
+  async function generateOfficialDocumentPdf(docData) {
+    if (!window.PDFLib) {
+      showToast('PDF generation engine unavailable. Please reload.', 'error');
+      return;
+    }
+
     try {
-      showToast('Compiling high-resolution vector PDF in browser...', 'info');
+      showToast('Compiling official high-resolution vector PDF...', 'info');
 
       const { PDFDocument, rgb, StandardFonts } = window.PDFLib;
       const pdfDoc = await PDFDocument.create();
@@ -1385,183 +1466,388 @@
 
       const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
       const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
-      const fontMono = await pdfDoc.embedFont(StandardFonts.CourierBold);
 
-      // Colors
-      const brandDark = rgb(0.02, 0.04, 0.06);
-      const brandGreen = rgb(0.0, 0.66, 0.42);
-      const textMuted = rgb(0.4, 0.45, 0.52);
-      const textDark = rgb(0.1, 0.12, 0.15);
+      // Template Color Palette
+      const tealPrimary = rgb(0.08, 0.49, 0.39); // #147D64
+      const textDark = rgb(0.09, 0.17, 0.21);   // #172B36
+      const textMuted = rgb(0.37, 0.44, 0.50);  // #5F7180
 
-      // Header Banner
-      page.drawRectangle({
-        x: 0,
-        y: height - 120,
-        width: width,
-        height: 120,
-        color: brandDark
-      });
+      // 1. Embed Images
+      try {
+        const [logoBuf, topCornerBuf, botCornerBuf, sigBuf] = await Promise.all([
+          fetch('/assets/images/logo.png').then(r => r.arrayBuffer()).catch(() => null),
+          fetch('/assets/images/template-corner-top-right.png').then(r => r.arrayBuffer()).catch(() => null),
+          fetch('/assets/images/template-corner-bottom-left.png').then(r => r.arrayBuffer()).catch(() => null),
+          fetch('/assets/images/official-signature.png').then(r => r.arrayBuffer()).catch(() => null)
+        ]);
 
-      page.drawText('WHIZ STUDIO', {
-        x: 50,
-        y: height - 60,
-        size: 24,
-        font: fontBold,
-        color: rgb(1, 1, 1)
-      });
+        if (topCornerBuf) {
+          const topCornerImg = await pdfDoc.embedPng(topCornerBuf);
+          page.drawImage(topCornerImg, {
+            x: width - 150,
+            y: height - 61.5,
+            width: 150,
+            height: 61.5
+          });
+        }
 
-      page.drawText('OFFICIAL SERVICE PAYMENT RECEIPT', {
-        x: 50,
+        if (botCornerBuf) {
+          const botCornerImg = await pdfDoc.embedPng(botCornerBuf);
+          page.drawImage(botCornerImg, {
+            x: 0,
+            y: 0,
+            width: 130,
+            height: 120
+          });
+        }
+
+        if (logoBuf) {
+          const logoImg = await pdfDoc.embedPng(logoBuf);
+          const logoW = 140;
+          const logoH = 140 * (576 / 1024);
+          page.drawImage(logoImg, {
+            x: 50,
+            y: height - 110,
+            width: logoW,
+            height: logoH
+          });
+        } else {
+          page.drawText('WHIZ STUDIO', {
+            x: 50,
+            y: height - 80,
+            size: 20,
+            font: fontBold,
+            color: tealPrimary
+          });
+        }
+
+        if (sigBuf) {
+          const sigImg = await pdfDoc.embedPng(sigBuf);
+          page.drawImage(sigImg, {
+            x: width - 175,
+            y: 75,
+            width: 95,
+            height: 66
+          });
+        }
+      } catch (e) {
+        console.warn('Image embedding fallback:', e);
+      }
+
+      // 2. Top-Right Title & Client Copy
+      const isInvoice = (docData.type || 'invoice').toLowerCase() === 'invoice';
+      const titleText = isInvoice ? 'INVOICE' : 'RECEIPT';
+      page.drawText(titleText, {
+        x: width - 210,
         y: height - 85,
-        size: 10,
+        size: 28,
         font: fontBold,
-        color: brandGreen
+        color: tealPrimary
       });
 
-      page.drawText(data.receiptNumber || 'REC-XXXXXX', {
-        x: width - 200,
-        y: height - 60,
-        size: 14,
-        font: fontMono,
-        color: rgb(1, 1, 1)
-      });
-
-      page.drawText(`Date: ${data.paymentDate || new Date().toISOString().split('T')[0]}`, {
-        x: width - 200,
-        y: height - 80,
-        size: 9,
-        font: fontRegular,
-        color: textMuted
-      });
-
-      // Client Details Section
-      let currentY = height - 160;
-
-      page.drawText('BILLED TO / CLIENT:', {
-        x: 50,
-        y: currentY,
-        size: 9,
-        font: fontBold,
-        color: textMuted
-      });
-
-      currentY -= 20;
-      page.drawText(data.client?.organizationName || data.client?.companyName || 'Valued Client', {
-        x: 50,
-        y: currentY,
-        size: 13,
-        font: fontBold,
-        color: textDark
-      });
-
-      currentY -= 16;
-      page.drawText(`Attn: ${data.client?.contactName || data.client?.fullName || 'Client Representative'} (${data.client?.email || ''})`, {
-        x: 50,
-        y: currentY,
-        size: 10,
-        font: fontRegular,
-        color: textMuted
-      });
-
-      // Table Header
-      currentY -= 40;
-      page.drawRectangle({
-        x: 50,
-        y: currentY,
-        width: width - 100,
-        height: 25,
-        color: rgb(0.95, 0.96, 0.97)
-      });
-
-      page.drawText('DESCRIPTION / SERVICE ENGAGEMENT', {
-        x: 60,
-        y: currentY + 8,
-        size: 9,
-        font: fontBold,
-        color: textMuted
-      });
-
-      page.drawText('AMOUNT PAID', {
-        x: width - 150,
-        y: currentY + 8,
-        size: 9,
-        font: fontBold,
-        color: textMuted
-      });
-
-      // Service Row
-      currentY -= 35;
-      page.drawText(data.serviceName || 'Retainer Marketing & Growth Engineering', {
-        x: 60,
-        y: currentY,
+      page.drawText('Client Copy', {
+        x: width - 210,
+        y: height - 103,
         size: 11,
         font: fontBold,
         color: textDark
       });
 
-      const amountFormatted = `$${((data.amountPaidCents || 0) / 100).toFixed(2)} ${data.currency || 'USD'}`;
-      page.drawText(amountFormatted, {
-        x: width - 150,
-        y: currentY,
+      page.drawLine({
+        start: { x: width - 210, y: height - 115 },
+        end: { x: width - 50, y: height - 115 },
+        thickness: 1.5,
+        color: tealPrimary
+      });
+
+      // 3. Details Section
+      let leftY = height - 160;
+      page.drawText('BILLED TO:', {
+        x: 50,
+        y: leftY,
+        size: 10,
+        font: fontBold,
+        color: tealPrimary
+      });
+
+      leftY -= 15;
+      page.drawText(docData.clientName || 'Valued Client', {
+        x: 50,
+        y: leftY,
+        size: 11.5,
+        font: fontBold,
+        color: textDark
+      });
+
+      leftY -= 13;
+      page.drawText('Address: ', {
+        x: 50,
+        y: leftY,
+        size: 8.5,
+        font: fontBold,
+        color: textDark
+      });
+
+      const addressText = docData.clientAddress || 'Dhaka, Bangladesh';
+      const words = addressText.split(' ');
+      let addrLine = '';
+      let addrLines = [];
+      for (const w of words) {
+        if ((addrLine + w).length > 38) {
+          addrLines.push(addrLine.trim());
+          addrLine = w + ' ';
+        } else {
+          addrLine += w + ' ';
+        }
+      }
+      if (addrLine.trim()) addrLines.push(addrLine.trim());
+
+      let currAddrY = leftY;
+      addrLines.slice(0, 3).forEach((line, idx) => {
+        page.drawText(line, {
+          x: idx === 0 ? 95 : 50,
+          y: currAddrY,
+          size: 8.5,
+          font: fontRegular,
+          color: textDark
+        });
+        currAddrY -= 11;
+      });
+
+      currAddrY -= 2;
+      page.drawText('Phone Number: ', {
+        x: 50,
+        y: currAddrY,
+        size: 8.5,
+        font: fontBold,
+        color: textDark
+      });
+      page.drawText(docData.clientPhone || '+880...', {
+        x: 120,
+        y: currAddrY,
+        size: 8.5,
+        font: fontRegular,
+        color: textDark
+      });
+
+      // Right Column Metadata
+      const rightX = width - 210;
+      let rightY = height - 160;
+
+      const numLabel = isInvoice ? 'INVOICE NO: ' : 'RECEIPT NO: ';
+      page.drawText(numLabel, {
+        x: rightX,
+        y: rightY,
+        size: 10,
+        font: fontBold,
+        color: tealPrimary
+      });
+      page.drawText(String(docData.docNumber || '829926'), {
+        x: rightX + fontBold.widthOfTextAtSize(numLabel, 10),
+        y: rightY,
+        size: 10,
+        font: fontBold,
+        color: textDark
+      });
+
+      rightY -= 14;
+      page.drawText(docData.docDate || '29 September, 2026', {
+        x: rightX,
+        y: rightY,
+        size: 9,
+        font: fontRegular,
+        color: textMuted
+      });
+
+      rightY -= 18;
+      page.drawText('PAYMENT TYPE', {
+        x: rightX,
+        y: rightY,
+        size: 9.5,
+        font: fontBold,
+        color: tealPrimary
+      });
+      rightY -= 13;
+      page.drawText(docData.paymentType || 'Facebook Ads', {
+        x: rightX,
+        y: rightY,
+        size: 9,
+        font: fontRegular,
+        color: textDark
+      });
+
+      rightY -= 16;
+      page.drawText('PAYMENT METHOD', {
+        x: rightX,
+        y: rightY,
+        size: 9.5,
+        font: fontBold,
+        color: tealPrimary
+      });
+      rightY -= 13;
+      page.drawText(docData.paymentMethod || 'Bkash', {
+        x: rightX,
+        y: rightY,
+        size: 9,
+        font: fontRegular,
+        color: textDark
+      });
+
+      rightY -= 12;
+      page.drawText('Account Details –', {
+        x: rightX,
+        y: rightY,
+        size: 8,
+        font: fontRegular,
+        color: textMuted
+      });
+      rightY -= 11;
+      page.drawText(docData.accountDetails || 'Md Kazi Abdur Rahim Emon', {
+        x: rightX,
+        y: rightY,
+        size: 8.5,
+        font: fontRegular,
+        color: textDark
+      });
+      rightY -= 11;
+      page.drawText(`Phone Number: ${docData.agencyPhone || '+880 1560066374'}`, {
+        x: rightX,
+        y: rightY,
+        size: 8,
+        font: fontRegular,
+        color: textDark
+      });
+
+      // 4. Line Items Table
+      const tableY = Math.min(currAddrY, rightY) - 25;
+
+      page.drawLine({
+        start: { x: 50, y: tableY + 16 },
+        end: { x: width - 50, y: tableY + 16 },
+        thickness: 1,
+        color: tealPrimary
+      });
+
+      page.drawText('Description', { x: 55, y: tableY + 4, size: 9.5, font: fontBold, color: tealPrimary });
+      page.drawText('Quantity', { x: 280, y: tableY + 4, size: 9.5, font: fontBold, color: tealPrimary });
+      page.drawText('Rate', { x: 380, y: tableY + 4, size: 9.5, font: fontBold, color: tealPrimary });
+      page.drawText('Amount', { x: 490, y: tableY + 4, size: 9.5, font: fontBold, color: tealPrimary });
+
+      page.drawLine({
+        start: { x: 50, y: tableY - 4 },
+        end: { x: width - 50, y: tableY - 4 },
+        thickness: 1,
+        color: tealPrimary
+      });
+
+      let itemY = tableY - 22;
+      page.drawText(docData.itemDesc || 'Facebook Ads Expenses & Service Change', {
+        x: 55,
+        y: itemY,
+        size: 9,
+        font: fontRegular,
+        color: textDark
+      });
+      page.drawText(String(docData.itemQty || '2'), {
+        x: 295,
+        y: itemY,
+        size: 9,
+        font: fontRegular,
+        color: textDark
+      });
+      page.drawText(String(docData.itemRate || '1250'), {
+        x: 385,
+        y: itemY,
+        size: 9,
+        font: fontRegular,
+        color: textDark
+      });
+      page.drawText(String(docData.itemAmount || '2500'), {
+        x: 495,
+        y: itemY,
+        size: 9,
+        font: fontBold,
+        color: textDark
+      });
+
+      page.drawLine({
+        start: { x: 50, y: itemY - 12 },
+        end: { x: width - 50, y: itemY - 12 },
+        thickness: 1,
+        color: tealPrimary
+      });
+
+      const totalY = itemY - 30;
+      page.drawText('TOTAL', {
+        x: 380,
+        y: totalY,
         size: 11,
         font: fontBold,
-        color: brandGreen
+        color: tealPrimary
       });
-
-      // Total Paid Callout Box
-      currentY -= 60;
-      page.drawRectangle({
-        x: width - 260,
-        y: currentY,
-        width: 210,
-        height: 45,
-        color: rgb(0.96, 0.99, 0.97),
-        borderColor: brandGreen,
-        borderWidth: 1
-      });
-
-      page.drawText('TOTAL VERIFIED PAID:', {
-        x: width - 245,
-        y: currentY + 28,
-        size: 9,
+      page.drawText(String(docData.totalAmount || '2500'), {
+        x: 495,
+        y: totalY,
+        size: 11,
         font: fontBold,
-        color: brandGreen
+        color: tealPrimary
       });
 
-      page.drawText(amountFormatted, {
-        x: width - 245,
-        y: currentY + 10,
-        size: 14,
+      // 5. Notes & Signature
+      const notesY = 135;
+      page.drawText('NOTES:', {
+        x: 120,
+        y: notesY,
+        size: 9.5,
         font: fontBold,
-        color: brandGreen
+        color: tealPrimary
       });
 
-      // Footer Notes
-      currentY -= 80;
-      page.drawText('PAYMENT VERIFICATION & IMMUTABLE RECORD:', {
-        x: 50,
-        y: currentY,
-        size: 9,
+      page.drawText('Whiz Studio', {
+        x: 120,
+        y: notesY - 14,
+        size: 9.5,
         font: fontBold,
-        color: textMuted
+        color: textDark
       });
 
-      currentY -= 15;
-      page.drawText(`Payment Method: ${(data.paymentMethod || 'BANK_TRANSFER').toUpperCase()} | Status: CONFIRMED & COMMITTED TO CLOUDFLARE D1`, {
-        x: 50,
-        y: currentY,
-        size: 8,
+      page.drawText('Address: Road 7, Block A, Mirpur 12, Dhaka, Bangladesh – 1216', {
+        x: 120,
+        y: notesY - 26,
+        size: 7.5,
         font: fontRegular,
-        color: textMuted
+        color: textDark
       });
 
-      currentY -= 15;
-      page.drawText('Authorized signature: Whiz Studio Financial Governance • Zero Server Storage Policy', {
-        x: 50,
-        y: currentY,
-        size: 8,
+      page.drawText('Phone Number: +880 1322196665', {
+        x: 120,
+        y: notesY - 38,
+        size: 7.5,
         font: fontRegular,
-        color: textMuted
+        color: textDark
+      });
+
+      page.drawText('Email: info@whizstudio.art', {
+        x: 120,
+        y: notesY - 50,
+        size: 7.5,
+        font: fontRegular,
+        color: textDark
+      });
+
+      page.drawLine({
+        start: { x: width - 200, y: 68 },
+        end: { x: width - 60, y: 68 },
+        thickness: 1.5,
+        color: tealPrimary
+      });
+
+      page.drawText('SIGNATURE', {
+        x: width - 150,
+        y: 53,
+        size: 9.5,
+        font: fontBold,
+        color: tealPrimary
       });
 
       const pdfBytes = await pdfDoc.save();
@@ -1569,17 +1855,41 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${data.receiptNumber || 'Receipt'}.pdf`;
+      const fileName = `Whiz_Studio_${isInvoice ? 'Invoice' : 'Receipt'}_${docData.docNumber || '829926'}.pdf`;
+      a.download = fileName;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      showToast(`Vector Receipt ${data.receiptNumber} downloaded!`, 'success');
+      showToast(`Vector PDF ${fileName} downloaded successfully!`, 'success');
     } catch (err) {
       console.error('PDF Generation Error:', err);
-      showToast('Error compiling vector PDF receipt.', 'error');
+      showToast('Error compiling vector PDF document.', 'error');
     }
+  }
+
+  // Wrapper for existing receipt downloads
+  async function generateReceiptPdfInBrowser(data) {
+    const docData = {
+      type: 'receipt',
+      docNumber: data.receiptNumber || '829926',
+      docDate: data.paymentDate || new Date().toISOString().split('T')[0],
+      clientName: data.client?.organizationName || data.client?.companyName || data.client?.contactName || 'Valued Client',
+      clientAddress: data.client?.address || 'Dhaka, Bangladesh',
+      clientPhone: data.client?.phone || '+880 1624644435',
+      paymentType: data.serviceName || 'Agency Service Retainer',
+      paymentMethod: (data.paymentMethod || 'Bkash').toUpperCase(),
+      accountDetails: data.accountDetails || 'Md Kazi Abdur Rahim Emon',
+      agencyPhone: data.agencyPhone || '+880 1560066374',
+      itemDesc: data.serviceName || 'Agency Service Retainer',
+      itemQty: '1',
+      itemRate: ((data.amountPaidCents || 0) / 100).toFixed(0),
+      itemAmount: ((data.amountPaidCents || 0) / 100).toFixed(0),
+      totalAmount: ((data.amountPaidCents || 0) / 100).toFixed(0),
+      currency: data.currency || 'USD'
+    };
+    await generateOfficialDocumentPdf(docData);
   }
 
   // =========================================================================
@@ -1834,50 +2144,75 @@
       }
     });
 
-    // Archive Client Modal & Action
-    document.getElementById('btnArchiveClientAction')?.addEventListener('click', () => {
+    // Suspend Client Action
+    document.getElementById('btnSuspendClientAction')?.addEventListener('click', async () => {
       const clientId = state.selectedClientId;
       if (!clientId) return;
+      if (!confirm('Are you sure you want to suspend this client? The client will lose access to the portal until reactivated.')) return;
 
-      const titleEl = document.getElementById('clientDetailTitle');
-      const targetNameEl = document.getElementById('archiveClientTargetName');
-      if (targetNameEl && titleEl) targetNameEl.textContent = titleEl.textContent;
+      const btn = document.getElementById('btnSuspendClientAction');
+      setBtnLoading(btn, true, 'Suspending...');
 
-      document.getElementById('modalArchiveClient')?.classList.remove('hidden');
-    });
-
-    document.getElementById('btnConfirmArchiveClient')?.addEventListener('click', async () => {
-      const clientId = state.selectedClientId;
-      if (!clientId) return;
-
-      const btn = document.getElementById('btnConfirmArchiveClient');
-      setBtnLoading(btn, true, 'Archiving client...');
-
-      const res = await apiFetch(`/clients/${clientId}/archive`, { method: 'POST' });
+      const res = await apiFetch(`/clients/${clientId}/suspend`, { method: 'POST' });
       setBtnLoading(btn, false);
 
       if (res.ok && res.data && res.data.success) {
-        showToast(res.data.message || 'Client archived successfully.', 'success');
-        document.getElementById('modalArchiveClient')?.classList.add('hidden');
+        showToast(res.data.message || 'Client account suspended.', 'success');
         openClientDetails(clientId);
         loadClientsData();
       } else {
-        showToast(res.data?.error || 'Failed to archive client.', 'error');
+        showToast(res.data?.error || 'Failed to suspend client.', 'error');
       }
     });
 
-    // Restore Client Action
-    document.getElementById('btnRestoreClientAction')?.addEventListener('click', async () => {
+    // Reactivate Client Action
+    document.getElementById('btnReactivateClientAction')?.addEventListener('click', async () => {
       const clientId = state.selectedClientId;
       if (!clientId) return;
 
-      const res = await apiFetch(`/clients/${clientId}/restore`, { method: 'POST' });
+      const btn = document.getElementById('btnReactivateClientAction');
+      setBtnLoading(btn, true, 'Reactivating...');
+
+      const res = await apiFetch(`/clients/${clientId}/reactivate`, { method: 'POST' });
+      setBtnLoading(btn, false);
+
       if (res.ok && res.data && res.data.success) {
-        showToast(res.data.message || 'Client restored to active directory.', 'success');
+        showToast(res.data.message || 'Client account reactivated successfully.', 'success');
         openClientDetails(clientId);
         loadClientsData();
       } else {
-        showToast(res.data?.error || 'Failed to restore client.', 'error');
+        showToast(res.data?.error || 'Failed to reactivate client.', 'error');
+      }
+    });
+
+    // Delete Client Action (opens modal)
+    document.getElementById('btnDeleteClientAction')?.addEventListener('click', () => {
+      const clientId = state.selectedClientId;
+      if (!clientId) return;
+      const titleEl = document.getElementById('clientDetailTitle');
+      const targetNameEl = document.getElementById('deleteClientTargetName');
+      if (targetNameEl && titleEl) targetNameEl.textContent = titleEl.textContent;
+      document.getElementById('modalDeleteClient')?.classList.remove('hidden');
+    });
+
+    // Confirm Permanent Delete Client
+    document.getElementById('btnConfirmDeleteClient')?.addEventListener('click', async () => {
+      const clientId = state.selectedClientId;
+      if (!clientId) return;
+
+      const btn = document.getElementById('btnConfirmDeleteClient');
+      setBtnLoading(btn, true, 'Deleting client...');
+
+      const res = await apiFetch(`/clients/${clientId}?delete_clerk=true`, { method: 'DELETE' });
+      setBtnLoading(btn, false);
+
+      if (res.ok && res.data && res.data.success) {
+        showToast(res.data.message || 'Client deleted successfully.', 'success');
+        document.getElementById('modalDeleteClient')?.classList.add('hidden');
+        switchTab('clients');
+        loadClientsData();
+      } else {
+        showToast(res.data?.error || 'Failed to delete client.', 'error');
       }
     });
 
@@ -2244,6 +2579,101 @@
     // Search and Filter Listeners
     document.getElementById('userDirectorySearch')?.addEventListener('input', () => renderUserDirectory());
     document.getElementById('userDirectoryRoleFilter')?.addEventListener('change', () => renderUserDirectory());
+    document.getElementById('userDirectoryStatusFilter')?.addEventListener('change', () => renderUserDirectory());
+
+    // Template Studio State & Event Handlers
+    let tplStudioMode = 'invoice';
+
+    function updateTemplateStudioPreview() {
+      const isInvoice = tplStudioMode === 'invoice';
+      const docTypeEl = document.getElementById('previewDocType');
+      const docNumLabel = document.getElementById('previewDocNumberLabel');
+      
+      if (docTypeEl) docTypeEl.textContent = isInvoice ? 'INVOICE' : 'RECEIPT';
+      if (docNumLabel) docNumLabel.innerHTML = (isInvoice ? 'INVOICE NO: ' : 'RECEIPT NO: ') + `<span class="font-black text-slate-900 text-sm font-mono" id="previewDocNumber">${document.getElementById('tplDocNumber')?.value || '829926'}</span>`;
+
+      const map = [
+        ['tplDocDate', 'previewDocDate'],
+        ['tplClientName', 'previewClientName'],
+        ['tplClientAddress', 'previewClientAddress'],
+        ['tplClientPhone', 'previewClientPhone'],
+        ['tplPaymentType', 'previewPaymentType'],
+        ['tplPaymentMethod', 'previewPaymentMethod'],
+        ['tplAccountDetails', 'previewAccountDetails'],
+        ['tplAgencyPhone', 'previewAgencyPhone'],
+        ['tplItemDesc', 'previewItemDesc'],
+        ['tplItemQty', 'previewItemQty']
+      ];
+      map.forEach(([inpId, prevId]) => {
+        const val = document.getElementById(inpId)?.value;
+        const prev = document.getElementById(prevId);
+        if (prev && val !== undefined) prev.textContent = val;
+      });
+
+      const qty = parseFloat(document.getElementById('tplItemQty')?.value || '1');
+      const rate = parseFloat(document.getElementById('tplItemRate')?.value || '0');
+      const amount = Math.round(qty * rate);
+
+      const itemRateEl = document.getElementById('previewItemRate');
+      if (itemRateEl) itemRateEl.textContent = rate.toString();
+
+      const itemAmountInput = document.getElementById('tplItemAmount');
+      if (itemAmountInput) itemAmountInput.value = amount.toString();
+
+      const itemRowAmount = document.getElementById('previewItemRowAmount');
+      if (itemRowAmount) itemRowAmount.textContent = amount.toString();
+
+      const totalAmount = document.getElementById('previewTotalAmount');
+      if (totalAmount) totalAmount.textContent = amount.toString();
+    }
+
+    document.getElementById('btnTplModeInvoice')?.addEventListener('click', () => {
+      tplStudioMode = 'invoice';
+      const invBtn = document.getElementById('btnTplModeInvoice');
+      const recBtn = document.getElementById('btnTplModeReceipt');
+      if (invBtn) invBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all bg-white text-[#172B36] shadow-sm cursor-pointer';
+      if (recBtn) recBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-500 hover:text-[#172B36] cursor-pointer';
+      updateTemplateStudioPreview();
+    });
+
+    document.getElementById('btnTplModeReceipt')?.addEventListener('click', () => {
+      tplStudioMode = 'receipt';
+      const invBtn = document.getElementById('btnTplModeInvoice');
+      const recBtn = document.getElementById('btnTplModeReceipt');
+      if (recBtn) recBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all bg-white text-[#172B36] shadow-sm cursor-pointer';
+      if (invBtn) invBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-500 hover:text-[#172B36] cursor-pointer';
+      updateTemplateStudioPreview();
+    });
+
+    ['tplDocNumber', 'tplDocDate', 'tplClientName', 'tplClientAddress', 'tplClientPhone', 'tplPaymentType', 'tplPaymentMethod', 'tplAccountDetails', 'tplAgencyPhone', 'tplItemDesc', 'tplItemQty', 'tplItemRate'].forEach(id => {
+      document.getElementById(id)?.addEventListener('input', updateTemplateStudioPreview);
+    });
+
+    document.getElementById('btnDownloadTemplatePdf')?.addEventListener('click', () => {
+      const isInvoice = tplStudioMode === 'invoice';
+      const qty = parseFloat(document.getElementById('tplItemQty')?.value || '1');
+      const rate = parseFloat(document.getElementById('tplItemRate')?.value || '0');
+      const amount = Math.round(qty * rate);
+
+      const docData = {
+        type: isInvoice ? 'invoice' : 'receipt',
+        docNumber: document.getElementById('tplDocNumber')?.value || '829926',
+        docDate: document.getElementById('tplDocDate')?.value || '29 September, 2026',
+        clientName: document.getElementById('tplClientName')?.value || 'Pholl Bihar',
+        clientAddress: document.getElementById('tplClientAddress')?.value || 'Dhaka, Bangladesh',
+        clientPhone: document.getElementById('tplClientPhone')?.value || '+880 1624644435',
+        paymentType: document.getElementById('tplPaymentType')?.value || 'Facebook Ads',
+        paymentMethod: document.getElementById('tplPaymentMethod')?.value || 'Bkash',
+        accountDetails: document.getElementById('tplAccountDetails')?.value || 'Md Kazi Abdur Rahim Emon',
+        agencyPhone: document.getElementById('tplAgencyPhone')?.value || '+880 1560066374',
+        itemDesc: document.getElementById('tplItemDesc')?.value || 'Facebook Ads Expenses & Service Change',
+        itemQty: qty.toString(),
+        itemRate: rate.toString(),
+        itemAmount: amount.toString(),
+        totalAmount: amount.toString()
+      };
+      generateOfficialDocumentPdf(docData);
+    });
 
     // Close Modals
     document.querySelectorAll('.btn-close-modal').forEach(btn => {
@@ -2256,20 +2686,7 @@
 
     // Test Generate Receipt PDF
     document.getElementById('btnTestGenerateReceipt')?.addEventListener('click', () => {
-      const sampleData = {
-        receiptNumber: 'REC-202610-DEMO',
-        paymentDate: new Date().toISOString().split('T')[0],
-        paymentMethod: 'BANK_TRANSFER',
-        currency: 'USD',
-        amountPaidCents: 150000,
-        serviceName: 'Facebook Ads Management (Growth Retainer)',
-        client: {
-          organizationName: 'Acme Growth Labs',
-          contactName: 'Jane Doe',
-          email: 'jane@acme.com'
-        }
-      };
-      generateReceiptPdfInBrowser(sampleData);
+      document.getElementById('btnDownloadTemplatePdf')?.click();
     });
   }
 

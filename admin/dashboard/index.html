@@ -119,13 +119,10 @@
 
         <!-- Brand Icon & Breadcrumbs -->
         <div class="flex items-center space-x-3">
-          <a href="/" class="flex items-center space-x-2 text-[#172B36] font-black tracking-tight group">
-            <div class="w-8 h-8 rounded-xl bg-brand-whiz/10 border border-brand-whiz/30 flex items-center justify-center text-brand-whiz group-hover:scale-105 transition-transform">
-              <i class="fa-solid fa-bolt text-xs"></i>
-            </div>
-            <span class="hidden sm:inline-block font-extrabold text-sm tracking-tight">Whiz Studio</span>
+          <a href="/" class="flex items-center group">
+            <img src="/assets/images/logo.png" alt="Whiz Studio" class="h-8 sm:h-9 w-auto object-contain transition-opacity group-hover:opacity-90">
           </a>
-          <span class="text-slate-600">/</span>
+          <span class="text-slate-300">/</span>
           <div class="flex items-center space-x-2">
             <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Console</span>
             <span class="text-slate-600">/</span>
@@ -251,12 +248,9 @@
       <aside id="mobileDrawer" class="fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-[#E3E9EF] p-5 transform -translate-x-full transition-transform duration-300 ease-in-out md:hidden flex flex-col justify-between shadow-2xl">
         <div class="space-y-6 overflow-y-auto">
           <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
-            <div class="flex items-center space-x-2">
-              <div class="w-7 h-7 rounded-lg bg-brand-whiz/10 border border-brand-whiz/30 flex items-center justify-center text-brand-whiz">
-                <i class="fa-solid fa-bolt text-xs"></i>
-              </div>
-              <span class="font-extrabold text-sm text-[#172B36]">Whiz Studio</span>
-            </div>
+            <a href="/" class="flex items-center">
+              <img src="/assets/images/logo.png" alt="Whiz Studio" class="h-7 w-auto object-contain">
+            </a>
             <button type="button" id="mobileDrawerCloseBtn" class="w-8 h-8 rounded-lg bg-white border border-[#E3E9EF] flex items-center justify-center text-slate-500 hover:text-[#172B36] cursor-pointer">
               <i class="fa-solid fa-xmark text-xs"></i>
             </button>
@@ -561,11 +555,18 @@
                   <i class="fa-solid fa-plus text-xs"></i>
                   <span>Assign Service</span>
                 </button>
+                <button type="button" id="btnSuspendClientAction" class="px-3.5 py-2 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all flex items-center gap-1.5 cursor-pointer">
+                  <i class="fa-solid fa-pause text-xs"></i>
+                  <span>Suspend Client</span>
+                </button>
+                <button type="button" id="btnReactivateClientAction" class="hidden px-3.5 py-2 rounded-xl text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-all flex items-center gap-1.5 cursor-pointer">
+                  <i class="fa-solid fa-play text-xs"></i>
+                  <span>Reactivate Client</span>
+                </button>
                 <button type="button" id="btnDeleteClientAction" class="px-3.5 py-2 rounded-xl text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-all flex items-center gap-1.5 cursor-pointer">
                   <i class="fa-solid fa-trash-can text-xs"></i>
                   <span>Delete Client</span>
                 </button>
-                
               </div>
             </div>
 
@@ -906,64 +907,264 @@
           </div>
 
           <!-- =================================================================
-               TAB 7: RECEIPT TEMPLATE SETTINGS (ZERO SERVER STORAGE)
+               TAB 7: INVOICE & RECEIPT TEMPLATE DESIGNER & PREVIEW
                ================================================================= -->
           <div id="view_receipt_template" class="hidden space-y-6">
-            <div>
-              <h2 class="text-2xl font-black text-[#172B36] tracking-tight">Receipt Template Configuration</h2>
-              <p class="text-xs text-slate-500">Configure and preview official payment receipts issued to clients..</p>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <!-- Left: Dynamic Field Mapping Table -->
-              <div class="p-6 rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl space-y-4">
-                <h3 class="text-sm font-extrabold text-[#172B36] uppercase tracking-wider pb-2 border-b border-[#E3E9EF]">Dynamic Template Fields</h3>
-                <div class="space-y-2 text-xs">
-                  <div class="flex items-center justify-between p-2 rounded-lg bg-slate-50/60 border border-[#E3E9EF]">
-                    <span class="font-mono text-brand-whiz">{{agency_name}}</span>
-                    <span class="text-slate-500">Whiz Studio</span>
-                  </div>
-                  <div class="flex items-center justify-between p-2 rounded-lg bg-slate-50/60 border border-[#E3E9EF]">
-                    <span class="font-mono text-brand-whiz">{{client_name}}</span>
-                    <span class="text-slate-500">Authorized Client Full Name</span>
-                  </div>
-                  <div class="flex items-center justify-between p-2 rounded-lg bg-slate-50/60 border border-[#E3E9EF]">
-                    <span class="font-mono text-brand-whiz">{{receipt_reference}}</span>
-                    <span class="text-slate-500">Immutable REC-YYYYMM-XXXX</span>
-                  </div>
-                  <div class="flex items-center justify-between p-2 rounded-lg bg-slate-50/60 border border-[#E3E9EF]">
-                    <span class="font-mono text-brand-whiz">{{amount_paid}}</span>
-                    <span class="text-slate-500">Verified Paid Minor Cents / 100</span>
-                  </div>
-                  <div class="flex items-center justify-between p-2 rounded-lg bg-slate-50/60 border border-[#E3E9EF]">
-                    <span class="font-mono text-brand-whiz">{{remaining_balance}}</span>
-                    <span class="text-slate-500">Calculated Outstanding Balance</span>
-                  </div>
-                  <div class="flex items-center justify-between p-2 rounded-lg bg-slate-50/60 border border-[#E3E9EF]">
-                    <span class="font-mono text-brand-whiz">{{daily_quota}}</span>
-                    <span class="text-emerald-400 font-bold">2 Generations / Day (Asia/Dhaka)</span>
-                  </div>
-                </div>
+            <!-- Header & Action Bar -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-[#E3E9EF]">
+              <div>
+                <h2 class="text-2xl font-black text-[#172B36] tracking-tight">Invoice &amp; Receipt Template Studio</h2>
+                <p class="text-xs text-slate-500">Live preview, customization, and browser-side vector PDF generation matching official agency stationery.</p>
               </div>
-
-              <!-- Right: Preview & Test Generator -->
-              <div class="p-6 rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl space-y-4">
-                <h3 class="text-sm font-extrabold text-[#172B36] uppercase tracking-wider pb-2 border-b border-[#E3E9EF]">Preview Receipt</h3>
-                <p class="text-xs text-slate-500 leading-relaxed">
-                  Preview how receipts appear before issuing to clients. PDFs are generated in your browser and never stored on servers.<span class="text-[#172B36] font-mono">pdf-lib</span>. No PDF binaries are ever written to server storage.
-                </p>
-                <div class="p-4 rounded-2xl bg-emerald-950/20 border border-emerald-500/30 text-xs text-emerald-300 space-y-1">
-                  <p class="font-bold flex items-center gap-1.5">
-                    <i class="fa-solid fa-shield-check"></i>
-                    <span>Zero Storage Policy Active</span>
-                  </p>
-                  <p class="text-[11px] text-slate-500">Generated ephemeral PDFs exist solely in browser RAM and trigger standard file download.</p>
+              <div class="flex items-center gap-2.5">
+                <div class="inline-flex rounded-xl bg-slate-100 p-1 border border-[#E3E9EF]">
+                  <button type="button" id="btnTplModeInvoice" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all bg-white text-[#172B36] shadow-sm cursor-pointer">
+                    <i class="fa-solid fa-file-invoice mr-1 text-[#147D64]"></i> Invoice
+                  </button>
+                  <button type="button" id="btnTplModeReceipt" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-500 hover:text-[#172B36] cursor-pointer">
+                    <i class="fa-solid fa-receipt mr-1"></i> Payment Receipt
+                  </button>
                 </div>
-                <button type="button" id="btnTestGenerateReceipt" class="w-full py-3 px-5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm hover:shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer">
-                  <i class="fa-solid fa-file-pdf text-sm"></i>
-                  <span>Test Generate Sample Receipt PDF</span>
+                <button type="button" id="btnDownloadTemplatePdf" class="px-4 py-2 rounded-xl text-xs font-bold btn-glass-primary shadow-sm hover:shadow-md transition-all flex items-center gap-2 cursor-pointer">
+                  <i class="fa-solid fa-file-arrow-down text-sm"></i>
+                  <span>Download PDF Document</span>
                 </button>
               </div>
+            </div>
+
+            <!-- Main Studio Grid -->
+            <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+              
+              <!-- Left Column: Template Configuration Controls (5 cols on xl) -->
+              <div class="xl:col-span-5 space-y-5">
+                <div class="p-6 rounded-3xl bg-white border border-[#E3E9EF] shadow-sm space-y-4">
+                  <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-700 flex items-center gap-2 pb-2 border-b border-[#E3E9EF]">
+                    <i class="fa-solid fa-sliders text-[#147D64]"></i>
+                    <span>Document Metadata &amp; Billing</span>
+                  </h3>
+
+                  <div class="space-y-3.5 text-xs">
+                    <div class="grid grid-cols-2 gap-3">
+                      <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Doc Number</label>
+                        <input type="text" id="tplDocNumber" value="829926" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] font-mono text-slate-800 text-xs focus:outline-none focus:border-[#147D64]">
+                      </div>
+                      <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Issue Date</label>
+                        <input type="text" id="tplDocDate" value="29 September, 2026" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-slate-800 text-xs focus:outline-none focus:border-[#147D64]">
+                      </div>
+                    </div>
+
+                    <div>
+                      <label class="block text-[11px] font-bold text-slate-600 mb-1">Billed Client / Business Name</label>
+                      <input type="text" id="tplClientName" value="Pholl Bihar" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] font-semibold text-slate-800 text-xs focus:outline-none focus:border-[#147D64]">
+                    </div>
+
+                    <div>
+                      <label class="block text-[11px] font-bold text-slate-600 mb-1">Client Address</label>
+                      <textarea id="tplClientAddress" rows="2" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-slate-800 text-xs focus:outline-none focus:border-[#147D64]">Adjacent to Sukundirbag Primary School Lal Bridge Area, Bonomala Road Ward 39, Tongi Gazipur City Corporation Gazipur, Bangladesh</textarea>
+                    </div>
+
+                    <div>
+                      <label class="block text-[11px] font-bold text-slate-600 mb-1">Client Phone Number</label>
+                      <input type="text" id="tplClientPhone" value="+880 1624644435" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-slate-800 text-xs focus:outline-none focus:border-[#147D64]">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                      <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Payment Type</label>
+                        <input type="text" id="tplPaymentType" value="Facebook Ads" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-slate-800 text-xs focus:outline-none focus:border-[#147D64]">
+                      </div>
+                      <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Payment Method</label>
+                        <input type="text" id="tplPaymentMethod" value="Bkash" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-slate-800 text-xs focus:outline-none focus:border-[#147D64]">
+                      </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                      <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Account Holder Name</label>
+                        <input type="text" id="tplAccountDetails" value="Md Kazi Abdur Rahim Emon" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-slate-800 text-xs focus:outline-none focus:border-[#147D64]">
+                      </div>
+                      <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Agency Phone</label>
+                        <input type="text" id="tplAgencyPhone" value="+880 1560066374" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-slate-800 text-xs focus:outline-none focus:border-[#147D64]">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Line Item Setup -->
+                <div class="p-6 rounded-3xl bg-white border border-[#E3E9EF] shadow-sm space-y-4">
+                  <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-700 flex items-center gap-2 pb-2 border-b border-[#E3E9EF]">
+                    <i class="fa-solid fa-list-check text-[#147D64]"></i>
+                    <span>Line Items &amp; Pricing</span>
+                  </h3>
+                  <div class="space-y-3 text-xs">
+                    <div>
+                      <label class="block text-[11px] font-bold text-slate-600 mb-1">Item Description</label>
+                      <input type="text" id="tplItemDesc" value="Facebook Ads Expenses &amp; Service Change" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-slate-800 text-xs focus:outline-none focus:border-[#147D64]">
+                    </div>
+                    <div class="grid grid-cols-3 gap-2">
+                      <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Qty</label>
+                        <input type="number" id="tplItemQty" value="2" min="1" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-slate-800 text-xs focus:outline-none focus:border-[#147D64]">
+                      </div>
+                      <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Rate</label>
+                        <input type="number" id="tplItemRate" value="1250" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-slate-800 text-xs focus:outline-none focus:border-[#147D64]">
+                      </div>
+                      <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Total</label>
+                        <input type="number" id="tplItemAmount" value="2500" class="w-full px-3 py-2 rounded-xl bg-slate-100 border border-[#E3E9EF] font-bold text-[#147D64] text-xs" readonly>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Verified Security Badge -->
+                <div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs space-y-1.5">
+                  <div class="flex items-center gap-2 font-bold">
+                    <i class="fa-solid fa-signature text-base text-[#147D64]"></i>
+                    <span>Official Ink Signature &amp; Zero Storage Policy</span>
+                  </div>
+                  <p class="text-[11px] text-emerald-700 leading-relaxed">
+                    Embedded official signature with cryptographic audit reference. Generated vector PDFs run 100% inside client browser memory with zero server disk storage.
+                  </p>
+                </div>
+              </div>
+
+              <!-- Right Column: Live A4 Stationery Visual Preview (7 cols on xl) -->
+              <div class="xl:col-span-7">
+                <div class="rounded-3xl bg-slate-100/80 border border-slate-200 p-4 sm:p-6 overflow-x-auto shadow-inner">
+                  
+                  <!-- Simulated A4 Paper Sheet (Ratio 1:1.414) -->
+                  <div id="tplA4PreviewSheet" class="relative bg-white text-[#172B36] w-full max-w-[620px] mx-auto rounded-xl shadow-2xl p-6 sm:p-10 overflow-hidden font-sans select-none border border-slate-200 min-h-[820px] flex flex-col justify-between">
+                    
+                    <!-- Luxury Corner Accents from Template -->
+                    <img src="/assets/images/template-corner-top-right.png" alt="" class="absolute top-0 right-0 w-36 sm:w-44 pointer-events-none select-none">
+                    <img src="/assets/images/template-corner-bottom-left.png" alt="" class="absolute bottom-0 left-0 w-32 sm:w-40 pointer-events-none select-none">
+
+                    <div class="relative z-10 space-y-6">
+                      <!-- Top Header Row: Logo & Document Title -->
+                      <div class="flex items-start justify-between pt-2">
+                        <!-- Top-Left Logo -->
+                        <div class="w-40 sm:w-48">
+                          <img src="/assets/images/logo.png" alt="Whiz Studio" class="w-full h-auto object-contain">
+                        </div>
+
+                        <!-- Top-Right Title & Client Copy -->
+                        <div class="text-right pr-2">
+                          <h1 id="previewDocType" class="text-3xl sm:text-4xl font-black text-[#147D64] tracking-tight leading-none uppercase">INVOICE</h1>
+                          <p class="text-xs sm:text-sm font-bold text-slate-800 mt-1">Client Copy</p>
+                          <div class="w-36 sm:w-44 h-0.5 bg-[#147D64] ml-auto mt-2"></div>
+                        </div>
+                      </div>
+
+                      <!-- Details Grid: Billed To (Left) & Invoice Meta (Right) -->
+                      <div class="grid grid-cols-2 gap-4 sm:gap-6 pt-2">
+                        <!-- Left: BILLED TO -->
+                        <div class="space-y-1 text-xs">
+                          <p class="font-extrabold text-[#147D64] uppercase tracking-wider text-[11px]">BILLED TO:</p>
+                          <p id="previewClientName" class="font-black text-slate-900 text-sm">Pholl Bihar</p>
+                          <p class="text-[11px] text-slate-700 leading-tight">
+                            <span class="font-bold text-slate-900">Address:</span>
+                            <span id="previewClientAddress" class="text-slate-700">Adjacent to Sukundirbag Primary School Lal Bridge Area, Bonomala Road Ward 39, Tongi Gazipur City Corporation Gazipur, Bangladesh</span>
+                          </p>
+                          <p class="text-[11px] text-slate-700">
+                            <span class="font-bold text-slate-900">Phone Number:</span>
+                            <span id="previewClientPhone" class="text-slate-800">+880 1624644435</span>
+                          </p>
+                        </div>
+
+                        <!-- Right: Metadata & Payment Info -->
+                        <div class="text-right space-y-1.5 text-xs">
+                          <div>
+                            <span id="previewDocNumberLabel" class="font-extrabold text-[#147D64] text-[11px]">INVOICE NO: </span>
+                            <span id="previewDocNumber" class="font-black text-slate-900 text-sm font-mono">829926</span>
+                            <p id="previewDocDate" class="text-[11px] text-slate-600 mt-0.5">29 September, 2026</p>
+                          </div>
+
+                          <div>
+                            <p class="font-extrabold text-[#147D64] uppercase tracking-wider text-[11px]">PAYMENT TYPE</p>
+                            <p id="previewPaymentType" class="font-semibold text-slate-800 text-[11px]">Facebook Ads</p>
+                          </div>
+
+                          <div>
+                            <p class="font-extrabold text-[#147D64] uppercase tracking-wider text-[11px]">PAYMENT METHOD</p>
+                            <p id="previewPaymentMethod" class="font-semibold text-slate-800 text-[11px]">Bkash</p>
+                            <p class="text-[10px] text-slate-600">Account Details –</p>
+                            <p id="previewAccountDetails" class="font-semibold text-slate-800 text-[11px]">Md Kazi Abdur Rahim Emon</p>
+                            <p class="text-[10px] text-slate-700">Phone Number: <span id="previewAgencyPhone">+880 1560066374</span></p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Line Items Table -->
+                      <div class="pt-2">
+                        <div class="border-y border-[#147D64] py-2">
+                          <table class="w-full text-xs">
+                            <thead>
+                              <tr class="text-[#147D64] font-extrabold text-[11px]">
+                                <th class="text-left pb-1 font-bold">Description</th>
+                                <th class="text-center pb-1 font-bold">Quantity</th>
+                                <th class="text-center pb-1 font-bold">Rate</th>
+                                <th class="text-right pb-1 font-bold">Amount</th>
+                              </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 text-[11px]">
+                              <tr>
+                                <td id="previewItemDesc" class="py-2.5 font-medium text-slate-800 pr-2">Facebook Ads Expenses &amp; Service Change</td>
+                                <td id="previewItemQty" class="py-2.5 text-center text-slate-700">2</td>
+                                <td id="previewItemRate" class="py-2.5 text-center text-slate-700">1250</td>
+                                <td id="previewItemRowAmount" class="py-2.5 text-right font-semibold text-slate-900">2500</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+
+                        <!-- Total Row -->
+                        <div class="flex items-center justify-end space-x-12 pt-3 pr-1 text-xs">
+                          <span class="font-extrabold text-[#147D64] tracking-wider text-sm">TOTAL</span>
+                          <span id="previewTotalAmount" class="font-black text-[#147D64] text-sm font-mono">2500</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Bottom Section: Notes & Official Signature -->
+                    <div class="relative z-10 pt-8 pb-2">
+                      <div class="grid grid-cols-2 gap-4 items-end">
+                        
+                        <!-- Bottom-Left: NOTES & Agency Contacts -->
+                        <div class="pl-14 sm:pl-16 space-y-1 text-xs">
+                          <p class="font-extrabold text-[#147D64] uppercase tracking-wider text-[11px]">NOTES:</p>
+                          <p class="font-black text-slate-900 text-xs">Whiz Studio</p>
+                          <p class="text-[10px] text-slate-600 leading-tight">
+                            <span class="font-bold text-slate-800">Address:</span> Road 7, Block A, Mirpur 12, Dhaka, Bangladesh – 1216
+                          </p>
+                          <p class="text-[10px] text-slate-600">
+                            <span class="font-bold text-slate-800">Phone Number:</span> +880 1322196665
+                          </p>
+                          <p class="text-[10px] text-slate-600">
+                            <span class="font-bold text-slate-800">Email:</span> info@whizstudio.art
+                          </p>
+                        </div>
+
+                        <!-- Bottom-Right: Official Signature & Teal Underline -->
+                        <div class="text-center flex flex-col items-center ml-auto">
+                          <div class="w-28 sm:w-36 h-14 sm:h-16 flex items-center justify-center">
+                            <img src="/assets/images/official-signature.png" alt="Signature" class="max-h-full w-auto object-contain">
+                          </div>
+                          <div class="w-32 sm:w-44 h-0.5 bg-[#147D64] my-1"></div>
+                          <p class="font-black text-[#147D64] text-[10px] sm:text-[11px] uppercase tracking-widest">SIGNATURE</p>
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+              </div>
+
             </div>
           </div>
 
@@ -998,6 +1199,11 @@
                   <option value="client">Clients Only</option>
                   <option value="admin">Admins Only</option>
                   <option value="owner">Owners Only</option>
+                </select>
+                <select id="userDirectoryStatusFilter" class="px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-slate-600 focus:outline-none focus:border-brand-whiz">
+                  <option value="all">All Statuses</option>
+                  <option value="active">Active Accounts</option>
+                  <option value="suspended">Suspended Accounts</option>
                 </select>
               </div>
             </div>
@@ -1378,7 +1584,6 @@
             <select name="status" id="editClientStatus" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
               <option value="active">Active</option>
               <option value="suspended">Suspended</option>
-              <option value="archived">Archived</option>
             </select>
           </div>
           <div>

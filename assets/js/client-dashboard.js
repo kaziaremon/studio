@@ -440,6 +440,7 @@
   }
 
   // 5. In-Browser PDF Receipt Generation via pdf-lib (100% Free, Zero Server Storage)
+  // Exact High-Fidelity Reproduction of Official Whiz Studio Stationery
   async function downloadPdfReceipt(paymentId, receiptNum, buttonEl) {
     if (!buttonEl) return;
     const originalText = buttonEl.innerHTML;
@@ -465,96 +466,396 @@
       // 2. Compile Vector PDF in Browser Memory
       const { PDFDocument, rgb, StandardFonts } = window.PDFLib;
       const pdfDoc = await PDFDocument.create();
-      const page = pdfDoc.addPage([595.28, 841.89]); // A4 Size
+      const page = pdfDoc.addPage([595.28, 841.89]); // A4 Size in points
+      const { width, height } = page.getSize();
+
       const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
       const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
-      // Header Brand
-      page.drawRectangle({
-        x: 0,
-        y: 760,
-        width: 595.28,
-        height: 82,
-        color: rgb(0.043, 0.067, 0.102)
-      });
+      // Template Color Palette
+      const tealPrimary = rgb(0.08, 0.49, 0.39); // #147D64
+      const textDark = rgb(0.09, 0.17, 0.21);   // #172B36
+      const textMuted = rgb(0.37, 0.44, 0.50);  // #5F7180
 
-      page.drawText('WHIZ STUDIO', {
-        x: 50,
-        y: 795,
-        size: 20,
+      // 1. Embed Images
+      try {
+        const [logoBuf, topCornerBuf, botCornerBuf, sigBuf] = await Promise.all([
+          fetch('/assets/images/logo.png').then(r => r.arrayBuffer()).catch(() => null),
+          fetch('/assets/images/template-corner-top-right.png').then(r => r.arrayBuffer()).catch(() => null),
+          fetch('/assets/images/template-corner-bottom-left.png').then(r => r.arrayBuffer()).catch(() => null),
+          fetch('/assets/images/official-signature.png').then(r => r.arrayBuffer()).catch(() => null)
+        ]);
+
+        if (topCornerBuf) {
+          const topCornerImg = await pdfDoc.embedPng(topCornerBuf);
+          page.drawImage(topCornerImg, {
+            x: width - 150,
+            y: height - 61.5,
+            width: 150,
+            height: 61.5
+          });
+        }
+
+        if (botCornerBuf) {
+          const botCornerImg = await pdfDoc.embedPng(botCornerBuf);
+          page.drawImage(botCornerImg, {
+            x: 0,
+            y: 0,
+            width: 130,
+            height: 120
+          });
+        }
+
+        if (logoBuf) {
+          const logoImg = await pdfDoc.embedPng(logoBuf);
+          const logoW = 140;
+          const logoH = 140 * (576 / 1024);
+          page.drawImage(logoImg, {
+            x: 50,
+            y: height - 110,
+            width: logoW,
+            height: logoH
+          });
+        } else {
+          page.drawText('WHIZ STUDIO', {
+            x: 50,
+            y: height - 80,
+            size: 20,
+            font: fontBold,
+            color: tealPrimary
+          });
+        }
+
+        if (sigBuf) {
+          const sigImg = await pdfDoc.embedPng(sigBuf);
+          page.drawImage(sigImg, {
+            x: width - 175,
+            y: 75,
+            width: 95,
+            height: 66
+          });
+        }
+      } catch (imgErr) {
+        console.warn('Image embedding fallback:', imgErr);
+      }
+
+      // 2. Top-Right Title & Client Copy
+      page.drawText('RECEIPT', {
+        x: width - 210,
+        y: height - 85,
+        size: 28,
         font: fontBold,
-        color: rgb(0, 0.659, 0.42)
+        color: tealPrimary
       });
 
-      page.drawText('OFFICIAL AGENCY RECEIPT', {
-        x: 50,
-        y: 775,
-        size: 10,
-        font: fontBold,
-        color: rgb(0.8, 0.8, 0.8)
-      });
-
-      page.drawText(`Receipt #: ${receiptData.receiptNumber || receiptNum}`, {
-        x: 400,
-        y: 795,
+      page.drawText('Client Copy', {
+        x: width - 210,
+        y: height - 103,
         size: 11,
         font: fontBold,
-        color: rgb(1, 1, 1)
+        color: textDark
       });
 
-      page.drawText(`Date: ${receiptData.paymentDate || '2026-10-30'}`, {
-        x: 400,
-        y: 775,
-        size: 10,
-        font: fontRegular,
-        color: rgb(0.7, 0.7, 0.7)
+      page.drawLine({
+        start: { x: width - 210, y: height - 115 },
+        end: { x: width - 50, y: height - 115 },
+        thickness: 1.5,
+        color: tealPrimary
       });
 
-      // Client & Agency details
-      page.drawText('ISSUED TO:', { x: 50, y: 720, size: 10, font: fontBold, color: rgb(0.2, 0.2, 0.2) });
-      page.drawText(receiptData.client?.name || 'Valued Client', { x: 50, y: 705, size: 12, font: fontBold });
-      page.drawText(receiptData.client?.email || '', { x: 50, y: 690, size: 10, font: fontRegular, color: rgb(0.4, 0.4, 0.4) });
-
-      // Financial Details Box
-      page.drawRectangle({
+      // 3. BILLED TO (Left) & Metadata (Right)
+      let leftY = height - 160;
+      page.drawText('BILLED TO:', {
         x: 50,
-        y: 560,
-        width: 495.28,
-        height: 100,
-        color: rgb(0.96, 0.97, 0.98),
-        borderColor: rgb(0.85, 0.85, 0.85),
-        borderWidth: 1
-      });
-
-      page.drawText('Description', { x: 70, y: 635, size: 10, font: fontBold });
-      page.drawText('Total Paid', { x: 450, y: 635, size: 10, font: fontBold });
-
-      page.drawText(receiptData.service?.name || 'Whiz Studio Agency Subscribed Marketing Services', {
-        x: 70,
-        y: 600,
+        y: leftY,
         size: 10,
-        font: fontRegular
-      });
-
-      const totalFormatted = `$${(((receiptData.amountCents || 0)) / 100).toFixed(2)}`;
-      page.drawText(totalFormatted, {
-        x: 450,
-        y: 600,
-        size: 12,
         font: fontBold,
-        color: rgb(0, 0.659, 0.42)
+        color: tealPrimary
       });
 
-      // Footer notice
-      page.drawText('Officially issued by Whiz Studio Agency • whizstudio.art', {
+      leftY -= 15;
+      page.drawText(receiptData.client?.name || receiptData.client?.companyName || 'Valued Client', {
         x: 50,
-        y: 50,
+        y: leftY,
+        size: 11.5,
+        font: fontBold,
+        color: textDark
+      });
+
+      leftY -= 13;
+      page.drawText('Address: ', {
+        x: 50,
+        y: leftY,
+        size: 8.5,
+        font: fontBold,
+        color: textDark
+      });
+
+      const addressText = receiptData.client?.address || 'Dhaka, Bangladesh';
+      const words = addressText.split(' ');
+      let addrLine = '';
+      let addrLines = [];
+      for (const w of words) {
+        if ((addrLine + w).length > 38) {
+          addrLines.push(addrLine.trim());
+          addrLine = w + ' ';
+        } else {
+          addrLine += w + ' ';
+        }
+      }
+      if (addrLine.trim()) addrLines.push(addrLine.trim());
+
+      let currAddrY = leftY;
+      addrLines.slice(0, 3).forEach((line, idx) => {
+        page.drawText(line, {
+          x: idx === 0 ? 95 : 50,
+          y: currAddrY,
+          size: 8.5,
+          font: fontRegular,
+          color: textDark
+        });
+        currAddrY -= 11;
+      });
+
+      currAddrY -= 2;
+      page.drawText('Phone Number: ', {
+        x: 50,
+        y: currAddrY,
+        size: 8.5,
+        font: fontBold,
+        color: textDark
+      });
+      page.drawText(receiptData.client?.phone || '+880...', {
+        x: 120,
+        y: currAddrY,
+        size: 8.5,
+        font: fontRegular,
+        color: textDark
+      });
+
+      // Right Column
+      const rightX = width - 210;
+      let rightY = height - 160;
+
+      const numLabel = 'RECEIPT NO: ';
+      page.drawText(numLabel, {
+        x: rightX,
+        y: rightY,
+        size: 10,
+        font: fontBold,
+        color: tealPrimary
+      });
+      page.drawText(String(receiptData.receiptNumber || receiptNum || '829926'), {
+        x: rightX + fontBold.widthOfTextAtSize(numLabel, 10),
+        y: rightY,
+        size: 10,
+        font: fontBold,
+        color: textDark
+      });
+
+      rightY -= 14;
+      page.drawText(receiptData.paymentDate || new Date().toISOString().split('T')[0], {
+        x: rightX,
+        y: rightY,
+        size: 9,
+        font: fontRegular,
+        color: textMuted
+      });
+
+      rightY -= 18;
+      page.drawText('PAYMENT TYPE', {
+        x: rightX,
+        y: rightY,
+        size: 9.5,
+        font: fontBold,
+        color: tealPrimary
+      });
+      rightY -= 13;
+      page.drawText(receiptData.service?.name || 'Growth Retainer', {
+        x: rightX,
+        y: rightY,
+        size: 9,
+        font: fontRegular,
+        color: textDark
+      });
+
+      rightY -= 16;
+      page.drawText('PAYMENT METHOD', {
+        x: rightX,
+        y: rightY,
+        size: 9.5,
+        font: fontBold,
+        color: tealPrimary
+      });
+      rightY -= 13;
+      page.drawText((receiptData.paymentMethod || 'Bkash').toUpperCase(), {
+        x: rightX,
+        y: rightY,
+        size: 9,
+        font: fontRegular,
+        color: textDark
+      });
+
+      rightY -= 12;
+      page.drawText('Account Details –', {
+        x: rightX,
+        y: rightY,
         size: 8,
         font: fontRegular,
-        color: rgb(0.5, 0.5, 0.5)
+        color: textMuted
+      });
+      rightY -= 11;
+      page.drawText('Md Kazi Abdur Rahim Emon', {
+        x: rightX,
+        y: rightY,
+        size: 8.5,
+        font: fontRegular,
+        color: textDark
+      });
+      rightY -= 11;
+      page.drawText('Phone Number: +880 1560066374', {
+        x: rightX,
+        y: rightY,
+        size: 8,
+        font: fontRegular,
+        color: textDark
       });
 
-      // 3. Trigger Browser Download
+      // 4. Line Items Table
+      const tableY = Math.min(currAddrY, rightY) - 25;
+
+      page.drawLine({
+        start: { x: 50, y: tableY + 16 },
+        end: { x: width - 50, y: tableY + 16 },
+        thickness: 1,
+        color: tealPrimary
+      });
+
+      page.drawText('Description', { x: 55, y: tableY + 4, size: 9.5, font: fontBold, color: tealPrimary });
+      page.drawText('Quantity', { x: 280, y: tableY + 4, size: 9.5, font: fontBold, color: tealPrimary });
+      page.drawText('Rate', { x: 380, y: tableY + 4, size: 9.5, font: fontBold, color: tealPrimary });
+      page.drawText('Amount', { x: 490, y: tableY + 4, size: 9.5, font: fontBold, color: tealPrimary });
+
+      page.drawLine({
+        start: { x: 50, y: tableY - 4 },
+        end: { x: width - 50, y: tableY - 4 },
+        thickness: 1,
+        color: tealPrimary
+      });
+
+      const totalVal = Math.round((receiptData.amountCents || 250000) / 100);
+
+      let itemY = tableY - 22;
+      page.drawText(receiptData.service?.name || 'Retainer Marketing & Growth Engineering', {
+        x: 55,
+        y: itemY,
+        size: 9,
+        font: fontRegular,
+        color: textDark
+      });
+      page.drawText('1', {
+        x: 295,
+        y: itemY,
+        size: 9,
+        font: fontRegular,
+        color: textDark
+      });
+      page.drawText(String(totalVal), {
+        x: 385,
+        y: itemY,
+        size: 9,
+        font: fontRegular,
+        color: textDark
+      });
+      page.drawText(String(totalVal), {
+        x: 495,
+        y: itemY,
+        size: 9,
+        font: fontBold,
+        color: textDark
+      });
+
+      page.drawLine({
+        start: { x: 50, y: itemY - 12 },
+        end: { x: width - 50, y: itemY - 12 },
+        thickness: 1,
+        color: tealPrimary
+      });
+
+      const totalY = itemY - 30;
+      page.drawText('TOTAL', {
+        x: 380,
+        y: totalY,
+        size: 11,
+        font: fontBold,
+        color: tealPrimary
+      });
+      page.drawText(String(totalVal), {
+        x: 495,
+        y: totalY,
+        size: 11,
+        font: fontBold,
+        color: tealPrimary
+      });
+
+      // 5. Notes & Signature
+      const notesY = 135;
+      page.drawText('NOTES:', {
+        x: 120,
+        y: notesY,
+        size: 9.5,
+        font: fontBold,
+        color: tealPrimary
+      });
+
+      page.drawText('Whiz Studio', {
+        x: 120,
+        y: notesY - 14,
+        size: 9.5,
+        font: fontBold,
+        color: textDark
+      });
+
+      page.drawText('Address: Road 7, Block A, Mirpur 12, Dhaka, Bangladesh – 1216', {
+        x: 120,
+        y: notesY - 26,
+        size: 7.5,
+        font: fontRegular,
+        color: textDark
+      });
+
+      page.drawText('Phone Number: +880 1322196665', {
+        x: 120,
+        y: notesY - 38,
+        size: 7.5,
+        font: fontRegular,
+        color: textDark
+      });
+
+      page.drawText('Email: info@whizstudio.art', {
+        x: 120,
+        y: notesY - 50,
+        size: 7.5,
+        font: fontRegular,
+        color: textDark
+      });
+
+      page.drawLine({
+        start: { x: width - 200, y: 68 },
+        end: { x: width - 60, y: 68 },
+        thickness: 1.5,
+        color: tealPrimary
+      });
+
+      page.drawText('SIGNATURE', {
+        x: width - 150,
+        y: 53,
+        size: 9.5,
+        font: fontBold,
+        color: tealPrimary
+      });
+
+      // 6. Trigger Browser Download
       const pdfBytes = await pdfDoc.save();
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
       const downloadUrl = URL.createObjectURL(blob);

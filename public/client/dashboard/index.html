@@ -95,14 +95,9 @@
   <aside id="clientMobileDrawer" class="fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-[#E3E9EF] transform -translate-x-full transition-transform duration-300 ease-in-out lg:hidden flex flex-col shadow-2xl">
     <!-- Drawer Header: Logo + Close -->
     <div class="flex items-center justify-between px-5 py-4 border-b border-[#E3E9EF] shrink-0">
-      <a href="/" class="flex items-center space-x-2.5">
-        <div class="w-8 h-8 rounded-xl bg-[#147D64]/10 border border-[#147D64]/30 flex items-center justify-center text-[#147D64]">
-          <i class="fa-solid fa-shapes text-sm"></i>
-        </div>
-        <div>
-          <span class="font-extrabold text-sm text-[#172B36] leading-none block">WHIZ STUDIO</span>
-          <span class="text-[10px] text-[#5F7180] font-semibold tracking-wider uppercase">Client Portal</span>
-        </div>
+      <a href="/" class="flex flex-col space-y-1">
+        <img src="/assets/images/logo.png" alt="Whiz Studio" class="h-7 w-auto object-contain self-start">
+        <span class="text-[10px] text-[#5F7180] font-bold tracking-wider uppercase pl-1">Client Portal</span>
       </a>
       <button type="button" id="clientMobileCloseBtn" class="w-8 h-8 rounded-xl bg-slate-50 border border-[#E3E9EF] flex items-center justify-center text-[#5F7180] hover:text-[#172B36] cursor-pointer transition-colors">
         <i class="fa-solid fa-xmark text-xs"></i>
@@ -169,15 +164,10 @@
     <!-- DESKTOP SIDEBAR (navigation only — NO visualization blocks) -->
     <aside class="hidden lg:flex flex-col w-64 bg-white border-r border-[#E3E9EF] shrink-0">
       <!-- Brand Logo -->
-      <div class="px-5 py-5 border-b border-[#E3E9EF] shrink-0">
-        <a href="/" class="flex items-center space-x-2.5 group">
-          <div class="w-9 h-9 rounded-xl bg-[#147D64]/10 border border-[#147D64]/30 flex items-center justify-center text-[#147D64] group-hover:bg-[#147D64]/15 transition-colors">
-            <i class="fa-solid fa-shapes text-sm"></i>
-          </div>
-          <div>
-            <span class="font-extrabold text-sm text-[#172B36] leading-none block tracking-tight">WHIZ STUDIO</span>
-            <span class="text-[10px] text-[#5F7180] font-semibold tracking-wider uppercase">Client Portal</span>
-          </div>
+      <div class="px-5 py-4 border-b border-[#E3E9EF] shrink-0">
+        <a href="/" class="flex flex-col space-y-1 group">
+          <img src="/assets/images/logo.png" alt="Whiz Studio" class="h-8 w-auto object-contain self-start transition-opacity group-hover:opacity-90">
+          <span class="text-[10px] text-[#5F7180] font-bold tracking-wider uppercase pl-1">Client Portal</span>
         </a>
       </div>
 
@@ -247,10 +237,13 @@
           <button type="button" id="clientMobileToggleBtn" class="lg:hidden w-9 h-9 rounded-xl bg-slate-50 border border-[#E3E9EF] flex items-center justify-center text-[#5F7180] hover:text-[#172B36] cursor-pointer">
             <i class="fa-solid fa-bars text-sm"></i>
           </button>
+          <a href="/" class="lg:hidden flex items-center">
+            <img src="/assets/images/logo.png" alt="Whiz Studio" class="h-6 w-auto object-contain">
+          </a>
           <!-- Breadcrumb -->
-          <div class="flex items-center space-x-2 text-xs">
-            <span class="font-extrabold text-[#5F7180] uppercase tracking-wider hidden sm:inline">Client Portal</span>
-            <span class="text-slate-300 hidden sm:inline">/</span>
+          <div class="hidden sm:flex items-center space-x-2 text-xs">
+            <span class="font-extrabold text-[#5F7180] uppercase tracking-wider">Client Portal</span>
+            <span class="text-slate-300">/</span>
             <span id="breadcrumbActiveTab" class="font-extrabold text-[#147D64] capitalize">Overview</span>
           </div>
         </div>
