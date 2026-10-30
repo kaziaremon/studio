@@ -1170,7 +1170,7 @@
             <div class="font-bold text-[#172B36]">${p.organization_name || 'Client'}</div>
             <div class="text-[11px] text-slate-500 font-mono">${p.invoice_number || 'INV-DIRECT'}</div>
           </td>
-          <td class="px-6 py-4 font-mono font-bold text-brand-whiz">${formatCurrency(p.amount_cents || 0, p.currency || "USD")}((p.amount_cents || 0) / 100).toFixed(2)}</td>
+          <td class="px-6 py-4 font-mono font-bold text-brand-whiz">${formatCurrency(p.amount_cents || 0, p.currency || "USD")}</td>
           <td class="px-6 py-4 uppercase text-slate-400 text-xs">${p.payment_method || 'CARD'}</td>
           <td class="px-6 py-4 text-slate-400 text-xs">${p.payment_date || 'N/A'}</td>
           <td class="px-6 py-4 text-right">
