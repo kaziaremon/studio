@@ -207,7 +207,7 @@
             <nav class="space-y-1">
               <button type="button" data-dash-tab="team" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 border border-transparent transition-all cursor-pointer text-left">
                 <i class="fa-solid fa-user-shield text-xs w-4"></i>
-                <span class="flex-1">Team & Access</span>
+                <span class="flex-1">User & Access Management</span>
                 <span class="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-500/30">Owner</span>
               </button>
               <button type="button" data-dash-tab="support" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 border border-transparent transition-all cursor-pointer text-left">
@@ -293,7 +293,7 @@
             </button>
             <button type="button" data-dash-tab="team" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 border border-transparent transition-all text-left">
               <i class="fa-solid fa-user-shield text-xs w-4"></i>
-              <span>Team & Access</span>
+              <span>User & Access Management</span>
             </button>
             <button type="button" data-dash-tab="support" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 border border-transparent transition-all text-left">
               <i class="fa-solid fa-inbox text-xs w-4"></i>
@@ -626,14 +626,71 @@
           <div id="view_team" class="hidden space-y-6">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
               <div>
-                <h2 class="text-2xl font-black text-white tracking-tight">Team Management & Access Registry</h2>
-                <p class="text-xs text-slate-400">Strict server-side administrator authorization registry.</p>
+                <h2 class="text-2xl font-black text-white tracking-tight">User & Access Management</h2>
+                <p class="text-xs text-slate-400">Authoritative Cloudflare D1 identity, client directory & role governance ($0 Free Tier).</p>
+              </div>
+              <div class="flex items-center gap-3">
+                <button type="button" id="btnRefreshUserDir" class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700/80 flex items-center gap-2 cursor-pointer transition-all">
+                  <i class="fa-solid fa-arrows-rotate text-xs text-brand-whiz"></i>
+                  <span>Refresh Directory</span>
+                </button>
               </div>
             </div>
 
-            <!-- Authorize Admin Form -->
+            <!-- Search & Filter Controls -->
+            <div class="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-xl flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <div class="relative flex-1">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500">
+                  <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                </span>
+                <input type="text" id="userDirectorySearch" placeholder="Search by name, email, or username..." class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-whiz transition-all">
+              </div>
+              <div class="flex items-center gap-2">
+                <select id="userDirectoryRoleFilter" class="px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-300 focus:outline-none focus:border-brand-whiz">
+                  <option value="all">All Roles</option>
+                  <option value="client">Clients Only</option>
+                  <option value="admin">Admins Only</option>
+                  <option value="owner">Owners Only</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- User Directory Table Card -->
+            <div class="rounded-3xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-xl overflow-hidden shadow-xl">
+              <div class="px-6 py-4 border-b border-slate-800/80 flex items-center justify-between">
+                <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                  <i class="fa-solid fa-address-book text-brand-whiz"></i>
+                  <span>Registered Accounts Directory</span>
+                </h3>
+                <span id="userDirectoryCount" class="text-[11px] font-mono text-slate-500">0 accounts</span>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs text-slate-300">
+                  <thead class="bg-slate-950/70 border-b border-slate-800 text-[11px] uppercase font-bold text-slate-400">
+                    <tr>
+                      <th class="px-6 py-3.5">User</th>
+                      <th class="px-6 py-3.5">Role</th>
+                      <th class="px-6 py-3.5">Status</th>
+                      <th class="px-6 py-3.5">Linked Company</th>
+                      <th class="px-6 py-3.5">Registered</th>
+                      <th class="px-6 py-3.5 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="userDirectoryTableBody" class="divide-y divide-slate-800/60">
+                    <tr>
+                      <td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">Loading users directory...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Authorize Admin Form Card -->
             <div class="p-6 rounded-3xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-xl space-y-4">
-              <h3 class="text-sm font-extrabold text-white uppercase tracking-wider">Authorize New Administrator</h3>
+              <div>
+                <h3 class="text-sm font-extrabold text-white uppercase tracking-wider">Authorize Administrator Pre-Approval</h3>
+                <p class="text-xs text-slate-400 mt-0.5">Pre-approve email addresses in Cloudflare D1 allowlist before onboarding.</p>
+              </div>
               <form id="adminInviteForm" novalidate class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <input type="text" id="inviteFullName" name="fullName" placeholder="Administrator Full Name" class="px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-700/80 text-xs text-white focus:outline-none focus:border-brand-whiz transition-all" required>
                 <input type="email" id="inviteEmail" name="email" placeholder="admin@example.com" class="px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-700/80 text-xs text-white focus:outline-none focus:border-brand-whiz transition-all" required>
@@ -644,22 +701,30 @@
               </form>
             </div>
 
-            <!-- Team Table -->
+            <!-- Role Change Audit History Card -->
             <div class="rounded-3xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-xl overflow-hidden shadow-xl">
+              <div class="px-6 py-4 border-b border-slate-800/80 flex items-center justify-between">
+                <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                  <i class="fa-solid fa-clock-rotate-left text-brand-whiz"></i>
+                  <span>Role Transition Audit History</span>
+                </h3>
+                <span class="text-[10px] font-mono uppercase text-emerald-400 bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-500/30">Authoritative D1 Audit</span>
+              </div>
               <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs text-slate-300">
                   <thead class="bg-slate-950/70 border-b border-slate-800 text-[11px] uppercase font-bold text-slate-400">
                     <tr>
-                      <th class="px-6 py-3.5">Administrator</th>
-                      <th class="px-6 py-3.5">Role</th>
+                      <th class="px-6 py-3.5">Timestamp</th>
+                      <th class="px-6 py-3.5">Target Account</th>
+                      <th class="px-6 py-3.5">Transition</th>
+                      <th class="px-6 py-3.5">Actor</th>
+                      <th class="px-6 py-3.5">Reason</th>
                       <th class="px-6 py-3.5">Status</th>
-                      <th class="px-6 py-3.5">Authorized Date</th>
-                      <th class="px-6 py-3.5 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody id="adminTeamTableBody" class="divide-y divide-slate-800/60">
+                  <tbody id="roleHistoryTableBody" class="divide-y divide-slate-800/60">
                     <tr>
-                      <td colspan="5" class="px-6 py-8 text-center text-slate-500 italic">Loading team directory...</td>
+                      <td colspan="6" class="px-6 py-6 text-center text-slate-500 italic">Loading audit trail...</td>
                     </tr>
                   </tbody>
                 </table>
@@ -945,6 +1010,72 @@
           <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center gap-1.5 cursor-pointer">
             <i class="fa-solid fa-check text-xs"></i>
             <span>Commit Payment to Ledger</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ROLE PROMOTION / DEMOTION CONFIRMATION -->
+  <div id="modalRoleChange" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <h3 class="text-base font-bold text-white flex items-center gap-2" id="modalRoleChangeTitle">
+          <i class="fa-solid fa-user-shield text-brand-whiz"></i>
+          <span>Confirm Role Change</span>
+        </h3>
+        <button type="button" class="btn-close-modal text-slate-400 hover:text-white cursor-pointer" data-modal="modalRoleChange">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+      <p class="text-xs text-slate-300 leading-relaxed" id="modalRoleChangeDesc">
+        Are you sure you want to change this account's permissions?
+      </p>
+      <form id="formRoleChange" class="space-y-3.5">
+        <input type="hidden" id="roleChangeUserId" name="userId">
+        <input type="hidden" id="roleChangeTargetRole" name="targetRole">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Reason for Immutable Audit Log *</label>
+          <input type="text" id="roleChangeReason" name="reason" placeholder="e.g. Promoted to administrator per executive authorization" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:border-brand-whiz">
+        </div>
+        <div class="flex items-center justify-end space-x-3 pt-3 border-t border-slate-800">
+          <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white cursor-pointer" data-modal="modalRoleChange">Cancel</button>
+          <button type="submit" id="btnSubmitRoleChange" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-check text-xs"></i>
+            <span>Confirm & Update Role</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ROLE PROMOTION / DEMOTION CONFIRMATION -->
+  <div id="modalRoleChange" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <h3 class="text-base font-bold text-white flex items-center gap-2" id="modalRoleChangeTitle">
+          <i class="fa-solid fa-user-shield text-brand-whiz"></i>
+          <span>Confirm Role Change</span>
+        </h3>
+        <button type="button" class="btn-close-modal text-slate-400 hover:text-white cursor-pointer" data-modal="modalRoleChange">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+      <p class="text-xs text-slate-300 leading-relaxed" id="modalRoleChangeDesc">
+        Are you sure you want to change this account's permissions?
+      </p>
+      <form id="formRoleChange" class="space-y-3.5">
+        <input type="hidden" id="roleChangeUserId" name="userId">
+        <input type="hidden" id="roleChangeTargetRole" name="targetRole">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Reason for Immutable Audit Log *</label>
+          <input type="text" id="roleChangeReason" name="reason" placeholder="e.g. Promoted to administrator per executive authorization" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:border-brand-whiz">
+        </div>
+        <div class="flex items-center justify-end space-x-3 pt-3 border-t border-slate-800">
+          <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white cursor-pointer" data-modal="modalRoleChange">Cancel</button>
+          <button type="submit" id="btnSubmitRoleChange" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-check text-xs"></i>
+            <span>Confirm & Update Role</span>
           </button>
         </div>
       </form>

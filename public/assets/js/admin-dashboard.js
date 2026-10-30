@@ -19,7 +19,9 @@
     clientsCache: [],
     servicesCache: [],
     projectsCache: [],
-    tasksCache: []
+    tasksCache: [],
+    usersCache: [],
+    roleHistoryCache: []
   };
 
   // Toast Notification Helper
@@ -684,33 +686,180 @@ ${bp.instructions}
     }
   }
 
-  // 7. TEAM DATA
+  // 7. USER & ACCESS MANAGEMENT (D1 DIRECTORY + ROLE GOVERNANCE)
   async function loadTeamData() {
-    const res = await apiFetch('/portal/admin/team');
-    const tbody = document.getElementById('adminTeamTableBody');
+    const tbody = document.getElementById('userDirectoryTableBody');
+    if (tbody) {
+      tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-6 text-center text-slate-500 italic">Fetching authoritative users directory from Cloudflare D1...</td></tr>';
+    }
+
+    try {
+      const [usersRes, historyRes] = await Promise.all([
+        apiFetch('/portal/admin/users'),
+        apiFetch('/portal/admin/role-history')
+      ]);
+
+      if (usersRes.ok && usersRes.data && usersRes.data.data) {
+        state.usersCache = usersRes.data.data.users || [];
+        renderUserDirectory();
+      } else {
+        if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-6 text-center text-rose-400">Failed to load users directory.</td></tr>';
+      }
+
+      if (historyRes.ok && historyRes.data) {
+        state.roleHistoryCache = historyRes.data.data || [];
+        renderRoleHistory();
+      }
+    } catch (err) {
+      console.error('User Directory Fetch Error:', err);
+      if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-6 text-center text-rose-400">Network error fetching users directory.</td></tr>';
+    }
+  }
+
+  function renderUserDirectory() {
+    const tbody = document.getElementById('userDirectoryTableBody');
+    const countEl = document.getElementById('userDirectoryCount');
     if (!tbody) return;
 
-    if (res.ok && res.data && res.data.data) {
-      const admins = res.data.data.admins || [];
-      tbody.innerHTML = admins.map(a => `
+    const query = (document.getElementById('userDirectorySearch')?.value || '').toLowerCase().trim();
+    const roleFilter = document.getElementById('userDirectoryRoleFilter')?.value || 'all';
+
+    let filtered = state.usersCache.filter(u => {
+      const matchesQuery = !query || 
+        (u.full_name && u.full_name.toLowerCase().includes(query)) ||
+        (u.email && u.email.toLowerCase().includes(query)) ||
+        (u.username && u.username.toLowerCase().includes(query));
+
+      const matchesRole = roleFilter === 'all' || 
+        (roleFilter === 'client' && u.role === 'client') ||
+        (roleFilter === 'admin' && u.role === 'admin') ||
+        (roleFilter === 'owner' && (u.role === 'owner' || u.role === 'super_admin'));
+
+      return matchesQuery && matchesRole;
+    });
+
+    if (countEl) countEl.textContent = `${filtered.length} account${filtered.length === 1 ? '' : 's'}`;
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">No users match the search filter.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(u => {
+      const isOwner = u.email && u.email.toLowerCase() === 'kaziaremon@gmail.com';
+      const initials = (u.full_name || u.email || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+
+      let roleBadge = '';
+      if (isOwner || u.role === 'owner' || u.role === 'super_admin') {
+        roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"><i class="fa-solid fa-crown text-[9px]"></i> Owner</span>';
+      } else if (u.role === 'admin') {
+        roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-blue-500/10 text-blue-400 border border-blue-500/30"><i class="fa-solid fa-shield-halved text-[9px]"></i> Admin</span>';
+      } else {
+        roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-slate-800 text-slate-300 border border-slate-700"><i class="fa-solid fa-user text-[9px]"></i> Client</span>';
+      }
+
+      const statusBadge = u.status === 'active' 
+        ? '<span class="px-2.5 py-0.5 rounded text-[10px] font-bold uppercase text-emerald-400 bg-emerald-950/60 border border-emerald-500/20">active</span>'
+        : '<span class="px-2.5 py-0.5 rounded text-[10px] font-bold uppercase text-amber-400 bg-amber-950/60 border border-amber-500/20">suspended</span>';
+
+      let actionsHtml = '';
+      if (isOwner) {
+        actionsHtml = '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-mono font-bold text-emerald-400 bg-emerald-950/40 border border-emerald-500/30"><i class="fa-solid fa-lock text-[10px]"></i> Locked (Founding Owner)</span>';
+      } else if (u.role === 'admin') {
+        actionsHtml = `<button type="button" class="btn-role-action px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 border border-amber-500/30 transition-all cursor-pointer" data-id="${u.id}" data-role="client" data-email="${u.email}" data-name="${u.full_name || u.email}"><i class="fa-solid fa-arrow-down mr-1 text-[10px]"></i>Demote to Client</button>`;
+      } else {
+        actionsHtml = `<button type="button" class="btn-role-action px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 transition-all cursor-pointer" data-id="${u.id}" data-role="admin" data-email="${u.email}" data-name="${u.full_name || u.email}"><i class="fa-solid fa-arrow-up mr-1 text-[10px]"></i>Promote to Admin</button>`;
+      }
+
+      return `
         <tr class="hover:bg-slate-800/40 transition-colors">
           <td class="px-6 py-4">
-            <div class="font-bold text-white">${a.full_name || 'Admin'}</div>
-            <div class="text-xs text-slate-400 font-mono">${a.approved_email}</div>
+            <div class="flex items-center space-x-3">
+              <div class="w-8 h-8 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-xs text-white uppercase shrink-0">
+                ${initials}
+              </div>
+              <div class="min-w-0">
+                <div class="font-bold text-white truncate">${u.full_name || 'Registered User'}</div>
+                <div class="text-xs text-slate-400 font-mono truncate">${u.email}</div>
+                ${u.clerk_user_id ? `<div class="text-[10px] text-slate-500 font-mono truncate mt-0.5">${u.clerk_user_id}</div>` : ''}
+              </div>
+            </div>
           </td>
-          <td class="px-6 py-4">
-            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${a.role === 'super_admin' ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30' : 'bg-slate-900 text-slate-400'}">${a.role}</span>
+          <td class="px-6 py-4">${roleBadge}</td>
+          <td class="px-6 py-4">${statusBadge}</td>
+          <td class="px-6 py-4 text-slate-300 text-xs">${u.company_name || '<span class="text-slate-600 italic">None</span>'}</td>
+          <td class="px-6 py-4 text-slate-400 text-xs font-mono">${u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}</td>
+          <td class="px-6 py-4 text-right">${actionsHtml}</td>
+        </tr>
+      `;
+    }).join('');
+
+    // Bind action buttons
+    tbody.querySelectorAll('.btn-role-action').forEach(btn => {
+      btn.addEventListener('click', () => {
+        openRoleChangeModal(btn.dataset.id, btn.dataset.role, btn.dataset.email, btn.dataset.name);
+      });
+    });
+  }
+
+  function renderRoleHistory() {
+    const tbody = document.getElementById('roleHistoryTableBody');
+    if (!tbody) return;
+
+    if (state.roleHistoryCache.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-6 text-center text-slate-500 italic">No role changes recorded in audit log.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = state.roleHistoryCache.map(h => {
+      const prevRoleBadge = `<span class="px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-slate-900 text-slate-400 border border-slate-800">${h.previous_role}</span>`;
+      const newRoleBadge = h.new_role === 'admin'
+        ? '<span class="px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-blue-950 text-blue-400 border border-blue-500/30">admin</span>'
+        : '<span class="px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-slate-900 text-slate-300 border border-slate-700">client</span>';
+
+      return `
+        <tr class="hover:bg-slate-800/40 transition-colors">
+          <td class="px-6 py-3.5 text-xs text-slate-400 font-mono">${h.action_timestamp || 'N/A'}</td>
+          <td class="px-6 py-3.5">
+            <div class="font-bold text-white text-xs">${h.target_name || 'User'}</div>
+            <div class="text-[11px] text-slate-400 font-mono">${h.target_email || h.target_clerk_user_id}</div>
           </td>
-          <td class="px-6 py-4">
-            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${a.status === 'active' ? 'text-emerald-400 bg-emerald-950/50' : 'text-amber-400 bg-amber-950/50'}">${a.status}</span>
+          <td class="px-6 py-3.5 text-xs flex items-center gap-1.5 mt-2">
+            ${prevRoleBadge} <i class="fa-solid fa-arrow-right text-[10px] text-slate-500"></i> ${newRoleBadge}
           </td>
-          <td class="px-6 py-4 text-slate-400 text-xs">${a.created_at ? new Date(a.created_at).toLocaleDateString() : 'N/A'}</td>
-          <td class="px-6 py-4 text-right">
-            ${a.role !== 'super_admin' ? `<button type="button" class="text-rose-400 hover:text-rose-300 text-xs font-bold">Revoke</button>` : '<span class="text-slate-600 text-xs">Locked</span>'}
+          <td class="px-6 py-3.5 text-xs text-slate-400 font-mono truncate max-w-[120px]">${h.actor_clerk_user_id}</td>
+          <td class="px-6 py-3.5 text-xs text-slate-300 italic">${h.reason || 'None provided'}</td>
+          <td class="px-6 py-3.5">
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase text-emerald-400 bg-emerald-950/60 border border-emerald-500/20">${h.action_result}</span>
           </td>
         </tr>
-      `).join('');
+      `;
+    }).join('');
+  }
+
+  function openRoleChangeModal(userId, targetRole, email, name) {
+    const modal = document.getElementById('modalRoleChange');
+    const title = document.getElementById('modalRoleChangeTitle');
+    const desc = document.getElementById('modalRoleChangeDesc');
+    const inputId = document.getElementById('roleChangeUserId');
+    const inputRole = document.getElementById('roleChangeTargetRole');
+    const inputReason = document.getElementById('roleChangeReason');
+
+    if (!modal) return;
+
+    if (inputId) inputId.value = userId;
+    if (inputRole) inputRole.value = targetRole;
+    if (inputReason) inputReason.value = '';
+
+    if (targetRole === 'admin') {
+      if (title) title.innerHTML = '<i class="fa-solid fa-user-shield text-blue-400"></i><span>Promote Account to Admin</span>';
+      if (desc) desc.textContent = `You are about to promote ${name} (${email}) to an Administrator. They will have access to the Super Admin Console.`;
+    } else {
+      if (title) title.innerHTML = '<i class="fa-solid fa-user text-amber-400"></i><span>Demote Account to Client</span>';
+      if (desc) desc.textContent = `You are about to demote ${name} (${email}) to a Client. Their administrative privileges will be revoked immediately.`;
     }
+
+    modal.classList.remove('hidden');
   }
 
   // 8. SUPPORT DATA
@@ -909,6 +1058,57 @@ ${bp.instructions}
           showToast(payRes.data?.error || 'Failed to record payment.', 'error');
         }
       });
+    }
+
+    // Role Change Form Submit
+    const formRoleChange = document.getElementById('formRoleChange');
+    if (formRoleChange) {
+      formRoleChange.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const submitBtn = document.getElementById('btnSubmitRoleChange');
+        const userId = document.getElementById('roleChangeUserId')?.value;
+        const targetRole = document.getElementById('roleChangeTargetRole')?.value;
+        const reason = document.getElementById('roleChangeReason')?.value || 'Role updated by Super Admin';
+
+        if (!userId || !targetRole) return;
+
+        setBtnLoading(submitBtn, true, 'Updating role...');
+
+        const res = await apiFetch(`/portal/admin/users/${userId}/role`, {
+          method: 'PUT',
+          body: JSON.stringify({ role: targetRole, reason })
+        });
+
+        setBtnLoading(submitBtn, false);
+
+        if (res.ok && res.data && res.data.success) {
+          showToast(res.data.message || 'User role successfully updated.', 'success');
+          document.getElementById('modalRoleChange')?.classList.add('hidden');
+          loadTeamData();
+        } else {
+          showToast(res.data?.error || 'Failed to update user role.', 'error');
+        }
+      });
+    }
+
+    // Refresh User Directory Button
+    const btnRefresh = document.getElementById('btnRefreshUserDir');
+    if (btnRefresh) {
+      btnRefresh.addEventListener('click', () => {
+        loadTeamData();
+        showToast('Refreshing directory...', 'info');
+      });
+    }
+
+    // Search and Filter Listeners
+    const searchInput = document.getElementById('userDirectorySearch');
+    if (searchInput) {
+      searchInput.addEventListener('input', () => renderUserDirectory());
+    }
+
+    const roleSelect = document.getElementById('userDirectoryRoleFilter');
+    if (roleSelect) {
+      roleSelect.addEventListener('change', () => renderUserDirectory());
     }
 
     // Close Modals

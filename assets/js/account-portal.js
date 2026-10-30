@@ -502,6 +502,44 @@
   // CLIENT AUTHENTICATION HANDLERS
   // =========================================================================
 
+  async function routeAuthenticatedUser(customSuccessMessage) {
+    await syncAuthState();
+    closeModal('accountPortalModal');
+    if (state.userRole === 'super_admin' || state.userRole === 'admin') {
+      toast(customSuccessMessage || 'Welcome back! Directing to Super Admin Console...', 'success');
+      setTimeout(() => {
+        window.location.href = '/admin/dashboard';
+      }, 350);
+    } else {
+      toast(customSuccessMessage || 'Signed in successfully!', 'success');
+      openClientDashboard();
+    }
+  }
+
+  async function handleGoogleOAuth(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!window.Clerk) {
+      toast('Authentication system is initializing. Please try again.', 'warning');
+      return;
+    }
+
+    try {
+      showPortalAlert('');
+      const redirectUrl = window.location.origin + '/?auth_redirect=true';
+      const redirectUrlComplete = window.location.origin + '/?auth_redirect=true';
+
+      await window.Clerk.client.signIn.authenticateWithRedirect({
+        strategy: 'oauth_google',
+        redirectUrl,
+        redirectUrlComplete
+      });
+    } catch (err) {
+      console.error('Google OAuth Error:', err);
+      const parsed = parseClerkError(err);
+      showPortalAlert(parsed.longMessage || parsed.message || 'Unable to connect with Google. Please try again.', 'error');
+    }
+  }
+
   async function handleClientLogin(e) {
     e.preventDefault();
     if (state.isRequestInFlight) return;
@@ -539,10 +577,7 @@
           })
         });
 
-        await syncAuthState();
-        closeModal('accountPortalModal');
-        toast('Signed in successfully!', 'success');
-        openClientDashboard();
+        await routeAuthenticatedUser('Signed in successfully!');
       } else if (signInAttempt.status === 'needs_second_factor' || signInAttempt.status === 'needs_client_trust') {
         state.pendingSignIn = signInAttempt;
         await setupClientSecondFactor(signInAttempt);
@@ -822,10 +857,7 @@
           })
         });
 
-        await syncAuthState();
-        closeModal('accountPortalModal');
-        toast('Account verified and created successfully! Welcome to Whiz Studio.', 'success');
-        openClientDashboard();
+        await routeAuthenticatedUser('Account created successfully! Welcome to Whiz Studio.');
       } else {
         showPortalAlert(`Verification pending additional steps (Status: ${completeSignUp.status}).`, 'warning');
       }
@@ -938,10 +970,7 @@
 
       if (result.status === 'complete') {
         await window.Clerk.setActive({ session: result.createdSessionId });
-        await syncAuthState();
-        closeModal('accountPortalModal');
-        toast('Password reset successfully! You are now logged in.', 'success');
-        openClientDashboard();
+        await routeAuthenticatedUser('Password updated successfully! You are now logged in.');
       } else {
         showPortalAlert(`Status: ${result.status}`, 'warning');
       }
@@ -2305,6 +2334,28 @@
     if (adminForgotBackBtn) adminForgotBackBtn.addEventListener('click', () => switchAdminSubView('login'));
 
     // Form Submissions
+    // Google OAuth Listeners
+    const googleLoginBtn = document.getElementById('googleLoginBtn');
+    if (googleLoginBtn) googleLoginBtn.addEventListener('click', handleGoogleOAuth);
+
+    const googleRegisterBtn = document.getElementById('googleRegisterBtn');
+    if (googleRegisterBtn) googleRegisterBtn.addEventListener('click', handleGoogleOAuth);
+
+    document.querySelectorAll('.google-auth-btn').forEach(btn => {
+      btn.addEventListener('click', handleGoogleOAuth);
+    });
+
+    // Google OAuth Listeners
+    const googleLoginBtn = document.getElementById('googleLoginBtn');
+    if (googleLoginBtn) googleLoginBtn.addEventListener('click', handleGoogleOAuth);
+
+    const googleRegisterBtn = document.getElementById('googleRegisterBtn');
+    if (googleRegisterBtn) googleRegisterBtn.addEventListener('click', handleGoogleOAuth);
+
+    document.querySelectorAll('.google-auth-btn').forEach(btn => {
+      btn.addEventListener('click', handleGoogleOAuth);
+    });
+
     const clientLoginForm = document.getElementById('clientLoginForm');
     if (clientLoginForm) clientLoginForm.addEventListener('submit', handleClientLogin);
 
@@ -2559,6 +2610,14 @@
       });
 
       await syncAuthState();
+
+      // Check if returning from Google OAuth redirect
+      const url = new URL(window.location.href);
+      if (url.searchParams.get('auth_redirect') === 'true' && window.Clerk.user) {
+        url.searchParams.delete('auth_redirect');
+        window.history.replaceState({}, document.title, url.pathname + (url.search ? url.search : ''));
+        routeAuthenticatedUser('Google authentication verified successfully!');
+      }
     } catch (err) {
       console.error('Clerk Initialization Error:', err);
     }
