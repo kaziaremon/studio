@@ -64,6 +64,23 @@
     };
   }
 
+  // Detect rate limit / too many requests across all Clerk error formats
+  function isRateLimitError(err) {
+    if (!err) return false;
+    if (err.status === 429) return true;
+    const parsed = parseClerkError(err);
+    const code = (parsed.code || '').toLowerCase();
+    const msg = ((parsed.message || '') + ' ' + (parsed.longMessage || '')).toLowerCase();
+    return (
+      code.includes('too_many_requests') ||
+      code.includes('rate_limit') ||
+      code.includes('verification_code_too_many_requests') ||
+      msg.includes('too many verification code requests') ||
+      msg.includes('too many requests') ||
+      msg.includes('rate limit')
+    );
+  }
+
   // API Call Wrapper with Clerk ID header
   async function apiFetch(endpoint, options = {}) {
     const headers = {
@@ -335,6 +352,21 @@
     if (subview === 'otp') {
       clearOtpInputs('clientOtpInputsContainer');
       startResendTimer('clientResendOtpBtn', 'clientResendOtpTimer');
+    } else if (subview === 'login') {
+      setTimeout(() => {
+        const input = document.getElementById('clientIdentifier');
+        if (input) input.focus();
+      }, 50);
+    } else if (subview === 'register') {
+      setTimeout(() => {
+        const input = document.getElementById('clientRegFullName');
+        if (input) input.focus();
+      }, 50);
+    } else if (subview === 'forgot') {
+      setTimeout(() => {
+        const input = document.getElementById('clientForgotEmail');
+        if (input) input.focus();
+      }, 50);
     }
   }
 
@@ -360,6 +392,26 @@
     if (subview === 'otp') {
       clearOtpInputs('adminOtpInputsContainer');
       startResendTimer('adminResendOtpBtn', 'adminResendOtpTimer');
+    } else if (subview === 'activate') {
+      setTimeout(() => {
+        const input = document.getElementById('adminActivateEmail');
+        if (input) input.focus();
+      }, 50);
+    } else if (subview === 'login') {
+      setTimeout(() => {
+        const input = document.getElementById('adminEmail');
+        if (input) input.focus();
+      }, 50);
+    } else if (subview === 'credentials') {
+      setTimeout(() => {
+        const input = document.getElementById('adminCredFullName');
+        if (input) input.focus();
+      }, 50);
+    } else if (subview === 'forgot') {
+      setTimeout(() => {
+        const input = document.getElementById('adminForgotEmail');
+        if (input) input.focus();
+      }, 50);
     }
   }
 
@@ -540,17 +592,32 @@
 
       state.pendingSignUp = signUpAttempt;
 
-      await signUpAttempt.prepareEmailAddressVerification({ strategy: 'email_code' });
+      try {
+        await signUpAttempt.prepareEmailAddressVerification({ strategy: 'email_code' });
+        const targetEl = document.getElementById('clientOtpTargetEmail');
+        if (targetEl) targetEl.textContent = maskEmail(email);
 
-      const targetEl = document.getElementById('clientOtpTargetEmail');
-      if (targetEl) targetEl.textContent = maskEmail(email);
-
-      switchClientSubView('otp');
-      toast(`Verification code sent. Please check your email.`, 'info');
+        switchClientSubView('otp');
+        toast(`Verification code sent. Please check your email.`, 'info');
+      } catch (prepErr) {
+        if (isRateLimitError(prepErr)) {
+          const targetEl = document.getElementById('clientOtpTargetEmail');
+          if (targetEl) targetEl.textContent = maskEmail(email);
+          switchClientSubView('otp');
+          toast('A verification code was already dispatched. Please check your inbox.', 'warning');
+          startResendTimer('clientResendOtpBtn', 'clientResendOtpTimer', 120);
+        } else {
+          throw prepErr;
+        }
+      }
     } catch (err) {
       console.error('Sign Up Error:', err);
       const parsed = parseClerkError(err);
-      showPortalAlert(parsed.longMessage || parsed.message || 'Error creating account. Please check your details.', 'error');
+      if (isRateLimitError(err)) {
+        showPortalAlert('Too many requests. Please wait a few moments before trying again.', 'warning');
+      } else {
+        showPortalAlert(parsed.longMessage || parsed.message || 'Error creating account. Please check your details.', 'error');
+      }
     } finally {
       state.isRequestInFlight = false;
       setBtnLoading(submitBtn, false);
@@ -626,11 +693,11 @@
       toast('Verification code sent. Please check your email.', 'info');
       startResendTimer('clientResendOtpBtn', 'clientResendOtpTimer', 60);
     } catch (err) {
-      const parsed = parseClerkError(err);
-      if (parsed.code === 'verification_code_too_many_requests' || parsed.code === 'verification_code_rate_limit_exceeded') {
+      if (isRateLimitError(err)) {
         toast('Too many requests. Please wait before requesting another code.', 'warning');
         startResendTimer('clientResendOtpBtn', 'clientResendOtpTimer', 120);
       } else {
+        const parsed = parseClerkError(err);
         toast(parsed.message || 'Failed to resend code.', 'error');
       }
     } finally {
@@ -879,11 +946,14 @@
         }
 
         // Rate limit reached on sign-up creation
-        if (parsed.code === 'verification_code_too_many_requests' || parsed.code === 'verification_code_rate_limit_exceeded') {
-          if (existingSignUp && existingSignUp.emailAddress?.toLowerCase() === email) {
+        if (isRateLimitError(createErr)) {
+          if (existingSignUp && existingSignUp.emailAddress && existingSignUp.emailAddress.toLowerCase() === email) {
             state.pendingSignUp = existingSignUp;
+            const targetEl = document.getElementById('adminOtpTargetEmail');
+            if (targetEl) targetEl.textContent = maskEmail(email);
             switchAdminSubView('otp');
             toast('A verification code was already dispatched. Please check your inbox.', 'info');
+            startResendTimer('adminResendOtpBtn', 'adminResendOtpTimer', 120);
             return;
           }
           showPortalAlert('Too many requests. Please wait a few moments before trying again.', 'warning');
@@ -904,8 +974,7 @@
         switchAdminSubView('otp');
         toast('Verification code sent. Please check your email.', 'info');
       } catch (prepareErr) {
-        const parsed = parseClerkError(prepareErr);
-        if (parsed.code === 'verification_code_too_many_requests' || parsed.code === 'verification_code_rate_limit_exceeded') {
+        if (isRateLimitError(prepareErr)) {
           // If code was already sent earlier in the window, allow entering it
           const targetEl = document.getElementById('adminOtpTargetEmail');
           if (targetEl) targetEl.textContent = maskEmail(email);
@@ -992,11 +1061,11 @@
       startResendTimer('adminResendOtpBtn', 'adminResendOtpTimer', 60);
     } catch (err) {
       console.error('Resend OTP Error:', err);
-      const parsed = parseClerkError(err);
-      if (parsed.code === 'verification_code_too_many_requests' || parsed.code === 'verification_code_rate_limit_exceeded') {
+      if (isRateLimitError(err)) {
         toast('Too many requests. Please wait before requesting another code.', 'warning');
         startResendTimer('adminResendOtpBtn', 'adminResendOtpTimer', 120);
       } else {
+        const parsed = parseClerkError(err);
         toast(parsed.message || 'Failed to resend code.', 'error');
       }
     } finally {
@@ -1856,6 +1925,96 @@
       }
     });
 
+    // Global Click Delegation ensures all modal, tab, and subview triggers respond instantly
+    document.addEventListener('click', (e) => {
+      // 1. My Account Nav triggers
+      if (e.target.closest('#myAccountNavBtn, #myAccountMobileNavBtn')) {
+        e.preventDefault();
+        openUserDashboard();
+        return;
+      }
+
+      // 2. Modal Close triggers
+      if (e.target.closest('#accountModalCloseBtn, #accountModalBackdrop')) {
+        e.preventDefault();
+        closeModal('accountPortalModal');
+        return;
+      }
+      if (e.target.closest('#clientDashboardCloseBtn, #clientDashboardBackdrop')) {
+        e.preventDefault();
+        closeModal('clientDashboardModal');
+        return;
+      }
+      if (e.target.closest('#adminDashboardCloseBtn, #adminDashboardBackdrop')) {
+        e.preventDefault();
+        closeModal('adminDashboardModal');
+        return;
+      }
+
+      // 3. Tab triggers
+      if (e.target.closest('#tabClientBtn')) {
+        e.preventDefault();
+        switchPortalTab('client');
+        return;
+      }
+      if (e.target.closest('#tabAdminBtn')) {
+        e.preventDefault();
+        switchPortalTab('admin');
+        return;
+      }
+
+      // 4. Admin Subview triggers
+      if (e.target.closest('#toAdminActivateBtn, [data-action="to-admin-activate"]')) {
+        e.preventDefault();
+        switchAdminSubView('activate');
+        return;
+      }
+      if (e.target.closest('#adminActivateBackBtn, [data-action="to-admin-login"]')) {
+        e.preventDefault();
+        switchAdminSubView('login');
+        return;
+      }
+      if (e.target.closest('#adminForgotBtn, [data-action="to-admin-forgot"]')) {
+        e.preventDefault();
+        switchAdminSubView('forgot');
+        return;
+      }
+      if (e.target.closest('#adminForgotBackBtn')) {
+        e.preventDefault();
+        switchAdminSubView('login');
+        return;
+      }
+
+      // 5. Client Subview triggers
+      if (e.target.closest('#toRegisterBtn, [data-action="to-client-register"]')) {
+        e.preventDefault();
+        switchClientSubView('register');
+        return;
+      }
+      if (e.target.closest('#toLoginBtn, [data-action="to-client-login"]')) {
+        e.preventDefault();
+        switchClientSubView('login');
+        return;
+      }
+      if (e.target.closest('#clientForgotBtn, [data-action="to-client-forgot"]')) {
+        e.preventDefault();
+        switchClientSubView('forgot');
+        return;
+      }
+      if (e.target.closest('#clientForgotBackBtn')) {
+        e.preventDefault();
+        switchClientSubView('login');
+        return;
+      }
+
+      // 6. Sign out buttons
+      if (e.target.closest('.btn-portal-signout')) {
+        e.preventDefault();
+        handleSignOut();
+        return;
+      }
+    });
+
     setupPasswordToggles();
   }
 
@@ -1868,7 +2027,7 @@
         if (window.Clerk) {
           clearInterval(interval);
           await bootstrapClerk();
-        } else if (attempts > 30) {
+        } else if (attempts > 100) {
           clearInterval(interval);
           console.error('Failed to load Clerk SDK.');
         }
@@ -1895,9 +2054,16 @@
     }
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
+  // Resilient Lifecycle Initialization
+  function init() {
     bindEvents();
     initClerk();
-  });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 
 })();
