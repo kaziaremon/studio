@@ -1,7 +1,13 @@
 /**
- * WHIZ STUDIO - COMPLETE CLERK-POWERED CLIENT & ADMIN ACCOUNT SYSTEM
+ * WHIZ STUDIO - SECURE CLERK-POWERED CLIENT & ADMIN ACCOUNT SYSTEM
  * Technology: Clerk JS SDK v5, Cloudflare D1 Backend API, Vanilla JS, GSAP 3.12+
  * Domain: whizstudio.art | Security: Role-Based Access Control ($0 Free Tier)
+ * 
+ * Strict Zero-Exposure Policy:
+ * - Administrator emails are NEVER hardcoded or exposed in frontend code.
+ * - Server-side authorization validates all administrative permissions.
+ * - In-flight request guards prevent duplicate OTP requests and rate limiting.
+ * - Official Clerk custom sign-up flow: Email -> OTP -> Credentials -> Complete.
  */
 
 (function () {
@@ -9,9 +15,8 @@
 
   const CLERK_PUBLISHABLE_KEY = 'pk_test_cG9ldGljLWxpZ2VyLTQzNTUuY2xlcmsuYWNjb3VudHMuZGV2JA';
   const API_BASE = 'https://whiz-api.kaziaremon.workers.dev/api/v1/portal';
-  const MANDATORY_FOUNDING_SUPER_ADMIN = 'kaziaremon@gmail.com';
 
-  // Global State
+  // Global State Machine
   const state = {
     clerkLoaded: false,
     currentUser: null,
@@ -25,7 +30,9 @@
     pendingSignIn: null,
     activationEmail: '',
     resendCooldown: 0,
-    resendInterval: null
+    resendInterval: null,
+    rateLimitCooldown: 0,
+    isRequestInFlight: false
   };
 
   // Toast Helper
@@ -35,6 +42,26 @@
     } else {
       console.log(`[Toast ${type.toUpperCase()}]: ${message}`);
     }
+  }
+
+  // Mask Email for privacy in OTP prompts
+  function maskEmail(email) {
+    if (!email || !email.includes('@')) return email || '';
+    const [user, domain] = email.split('@');
+    if (user.length <= 2) return `${user[0]}*@${domain}`;
+    return `${user[0]}${'*'.repeat(Math.min(user.length - 2, 4))}${user[user.length - 1]}@${domain}`;
+  }
+
+  // Parse Clerk Error safely
+  function parseClerkError(err) {
+    if (!err) return { code: 'unknown', message: 'An unexpected error occurred.' };
+    const first = (err.errors && err.errors[0]) || {};
+    return {
+      code: first.code || err.code || 'unknown',
+      message: first.message || err.message || 'An unexpected error occurred.',
+      longMessage: first.longMessage || first.message || err.message || '',
+      meta: first.meta || null
+    };
   }
 
   // API Call Wrapper with Clerk ID header
@@ -61,22 +88,24 @@
     }
   }
 
-  // OTP 6-Digit Box Binder
-  function setupOtpInputs(containerId, onComplete) {
+  // OTP 6-Digit Box Helpers
+  function bindOtpInputEvents(containerId, onCompleteCallback) {
     const container = document.getElementById(containerId);
     if (!container) return;
     const inputs = container.querySelectorAll('.otp-box');
     if (!inputs.length) return;
 
     inputs.forEach((input, idx) => {
-      input.value = '';
       input.addEventListener('input', (e) => {
         const val = e.target.value.replace(/[^0-9]/g, '');
         e.target.value = val.slice(-1);
         if (e.target.value && idx < inputs.length - 1) {
           inputs[idx + 1].focus();
         }
-        checkFullOtp();
+        const fullCode = Array.from(inputs).map(i => i.value).join('');
+        if (fullCode.length === 6 && typeof onCompleteCallback === 'function') {
+          onCompleteCallback(fullCode);
+        }
       });
 
       input.addEventListener('keydown', (e) => {
@@ -94,17 +123,13 @@
           });
           const targetIdx = Math.min(pasted.length, 5);
           inputs[targetIdx].focus();
-          checkFullOtp();
+          const fullCode = Array.from(inputs).map(i => i.value).join('');
+          if (fullCode.length === 6 && typeof onCompleteCallback === 'function') {
+            onCompleteCallback(fullCode);
+          }
         }
       });
     });
-
-    function checkFullOtp() {
-      const code = Array.from(inputs).map(i => i.value).join('');
-      if (code.length === 6 && typeof onComplete === 'function') {
-        onComplete(code);
-      }
-    }
   }
 
   function getOtpCode(containerId) {
@@ -117,19 +142,19 @@
   function clearOtpInputs(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
-    container.querySelectorAll('.otp-box').forEach(i => i.value = '');
-    const first = container.querySelector('.otp-box');
-    if (first) first.focus();
+    const inputs = container.querySelectorAll('.otp-box');
+    inputs.forEach(i => i.value = '');
+    if (inputs[0]) inputs[0].focus();
   }
 
   // Resend Timer Helper
-  function startResendTimer(btnId, timerTextId) {
+  function startResendTimer(btnId, timerTextId, durationSeconds = 60) {
     const btn = document.getElementById(btnId);
     const textEl = document.getElementById(timerTextId);
     if (!btn) return;
 
     if (state.resendInterval) clearInterval(state.resendInterval);
-    state.resendCooldown = 60;
+    state.resendCooldown = durationSeconds;
     btn.disabled = true;
     btn.classList.add('opacity-50', 'cursor-not-allowed');
 
@@ -236,7 +261,7 @@
     showPortalAlert('');
   }
 
-  // Tab & Subview Switchers for Portal Modal
+  // Tab & Subview Switchers
   function switchPortalTab(tab) {
     state.activeTab = tab;
     showPortalAlert('');
@@ -308,9 +333,7 @@
     });
 
     if (subview === 'otp') {
-      setupOtpInputs('clientOtpInputsContainer', () => {
-        handleClientOtpSubmit();
-      });
+      clearOtpInputs('clientOtpInputsContainer');
       startResendTimer('clientResendOtpBtn', 'clientResendOtpTimer');
     }
   }
@@ -335,9 +358,7 @@
     });
 
     if (subview === 'otp') {
-      setupOtpInputs('adminOtpInputsContainer', () => {
-        handleAdminOtpSubmit();
-      });
+      clearOtpInputs('adminOtpInputsContainer');
       startResendTimer('adminResendOtpBtn', 'adminResendOtpTimer');
     }
   }
@@ -366,18 +387,12 @@
       return;
     }
 
-    // Authenticated in Clerk -> Verify backend profile & role
-    const primaryEmail = user.primaryEmailAddress ? user.primaryEmailAddress.emailAddress : '';
-    
-    // Check if user is Super Admin or Admin
-    const isSuperAdminEmail = primaryEmail.toLowerCase() === MANDATORY_FOUNDING_SUPER_ADMIN;
-
-    // Fetch profile from backend
+    // Authenticated in Clerk -> Verify backend profile & role from trusted API
     const res = await apiFetch('/me');
     if (res.ok && res.data && res.data.data && res.data.data.user) {
       state.backendProfile = res.data.data.user;
       const role = state.backendProfile.role;
-      if (role === 'owner' || isSuperAdminEmail) {
+      if (role === 'owner' || state.backendProfile.isSuperAdmin) {
         state.userRole = 'super_admin';
       } else if (role === 'admin') {
         state.userRole = 'admin';
@@ -386,11 +401,11 @@
       }
     } else {
       // Fallback role resolution
-      state.userRole = isSuperAdminEmail ? 'super_admin' : 'client';
+      state.userRole = 'client';
     }
 
     // Update Nav buttons to show Name & Role
-    const displayName = user.firstName || user.username || primaryEmail.split('@')[0] || 'User';
+    const displayName = user.firstName || user.username || (user.primaryEmailAddress ? user.primaryEmailAddress.emailAddress.split('@')[0] : 'User');
     navBtns.forEach(btn => {
       const span = btn.querySelector('span');
       if (span) {
@@ -425,10 +440,11 @@
   // CLIENT AUTHENTICATION HANDLERS
   // =========================================================================
 
-  // Client Login Submit
   async function handleClientLogin(e) {
     e.preventDefault();
+    if (state.isRequestInFlight) return;
     showPortalAlert('');
+
     const form = e.target;
     const identifier = (form.identifier.value || '').trim();
     const password = form.password.value;
@@ -439,6 +455,7 @@
       return;
     }
 
+    state.isRequestInFlight = true;
     setBtnLoading(submitBtn, true, 'Signing in...');
 
     try {
@@ -450,8 +467,7 @@
       if (signInAttempt.status === 'complete') {
         await window.Clerk.setActive({ session: signInAttempt.createdSessionId });
         
-        // Sync profile with D1
-        const email = signInAttempt.identifier || (window.Clerk.user && window.Clerk.user.primaryEmailAddress ? window.Clerk.user.primaryEmailAddress.emailAddress : '');
+        const email = signInAttempt.identifier || (window.Clerk.user?.primaryEmailAddress?.emailAddress) || '';
         await apiFetch('/sync-client', {
           method: 'POST',
           body: JSON.stringify({
@@ -470,17 +486,19 @@
       }
     } catch (err) {
       console.error('Sign In Error:', err);
-      const msg = (err.errors && err.errors[0] && err.errors[0].longMessage) || (err.errors && err.errors[0] && err.errors[0].message) || err.message || 'Invalid username/email or password.';
-      showPortalAlert(msg, 'error');
+      const parsed = parseClerkError(err);
+      showPortalAlert(parsed.longMessage || parsed.message || 'Invalid username/email or password.', 'error');
     } finally {
+      state.isRequestInFlight = false;
       setBtnLoading(submitBtn, false);
     }
   }
 
-  // Client Register Submit
   async function handleClientRegister(e) {
     e.preventDefault();
+    if (state.isRequestInFlight) return;
     showPortalAlert('');
+
     const form = e.target;
     const fullName = (form.fullName.value || '').trim();
     const username = (form.username.value || '').trim();
@@ -495,7 +513,7 @@
     }
 
     if (password.length < 15) {
-      showPortalAlert('Password must be at least 15 characters long as required for high-security standards.', 'error');
+      showPortalAlert('Password must be at least 15 characters long as required for high security standards.', 'error');
       return;
     }
 
@@ -504,40 +522,45 @@
       return;
     }
 
+    state.isRequestInFlight = true;
     setBtnLoading(submitBtn, true, 'Creating Account...');
 
     try {
+      const nameParts = fullName.split(/\s+/);
+      const firstName = nameParts[0] || fullName;
+      const lastName = nameParts.slice(1).join(' ') || '';
+
       const signUpAttempt = await window.Clerk.client.signUp.create({
         username,
         emailAddress: email,
         password,
-        firstName: fullName.split(' ')[0] || fullName,
-        lastName: fullName.split(' ').slice(1).join(' ') || ''
+        firstName,
+        lastName
       });
 
       state.pendingSignUp = signUpAttempt;
 
-      // Send OTP to email
       await signUpAttempt.prepareEmailAddressVerification({ strategy: 'email_code' });
 
-      // Update OTP subview instructions with masked email
       const targetEl = document.getElementById('clientOtpTargetEmail');
-      if (targetEl) targetEl.textContent = email;
+      if (targetEl) targetEl.textContent = maskEmail(email);
 
       switchClientSubView('otp');
-      toast(`Verification code sent to ${email}`, 'info');
+      toast(`Verification code sent. Please check your email.`, 'info');
     } catch (err) {
       console.error('Sign Up Error:', err);
-      const msg = (err.errors && err.errors[0] && err.errors[0].longMessage) || (err.errors && err.errors[0] && err.errors[0].message) || err.message || 'Error creating account. Please check your details.';
-      showPortalAlert(msg, 'error');
+      const parsed = parseClerkError(err);
+      showPortalAlert(parsed.longMessage || parsed.message || 'Error creating account. Please check your details.', 'error');
     } finally {
+      state.isRequestInFlight = false;
       setBtnLoading(submitBtn, false);
     }
   }
 
-  // Client OTP Verification Submit
   async function handleClientOtpSubmit() {
+    if (state.isRequestInFlight) return;
     showPortalAlert('');
+
     const code = getOtpCode('clientOtpInputsContainer');
     const submitBtn = document.getElementById('clientVerifyOtpBtn');
 
@@ -546,21 +569,22 @@
       return;
     }
 
-    if (!state.pendingSignUp) {
+    const attempt = state.pendingSignUp || window.Clerk.client.signUp;
+    if (!attempt) {
       showPortalAlert('Registration session expired. Please start registration again.', 'error');
       switchClientSubView('register');
       return;
     }
 
+    state.isRequestInFlight = true;
     setBtnLoading(submitBtn, true, 'Verifying code...');
 
     try {
-      const completeSignUp = await state.pendingSignUp.attemptEmailAddressVerification({ code });
+      const completeSignUp = await attempt.attemptEmailAddressVerification({ code });
 
       if (completeSignUp.status === 'complete') {
         await window.Clerk.setActive({ session: completeSignUp.createdSessionId });
 
-        // Sync client profile to D1 database
         const email = completeSignUp.emailAddress;
         const fullName = `${completeSignUp.firstName || ''} ${completeSignUp.lastName || ''}`.trim() || completeSignUp.username || 'Client';
 
@@ -582,30 +606,43 @@
       }
     } catch (err) {
       console.error('OTP Verification Error:', err);
-      const msg = (err.errors && err.errors[0] && err.errors[0].longMessage) || (err.errors && err.errors[0] && err.errors[0].message) || 'Invalid verification code. Please check your email and try again.';
-      showPortalAlert(msg, 'error');
+      const parsed = parseClerkError(err);
+      showPortalAlert(parsed.longMessage || parsed.message || 'Invalid verification code. Please check your email.', 'error');
       clearOtpInputs('clientOtpInputsContainer');
     } finally {
+      state.isRequestInFlight = false;
       setBtnLoading(submitBtn, false);
     }
   }
 
-  // Resend Client OTP
   async function handleClientResendOtp() {
-    if (!state.pendingSignUp || state.resendCooldown > 0) return;
+    if (state.isRequestInFlight || state.resendCooldown > 0) return;
+    const attempt = state.pendingSignUp || window.Clerk.client.signUp;
+    if (!attempt) return;
+
+    state.isRequestInFlight = true;
     try {
-      await state.pendingSignUp.prepareEmailAddressVerification({ strategy: 'email_code' });
-      toast('A new 6-digit code has been sent to your email.', 'info');
-      startResendTimer('clientResendOtpBtn', 'clientResendOtpTimer');
+      await attempt.prepareEmailAddressVerification({ strategy: 'email_code' });
+      toast('Verification code sent. Please check your email.', 'info');
+      startResendTimer('clientResendOtpBtn', 'clientResendOtpTimer', 60);
     } catch (err) {
-      toast('Failed to resend code: ' + (err.message || 'Please try again later.'), 'error');
+      const parsed = parseClerkError(err);
+      if (parsed.code === 'verification_code_too_many_requests' || parsed.code === 'verification_code_rate_limit_exceeded') {
+        toast('Too many requests. Please wait before requesting another code.', 'warning');
+        startResendTimer('clientResendOtpBtn', 'clientResendOtpTimer', 120);
+      } else {
+        toast(parsed.message || 'Failed to resend code.', 'error');
+      }
+    } finally {
+      state.isRequestInFlight = false;
     }
   }
 
-  // Client Forgot Password - Step 1: Send Code
   async function handleClientForgotSendCode(e) {
     e.preventDefault();
+    if (state.isRequestInFlight) return;
     showPortalAlert('');
+
     const form = e.target;
     const identifier = (form.email.value || '').trim();
     const submitBtn = form.querySelector('button[type="submit"]');
@@ -615,6 +652,7 @@
       return;
     }
 
+    state.isRequestInFlight = true;
     setBtnLoading(submitBtn, true, 'Sending Code...');
 
     try {
@@ -624,23 +662,24 @@
       });
       state.pendingSignIn = signInAttempt;
 
-      // Show step 2 in forgot view
       document.getElementById('clientForgotStep1').classList.add('hidden');
       document.getElementById('clientForgotStep2').classList.remove('hidden');
-      toast(`Reset code sent to ${identifier}`, 'info');
+      toast('Verification code sent. Please check your email.', 'info');
     } catch (err) {
       console.error('Forgot Password Error:', err);
-      const msg = (err.errors && err.errors[0] && err.errors[0].longMessage) || err.message || 'Could not send reset code. Verify the email address.';
-      showPortalAlert(msg, 'error');
+      const parsed = parseClerkError(err);
+      showPortalAlert(parsed.longMessage || parsed.message || 'Could not send reset code.', 'error');
     } finally {
+      state.isRequestInFlight = false;
       setBtnLoading(submitBtn, false);
     }
   }
 
-  // Client Forgot Password - Step 2: Reset with Code
   async function handleClientForgotReset(e) {
     e.preventDefault();
+    if (state.isRequestInFlight) return;
     showPortalAlert('');
+
     const form = e.target;
     const code = (form.code.value || '').trim();
     const newPassword = form.newPassword.value;
@@ -662,6 +701,7 @@
       return;
     }
 
+    state.isRequestInFlight = true;
     setBtnLoading(submitBtn, true, 'Updating Password...');
 
     try {
@@ -682,9 +722,10 @@
       }
     } catch (err) {
       console.error('Password Reset Error:', err);
-      const msg = (err.errors && err.errors[0] && err.errors[0].longMessage) || err.message || 'Invalid code or password.';
-      showPortalAlert(msg, 'error');
+      const parsed = parseClerkError(err);
+      showPortalAlert(parsed.longMessage || parsed.message || 'Invalid code or password.', 'error');
     } finally {
+      state.isRequestInFlight = false;
       setBtnLoading(submitBtn, false);
     }
   }
@@ -693,10 +734,11 @@
   // ADMIN AUTHENTICATION & FOUNDING ACTIVATION HANDLERS
   // =========================================================================
 
-  // Admin Login Submit
   async function handleAdminLogin(e) {
     e.preventDefault();
+    if (state.isRequestInFlight) return;
     showPortalAlert('');
+
     const form = e.target;
     const email = (form.adminEmail.value || '').trim().toLowerCase();
     const password = form.adminPassword.value;
@@ -707,24 +749,27 @@
       return;
     }
 
+    state.isRequestInFlight = true;
     setBtnLoading(submitBtn, true, 'Authenticating Admin...');
 
     try {
-      // 1. Verify email authorization against backend first
+      // 1. Verify administrative authorization against backend
       const checkRes = await apiFetch(`/check-admin?email=${encodeURIComponent(email)}`);
       if (!checkRes.ok || !checkRes.data || !checkRes.data.authorized) {
-        showPortalAlert(checkRes.data?.error || 'Access Denied: This account is not authorized for administrative access.', 'error');
+        showPortalAlert('This email address is not eligible for administrator activation.', 'error');
         setBtnLoading(submitBtn, false);
+        state.isRequestInFlight = false;
         return;
       }
 
-      if (checkRes.data.data && checkRes.data.data.needsActivation) {
-        showPortalAlert('This administrator account has not been activated yet. Please click "Activate Admin Account" below.', 'warning');
+      if (checkRes.data.needsActivation) {
+        showPortalAlert('This administrator account has not completed initial activation. Please click "Activate Admin Account" below.', 'warning');
         setBtnLoading(submitBtn, false);
+        state.isRequestInFlight = false;
         return;
       }
 
-      // 2. Sign in with Clerk
+      // 2. Sign in via Clerk
       const signInAttempt = await window.Clerk.client.signIn.create({
         identifier: email,
         password
@@ -735,31 +780,33 @@
         await syncAuthState();
 
         if (state.userRole !== 'admin' && state.userRole !== 'super_admin') {
-          // Fallback authorization check
           await window.Clerk.signOut();
           showPortalAlert('Access Revoked: Server verified that your role does not possess administrative permissions.', 'error');
           return;
         }
 
         closeModal('accountPortalModal');
-        toast('Welcome to Whiz Studio Management Portal', 'success');
+        toast('Welcome to Whiz Studio Admin Console', 'success');
         openAdminDashboard();
       } else {
         showPortalAlert(`Admin authentication status: ${signInAttempt.status}`, 'warning');
       }
     } catch (err) {
       console.error('Admin Sign In Error:', err);
-      const msg = (err.errors && err.errors[0] && err.errors[0].longMessage) || (err.errors && err.errors[0] && err.errors[0].message) || err.message || 'Invalid admin credentials.';
-      showPortalAlert(msg, 'error');
+      const parsed = parseClerkError(err);
+      showPortalAlert(parsed.longMessage || parsed.message || 'Invalid administrator credentials.', 'error');
     } finally {
+      state.isRequestInFlight = false;
       setBtnLoading(submitBtn, false);
     }
   }
 
-  // Admin First-Time Activation: Email Eligibility Check
+  // Admin Activation Check & OTP Request
   async function handleAdminActivateCheck(e) {
     e.preventDefault();
+    if (state.isRequestInFlight) return;
     showPortalAlert('');
+
     const form = e.target;
     const email = (form.email.value || '').trim().toLowerCase();
     const submitBtn = form.querySelector('button[type="submit"]');
@@ -769,18 +816,19 @@
       return;
     }
 
+    state.isRequestInFlight = true;
     setBtnLoading(submitBtn, true, 'Verifying Eligibility...');
 
     try {
+      // Step 1: Server-side eligibility check (zero information leakage)
       const res = await apiFetch(`/check-admin?email=${encodeURIComponent(email)}`);
 
       if (!res.ok || !res.data || !res.data.authorized) {
-        showPortalAlert(res.data?.error || 'Access Denied: This email address is not authorized for administrator registration.', 'error');
+        showPortalAlert('This email address is not eligible for administrator activation.', 'error');
         return;
       }
 
-      const adminInfo = res.data.data;
-      if (!adminInfo.needsActivation) {
+      if (!res.data.needsActivation) {
         showPortalAlert('This administrator account has already been activated. Please sign in directly with your password.', 'info');
         switchAdminSubView('login');
         return;
@@ -788,39 +836,102 @@
 
       state.activationEmail = email;
 
-      // Start Clerk SignUp for Admin Activation
-      // Temporary password for Clerk sign up stage (user sets permanent in credentials view)
-      const tempPass = 'TempAdminInit_' + Math.random().toString(36).slice(2) + '!99Aa';
-      const tempUsername = 'adm_' + email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 15) + '_' + Math.floor(Math.random()*1000);
+      // Step 2: Check for existing in-progress sign-up in current client session
+      const existingSignUp = window.Clerk?.client?.signUp;
+      if (
+        existingSignUp &&
+        existingSignUp.status === 'missing_requirements' &&
+        existingSignUp.emailAddress &&
+        existingSignUp.emailAddress.toLowerCase() === email
+      ) {
+        state.pendingSignUp = existingSignUp;
 
-      const signUpAttempt = await window.Clerk.client.signUp.create({
-        emailAddress: email,
-        username: tempUsername,
-        password: tempPass
-      });
+        // Check if email was ALREADY verified in this browser
+        if (existingSignUp.verifications?.emailAddress?.status === 'verified') {
+          toast('Email is already verified. Please set your credentials.', 'info');
+          switchAdminSubView('credentials');
+          return;
+        }
+
+        // Email OTP code was already prepared/sent; transition to OTP input directly
+        const targetEl = document.getElementById('adminOtpTargetEmail');
+        if (targetEl) targetEl.textContent = maskEmail(email);
+
+        switchAdminSubView('otp');
+        toast('A verification code was previously sent. Please check your inbox.', 'info');
+        return;
+      }
+
+      // Step 3: Initiate new Sign-Up attempt via Clerk
+      let signUpAttempt;
+      try {
+        signUpAttempt = await window.Clerk.client.signUp.create({
+          emailAddress: email
+        });
+      } catch (createErr) {
+        const parsed = parseClerkError(createErr);
+
+        // Account already exists in Clerk
+        if (parsed.code === 'form_identifier_exists') {
+          showPortalAlert('An account already exists for this email. Please sign in with your password, or use password recovery.', 'info');
+          switchAdminSubView('login');
+          return;
+        }
+
+        // Rate limit reached on sign-up creation
+        if (parsed.code === 'verification_code_too_many_requests' || parsed.code === 'verification_code_rate_limit_exceeded') {
+          if (existingSignUp && existingSignUp.emailAddress?.toLowerCase() === email) {
+            state.pendingSignUp = existingSignUp;
+            switchAdminSubView('otp');
+            toast('A verification code was already dispatched. Please check your inbox.', 'info');
+            return;
+          }
+          showPortalAlert('Too many requests. Please wait a few moments before trying again.', 'warning');
+          return;
+        }
+
+        throw createErr;
+      }
 
       state.pendingSignUp = signUpAttempt;
 
-      // Send OTP to approved email
-      await signUpAttempt.prepareEmailAddressVerification({ strategy: 'email_code' });
+      // Step 4: Dispatch OTP Verification Code
+      try {
+        await signUpAttempt.prepareEmailAddressVerification({ strategy: 'email_code' });
+        const targetEl = document.getElementById('adminOtpTargetEmail');
+        if (targetEl) targetEl.textContent = maskEmail(email);
 
-      const targetEl = document.getElementById('adminOtpTargetEmail');
-      if (targetEl) targetEl.textContent = email;
+        switchAdminSubView('otp');
+        toast('Verification code sent. Please check your email.', 'info');
+      } catch (prepareErr) {
+        const parsed = parseClerkError(prepareErr);
+        if (parsed.code === 'verification_code_too_many_requests' || parsed.code === 'verification_code_rate_limit_exceeded') {
+          // If code was already sent earlier in the window, allow entering it
+          const targetEl = document.getElementById('adminOtpTargetEmail');
+          if (targetEl) targetEl.textContent = maskEmail(email);
+          switchAdminSubView('otp');
+          toast('A verification code was already sent earlier. Please enter that code.', 'warning');
+          startResendTimer('adminResendOtpBtn', 'adminResendOtpTimer', 120);
+        } else {
+          throw prepareErr;
+        }
+      }
 
-      switchAdminSubView('otp');
-      toast(`Security code dispatched to ${email}`, 'info');
     } catch (err) {
       console.error('Admin Activation Error:', err);
-      const msg = (err.errors && err.errors[0] && err.errors[0].longMessage) || (err.errors && err.errors[0] && err.errors[0].message) || err.message || 'Error initiating admin activation.';
-      showPortalAlert(msg, 'error');
+      const parsed = parseClerkError(err);
+      showPortalAlert(parsed.longMessage || parsed.message || 'Error initiating admin activation.', 'error');
     } finally {
+      state.isRequestInFlight = false;
       setBtnLoading(submitBtn, false);
     }
   }
 
-  // Admin OTP Verification Submit
+  // Admin OTP Verification Handler
   async function handleAdminOtpSubmit() {
+    if (state.isRequestInFlight) return;
     showPortalAlert('');
+
     const code = getOtpCode('adminOtpInputsContainer');
     const submitBtn = document.getElementById('adminVerifyOtpBtn');
 
@@ -829,51 +940,76 @@
       return;
     }
 
-    if (!state.pendingSignUp) {
+    const attempt = state.pendingSignUp || window.Clerk?.client?.signUp;
+    if (!attempt) {
       showPortalAlert('Activation session expired. Please start again.', 'error');
       switchAdminSubView('activate');
       return;
     }
 
+    state.isRequestInFlight = true;
     setBtnLoading(submitBtn, true, 'Verifying Security Code...');
 
     try {
-      const verifiedSignUp = await state.pendingSignUp.attemptEmailAddressVerification({ code });
+      const verifiedSignUp = await attempt.attemptEmailAddressVerification({ code });
 
-      if (verifiedSignUp.status === 'complete' || verifiedSignUp.verifications?.emailAddress?.status === 'verified') {
-        // Move to Permanent Credentials View
+      if (verifiedSignUp.verifications?.emailAddress?.status === 'verified') {
         state.pendingSignUp = verifiedSignUp;
         switchAdminSubView('credentials');
-        toast('Identity verified! Set your permanent credentials.', 'success');
+        toast('Email verified! Now choose your permanent administrator credentials.', 'success');
       } else {
         showPortalAlert(`Verification status: ${verifiedSignUp.status}`, 'warning');
       }
     } catch (err) {
       console.error('Admin OTP Verification Error:', err);
-      const msg = (err.errors && err.errors[0] && err.errors[0].longMessage) || 'Invalid verification code.';
-      showPortalAlert(msg, 'error');
-      clearOtpInputs('adminOtpInputsContainer');
+      const parsed = parseClerkError(err);
+      if (parsed.code === 'verification_already_verified') {
+        switchAdminSubView('credentials');
+        toast('Email already verified. Please set your credentials.', 'info');
+      } else if (parsed.code === 'verification_expired') {
+        showPortalAlert('Verification code has expired. Please request a new code.', 'error');
+        clearOtpInputs('adminOtpInputsContainer');
+      } else {
+        showPortalAlert(parsed.longMessage || parsed.message || 'Invalid verification code. Please check your email.', 'error');
+        clearOtpInputs('adminOtpInputsContainer');
+      }
     } finally {
+      state.isRequestInFlight = false;
       setBtnLoading(submitBtn, false);
     }
   }
 
-  // Resend Admin OTP
+  // Admin Resend OTP Handler
   async function handleAdminResendOtp() {
-    if (!state.pendingSignUp || state.resendCooldown > 0) return;
+    if (state.isRequestInFlight || state.resendCooldown > 0) return;
+    const attempt = state.pendingSignUp || window.Clerk?.client?.signUp;
+    if (!attempt) return;
+
+    state.isRequestInFlight = true;
     try {
-      await state.pendingSignUp.prepareEmailAddressVerification({ strategy: 'email_code' });
-      toast('A new security code has been sent to your email.', 'info');
-      startResendTimer('adminResendOtpBtn', 'adminResendOtpTimer');
+      await attempt.prepareEmailAddressVerification({ strategy: 'email_code' });
+      toast('Verification code sent. Please check your email.', 'info');
+      startResendTimer('adminResendOtpBtn', 'adminResendOtpTimer', 60);
     } catch (err) {
-      toast('Failed to resend code: ' + (err.message || 'Please try again.'), 'error');
+      console.error('Resend OTP Error:', err);
+      const parsed = parseClerkError(err);
+      if (parsed.code === 'verification_code_too_many_requests' || parsed.code === 'verification_code_rate_limit_exceeded') {
+        toast('Too many requests. Please wait before requesting another code.', 'warning');
+        startResendTimer('adminResendOtpBtn', 'adminResendOtpTimer', 120);
+      } else {
+        toast(parsed.message || 'Failed to resend code.', 'error');
+      }
+    } finally {
+      state.isRequestInFlight = false;
     }
   }
 
   // Admin Permanent Credentials Setup Submit
   async function handleAdminCredentialsSubmit(e) {
     e.preventDefault();
+    if (state.isRequestInFlight) return;
     showPortalAlert('');
+
     const form = e.target;
     const fullName = (form.fullName.value || '').trim();
     const username = (form.username.value || '').trim();
@@ -896,27 +1032,35 @@
       return;
     }
 
+    state.isRequestInFlight = true;
     setBtnLoading(submitBtn, true, 'Activating Administrator Account...');
 
     try {
-      // Set session active if not already
-      if (state.pendingSignUp.createdSessionId) {
-        await window.Clerk.setActive({ session: state.pendingSignUp.createdSessionId });
+      const attempt = state.pendingSignUp || window.Clerk?.client?.signUp;
+      if (!attempt) {
+        throw new Error('Sign-up attempt not found. Please restart the activation process.');
       }
 
-      const clerkUserId = state.pendingSignUp.createdUserId || (window.Clerk.user ? window.Clerk.user.id : null);
+      const nameParts = fullName.split(/\s+/);
+      const firstName = nameParts[0] || fullName;
+      const lastName = nameParts.slice(1).join(' ') || '';
 
-      // Update Clerk user's password, username, and full name
-      if (window.Clerk.user) {
-        await window.Clerk.user.update({
-          username,
-          firstName: fullName.split(' ')[0] || fullName,
-          lastName: fullName.split(' ').slice(1).join(' ') || '',
-          password
-        }).catch(err => {
-          console.warn('User update notice:', err);
-        });
+      // Update in-progress sign-up with username, password, and name
+      const completedSignUp = await attempt.update({
+        username,
+        password,
+        firstName,
+        lastName
+      });
+
+      if (completedSignUp.status !== 'complete') {
+        throw new Error(`Sign-up requirements incomplete (Status: ${completedSignUp.status}). Missing: ${completedSignUp.missingFields?.join(', ')}`);
       }
+
+      // Finalize and activate Clerk session
+      await window.Clerk.setActive({ session: completedSignUp.createdSessionId });
+
+      const clerkUserId = completedSignUp.createdUserId || window.Clerk?.user?.id;
 
       // Call Backend to Bind Identity & Lock Activation Bootstrap
       const activateRes = await apiFetch('/activate-admin', {
@@ -935,13 +1079,108 @@
 
       await syncAuthState();
       closeModal('accountPortalModal');
-      toast('Administrator account successfully activated! Welcome aboard.', 'success');
+      toast('Administrator account successfully activated! Welcome to Whiz Studio.', 'success');
       openAdminDashboard();
     } catch (err) {
       console.error('Admin Final Activation Error:', err);
-      const msg = (err.errors && err.errors[0] && err.errors[0].longMessage) || err.message || 'Error finalizing admin account.';
-      showPortalAlert(msg, 'error');
+      const parsed = parseClerkError(err);
+      showPortalAlert(parsed.longMessage || parsed.message || 'Error finalizing admin account.', 'error');
     } finally {
+      state.isRequestInFlight = false;
+      setBtnLoading(submitBtn, false);
+    }
+  }
+
+  // Admin Forgot Password - Step 1: Send Code
+  async function handleAdminForgotSendCode(e) {
+    e.preventDefault();
+    if (state.isRequestInFlight) return;
+    showPortalAlert('');
+
+    const form = e.target;
+    const identifier = (form.email.value || '').trim().toLowerCase();
+    const submitBtn = form.querySelector('button[type="submit"]');
+
+    if (!identifier) {
+      showPortalAlert('Please enter your administrator email address.', 'error');
+      return;
+    }
+
+    state.isRequestInFlight = true;
+    setBtnLoading(submitBtn, true, 'Sending Reset Code...');
+
+    try {
+      const signInAttempt = await window.Clerk.client.signIn.create({
+        strategy: 'reset_password_email_code',
+        identifier
+      });
+      state.pendingSignIn = signInAttempt;
+
+      document.getElementById('adminForgotStep1').classList.add('hidden');
+      document.getElementById('adminForgotStep2').classList.remove('hidden');
+      toast('Verification code sent. Please check your email.', 'info');
+    } catch (err) {
+      console.error('Admin Forgot Password Error:', err);
+      const parsed = parseClerkError(err);
+      showPortalAlert(parsed.longMessage || parsed.message || 'Could not send reset code.', 'error');
+    } finally {
+      state.isRequestInFlight = false;
+      setBtnLoading(submitBtn, false);
+    }
+  }
+
+  // Admin Forgot Password - Step 2: Reset with Code
+  async function handleAdminForgotReset(e) {
+    e.preventDefault();
+    if (state.isRequestInFlight) return;
+    showPortalAlert('');
+
+    const form = e.target;
+    const code = (form.code.value || '').trim();
+    const newPassword = form.newPassword.value;
+    const confirmNewPassword = form.confirmNewPassword.value;
+    const submitBtn = form.querySelector('button[type="submit"]');
+
+    if (!code || !newPassword) {
+      showPortalAlert('Please enter the verification code and your new password.', 'error');
+      return;
+    }
+
+    if (newPassword.length < 15) {
+      showPortalAlert('New password must be at least 15 characters long.', 'error');
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      showPortalAlert('Passwords do not match.', 'error');
+      return;
+    }
+
+    state.isRequestInFlight = true;
+    setBtnLoading(submitBtn, true, 'Updating Password...');
+
+    try {
+      const result = await state.pendingSignIn.attemptFirstFactor({
+        strategy: 'reset_password_email_code',
+        code,
+        password: newPassword
+      });
+
+      if (result.status === 'complete') {
+        await window.Clerk.setActive({ session: result.createdSessionId });
+        await syncAuthState();
+        closeModal('accountPortalModal');
+        toast('Password reset successfully! You are now logged in.', 'success');
+        openAdminDashboard();
+      } else {
+        showPortalAlert(`Status: ${result.status}`, 'warning');
+      }
+    } catch (err) {
+      console.error('Admin Password Reset Error:', err);
+      const parsed = parseClerkError(err);
+      showPortalAlert(parsed.longMessage || parsed.message || 'Invalid code or password.', 'error');
+    } finally {
+      state.isRequestInFlight = false;
       setBtnLoading(submitBtn, false);
     }
   }
@@ -987,13 +1226,11 @@
     const email = user.primaryEmailAddress ? user.primaryEmailAddress.emailAddress : '';
     const name = user.fullName || user.firstName || user.username || 'Valued Client';
 
-    // Populate Header & Overview
     const nameEls = document.querySelectorAll('.client-display-name');
     nameEls.forEach(el => el.textContent = name);
     const emailEls = document.querySelectorAll('.client-display-email');
     emailEls.forEach(el => el.textContent = email);
 
-    // Fetch Full Profile from D1
     const res = await apiFetch('/me');
     if (res.ok && res.data && res.data.data && res.data.data.user) {
       const u = res.data.data.user;
@@ -1010,7 +1247,6 @@
         if (form.bio) form.bio.value = u.bio || '';
       }
 
-      // Settings Info
       const createdEl = document.getElementById('clientAccountCreatedDate');
       if (createdEl && u.createdAt) {
         createdEl.textContent = new Date(u.createdAt).toLocaleDateString();
@@ -1020,9 +1256,11 @@
 
   async function handleClientProfileSave(e) {
     e.preventDefault();
+    if (state.isRequestInFlight) return;
     const form = e.target;
     const submitBtn = form.querySelector('button[type="submit"]');
 
+    state.isRequestInFlight = true;
     setBtnLoading(submitBtn, true, 'Saving Changes...');
 
     const payload = {
@@ -1040,6 +1278,7 @@
       body: JSON.stringify(payload)
     });
 
+    state.isRequestInFlight = false;
     setBtnLoading(submitBtn, false);
 
     if (res.ok && res.data && res.data.success) {
@@ -1052,6 +1291,7 @@
 
   async function handleClientSupportSubmit(e) {
     e.preventDefault();
+    if (state.isRequestInFlight) return;
     const form = e.target;
     const subject = (form.subject.value || '').trim();
     const message = (form.message.value || '').trim();
@@ -1062,6 +1302,7 @@
       return;
     }
 
+    state.isRequestInFlight = true;
     setBtnLoading(submitBtn, true, 'Submitting Ticket...');
 
     const email = state.currentUser?.primaryEmailAddress?.emailAddress || '';
@@ -1078,6 +1319,7 @@
       })
     });
 
+    state.isRequestInFlight = false;
     setBtnLoading(submitBtn, false);
 
     if (res.ok && res.data && res.data.success) {
@@ -1171,7 +1413,7 @@
 
     const badgeEl = document.getElementById('adminRoleBadge');
     if (badgeEl) {
-      if (state.userRole === 'super_admin' || email.toLowerCase() === MANDATORY_FOUNDING_SUPER_ADMIN) {
+      if (state.userRole === 'super_admin') {
         badgeEl.textContent = 'Super Admin';
         badgeEl.className = 'text-[10px] font-extrabold uppercase tracking-wider text-emerald-300 bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-500/40';
       } else {
@@ -1180,27 +1422,23 @@
       }
     }
 
-    // Hide Team Tab if not super_admin/owner
     const teamTabBtn = document.getElementById('adminTabBtn_team');
     if (teamTabBtn) {
       if (state.userRole === 'super_admin') teamTabBtn.classList.remove('hidden');
       else teamTabBtn.classList.add('hidden');
     }
 
-    // Load Stats from /admin/stats
     const res = await apiFetch('/admin/stats');
     if (res.ok && res.data && res.data.data) {
       const stats = res.data.data;
       const elClients = document.getElementById('adminStatClients');
       const elAdmins = document.getElementById('adminStatAdmins');
       const elTickets = document.getElementById('adminStatTickets');
-      const elActivity = document.getElementById('adminStatActivity');
 
       if (elClients) elClients.textContent = stats.totalClients;
       if (elAdmins) elAdmins.textContent = stats.totalAdmins;
       if (elTickets) elTickets.textContent = stats.openSupportRequests;
 
-      // Activity Feed
       const feed = document.getElementById('adminRecentActivityList');
       if (feed && Array.isArray(stats.recentActivity)) {
         if (!stats.recentActivity.length) {
@@ -1221,7 +1459,6 @@
     }
   }
 
-  // Admin: Load Clients Directory
   async function loadAdminClients(searchQuery = '') {
     const tableBody = document.getElementById('adminClientsTableBody');
     if (!tableBody) return;
@@ -1250,7 +1487,6 @@
     }
   }
 
-  // Admin: Load Team Directory (Super Admin Only)
   async function loadAdminTeam() {
     const adminListContainer = document.getElementById('adminTeamTableBody');
     if (!adminListContainer) return;
@@ -1259,34 +1495,32 @@
 
     const res = await apiFetch('/admin/team');
     if (res.ok && res.data && res.data.data) {
-      const { admins, pendingInvitations } = res.data.data;
+      const { admins } = res.data.data;
 
-      // Admins table
       if (!admins.length) {
         adminListContainer.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-xs text-slate-400">No administrators found.</td></tr>';
       } else {
         adminListContainer.innerHTML = admins.map(a => {
-          const isFounding = a.approved_email.toLowerCase() === MANDATORY_FOUNDING_SUPER_ADMIN;
+          const isSuperAdmin = a.role === 'super_admin';
           return `
             <tr class="border-b border-slate-700/30 hover:bg-slate-800/40 transition-colors text-xs text-slate-300">
               <td class="py-3 px-4 font-semibold text-white">
                 ${escapeHtml(a.full_name || 'Admin')}
-                ${isFounding ? '<span class="ml-2 text-[9px] bg-emerald-950 text-emerald-300 px-1.5 py-0.5 rounded border border-emerald-500/30">FOUNDER</span>' : ''}
+                ${isSuperAdmin ? '<span class="ml-2 text-[9px] bg-emerald-950 text-emerald-300 px-1.5 py-0.5 rounded border border-emerald-500/30">SUPER ADMIN</span>' : ''}
               </td>
               <td class="py-3 px-4">${escapeHtml(a.approved_email)}</td>
               <td class="py-3 px-4"><span class="capitalize">${a.role}</span></td>
               <td class="py-3 px-4"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${a.status === 'active' ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30' : 'bg-amber-950 text-amber-400 border border-amber-500/30'}">${a.status}</span></td>
               <td class="py-3 px-4 text-right space-x-2">
-                ${!isFounding ? `
+                ${!isSuperAdmin ? `
                   <button type="button" class="btn-change-admin-email text-[11px] text-blue-400 hover:text-blue-300 underline cursor-pointer" data-id="${a.id}" data-email="${a.approved_email}">Change Email</button>
                   <button type="button" class="btn-revoke-admin text-[11px] text-rose-400 hover:text-rose-300 underline cursor-pointer" data-id="${a.id}" data-email="${a.approved_email}">Revoke</button>
-                ` : '<span class="text-slate-500 text-[10px]">Protected</span>'}
+                ` : '<span class="text-slate-500 text-[10px]">Protected Super Admin</span>'}
               </td>
             </tr>
           `;
         }).join('');
 
-        // Bind Action Handlers
         adminListContainer.querySelectorAll('.btn-change-admin-email').forEach(btn => {
           btn.addEventListener('click', () => {
             const adminId = btn.dataset.id;
@@ -1313,9 +1547,9 @@
     }
   }
 
-  // Admin: Invite New Administrator
   async function handleInviteAdmin(e) {
     e.preventDefault();
+    if (state.isRequestInFlight) return;
     const form = e.target;
     const fullName = (form.fullName.value || '').trim();
     const email = (form.email.value || '').trim().toLowerCase();
@@ -1327,6 +1561,7 @@
       return;
     }
 
+    state.isRequestInFlight = true;
     setBtnLoading(submitBtn, true, 'Creating Invitation...');
 
     const res = await apiFetch('/admin/team/invite', {
@@ -1334,6 +1569,7 @@
       body: JSON.stringify({ fullName, email, role })
     });
 
+    state.isRequestInFlight = false;
     setBtnLoading(submitBtn, false);
 
     if (res.ok && res.data && res.data.success) {
@@ -1345,7 +1581,6 @@
     }
   }
 
-  // Admin: Change Administrator Email
   async function handleChangeAdminEmail(adminId, newEmail) {
     const res = await apiFetch('/admin/team/email', {
       method: 'PUT',
@@ -1360,7 +1595,6 @@
     }
   }
 
-  // Admin: Revoke Administrator Access
   async function handleRevokeAdmin(adminId) {
     const res = await apiFetch('/admin/team/revoke', {
       method: 'POST',
@@ -1375,7 +1609,6 @@
     }
   }
 
-  // Admin: Load Support Requests
   async function loadAdminSupport() {
     const container = document.getElementById('adminSupportTableBody');
     if (!container) return;
@@ -1432,7 +1665,6 @@
     }
   }
 
-  // Escape HTML helper
   function escapeHtml(str) {
     if (!str) return '';
     return String(str)
@@ -1443,7 +1675,6 @@
       .replace(/'/g, '&#039;');
   }
 
-  // Password visibility toggle helper
   function setupPasswordToggles() {
     document.querySelectorAll('.password-toggle-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -1470,7 +1701,6 @@
     });
   }
 
-  // Sign Out Handler
   async function handleSignOut() {
     if (!window.Clerk) return;
     try {
@@ -1483,9 +1713,8 @@
     }
   }
 
-  // Global Event Binding
+  // Global Event Binding (Attaches handlers ONCE)
   function bindEvents() {
-    // Nav Openers
     ['myAccountNavBtn', 'myAccountMobileNavBtn'].forEach(id => {
       const btn = document.getElementById(id);
       if (btn) {
@@ -1496,7 +1725,6 @@
       }
     });
 
-    // Close buttons
     ['accountModalCloseBtn', 'accountModalBackdrop'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.addEventListener('click', () => closeModal('accountPortalModal'));
@@ -1512,18 +1740,15 @@
       if (el) el.addEventListener('click', () => closeModal('adminDashboardModal'));
     });
 
-    // Sign Out Buttons
     document.querySelectorAll('.btn-portal-signout').forEach(btn => {
       btn.addEventListener('click', handleSignOut);
     });
 
-    // Tab Switchers in Portal Modal
     const tabClient = document.getElementById('tabClientBtn');
     const tabAdmin = document.getElementById('tabAdminBtn');
     if (tabClient) tabClient.addEventListener('click', () => switchPortalTab('client'));
     if (tabAdmin) tabAdmin.addEventListener('click', () => switchPortalTab('admin'));
 
-    // Client Subview Transitions
     const toRegisterBtn = document.getElementById('toRegisterBtn');
     const toLoginBtn = document.getElementById('toLoginBtn');
     const clientForgotBtn = document.getElementById('clientForgotBtn');
@@ -1534,11 +1759,15 @@
     if (clientForgotBtn) clientForgotBtn.addEventListener('click', () => switchClientSubView('forgot'));
     if (clientForgotBackBtn) clientForgotBackBtn.addEventListener('click', () => switchClientSubView('login'));
 
-    // Admin Subview Transitions
     const toAdminActivateBtn = document.getElementById('toAdminActivateBtn');
     const adminActivateBackBtn = document.getElementById('adminActivateBackBtn');
+    const adminForgotBtn = document.getElementById('adminForgotBtn');
+    const adminForgotBackBtn = document.getElementById('adminForgotBackBtn');
+
     if (toAdminActivateBtn) toAdminActivateBtn.addEventListener('click', () => switchAdminSubView('activate'));
     if (adminActivateBackBtn) adminActivateBackBtn.addEventListener('click', () => switchAdminSubView('login'));
+    if (adminForgotBtn) adminForgotBtn.addEventListener('click', () => switchAdminSubView('forgot'));
+    if (adminForgotBackBtn) adminForgotBackBtn.addEventListener('click', () => switchAdminSubView('login'));
 
     // Form Submissions
     const clientLoginForm = document.getElementById('clientLoginForm');
@@ -1574,6 +1803,21 @@
     const adminCredentialsForm = document.getElementById('adminCredentialsForm');
     if (adminCredentialsForm) adminCredentialsForm.addEventListener('submit', handleAdminCredentialsSubmit);
 
+    const adminForgotForm1 = document.getElementById('adminForgotStep1');
+    if (adminForgotForm1) adminForgotForm1.addEventListener('submit', handleAdminForgotSendCode);
+
+    const adminForgotForm2 = document.getElementById('adminForgotStep2');
+    if (adminForgotForm2) adminForgotForm2.addEventListener('submit', handleAdminForgotReset);
+
+    // Bind OTP Inputs ONCE
+    bindOtpInputEvents('clientOtpInputsContainer', () => {
+      handleClientOtpSubmit();
+    });
+
+    bindOtpInputEvents('adminOtpInputsContainer', () => {
+      handleAdminOtpSubmit();
+    });
+
     // Client Dashboard Tabs
     ['overview', 'profile', 'services', 'support', 'settings'].forEach(tab => {
       const btn = document.getElementById(`clientTabBtn_${tab}`);
@@ -1592,7 +1836,6 @@
       if (btn) btn.addEventListener('click', () => switchAdminDashboardTab(tab));
     });
 
-    // Admin Client Search Input
     const clientSearchInput = document.getElementById('adminClientSearchInput');
     if (clientSearchInput) {
       let debounceTimer = null;
@@ -1604,11 +1847,9 @@
       });
     }
 
-    // Admin Invite Form
     const adminInviteForm = document.getElementById('adminInviteForm');
     if (adminInviteForm) adminInviteForm.addEventListener('submit', handleInviteAdmin);
 
-    // Escape Key Listener
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && state.currentModal) {
         closeModal(state.currentModal);
@@ -1618,10 +1859,9 @@
     setupPasswordToggles();
   }
 
-  // Clerk SDK Loader & Initialization
+  // Clerk SDK Initialization
   async function initClerk() {
     if (!window.Clerk) {
-      console.warn('Clerk SDK not yet mounted on window. Waiting for script to load...');
       let attempts = 0;
       const interval = setInterval(async () => {
         attempts++;
@@ -1630,7 +1870,7 @@
           await bootstrapClerk();
         } else if (attempts > 30) {
           clearInterval(interval);
-          console.error('Failed to load Clerk SDK from poetic-liger-4355.clerk.accounts.dev');
+          console.error('Failed to load Clerk SDK.');
         }
       }, 200);
     } else {
@@ -1645,7 +1885,6 @@
       });
       state.clerkLoaded = true;
 
-      // Listen for Clerk auth state changes
       window.Clerk.addListener(({ user }) => {
         syncAuthState();
       });
@@ -1656,7 +1895,6 @@
     }
   }
 
-  // DOM Content Loaded entry point
   document.addEventListener('DOMContentLoaded', () => {
     bindEvents();
     initClerk();

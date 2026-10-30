@@ -1858,6 +1858,9 @@
                   <label for="adminPassword" class="block text-xs font-semibold uppercase tracking-wider text-slate-700">
                     Password <span class="text-rose-500">*</span>
                   </label>
+                  <button type="button" id="adminForgotBtn" class="text-xs text-brand-whiz font-bold hover:underline cursor-pointer">
+                    Forgot Password?
+                  </button>
                 </div>
                 <div class="relative">
                   <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
@@ -1901,7 +1904,7 @@
                   <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
                     <i class="fa-solid fa-envelope-circle-check text-xs"></i>
                   </span>
-                  <input type="email" id="adminActivateEmail" name="email" placeholder="e.g. kaziaremon@gmail.com" class="account-form-input w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-xl text-sm font-medium focus:ring-2 focus:ring-slate-900/30 border border-slate-300/80 bg-white/80" autocomplete="email">
+                  <input type="email" id="adminActivateEmail" name="email" placeholder="admin@example.com" value="" class="account-form-input w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-xl text-sm font-medium focus:ring-2 focus:ring-slate-900/30 border border-slate-300/80 bg-white/80" autocomplete="email">
                 </div>
               </div>
               <button type="submit" class="w-full py-3 px-5 rounded-xl text-sm font-bold bg-slate-900 hover:bg-slate-800 text-white shadow-sm hover:shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer border border-slate-800">
@@ -1991,11 +1994,55 @@
           <div id="adminForgotView" class="hidden">
             <div class="mb-5">
               <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">Admin Password Reset</h2>
-              <p class="text-xs sm:text-sm text-slate-600 font-normal mt-1">Contact the Founding Super Admin or follow standard password recovery.</p>
+              <p class="text-xs sm:text-sm text-slate-600 font-normal mt-1">Enter your approved email to receive a password recovery code.</p>
             </div>
-            <div class="p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-950 text-xs">
-              <p class="font-bold mb-1">Strict Administrative Security</p>
-              <p>For administrative identity safety, password updates for administrator roles require elevated authorization or verification code dispatch to your pre-approved domain address.</p>
+            <!-- Step 1: Email Form -->
+            <form id="adminForgotStep1" novalidate class="space-y-4">
+              <div>
+                <label for="adminForgotEmail" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                  Administrator Email <span class="text-rose-500">*</span>
+                </label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                    <i class="fa-solid fa-envelope text-xs"></i>
+                  </span>
+                  <input type="email" id="adminForgotEmail" name="email" placeholder="admin@example.com" value="" class="account-form-input w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-xl text-sm font-medium focus:ring-2 focus:ring-slate-900/30 border border-slate-300/80 bg-white/80" autocomplete="email">
+                </div>
+              </div>
+              <button type="submit" class="w-full py-3 px-5 rounded-xl text-sm font-bold bg-slate-900 hover:bg-slate-800 text-white shadow-sm hover:shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer border border-slate-800">
+                <span>Send Reset Code</span>
+                <i class="fa-solid fa-paper-plane text-xs text-brand-whiz"></i>
+              </button>
+            </form>
+            <!-- Step 2: Code & New Password -->
+            <form id="adminForgotStep2" novalidate class="hidden space-y-3.5">
+              <div>
+                <label for="adminForgotCode" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
+                  Verification Code <span class="text-rose-500">*</span>
+                </label>
+                <input type="text" id="adminForgotCode" name="code" placeholder="Enter 6-digit code" class="account-form-input w-full px-4 py-2.5 rounded-xl text-sm font-medium focus:ring-2 focus:ring-slate-900/30 border border-slate-300/80 bg-white/80">
+              </div>
+              <div>
+                <label for="adminForgotNewPassword" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
+                  New Permanent Password (Min 15 chars) <span class="text-rose-500">*</span>
+                </label>
+                <input type="password" id="adminForgotNewPassword" name="newPassword" data-password-field="true" placeholder="Enter new password" class="account-form-input w-full px-4 py-2.5 rounded-xl text-sm font-medium focus:ring-2 focus:ring-slate-900/30 border border-slate-300/80 bg-white/80">
+              </div>
+              <div>
+                <label for="adminForgotConfirmPassword" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
+                  Confirm New Password <span class="text-rose-500">*</span>
+                </label>
+                <input type="password" id="adminForgotConfirmPassword" name="confirmNewPassword" data-password-field="true" placeholder="Confirm new password" class="account-form-input w-full px-4 py-2.5 rounded-xl text-sm font-medium focus:ring-2 focus:ring-slate-900/30 border border-slate-300/80 bg-white/80">
+              </div>
+              <button type="submit" class="w-full py-3 px-5 rounded-xl text-sm font-bold bg-slate-900 hover:bg-slate-800 text-white shadow-sm hover:shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer border border-slate-800">
+                <span>Update Password & Enter Admin</span>
+                <i class="fa-solid fa-key text-xs text-brand-whiz"></i>
+              </button>
+            </form>
+            <div class="text-center text-xs text-slate-600 font-medium mt-4 pt-4 border-t border-slate-200/60">
+              <button type="button" id="adminForgotBackBtn" class="text-slate-800 font-bold hover:underline cursor-pointer">
+                <i class="fa-solid fa-arrow-left mr-1"></i> Back to Admin Login
+              </button>
             </div>
           </div>
 
