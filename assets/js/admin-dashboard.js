@@ -45,6 +45,16 @@
     }
   }
 
+  function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
   const state = {
     currentUser: null,
     adminProfile: null,
@@ -419,16 +429,46 @@
     const tbody = document.getElementById('adminClientsTableBody');
     if (!tbody) return;
 
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="5" class="px-6 py-10 text-center">
+          <div class="inline-flex items-center gap-2.5 text-xs font-semibold text-slate-500">
+            <i class="fa-solid fa-circle-notch fa-spin text-brand-whiz text-sm"></i>
+            <span>Loading clients directory from Cloudflare D1...</span>
+          </div>
+        </td>
+      </tr>
+    `;
+
     const statusFilter = document.getElementById('adminClientStatusFilter')?.value || 'active';
     const searchQuery = (document.getElementById('adminClientSearchInput')?.value || '').trim();
 
     const res = await apiFetch(`/clients?status=${statusFilter}&search=${encodeURIComponent(searchQuery)}`);
 
-    if (res.ok && res.data && res.data.data) {
+    if (res.ok && res.data && Array.isArray(res.data.data)) {
       state.clientsCache = res.data.data;
       renderClientsTable(state.clientsCache);
     } else {
-      tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-6 text-center text-rose-400">Failed to load clients directory from D1.</td></tr>';
+      const errMsg = res.data?.error || 'Failed to communicate with Cloudflare D1.';
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" class="px-6 py-8 text-center">
+            <div class="max-w-md mx-auto p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs space-y-2">
+              <div class="flex items-center justify-center gap-2 font-bold text-rose-800">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span>Unable to load clients directory</span>
+              </div>
+              <p class="text-[11px] text-rose-600">${escapeHtml(errMsg)}</p>
+              <button type="button" id="btnRetryLoadClients" class="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-[11px] transition-colors cursor-pointer shadow-xs">
+                <i class="fa-solid fa-rotate-right"></i> Retry Connection
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+      document.getElementById('btnRetryLoadClients')?.addEventListener('click', () => {
+        loadClientsData();
+      });
     }
   }
 
@@ -437,37 +477,64 @@
     if (!tbody) return;
 
     if (!clients || clients.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-6 text-center text-slate-500 italic">No clients found matching the selected filter. Click "Add New Client" above.</td></tr>';
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" class="px-6 py-12 text-center">
+            <div class="max-w-sm mx-auto space-y-3">
+              <div class="w-12 h-12 mx-auto rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 text-lg">
+                <i class="fa-solid fa-users-slash"></i>
+              </div>
+              <div>
+                <h4 class="text-sm font-bold text-[#172B36]">No Clients Found</h4>
+                <p class="text-xs text-slate-500 mt-0.5">No registered client accounts match the selected filter or search criteria.</p>
+              </div>
+              <button type="button" id="btnEmptyAddClient" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-brand-whiz text-white hover:bg-brand-whiz/90 text-xs font-bold transition-all shadow-xs cursor-pointer">
+                <i class="fa-solid fa-user-plus"></i> Add New Client
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+      document.getElementById('btnEmptyAddClient')?.addEventListener('click', () => {
+        document.getElementById('btnOpenAddClientModal')?.click();
+      });
       return;
     }
 
     tbody.innerHTML = clients.map(c => {
       const isSuspended = c.status === 'suspended';
+      const isDeleted = c.status === 'deleted';
 
       let statusBadge = '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">Active</span>';
       if (isSuspended) {
         statusBadge = '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-200">Suspended</span>';
+      } else if (isDeleted) {
+        statusBadge = '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-rose-50 text-rose-700 border border-rose-200">Deleted</span>';
       }
+
+      const companyDisplay = (c.company_name && c.company_name.trim())
+        ? `<div class="text-xs text-brand-whiz font-medium truncate max-w-[220px]">${escapeHtml(c.company_name)}</div>`
+        : `<div class="mt-0.5"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200"><i class="fa-solid fa-building-circle-exclamation text-amber-500 text-[9px]"></i> Unassigned Company</span></div>`;
 
       return `
         <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
           <td class="px-6 py-4">
-            <div class="font-bold text-[#172B36] text-sm">${c.full_name || 'Client'}</div>
-            <div class="text-xs text-brand-whiz font-medium">${c.company_name || 'Independent Business'}</div>
-            <div class="text-[10px] text-slate-500 font-mono mt-0.5">${c.id}</div>
+            <div class="font-bold text-[#172B36] text-sm">${escapeHtml(c.full_name || 'Client')}</div>
+            ${companyDisplay}
+            <div class="text-[10px] text-slate-500 font-mono mt-0.5">${escapeHtml(c.id)}</div>
           </td>
           <td class="px-6 py-4 font-mono text-[#5F7180]">
-            <div>${c.email}</div>
-            <div class="text-[11px] text-slate-500">${c.phone || 'No phone'}</div>
+            <div>${escapeHtml(c.email)}</div>
+            <div class="text-[11px] text-slate-500">${escapeHtml(c.phone || 'No phone')}</div>
           </td>
           <td class="px-6 py-4 text-[#5F7180] text-xs">
-            ${c.city || 'Dhaka'}, ${c.country || 'Bangladesh'}
+            ${escapeHtml(c.city || 'Dhaka')}, ${escapeHtml(c.country || 'Bangladesh')}
           </td>
           <td class="px-6 py-4">
             ${statusBadge}
           </td>
           <td class="px-6 py-4 text-right">
-            <button type="button" class="btn-manage-client px-3.5 py-1.5 rounded-xl text-xs font-bold btn-glass-primary shadow-xs hover:shadow-md cursor-pointer transition-all" data-id="${c.id}">
+            <button type="button" class="btn-manage-client px-3.5 py-1.5 rounded-xl text-xs font-bold btn-glass-primary shadow-xs hover:shadow-md cursor-pointer transition-all" data-id="${escapeHtml(c.id)}">
               <i class="fa-solid fa-sliders mr-1 text-[11px]"></i> Manage
             </button>
           </td>
@@ -503,8 +570,8 @@
     const { client, services, projects, invoices, payments, auditLogs } = res.data.data;
 
     // Header info
-    if (titleEl) titleEl.textContent = client.company_name || client.full_name;
-    if (subEl) subEl.textContent = `${client.full_name} (${client.email})`;
+    if (titleEl) titleEl.textContent = client.company_name || client.full_name || 'Client Record';
+    if (subEl) subEl.textContent = `${client.full_name || 'Client'} (${client.email})${client.is_unassigned ? ' • Unassigned Company' : ''}`;
 
     const statusBadge = document.getElementById('clientDetailStatusBadge');
     const btnSuspend = document.getElementById('btnSuspendClientAction');
@@ -530,7 +597,11 @@
     const cfn = document.getElementById('clientCardFullName');
     if (cfn) cfn.textContent = client.full_name || 'Valued Client';
     const ccn = document.getElementById('clientCardCompanyName');
-    if (ccn) ccn.textContent = client.company_name || 'No Company Name';
+    if (ccn) {
+      ccn.innerHTML = client.company_name
+        ? escapeHtml(client.company_name)
+        : `<span class="inline-flex items-center gap-1 text-amber-600 font-semibold"><i class="fa-solid fa-triangle-exclamation text-[10px]"></i> Unassigned (No Linked Organization)</span>`;
+    }
     const cEm = document.getElementById('clientCardEmail');
     if (cEm) cEm.textContent = client.email;
     const cPh = document.getElementById('clientCardPhone');
@@ -540,7 +611,7 @@
     const cClk = document.getElementById('clientCardClerkId');
     if (cClk) cClk.textContent = client.clerk_user_id || 'Pending Clerk linking';
     const cOrg = document.getElementById('clientCardOrgId');
-    if (cOrg) cOrg.textContent = client.organization_id || 'None';
+    if (cOrg) cOrg.textContent = client.organization_id || 'Not Linked';
 
     // Populate Preferred Currency in Financial Preferences
     const clientCurrency = (client.currency || (client.country === 'Bangladesh' || (client.phone && client.phone.startsWith('+880')) ? 'BDT' : 'USD')).toUpperCase();
@@ -573,9 +644,9 @@
     const totalBilledCents = (invoices || []).reduce((sum, inv) => sum + (inv.total_cents || 0), 0);
     const totalPaidCents = (payments || []).reduce((sum, p) => sum + (p.amount_cents || 0), 0);
     const tbEl = document.getElementById('clientCardTotalBilled');
-    if (tbEl) tbEl.textContent = `$${(totalBilledCents / 100).toFixed(2)}`;
+    if (tbEl) tbEl.textContent = formatCurrency(totalBilledCents, clientCurrency);
     const tpEl = document.getElementById('clientCardTotalPaid');
-    if (tpEl) tpEl.textContent = `$${(totalPaidCents / 100).toFixed(2)}`;
+    if (tpEl) tpEl.textContent = formatCurrency(totalPaidCents, clientCurrency);
 
     // Render Assigned Services
     const srvCountEl = document.getElementById('clientServicesCount');
@@ -603,16 +674,16 @@
                 <i class="fa-solid fa-bolt"></i>
               </div>
               <div class="min-w-0">
-                <div class="text-xs font-bold text-[#172B36] truncate">${s.service_name}</div>
+                <div class="text-xs font-bold text-[#172B36] truncate">${escapeHtml(s.service_name)}</div>
                 <div class="text-[11px] text-[#5F7180] flex items-center gap-2">
-                  <span>${s.package_name || 'Standard Retainer'}</span>
+                  <span>${escapeHtml(s.package_name || 'Standard Retainer')}</span>
                   <span>•</span>
-                  <span>Started: ${s.start_date || 'N/A'}</span>
+                  <span>Started: ${escapeHtml(s.start_date || 'N/A')}</span>
                 </div>
               </div>
             </div>
             <div class="flex items-center space-x-3 shrink-0">
-              <span class="text-xs font-mono font-bold text-brand-whiz">${formatCurrency(p.amount_cents || 0, p.currency || "USD")}((s.price_cents || 0) / 100).toFixed(0)}</span>
+              <span class="text-xs font-mono font-bold text-brand-whiz">${formatCurrency(s.price_cents || 0, s.currency || clientCurrency || "USD")}</span>
               <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${s.status === 'active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-50 text-slate-600 border border-slate-200'}">${s.status}</span>
               ${s.status === 'active' ? `
                 <button type="button" class="btn-cancel-client-service text-slate-500 hover:text-rose-400 p-1 cursor-pointer transition-colors" data-cs="${s.id}" title="Cancel Service">
