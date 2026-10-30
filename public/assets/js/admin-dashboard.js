@@ -1369,15 +1369,20 @@
 
     tbody.querySelectorAll('.btn-user-delete').forEach(btn => {
       btn.addEventListener('click', async () => {
-        if (!confirm(`Are you sure you want to permanently delete account '${btn.dataset.name}'? All test data will be removed.`)) return;
+        if (!confirm(`Are you sure you want to permanently delete account '${btn.dataset.name}'?`)) return;
         btn.disabled = true;
-        const res = await apiFetch(`/clients/${btn.dataset.id}?delete_clerk=true`, { method: 'DELETE' });
-        if (res.ok && res.data && res.data.success) {
-          showToast('Account permanently deleted.', 'success');
-          loadTeamData();
-          loadClientsData();
-        } else {
-          showToast(res.data?.error || 'Failed to delete account.', 'error');
+        try {
+          const res = await apiFetch(`/clients/${btn.dataset.id}?delete_clerk=false`, { method: 'DELETE' });
+          if (res.ok && res.data && res.data.success) {
+            showToast(res.data.message || 'Account successfully deleted.', 'success');
+            loadTeamData();
+            loadClientsData();
+          } else {
+            showToast(res.data?.error || 'Unable to delete account. Please review any associated records.', 'error');
+            btn.disabled = false;
+          }
+        } catch (err) {
+          showToast('Network error while deleting account.', 'error');
           btn.disabled = false;
         }
       });
@@ -2263,6 +2268,19 @@
       const titleEl = document.getElementById('clientDetailTitle');
       const targetNameEl = document.getElementById('deleteClientTargetName');
       if (targetNameEl && titleEl) targetNameEl.textContent = titleEl.textContent;
+
+      // Ensure Clerk deletion option is unchecked by default
+      const clerkOpt = document.getElementById('deleteClientClerkOption');
+      if (clerkOpt) clerkOpt.checked = false;
+
+      // Ensure delete button is reset and ready
+      const confirmBtn = document.getElementById('btnConfirmDeleteClient');
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+        confirmBtn.innerHTML = '<i class="fa-solid fa-trash-can text-xs"></i> <span>Permanently Delete Client</span>';
+      }
+
       document.getElementById('modalDeleteClient')?.classList.remove('hidden');
     });
 
@@ -2272,18 +2290,27 @@
       if (!clientId) return;
 
       const btn = document.getElementById('btnConfirmDeleteClient');
+      if (btn.disabled) return;
       setBtnLoading(btn, true, 'Deleting client...');
 
-      const res = await apiFetch(`/clients/${clientId}?delete_clerk=true`, { method: 'DELETE' });
-      setBtnLoading(btn, false);
+      const deleteClerk = document.getElementById('deleteClientClerkOption')?.checked === true;
 
-      if (res.ok && res.data && res.data.success) {
-        showToast(res.data.message || 'Client deleted successfully.', 'success');
-        document.getElementById('modalDeleteClient')?.classList.add('hidden');
-        switchTab('clients');
-        loadClientsData();
-      } else {
-        showToast(res.data?.error || 'Failed to delete client.', 'error');
+      try {
+        const res = await apiFetch(`/clients/${clientId}?delete_clerk=${deleteClerk}`, { method: 'DELETE' });
+        setBtnLoading(btn, false);
+
+        if (res.ok && res.data && res.data.success) {
+          showToast(res.data.message || 'Client deleted successfully.', 'success');
+          document.getElementById('modalDeleteClient')?.classList.add('hidden');
+          switchTab('clients');
+          loadClientsData();
+          loadTeamData();
+        } else {
+          showToast(res.data?.error || 'Unable to delete this client. No changes were completed. Please retry or review the account records.', 'error');
+        }
+      } catch (err) {
+        setBtnLoading(btn, false);
+        showToast('Network error while processing client deletion. Please retry.', 'error');
       }
     });
 
