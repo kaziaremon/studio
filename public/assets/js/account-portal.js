@@ -1669,7 +1669,7 @@
   }
 
   function switchClientDashboardTab(tabName) {
-    const tabs = ['overview', 'profile', 'services', 'support', 'settings'];
+    const tabs = ['overview', 'profile', 'services', 'finance', 'support', 'settings'];
     tabs.forEach(t => {
       const viewEl = document.getElementById(`clientTabContent_${t}`);
       const btnEl = document.getElementById(`clientTabBtn_${t}`);
@@ -2388,7 +2388,7 @@
     });
 
     // Client Dashboard Tabs
-    ['overview', 'profile', 'services', 'support', 'settings'].forEach(tab => {
+    ['overview', 'profile', 'services', 'finance', 'support', 'settings'].forEach(tab => {
       const btn = document.getElementById(`clientTabBtn_${tab}`);
       if (btn) btn.addEventListener('click', () => switchClientDashboardTab(tab));
     });

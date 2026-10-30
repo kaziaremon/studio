@@ -2220,25 +2220,45 @@
           <div id="clientTabContent_overview" class="space-y-6">
             <div class="p-5 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200/80">
               <h4 class="text-lg sm:text-xl font-extrabold text-slate-900">Welcome to your Portal, <span class="client-display-name text-brand-whiz">Client</span>!</h4>
-              <p class="text-xs sm:text-sm text-slate-600 mt-1">Manage your business profile, request service consultations, and communicate directly with the Whiz Studio executive team.</p>
+              <p class="text-xs sm:text-sm text-slate-600 mt-1">Real-time transparency into your provisioned services, project completion, and verified financial ledger.</p>
+            </div>
+
+            <!-- Overall Deliverables Progress -->
+            <div class="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
+              <div class="flex items-center justify-between mb-2">
+                <div>
+                  <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Overall Deliverables Progress</span>
+                  <h5 class="text-base font-extrabold text-slate-900">Live Production Completion</h5>
+                </div>
+                <div class="text-right">
+                  <span id="clientOverviewProgressVal" class="text-2xl font-black text-brand-whiz">0%</span>
+                </div>
+              </div>
+              <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden border border-slate-200/60">
+                <div id="clientOverviewProgressBar" class="bg-gradient-to-r from-brand-whiz to-emerald-400 h-3 rounded-full transition-all duration-500" style="width: 0%;"></div>
+              </div>
+              <div class="flex items-center justify-between text-[11px] text-slate-400 mt-2">
+                <span class="flex items-center"><i class="fa-solid fa-bolt text-emerald-500 mr-1"></i> Automated D1 live calculation</span>
+                <span>Operational privacy preserved</span>
+              </div>
             </div>
 
             <!-- Stats Grid -->
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
-                <span class="text-xs font-semibold text-slate-500 uppercase">Active Services</span>
-                <div class="text-2xl font-black text-slate-900 mt-1">0</div>
-                <span class="text-[11px] text-slate-400">Ready for provisioning</span>
+                <span class="text-xs font-semibold text-slate-500 uppercase">Active Retainers</span>
+                <div id="clientStatActiveServices" class="text-2xl font-black text-slate-900 mt-1">0</div>
+                <span class="text-[11px] text-slate-400">Deployed campaigns</span>
               </div>
               <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
-                <span class="text-xs font-semibold text-slate-500 uppercase">Support Tickets</span>
-                <div class="text-2xl font-black text-brand-whiz mt-1">0</div>
-                <span class="text-[11px] text-slate-400">Priority client lane</span>
+                <span class="text-xs font-semibold text-slate-500 uppercase">Confirmed Paid</span>
+                <div id="clientStatPaidAmount" class="text-2xl font-black text-emerald-600 mt-1">$0.00</div>
+                <span class="text-[11px] text-slate-400">Official verified ledger</span>
               </div>
               <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
-                <span class="text-xs font-semibold text-slate-500 uppercase">Account Status</span>
-                <div class="text-2xl font-black text-emerald-600 mt-1">Active</div>
-                <span class="text-[11px] text-slate-400">Verified identity</span>
+                <span class="text-xs font-semibold text-slate-500 uppercase">Daily Receipt Quota</span>
+                <div id="clientStatReceiptQuota" class="text-2xl font-black text-brand-whiz mt-1">0 / 2 Used</div>
+                <span class="text-[11px] text-slate-400">Resets 00:00 Asia/Dhaka</span>
               </div>
             </div>
 
@@ -2297,22 +2317,99 @@
             </form>
           </div>
 
-          <!-- TAB 3: MY SERVICES (EMPTY STATE) -->
+          <!-- TAB 3: MY SERVICES (LIVE D1 SYNC) -->
           <div id="clientTabContent_services" class="hidden space-y-6">
-            <div>
-              <h4 class="text-lg font-extrabold text-slate-900">Provisioned Services</h4>
-              <p class="text-xs text-slate-500">Track your ongoing retainers, active campaigns, and web assets.</p>
-            </div>
-            <!-- High-End Empty State -->
-            <div class="py-12 px-6 rounded-3xl bg-slate-50/80 border border-slate-200/80 text-center flex flex-col items-center justify-center space-y-3">
-              <div class="w-16 h-16 rounded-2xl bg-white shadow-xs border border-slate-200 flex items-center justify-center text-brand-whiz text-2xl">
-                <i class="fa-solid fa-layer-group"></i>
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="text-lg font-extrabold text-slate-900">Provisioned Services</h4>
+                <p class="text-xs text-slate-500">Live milestones and production completion for your contracted Whiz Studio services.</p>
               </div>
-              <h5 class="text-base font-bold text-slate-900">No Active Service Subscriptions</h5>
-              <p class="text-xs sm:text-sm text-slate-500 max-w-md">You do not have any active retainers or deployed projects linked to this profile yet. Launch your next campaign with Whiz Studio today.</p>
-              <a href="#contact" onclick="document.getElementById('clientDashboardCloseBtn').click()" class="mt-2 px-6 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-xs">
-                Request a Service Consultation
-              </a>
+              <span class="px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-950 border border-emerald-300">
+                <i class="fa-solid fa-shield-check mr-1 text-emerald-600"></i> Client Verified
+              </span>
+            </div>
+
+            <div id="clientServicesListContainer" class="space-y-4">
+              <!-- Dynamically populated from /api/v1/portal/client-overview -->
+              <div class="py-12 px-6 rounded-3xl bg-slate-50/80 border border-slate-200/80 text-center flex flex-col items-center justify-center space-y-3">
+                <div class="w-16 h-16 rounded-2xl bg-white shadow-xs border border-slate-200 flex items-center justify-center text-brand-whiz text-2xl">
+                  <i class="fa-solid fa-layer-group"></i>
+                </div>
+                <h5 class="text-base font-bold text-slate-900">Loading Provisioned Services...</h5>
+                <p class="text-xs sm:text-sm text-slate-500 max-w-md">Synchronizing active contracts and progress status with Whiz Studio Cloudflare D1.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 3B: FINANCE & RECEIPTS (ZERO-STORAGE VECTOR PDF) -->
+          <div id="clientTabContent_finance" class="hidden space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h4 class="text-lg font-extrabold text-slate-900">Financial Ledger & Official Receipts</h4>
+                <p class="text-xs text-slate-500">Audit verified payments and download cryptographic vector PDF receipts.</p>
+              </div>
+              <!-- Daily Quota Badge -->
+              <div class="inline-flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900">
+                <i class="fa-solid fa-gauge-high text-brand-whiz"></i>
+                <span>Daily Quota: <strong id="clientFinanceQuotaBadge">0 / 2 Used</strong></span>
+              </div>
+            </div>
+
+            <!-- Ledger Summary Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
+                <span class="text-xs font-semibold text-slate-500 uppercase">Total Invoiced</span>
+                <div id="clientFinanceTotalInvoiced" class="text-2xl font-black text-slate-900 mt-1">$0.00</div>
+                <span class="text-[11px] text-slate-400">All contracts to date</span>
+              </div>
+              <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
+                <span class="text-xs font-semibold text-slate-500 uppercase">Confirmed Paid</span>
+                <div id="clientFinanceTotalPaid" class="text-2xl font-black text-emerald-600 mt-1">$0.00</div>
+                <span class="text-[11px] text-slate-400">Settled transactions</span>
+              </div>
+              <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
+                <span class="text-xs font-semibold text-slate-500 uppercase">Outstanding Balance</span>
+                <div id="clientFinanceBalance" class="text-2xl font-black text-slate-900 mt-1">$0.00</div>
+                <span class="text-[11px] text-slate-400">Current receivables</span>
+              </div>
+            </div>
+
+            <!-- Quota Architecture Notice -->
+            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start space-x-3 text-xs text-slate-600">
+              <i class="fa-solid fa-circle-info text-brand-whiz text-sm mt-0.5"></i>
+              <div>
+                <p class="font-bold text-slate-800">Zero-Storage Vector Receipt Engine</p>
+                <p class="mt-0.5">Receipt PDFs are compiled live in your browser's memory using vector mathematics. Zero PDF files are stored on server disks. Standard client limit is 2 receipt generations per calendar day, resetting midnight Asia/Dhaka.</p>
+              </div>
+            </div>
+
+            <!-- Confirmed Payments Table -->
+            <div class="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-xs">
+              <div class="px-5 py-3.5 border-b border-slate-200/70 bg-slate-50/50 flex items-center justify-between">
+                <h5 class="text-xs font-extrabold uppercase tracking-wider text-slate-700">Verified Payment Transactions</h5>
+                <span class="text-[11px] text-slate-400">Cloudflare D1 Verified</span>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr class="border-b border-slate-200/70 bg-slate-50 text-[11px] font-bold text-slate-500 uppercase">
+                      <th class="py-3 px-4">Date</th>
+                      <th class="py-3 px-4">Receipt #</th>
+                      <th class="py-3 px-4">Invoice #</th>
+                      <th class="py-3 px-4">Method</th>
+                      <th class="py-3 px-4">Amount</th>
+                      <th class="py-3 px-4 text-right">Official Receipt</th>
+                    </tr>
+                  </thead>
+                  <tbody id="clientFinancePaymentsTableBody" class="divide-y divide-slate-100 text-slate-700">
+                    <tr>
+                      <td colspan="6" class="py-8 text-center text-slate-400">
+                        <i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading payment records...
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
 
@@ -2639,6 +2736,7 @@
   </div>
 
   <!-- Main JavaScript Application Logic -->
+  <script src="https://unpkg.com/pdf-lib@1.17.9/dist/pdf-lib.min.js"></script>
   <script src="assets/js/main.js?v=20261030_v3"></script>
   <!-- Account Portal Controller -->
   <script src="assets/js/account-portal.js?v=20261030_v3"></script>
