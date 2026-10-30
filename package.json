@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "deploy": "node scripts/deploy.js"
+    "deploy": "node scripts/deploy.js",
+    "provision-admin": "node scripts/provision-super-admin.cjs"
   },
   "dependencies": {
     "@clerk/clerk-js": "^6.42.0",

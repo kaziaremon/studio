@@ -807,12 +807,12 @@
     showPortalAlert('');
 
     const form = e.target;
-    const email = (form.adminEmail.value || '').trim().toLowerCase();
+    const identifier = (form.adminEmail.value || '').trim();
     const password = form.adminPassword.value;
     const submitBtn = form.querySelector('button[type="submit"]');
 
-    if (!email || !password) {
-      showPortalAlert('Please enter your administrator email and password.', 'error');
+    if (!identifier || !password) {
+      showPortalAlert('Please enter your administrator username or email and password.', 'error');
       return;
     }
 
@@ -820,25 +820,24 @@
     setBtnLoading(submitBtn, true, 'Authenticating Admin...');
 
     try {
-      // 1. Verify administrative authorization against backend
-      const checkRes = await apiFetch(`/check-admin?email=${encodeURIComponent(email)}`);
-      if (!checkRes.ok || !checkRes.data || !checkRes.data.authorized) {
-        showPortalAlert('This email address is not eligible for administrator activation.', 'error');
-        setBtnLoading(submitBtn, false);
-        state.isRequestInFlight = false;
-        return;
+      // 1. If identifier is an email, check activation eligibility first
+      if (identifier.includes('@')) {
+        const checkRes = await apiFetch(`/check-admin?email=${encodeURIComponent(identifier.toLowerCase())}`);
+        const checkData = (checkRes && checkRes.data && (checkRes.data.data || checkRes.data)) || null;
+
+        if (checkRes && checkRes.ok && checkData) {
+          if (checkData.needsActivation) {
+            showPortalAlert('This administrator account has not completed initial activation. Please click "Activate Admin Account" below.', 'warning');
+            setBtnLoading(submitBtn, false);
+            state.isRequestInFlight = false;
+            return;
+          }
+        }
       }
 
-      if (checkRes.data.needsActivation) {
-        showPortalAlert('This administrator account has not completed initial activation. Please click "Activate Admin Account" below.', 'warning');
-        setBtnLoading(submitBtn, false);
-        state.isRequestInFlight = false;
-        return;
-      }
-
-      // 2. Sign in via Clerk
+      // 2. Sign in via Clerk using Username or Email
       const signInAttempt = await window.Clerk.client.signIn.create({
-        identifier: email,
+        identifier,
         password
       });
 
@@ -848,7 +847,7 @@
 
         if (state.userRole !== 'admin' && state.userRole !== 'super_admin') {
           await window.Clerk.signOut();
-          showPortalAlert('Access Revoked: Server verified that your role does not possess administrative permissions.', 'error');
+          showPortalAlert('Access Revoked: Server verified that your account does not possess administrative permissions.', 'error');
           return;
         }
 
@@ -887,15 +886,17 @@
     setBtnLoading(submitBtn, true, 'Verifying Eligibility...');
 
     try {
-      // Step 1: Server-side eligibility check (zero information leakage)
+      // Step 1: Server-side eligibility check (zero information leakage, defensive response handling)
       const res = await apiFetch(`/check-admin?email=${encodeURIComponent(email)}`);
+      const resData = (res && res.data && (res.data.data || res.data)) || null;
 
-      if (!res.ok || !res.data || !res.data.authorized) {
-        showPortalAlert('This email address is not eligible for administrator activation.', 'error');
+      if (!res || !res.ok || !resData || !resData.authorized) {
+        showPortalAlert((resData && resData.error) || 'This email address is not eligible for administrator activation.', 'error');
         return;
       }
 
-      if (!res.data.needsActivation) {
+      const needsActivation = Boolean(resData.needsActivation);
+      if (!needsActivation) {
         showPortalAlert('This administrator account has already been activated. Please sign in directly with your password.', 'info');
         switchAdminSubView('login');
         return;
@@ -1445,7 +1446,7 @@
   }
 
   function switchAdminDashboardTab(tabName) {
-    const tabs = ['overview', 'clients', 'team', 'support'];
+    const tabs = ['overview', 'clients', 'team', 'support', 'settings'];
     tabs.forEach(t => {
       const viewEl = document.getElementById(`adminTabContent_${t}`);
       const btnEl = document.getElementById(`adminTabBtn_${t}`);
@@ -1467,6 +1468,7 @@
     if (tabName === 'clients') loadAdminClients();
     else if (tabName === 'team') loadAdminTeam();
     else if (tabName === 'support') loadAdminSupport();
+    else if (tabName === 'settings') initAdminSecuritySettings();
   }
 
   async function loadAdminDashboardData() {
@@ -1734,6 +1736,103 @@
     }
   }
 
+  // Admin Security / Change Password Functions
+  function initAdminSecuritySettings() {
+    const emailTarget = document.getElementById('adminSecurityEmailTarget');
+    if (emailTarget && state.currentUser) {
+      const email = state.currentUser.primaryEmailAddress ? state.currentUser.primaryEmailAddress.emailAddress : '';
+      emailTarget.textContent = maskEmail(email);
+    }
+  }
+
+  async function handleAdminSecuritySendOtp() {
+    if (state.isRequestInFlight) return;
+    const btn = document.getElementById('adminSecuritySendOtpBtn');
+    if (!state.currentUser) return;
+    const email = state.currentUser.primaryEmailAddress ? state.currentUser.primaryEmailAddress.emailAddress : '';
+    if (!email) return;
+
+    state.isRequestInFlight = true;
+    setBtnLoading(btn, true, 'Sending Verification Code...');
+
+    try {
+      const signInAttempt = await window.Clerk.client.signIn.create({
+        strategy: 'reset_password_email_code',
+        identifier: email
+      });
+      state.pendingSignIn = signInAttempt;
+
+      document.getElementById('adminSecurityStep1').classList.add('hidden');
+      document.getElementById('adminSecurityStep2').classList.remove('hidden');
+      toast('Verification code sent to your email.', 'info');
+    } catch (err) {
+      console.error('Admin Security OTP Error:', err);
+      const parsed = parseClerkError(err);
+      toast(parsed.longMessage || parsed.message || 'Failed to dispatch verification code.', 'error');
+    } finally {
+      state.isRequestInFlight = false;
+      setBtnLoading(btn, false);
+    }
+  }
+
+  async function handleAdminSecurityResetSubmit(e) {
+    e.preventDefault();
+    if (state.isRequestInFlight) return;
+
+    const form = e.target;
+    const code = (form.code.value || '').trim();
+    const newPassword = form.newPassword.value;
+    const confirmPassword = form.confirmPassword.value;
+    const submitBtn = form.querySelector('button[type="submit"]');
+
+    if (!code || !newPassword) {
+      toast('Please enter both the verification code and your new password.', 'error');
+      return;
+    }
+
+    if (newPassword.length < 15) {
+      toast('Admin password must be at least 15 characters long.', 'error');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast('Passwords do not match.', 'error');
+      return;
+    }
+
+    state.isRequestInFlight = true;
+    setBtnLoading(submitBtn, true, 'Verifying & Updating Password...');
+
+    try {
+      if (!state.pendingSignIn) {
+        throw new Error('Verification session expired. Please request a new code.');
+      }
+
+      const result = await state.pendingSignIn.attemptFirstFactor({
+        strategy: 'reset_password_email_code',
+        code,
+        password: newPassword
+      });
+
+      if (result.status === 'complete') {
+        await window.Clerk.setActive({ session: result.createdSessionId });
+        toast('Password updated successfully! Your new password is now active.', 'success');
+        form.reset();
+        document.getElementById('adminSecurityStep1').classList.remove('hidden');
+        document.getElementById('adminSecurityStep2').classList.add('hidden');
+      } else {
+        toast(`Verification status: ${result.status}`, 'warning');
+      }
+    } catch (err) {
+      console.error('Password Update Error:', err);
+      const parsed = parseClerkError(err);
+      toast(parsed.longMessage || parsed.message || 'Failed to update password. Check your code.', 'error');
+    } finally {
+      state.isRequestInFlight = false;
+      setBtnLoading(submitBtn, false);
+    }
+  }
+
   function escapeHtml(str) {
     if (!str) return '';
     return String(str)
@@ -1900,10 +1999,26 @@
     if (clientSupportForm) clientSupportForm.addEventListener('submit', handleClientSupportSubmit);
 
     // Admin Dashboard Tabs
-    ['overview', 'clients', 'team', 'support'].forEach(tab => {
+    ['overview', 'clients', 'team', 'support', 'settings'].forEach(tab => {
       const btn = document.getElementById(`adminTabBtn_${tab}`);
       if (btn) btn.addEventListener('click', () => switchAdminDashboardTab(tab));
     });
+
+    const adminSecuritySendOtpBtn = document.getElementById('adminSecuritySendOtpBtn');
+    if (adminSecuritySendOtpBtn) adminSecuritySendOtpBtn.addEventListener('click', handleAdminSecuritySendOtp);
+
+    const adminSecurityStep2 = document.getElementById('adminSecurityStep2');
+    if (adminSecurityStep2) adminSecurityStep2.addEventListener('submit', handleAdminSecurityResetSubmit);
+
+    const adminSecurityCancelBtn = document.getElementById('adminSecurityCancelBtn');
+    if (adminSecurityCancelBtn) {
+      adminSecurityCancelBtn.addEventListener('click', () => {
+        const step1 = document.getElementById('adminSecurityStep1');
+        const step2 = document.getElementById('adminSecurityStep2');
+        if (step1) step1.classList.remove('hidden');
+        if (step2) step2.classList.add('hidden');
+      });
+    }
 
     const clientSearchInput = document.getElementById('adminClientSearchInput');
     if (clientSearchInput) {
