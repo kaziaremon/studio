@@ -1371,6 +1371,68 @@
               </form>
             </div>
 
+            <!-- Pending Administrator Approvals Card (TASK 6) -->
+            <div class="rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl overflow-hidden shadow-xl space-y-0">
+              <div class="px-6 py-4 border-b border-[#E3E9EF] flex items-center justify-between">
+                <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-600 flex items-center gap-2">
+                  <i class="fa-solid fa-hourglass-half text-amber-500"></i>
+                  <span>Pending Administrator Pre-Approvals</span>
+                </h3>
+                <span id="pendingApprovalsCount" class="text-[11px] font-mono text-slate-500">0 pending</span>
+              </div>
+              <div id="pendingApprovalsCardsContainer" class="md:hidden p-4 space-y-3"></div>
+              <div class="hidden md:block overflow-x-auto">
+                <table class="w-full text-left text-xs text-slate-600 min-w-[680px]">
+                  <thead class="bg-slate-50/70 border-b border-[#E3E9EF] text-[11px] uppercase font-bold text-slate-500">
+                    <tr>
+                      <th class="px-6 py-3.5">Approved Name</th>
+                      <th class="px-6 py-3.5">Approved Gmail</th>
+                      <th class="px-6 py-3.5">Target Role</th>
+                      <th class="px-6 py-3.5">Pre-Approved On</th>
+                      <th class="px-6 py-3.5">Status</th>
+                      <th class="px-6 py-3.5 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="pendingApprovalsTableBody" class="divide-y divide-[#E3E9EF]">
+                    <tr>
+                      <td colspan="6" class="px-6 py-6 text-center text-slate-500 italic">No pending pre-approvals.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Active Administrators Directory Card (TASK 6) -->
+            <div class="rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl overflow-hidden shadow-xl space-y-0">
+              <div class="px-6 py-4 border-b border-[#E3E9EF] flex items-center justify-between">
+                <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-600 flex items-center gap-2">
+                  <i class="fa-solid fa-user-shield text-[#147D64]"></i>
+                  <span>Active Administrators Directory</span>
+                </h3>
+                <span id="activeAdminsCount" class="text-[11px] font-mono text-slate-500">0 active</span>
+              </div>
+              <div id="activeAdminsCardsContainer" class="md:hidden p-4 space-y-3"></div>
+              <div class="hidden md:block overflow-x-auto">
+                <table class="w-full text-left text-xs text-slate-600 min-w-[680px]">
+                  <thead class="bg-slate-50/70 border-b border-[#E3E9EF] text-[11px] uppercase font-bold text-slate-500">
+                    <tr>
+                      <th class="px-6 py-3.5">Administrator</th>
+                      <th class="px-6 py-3.5">Email</th>
+                      <th class="px-6 py-3.5">Clerk Identity</th>
+                      <th class="px-6 py-3.5">Role</th>
+                      <th class="px-6 py-3.5">Activated On</th>
+                      <th class="px-6 py-3.5 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="activeAdminsTableBody" class="divide-y divide-[#E3E9EF]">
+                    <tr>
+                      <td colspan="6" class="px-6 py-6 text-center text-slate-500 italic">Loading active administrators...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
             <!-- Role Change Audit History Card -->
             <div class="rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl overflow-hidden shadow-xl">
               <div class="px-6 py-4 border-b border-[#E3E9EF] flex items-center justify-between">

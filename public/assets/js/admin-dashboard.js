@@ -1517,13 +1517,15 @@
     }
 
     try {
-      const [usersSettled, historySettled] = await Promise.allSettled([
+      const [usersSettled, historySettled, teamSettled] = await Promise.allSettled([
         apiFetch('/portal/admin/users'),
-        apiFetch('/portal/admin/role-history')
+        apiFetch('/portal/admin/role-history'),
+        apiFetch('/portal/admin/team')
       ]);
 
       const usersRes = usersSettled.status === 'fulfilled' ? usersSettled.value : null;
       const historyRes = historySettled.status === 'fulfilled' ? historySettled.value : null;
+      const teamRes = teamSettled.status === 'fulfilled' ? teamSettled.value : null;
 
       if (usersRes && usersRes.ok && usersRes.data && usersRes.data.data) {
         state.usersCache = usersRes.data.data.users || [];
@@ -1544,6 +1546,15 @@
           renderRoleHistory();
         } catch (histErr) {
           console.error('renderRoleHistory error:', histErr);
+        }
+      }
+
+      if (teamRes && teamRes.ok && teamRes.data) {
+        const teamData = teamRes.data.data || teamRes.data;
+        try {
+          renderTeamManagement(teamData);
+        } catch (teamErr) {
+          console.error('renderTeamManagement error:', teamErr);
         }
       }
     } catch (err) {
@@ -1631,14 +1642,14 @@
             </div>
           `;
         } else {
-          const roleBtn = u.role === 'admin'
-            ? `<button type="button" class="btn-role-action px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition-all cursor-pointer" data-id="${u.id}" data-role="client" data-email="${escapeHtml(email)}" data-name="${escapeHtml(fullName)}"><i class="fa-solid fa-arrow-down mr-1 text-[10px]"></i>Demote</button>`
-            : `<button type="button" class="btn-role-action px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition-all cursor-pointer" data-id="${u.id}" data-role="admin" data-email="${escapeHtml(email)}" data-name="${escapeHtml(fullName)}"><i class="fa-solid fa-arrow-up mr-1 text-[10px]"></i>Promote</button>`;
+          const roleBtn = (!isOwner && u.role === 'admin')
+            ? `<button type="button" class="btn-role-action px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition-all cursor-pointer" data-id="${u.id}" data-role="client" data-email="${escapeHtml(email)}" data-name="${escapeHtml(fullName)}"><i class="fa-solid fa-arrow-down mr-1 text-[10px]"></i>Revoke Admin Access</button>`
+            : '';
 
           actionsHtml = `
             <div class="flex items-center justify-end gap-1.5">
               ${roleBtn}
-              <button type="button" class="btn-user-suspend px-2.5 py-1 rounded-lg text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 cursor-pointer" data-id="${u.id}"><i class="fa-solid fa-pause mr-1"></i>Suspend</button>
+              ${!isOwner ? `<button type="button" class="btn-user-suspend px-2.5 py-1 rounded-lg text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 cursor-pointer" data-id="${u.id}"><i class="fa-solid fa-pause mr-1"></i>Suspend</button>` : ''}
             </div>
           `;
         }
@@ -1716,8 +1727,8 @@
             ${!isOwner ? `
               <div class="pt-2 border-t border-slate-100 flex items-center gap-2">
                 ${u.role === 'admin'
-                  ? `<button type="button" class="btn-role-action flex-1 py-2 rounded-xl text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 text-center cursor-pointer" data-id="${u.id}" data-role="client" data-email="${escapeHtml(email)}" data-name="${escapeHtml(fullName)}">Demote to Client</button>`
-                  : `<button type="button" class="btn-role-action flex-1 py-2 rounded-xl text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 text-center cursor-pointer" data-id="${u.id}" data-role="admin" data-email="${escapeHtml(email)}" data-name="${escapeHtml(fullName)}">Promote to Admin</button>`
+                  ? `<button type="button" class="btn-role-action flex-1 py-2 rounded-xl text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 text-center cursor-pointer" data-id="${u.id}" data-role="client" data-email="${escapeHtml(email)}" data-name="${escapeHtml(fullName)}">Revoke Admin Access</button>`
+                  : ''
                 }
                 ${u.status === 'suspended'
                   ? `<button type="button" class="btn-user-reactivate px-3 py-2 rounded-xl text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 cursor-pointer" data-id="${u.id}">Reactivate</button>`
@@ -1728,6 +1739,25 @@
           </div>
         `;
       }).join('');
+    }
+
+    function openRoleChangeModal(id, targetRole, email, name) {
+      const modal = document.getElementById('modalRoleChange');
+      if (!modal) return;
+      const idInput = document.getElementById('roleChangeUserId');
+      const roleInput = document.getElementById('roleChangeTargetRole');
+      const titleEl = document.getElementById('modalRoleChangeTitle');
+      const descEl = document.getElementById('modalRoleChangeDesc');
+      const submitBtn = document.getElementById('btnSubmitRoleChange');
+
+      if (idInput) idInput.value = id;
+      if (roleInput) roleInput.value = targetRole;
+      if (titleEl) titleEl.innerHTML = '<i class="fa-solid fa-user-xmark text-amber-600 mr-2"></i><span>Revoke Administrator Access</span>';
+      if (descEl) descEl.textContent = `Are you sure you want to revoke administrator access for ${name} (${email})? Their account will be downgraded to a standard Client.`;
+      if (submitBtn) {
+        submitBtn.innerHTML = '<i class="fa-solid fa-user-minus text-xs mr-1"></i><span>Revoke Admin Access & Downgrade</span>';
+      }
+      modal.classList.remove('hidden');
     }
 
     // Bind action buttons on both
@@ -1873,6 +1903,183 @@
         `;
       }).join('');
     }
+  }
+
+  function renderTeamManagement(teamData) {
+    const pendingTbody = document.getElementById('pendingApprovalsTableBody');
+    const pendingCards = document.getElementById('pendingApprovalsCardsContainer');
+    const pendingCount = document.getElementById('pendingApprovalsCount');
+
+    const activeTbody = document.getElementById('activeAdminsTableBody');
+    const activeCards = document.getElementById('activeAdminsCardsContainer');
+    const activeCount = document.getElementById('activeAdminsCount');
+
+    const rawAdmins = teamData.admins || [];
+    const pendingInvs = teamData.pendingInvitations || [];
+
+    const pendingList = pendingInvs.length > 0
+      ? pendingInvs
+      : rawAdmins.filter(a => a.status === 'pending');
+
+    const activeList = rawAdmins.filter(a => a.status === 'active' || (a.clerk_user_id && a.status !== 'revoked' && a.status !== 'pending'));
+
+    if (pendingCount) pendingCount.textContent = `${pendingList.length} pending`;
+    if (activeCount) activeCount.textContent = `${activeList.length} active`;
+
+    // 1. Render Pending Approvals
+    if (pendingList.length === 0) {
+      const emptyPending = '<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">No pending administrator pre-approvals.</td></tr>';
+      if (pendingTbody) pendingTbody.innerHTML = emptyPending;
+      if (pendingCards) pendingCards.innerHTML = '<div class="p-6 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 italic shadow-xs">No pending administrator pre-approvals.</div>';
+    } else {
+      if (pendingTbody) {
+        pendingTbody.innerHTML = pendingList.map(p => {
+          const name = p.full_name || 'Approved Administrator';
+          const email = p.email || p.approved_email || '';
+          const role = p.role === 'super_admin' ? 'Super Admin' : 'Admin';
+          const createdAt = p.created_at ? new Date(p.created_at).toLocaleDateString() : 'N/A';
+          return `
+            <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
+              <td class="px-6 py-4 font-bold text-[#172B36]">${escapeHtml(name)}</td>
+              <td class="px-6 py-4 font-mono text-xs text-slate-600">${escapeHtml(email)}</td>
+              <td class="px-6 py-4"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 uppercase">${escapeHtml(role)}</span></td>
+              <td class="px-6 py-4 font-mono text-xs text-slate-500">${escapeHtml(createdAt)}</td>
+              <td class="px-6 py-4"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 uppercase">Pending Verification</span></td>
+              <td class="px-6 py-4 text-right">
+                <button type="button" class="btn-revoke-invitation px-2.5 py-1 rounded-lg text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 cursor-pointer transition-all" data-id="${p.id}" data-email="${escapeHtml(email)}">
+                  <i class="fa-solid fa-ban mr-1 text-[10px]"></i>Revoke Approval
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      if (pendingCards) {
+        pendingCards.innerHTML = pendingList.map(p => {
+          const name = p.full_name || 'Approved Administrator';
+          const email = p.email || p.approved_email || '';
+          const role = p.role === 'super_admin' ? 'Super Admin' : 'Admin';
+          const createdAt = p.created_at ? new Date(p.created_at).toLocaleDateString() : 'N/A';
+          return `
+            <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs space-y-2.5">
+              <div class="flex items-center justify-between text-xs">
+                <span class="font-bold text-[#172B36]">${escapeHtml(name)}</span>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 uppercase">Pending</span>
+              </div>
+              <div class="font-mono text-xs text-slate-600">${escapeHtml(email)}</div>
+              <div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs text-slate-500">
+                <span>Role: <strong class="text-slate-700">${escapeHtml(role)}</strong></span>
+                <span class="font-mono text-[11px]">${escapeHtml(createdAt)}</span>
+              </div>
+              <button type="button" class="btn-revoke-invitation w-full py-2 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-center cursor-pointer transition-all" data-id="${p.id}" data-email="${escapeHtml(email)}">
+                Revoke Approval
+              </button>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    // 2. Render Active Administrators
+    if (activeList.length === 0) {
+      const emptyActive = '<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">No active administrators found.</td></tr>';
+      if (activeTbody) activeTbody.innerHTML = emptyActive;
+      if (activeCards) activeCards.innerHTML = '<div class="p-6 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 italic shadow-xs">No active administrators found.</div>';
+    } else {
+      if (activeTbody) {
+        activeTbody.innerHTML = activeList.map(a => {
+          const email = a.approved_email || a.email || '';
+          const isOwner = email.toLowerCase() === 'kaziaremon@gmail.com';
+          const name = a.full_name || (isOwner ? 'Kazi Emon' : 'Administrator');
+          const clerkId = a.clerk_user_id || '—';
+          const roleBadge = isOwner
+            ? '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Owner</span>'
+            : '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-blue-50 text-blue-700 border border-blue-200"><i class="fa-solid fa-shield-halved text-[9px]"></i> Admin</span>';
+          const activatedAt = a.activated_at ? new Date(a.activated_at).toLocaleDateString() : (a.created_at ? new Date(a.created_at).toLocaleDateString() : 'N/A');
+
+          const actionHtml = isOwner
+            ? '<span class="px-2.5 py-1 rounded-lg text-xs font-bold text-emerald-800 bg-emerald-100 border border-emerald-300"><i class="fa-solid fa-shield mr-1"></i>Founding Super Admin</span>'
+            : `<button type="button" class="btn-revoke-admin-access px-2.5 py-1 rounded-lg text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 cursor-pointer transition-all" data-id="${a.id}" data-email="${escapeHtml(email)}" data-name="${escapeHtml(name)}"><i class="fa-solid fa-user-xmark mr-1 text-[10px]"></i>Revoke Admin Access</button>`;
+
+          return `
+            <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
+              <td class="px-6 py-4 font-bold text-[#172B36]">${escapeHtml(name)}</td>
+              <td class="px-6 py-4 font-mono text-xs text-slate-600">${escapeHtml(email)}</td>
+              <td class="px-6 py-4 font-mono text-[11px] text-slate-400">${escapeHtml(clerkId)}</td>
+              <td class="px-6 py-4">${roleBadge}</td>
+              <td class="px-6 py-4 font-mono text-xs text-slate-500">${escapeHtml(activatedAt)}</td>
+              <td class="px-6 py-4 text-right">${actionHtml}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      if (activeCards) {
+        activeCards.innerHTML = activeList.map(a => {
+          const email = a.approved_email || a.email || '';
+          const isOwner = email.toLowerCase() === 'kaziaremon@gmail.com';
+          const name = a.full_name || (isOwner ? 'Kazi Emon' : 'Administrator');
+          const clerkId = a.clerk_user_id || '—';
+          const activatedAt = a.activated_at ? new Date(a.activated_at).toLocaleDateString() : (a.created_at ? new Date(a.created_at).toLocaleDateString() : 'N/A');
+
+          return `
+            <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs space-y-2.5">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-[#172B36] text-sm">${escapeHtml(name)}</span>
+                ${isOwner
+                  ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">Owner</span>'
+                  : '<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-blue-50 text-blue-700 border border-blue-200">Admin</span>'
+                }
+              </div>
+              <div class="font-mono text-xs text-slate-600">${escapeHtml(email)}</div>
+              <div class="text-[10px] font-mono text-slate-400">${escapeHtml(clerkId)}</div>
+              <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                <span>Active since: ${escapeHtml(activatedAt)}</span>
+                ${!isOwner ? `
+                  <button type="button" class="btn-revoke-admin-access px-3 py-1.5 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 cursor-pointer" data-id="${a.id}" data-email="${escapeHtml(email)}" data-name="${escapeHtml(name)}">
+                    Revoke Access
+                  </button>
+                ` : '<span class="text-xs font-bold text-emerald-700">Protected</span>'}
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    // Attach listeners for Revoke Pre-Approval
+    document.querySelectorAll('.btn-revoke-invitation').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.id;
+        const email = btn.dataset.email;
+        if (!confirm(`Are you sure you want to revoke administrator pre-approval for ${email}?`)) return;
+
+        setBtnLoading(btn, true, 'Revoking...');
+        const res = await apiFetch('/portal/admin/team/revoke', {
+          method: 'POST',
+          body: JSON.stringify({ invitationId: id, email })
+        });
+        setBtnLoading(btn, false);
+
+        if (res.ok && res.data && res.data.success) {
+          showToast(res.data.message || `Pre-approval for ${email} revoked.`, 'success');
+          loadTeamData();
+        } else {
+          showToast(res.data?.error || 'Failed to revoke pre-approval.', 'error');
+        }
+      });
+    });
+
+    // Attach listeners for Revoke Admin Access
+    document.querySelectorAll('.btn-revoke-admin-access').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.id;
+        const email = btn.dataset.email;
+        const name = btn.dataset.name;
+        openRoleChangeModal(id, 'client', email, name);
+      });
+    });
   }
 
   // =========================================================================

@@ -783,8 +783,8 @@
       return;
     }
 
-    if (password.length < 15) {
-      showPortalAlert('Password must be at least 15 characters long as required for high security standards.', 'error');
+    if (password.length < 8) {
+      showPortalAlert('Password must be at least 8 characters long.', 'error');
       return;
     }
 
@@ -974,8 +974,8 @@
       return;
     }
 
-    if (newPassword.length < 15) {
-      showPortalAlert('New password must be at least 15 characters long.', 'error');
+    if (newPassword.length < 8) {
+      showPortalAlert('New password must be at least 8 characters long.', 'error');
       return;
     }
 
@@ -1550,8 +1550,8 @@
       return;
     }
 
-    if (password.length < 15) {
-      showPortalAlert('Admin password must be at least 15 characters long.', 'error');
+    if (password.length < 8) {
+      showPortalAlert('Admin password must be at least 8 characters long.', 'error');
       return;
     }
 
@@ -1674,8 +1674,8 @@
       return;
     }
 
-    if (newPassword.length < 15) {
-      showPortalAlert('New password must be at least 15 characters long.', 'error');
+    if (newPassword.length < 8) {
+      showPortalAlert('New password must be at least 8 characters long.', 'error');
       return;
     }
 
