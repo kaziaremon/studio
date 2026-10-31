@@ -1508,8 +1508,12 @@
   // =========================================================================
   async function loadTeamData() {
     const tbody = document.getElementById('userDirectoryTableBody');
+    const cardsContainer = document.getElementById('adminUserCardsContainer');
     if (tbody) {
-      tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-6 text-center text-slate-500 italic">Loading user directory...</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic"><i class="fa-solid fa-circle-notch fa-spin mr-2 text-[#147D64]"></i>Loading users directory...</td></tr>';
+    }
+    if (cardsContainer) {
+      cardsContainer.innerHTML = '<div class="p-6 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 italic shadow-xs"><i class="fa-solid fa-circle-notch fa-spin mr-2 text-[#147D64]"></i>Loading users directory...</div>';
     }
 
     try {
@@ -1523,19 +1527,30 @@
 
       if (usersRes && usersRes.ok && usersRes.data && usersRes.data.data) {
         state.usersCache = usersRes.data.data.users || [];
-        renderUserDirectory();
+        try {
+          renderUserDirectory();
+        } catch (renderErr) {
+          console.error('renderUserDirectory error:', renderErr);
+        }
       } else {
         const errorMsg = usersRes?.data?.error || (usersSettled.status === 'rejected' ? 'Connection error' : 'Failed to load users directory.');
-        if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-6 text-center text-rose-500 font-medium">${errorMsg}</td></tr>`;
+        if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-6 text-center text-rose-500 font-medium">${escapeHtml(errorMsg)}</td></tr>`;
+        if (cardsContainer) cardsContainer.innerHTML = `<div class="p-6 rounded-2xl bg-white border border-rose-200 text-center text-xs text-rose-500 font-medium shadow-xs">${escapeHtml(errorMsg)}</div>`;
       }
 
       if (historyRes && historyRes.ok && historyRes.data) {
         state.roleHistoryCache = historyRes.data.data || [];
-        renderRoleHistory();
+        try {
+          renderRoleHistory();
+        } catch (histErr) {
+          console.error('renderRoleHistory error:', histErr);
+        }
       }
     } catch (err) {
       console.error('User Directory Fetch Error:', err);
-      if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-6 text-center text-rose-500 font-medium">Failed to load user directory. Please retry.</td></tr>';
+      const failMsg = 'Failed to load user directory. Please retry.';
+      if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-6 text-center text-rose-500 font-medium">${failMsg}</td></tr>`;
+      if (cardsContainer) cardsContainer.innerHTML = `<div class="p-6 rounded-2xl bg-white border border-rose-200 text-center text-xs text-rose-500 font-medium shadow-xs">${failMsg}</div>`;
     }
   }
 
@@ -1543,17 +1558,23 @@
     const tbody = document.getElementById('userDirectoryTableBody');
     const countEl = document.getElementById('userDirectoryCount');
     const cardsContainer = document.getElementById('adminUserCardsContainer');
-    if (!tbody) return;
+    if (!tbody && !cardsContainer) return;
 
     const query = (document.getElementById('userDirectorySearch')?.value || '').toLowerCase().trim();
     const roleFilter = document.getElementById('userDirectoryRoleFilter')?.value || 'all';
     const statusFilter = document.getElementById('userDirectoryStatusFilter')?.value || 'all';
 
     let filtered = state.usersCache.filter(u => {
+      const fullName = (u.full_name || u.fullName || '').toLowerCase();
+      const email = (u.email || '').toLowerCase();
+      const username = (u.username || '').toLowerCase();
+      const clerkId = (u.clerk_user_id || u.clerkUserId || '').toLowerCase();
+
       const matchesQuery = !query || 
-        (u.full_name && u.full_name.toLowerCase().includes(query)) ||
-        (u.email && u.email.toLowerCase().includes(query)) ||
-        (u.username && u.username.toLowerCase().includes(query));
+        fullName.includes(query) ||
+        email.includes(query) ||
+        username.includes(query) ||
+        clerkId.includes(query);
 
       const matchesRole = roleFilter === 'all' || 
         (roleFilter === 'client' && u.role === 'client') ||
@@ -1569,81 +1590,92 @@
 
     if (filtered.length === 0) {
       const emptyMsg = '<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">No users match the search filter.</td></tr>';
-      tbody.innerHTML = emptyMsg;
-      if (cardsContainer) cardsContainer.innerHTML = '<div class="p-6 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 italic">No users match search criteria.</div>';
+      if (tbody) tbody.innerHTML = emptyMsg;
+      if (cardsContainer) cardsContainer.innerHTML = '<div class="p-6 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 italic shadow-xs">No users match search criteria.</div>';
       return;
     }
 
     // Desktop Table
-    tbody.innerHTML = filtered.map(u => {
-      const isOwner = u.email && u.email.toLowerCase() === 'kaziaremon@gmail.com';
-      const initials = (u.full_name || u.email || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+    if (tbody) {
+      tbody.innerHTML = filtered.map(u => {
+        const email = u.email || '';
+        const isOwner = email.toLowerCase() === 'kaziaremon@gmail.com';
+        const fullName = u.full_name || u.fullName || 'Registered User';
+        const initials = (fullName || email || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+        const clerkId = u.clerk_user_id || u.clerkUserId || '';
+        const companyName = u.company_name || u.companyName || '';
+        const createdAt = u.created_at || u.createdAt;
 
-      let roleBadge = '';
-      if (isOwner || u.role === 'owner' || u.role === 'super_admin') {
-        roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-crown text-[9px]"></i> Owner</span>';
-      } else if (u.role === 'admin') {
-        roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-blue-50 text-blue-700 border border-blue-200"><i class="fa-solid fa-shield-halved text-[9px]"></i> Admin</span>';
-      } else {
-        roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-slate-100 text-slate-700 border border-slate-200"><i class="fa-solid fa-user text-[9px]"></i> Client</span>';
-      }
+        let roleBadge = '';
+        if (isOwner || u.role === 'owner' || u.role === 'super_admin') {
+          roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-crown text-[9px]"></i> Owner</span>';
+        } else if (u.role === 'admin') {
+          roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-blue-50 text-blue-700 border border-blue-200"><i class="fa-solid fa-shield-halved text-[9px]"></i> Admin</span>';
+        } else {
+          roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-slate-100 text-slate-700 border border-slate-200"><i class="fa-solid fa-user text-[9px]"></i> Client</span>';
+        }
 
-      const statusBadge = u.status === 'active' 
-        ? '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase text-emerald-700 bg-emerald-50 border border-emerald-200">Active</span>'
-        : '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase text-amber-700 bg-amber-50 border border-amber-200">Suspended</span>';
+        const statusBadge = u.status === 'active' 
+          ? '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase text-emerald-700 bg-emerald-50 border border-emerald-200">Active</span>'
+          : '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase text-amber-700 bg-amber-50 border border-amber-200">Suspended</span>';
 
-      let actionsHtml = '';
-      if (isOwner) {
-        actionsHtml = '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-mono font-bold text-emerald-700 bg-emerald-50 border border-emerald-200"><i class="fa-solid fa-lock text-[10px]"></i> Founding Owner</span>';
-      } else if (u.status === 'suspended') {
-        actionsHtml = `
-          <div class="flex items-center justify-end gap-1.5">
-            ${u.role === 'client' ? `<button type="button" class="btn-user-view-details px-2.5 py-1 rounded-lg text-xs font-bold bg-white hover:bg-slate-50 text-[#172B36] border border-[#E3E9EF] cursor-pointer" data-id="${u.id}"><i class="fa-solid fa-eye mr-1 text-brand-whiz"></i>Details</button>` : ''}
-            <button type="button" class="btn-user-reactivate px-2.5 py-1 rounded-lg text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 cursor-pointer" data-id="${u.id}"><i class="fa-solid fa-play mr-1"></i>Reactivate</button>
-            <button type="button" class="btn-user-delete px-2.5 py-1 rounded-lg text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 cursor-pointer" data-id="${u.id}" data-name="${u.full_name || u.email}"><i class="fa-solid fa-trash-can mr-1"></i>Delete</button>
-          </div>
-        `;
-      } else {
-        const roleBtn = u.role === 'admin'
-          ? `<button type="button" class="btn-role-action px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition-all cursor-pointer" data-id="${u.id}" data-role="client" data-email="${u.email}" data-name="${u.full_name || u.email}"><i class="fa-solid fa-arrow-down mr-1 text-[10px]"></i>Demote</button>`
-          : `<button type="button" class="btn-role-action px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition-all cursor-pointer" data-id="${u.id}" data-role="admin" data-email="${u.email}" data-name="${u.full_name || u.email}"><i class="fa-solid fa-arrow-up mr-1 text-[10px]"></i>Promote</button>`;
-
-        actionsHtml = `
-          <div class="flex items-center justify-end gap-1.5">
-            ${roleBtn}
-            <button type="button" class="btn-user-suspend px-2.5 py-1 rounded-lg text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 cursor-pointer" data-id="${u.id}"><i class="fa-solid fa-pause mr-1"></i>Suspend</button>
-          </div>
-        `;
-      }
-
-      return `
-        <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
-          <td class="px-6 py-4">
-            <div class="flex items-center space-x-3">
-              <div class="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-xs text-[#172B36] uppercase shrink-0">
-                ${initials}
-              </div>
-              <div class="min-w-0">
-                <div class="font-bold text-[#172B36] truncate">${u.full_name || 'Registered User'}</div>
-                <div class="text-xs text-slate-500 font-mono truncate">${u.email}</div>
-                ${u.clerk_user_id ? `<div class="text-[10px] text-slate-400 font-mono truncate mt-0.5">${u.clerk_user_id}</div>` : ''}
-              </div>
+        let actionsHtml = '';
+        if (isOwner) {
+          actionsHtml = '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-mono font-bold text-emerald-700 bg-emerald-50 border border-emerald-200"><i class="fa-solid fa-lock text-[10px]"></i> Founding Owner</span>';
+        } else if (u.status === 'suspended') {
+          actionsHtml = `
+            <div class="flex items-center justify-end gap-1.5">
+              ${u.role === 'client' ? `<button type="button" class="btn-user-view-details px-2.5 py-1 rounded-lg text-xs font-bold bg-white hover:bg-slate-50 text-[#172B36] border border-[#E3E9EF] cursor-pointer" data-id="${u.id}"><i class="fa-solid fa-eye mr-1 text-brand-whiz"></i>Details</button>` : ''}
+              <button type="button" class="btn-user-reactivate px-2.5 py-1 rounded-lg text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 cursor-pointer" data-id="${u.id}"><i class="fa-solid fa-play mr-1"></i>Reactivate</button>
+              <button type="button" class="btn-user-delete px-2.5 py-1 rounded-lg text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 cursor-pointer" data-id="${u.id}" data-name="${escapeHtml(fullName)}"><i class="fa-solid fa-trash-can mr-1"></i>Delete</button>
             </div>
-          </td>
-          <td class="px-6 py-4">${roleBadge}</td>
-          <td class="px-6 py-4">${statusBadge}</td>
-          <td class="px-6 py-4 text-slate-600 text-xs">${u.company_name || '<span class="text-slate-400 italic">None</span>'}</td>
-          <td class="px-6 py-4 text-slate-500 text-xs font-mono">${u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}</td>
-          <td class="px-6 py-4 text-right">${actionsHtml}</td>
-        </tr>
-      `;
-    }).join('');
+          `;
+        } else {
+          const roleBtn = u.role === 'admin'
+            ? `<button type="button" class="btn-role-action px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition-all cursor-pointer" data-id="${u.id}" data-role="client" data-email="${escapeHtml(email)}" data-name="${escapeHtml(fullName)}"><i class="fa-solid fa-arrow-down mr-1 text-[10px]"></i>Demote</button>`
+            : `<button type="button" class="btn-role-action px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition-all cursor-pointer" data-id="${u.id}" data-role="admin" data-email="${escapeHtml(email)}" data-name="${escapeHtml(fullName)}"><i class="fa-solid fa-arrow-up mr-1 text-[10px]"></i>Promote</button>`;
+
+          actionsHtml = `
+            <div class="flex items-center justify-end gap-1.5">
+              ${roleBtn}
+              <button type="button" class="btn-user-suspend px-2.5 py-1 rounded-lg text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 cursor-pointer" data-id="${u.id}"><i class="fa-solid fa-pause mr-1"></i>Suspend</button>
+            </div>
+          `;
+        }
+
+        return `
+          <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
+            <td class="px-6 py-4">
+              <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-xs text-[#172B36] uppercase shrink-0">
+                  ${escapeHtml(initials)}
+                </div>
+                <div class="min-w-0">
+                  <div class="font-bold text-[#172B36] truncate">${escapeHtml(fullName)}</div>
+                  <div class="text-xs text-slate-500 font-mono truncate">${escapeHtml(email)}</div>
+                  ${clerkId ? `<div class="text-[10px] text-slate-400 font-mono truncate mt-0.5">${escapeHtml(clerkId)}</div>` : ''}
+                </div>
+              </div>
+            </td>
+            <td class="px-6 py-4">${roleBadge}</td>
+            <td class="px-6 py-4">${statusBadge}</td>
+            <td class="px-6 py-4 text-slate-600 text-xs">${companyName ? escapeHtml(companyName) : '<span class="text-slate-400 italic">None</span>'}</td>
+            <td class="px-6 py-4 text-slate-500 text-xs font-mono">${createdAt ? new Date(createdAt).toLocaleDateString() : 'N/A'}</td>
+            <td class="px-6 py-4 text-right">${actionsHtml}</td>
+          </tr>
+        `;
+      }).join('');
+    }
 
     // Mobile Cards
     if (cardsContainer) {
       cardsContainer.innerHTML = filtered.map(u => {
-        const isOwner = u.email && u.email.toLowerCase() === 'kaziaremon@gmail.com';
-        const initials = (u.full_name || u.email || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+        const email = u.email || '';
+        const isOwner = email.toLowerCase() === 'kaziaremon@gmail.com';
+        const fullName = u.full_name || u.fullName || 'Registered User';
+        const initials = (fullName || email || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+        const companyName = u.company_name || u.companyName || '';
+        const createdAt = u.created_at || u.createdAt;
 
         let roleBadge = '';
         if (isOwner || u.role === 'owner' || u.role === 'super_admin') {
@@ -1663,11 +1695,11 @@
             <div class="flex items-start justify-between gap-2">
               <div class="flex items-center space-x-3 min-w-0">
                 <div class="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-xs text-[#172B36] uppercase shrink-0">
-                  ${initials}
+                  ${escapeHtml(initials)}
                 </div>
                 <div class="min-w-0">
-                  <h4 class="text-sm font-black text-[#172B36] truncate">${u.full_name || 'Registered User'}</h4>
-                  <p class="text-xs font-mono text-slate-500 truncate">${u.email}</p>
+                  <h4 class="text-sm font-black text-[#172B36] truncate">${escapeHtml(fullName)}</h4>
+                  <p class="text-xs font-mono text-slate-500 truncate">${escapeHtml(email)}</p>
                 </div>
               </div>
               <div class="shrink-0 flex flex-col items-end gap-1">
@@ -1677,15 +1709,15 @@
             </div>
 
             <div class="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100">
-              <span>Company: <strong class="text-slate-700">${u.company_name || 'None'}</strong></span>
-              <span class="font-mono text-[11px]">${u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}</span>
+              <span>Company: <strong class="text-slate-700">${companyName ? escapeHtml(companyName) : 'None'}</strong></span>
+              <span class="font-mono text-[11px]">${createdAt ? new Date(createdAt).toLocaleDateString() : 'N/A'}</span>
             </div>
 
             ${!isOwner ? `
               <div class="pt-2 border-t border-slate-100 flex items-center gap-2">
                 ${u.role === 'admin'
-                  ? `<button type="button" class="btn-role-action flex-1 py-2 rounded-xl text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 text-center cursor-pointer" data-id="${u.id}" data-role="client" data-email="${u.email}" data-name="${u.full_name || u.email}">Demote to Client</button>`
-                  : `<button type="button" class="btn-role-action flex-1 py-2 rounded-xl text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 text-center cursor-pointer" data-id="${u.id}" data-role="admin" data-email="${u.email}" data-name="${u.full_name || u.email}">Promote to Admin</button>`
+                  ? `<button type="button" class="btn-role-action flex-1 py-2 rounded-xl text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 text-center cursor-pointer" data-id="${u.id}" data-role="client" data-email="${escapeHtml(email)}" data-name="${escapeHtml(fullName)}">Demote to Client</button>`
+                  : `<button type="button" class="btn-role-action flex-1 py-2 rounded-xl text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 text-center cursor-pointer" data-id="${u.id}" data-role="admin" data-email="${escapeHtml(email)}" data-name="${escapeHtml(fullName)}">Promote to Admin</button>`
                 }
                 ${u.status === 'suspended'
                   ? `<button type="button" class="btn-user-reactivate px-3 py-2 rounded-xl text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 cursor-pointer" data-id="${u.id}">Reactivate</button>`
@@ -1760,6 +1792,87 @@
         }
       });
     });
+  }
+
+  function renderRoleHistory() {
+    const tbody = document.getElementById('roleHistoryTableBody');
+    const cardsContainer = document.getElementById('roleHistoryCardsContainer');
+    if (!tbody) return;
+
+    const history = state.roleHistoryCache || [];
+
+    if (history.length === 0) {
+      const emptyMsg = '<tr><td colspan="6" class="px-6 py-6 text-center text-slate-500 italic">No role transition records yet.</td></tr>';
+      tbody.innerHTML = emptyMsg;
+      if (cardsContainer) {
+        cardsContainer.innerHTML = '<div class="p-6 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 italic shadow-xs">No role transition records yet.</div>';
+      }
+      return;
+    }
+
+    // Desktop Table
+    tbody.innerHTML = history.map(h => {
+      const dateStr = h.action_timestamp ? new Date(h.action_timestamp).toLocaleString('en-US', {
+        month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
+      }) : '—';
+      const target = h.target_email || h.target_name || h.target_clerk_user_id || 'User';
+      const actor = h.actor_clerk_user_id ? (h.actor_clerk_user_id.startsWith('usr_owner') ? 'Super Admin' : h.actor_clerk_user_id) : 'System';
+      const prevRole = h.previous_role || 'client';
+      const nextRole = h.new_role || 'admin';
+      const result = h.action_result || 'success';
+      const reason = h.reason || 'Administrative role update';
+
+      return `
+        <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
+          <td class="px-6 py-4 font-mono text-[11px] text-slate-500">${escapeHtml(dateStr)}</td>
+          <td class="px-6 py-4 font-bold text-[#172B36] truncate max-w-[200px]">${escapeHtml(target)}</td>
+          <td class="px-6 py-4">
+            <span class="inline-flex items-center gap-1.5 text-xs font-semibold">
+              <span class="capitalize px-2 py-0.5 rounded bg-slate-100 text-slate-700">${escapeHtml(prevRole)}</span>
+              <i class="fa-solid fa-arrow-right text-[10px] text-slate-400"></i>
+              <span class="capitalize px-2 py-0.5 rounded font-bold ${nextRole === 'admin' || nextRole === 'owner' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-700'}">${escapeHtml(nextRole)}</span>
+            </span>
+          </td>
+          <td class="px-6 py-4 text-slate-600 text-xs">${escapeHtml(actor)}</td>
+          <td class="px-6 py-4 text-slate-500 text-xs truncate max-w-[180px]">${escapeHtml(reason)}</td>
+          <td class="px-6 py-4">
+            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${result === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}">${escapeHtml(result)}</span>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    // Mobile Cards
+    if (cardsContainer) {
+      cardsContainer.innerHTML = history.map(h => {
+        const dateStr = h.action_timestamp ? new Date(h.action_timestamp).toLocaleString('en-US', {
+          month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
+        }) : '—';
+        const target = h.target_email || h.target_name || h.target_clerk_user_id || 'User';
+        const prevRole = h.previous_role || 'client';
+        const nextRole = h.new_role || 'admin';
+        const result = h.action_result || 'success';
+        const reason = h.reason || 'Administrative role update';
+
+        return `
+          <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs space-y-2.5">
+            <div class="flex items-center justify-between text-xs">
+              <span class="font-mono text-[11px] text-slate-500">${escapeHtml(dateStr)}</span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${result === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}">${escapeHtml(result)}</span>
+            </div>
+            <div class="text-xs font-bold text-[#172B36] truncate">${escapeHtml(target)}</div>
+            <div class="flex items-center gap-1.5 text-xs">
+              <span class="capitalize px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[11px]">${escapeHtml(prevRole)}</span>
+              <i class="fa-solid fa-arrow-right text-[9px] text-slate-400"></i>
+              <span class="capitalize px-2 py-0.5 rounded font-bold text-[11px] ${nextRole === 'admin' || nextRole === 'owner' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-700'}">${escapeHtml(nextRole)}</span>
+            </div>
+            <div class="text-[11px] text-slate-500 pt-1.5 border-t border-slate-100">
+              <span>Reason: <strong>${escapeHtml(reason)}</strong></span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
   }
 
   // =========================================================================
@@ -3132,9 +3245,17 @@
     });
 
     // Refresh User Directory Button
-    document.getElementById('btnRefreshUserDir')?.addEventListener('click', () => {
-      loadTeamData();
-      showToast('Refreshing directory...', 'info');
+    document.getElementById('btnRefreshUserDir')?.addEventListener('click', async () => {
+      const icon = document.getElementById('btnRefreshUserDirIcon');
+      if (icon) icon.classList.add('fa-spin');
+      try {
+        await loadTeamData();
+        showToast('User directory refreshed.', 'success');
+      } catch (e) {
+        showToast('Failed to refresh user directory.', 'error');
+      } finally {
+        if (icon) icon.classList.remove('fa-spin');
+      }
     });
 
     // Search and Filter Listeners

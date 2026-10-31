@@ -131,83 +131,77 @@
         </a>
       </div>
 
-      <!-- Right: User Avatar Trigger + Interactive Dropdown -->
-      <div class="relative">
-        <button type="button" id="userMenuBtn" class="flex items-center space-x-2 p-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 active:bg-slate-200 border border-slate-200 text-[#172B36] transition-all cursor-pointer touch-manipulation select-none" aria-expanded="false" aria-haspopup="true">
-          <div class="w-8 h-8 rounded-lg bg-[#147D64]/15 border border-[#147D64]/30 flex items-center justify-center font-bold text-xs text-[#147D64] admin-display-initials select-none">
-            SA
-          </div>
-          <span class="hidden md:inline-block text-xs font-bold admin-display-name">Administrator</span>
-          <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform duration-200" id="userMenuChevron"></i>
+      <!-- Right: Mobile Refresh + User Avatar Trigger + Interactive Dropdown -->
+      <div class="flex items-center space-x-2 relative">
+        <button type="button" id="mobileQuickRefreshBtn" class="md:hidden w-10 h-10 rounded-xl bg-slate-50 hover:bg-slate-100 active:bg-slate-200 border border-slate-200 flex items-center justify-center text-slate-600 hover:text-[#147D64] transition-colors cursor-pointer touch-manipulation" aria-label="Refresh Workspace" title="Refresh Current Tab">
+          <i class="fa-solid fa-arrows-rotate text-xs" id="mobileQuickRefreshIcon"></i>
         </button>
+        <span id="mobileSubheaderTitle" class="hidden"></span>
 
-        <!-- Functional Profile Dropdown Menu (Phase 2 Requirement) -->
-        <div id="userAccountDropdown" class="hidden absolute right-0 mt-2 w-72 rounded-2xl bg-white border border-[#E3E9EF] shadow-2xl p-2.5 z-50 animate-in fade-in zoom-in-95 duration-150">
-          <!-- User Profile Summary Header -->
-          <div class="p-3 rounded-xl bg-slate-50 border border-slate-100 mb-2">
-            <div class="flex items-center space-x-3">
-              <div class="w-10 h-10 rounded-xl bg-[#147D64]/15 border border-[#147D64]/30 flex items-center justify-center font-bold text-sm text-[#147D64] admin-display-initials select-none">
-                SA
+        <div class="relative">
+          <button type="button" id="userMenuBtn" class="flex items-center space-x-2 p-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 active:bg-slate-200 border border-slate-200 text-[#172B36] transition-all cursor-pointer touch-manipulation select-none" aria-expanded="false" aria-haspopup="true">
+            <div class="w-8 h-8 rounded-lg bg-[#147D64]/15 border border-[#147D64]/30 flex items-center justify-center font-bold text-xs text-[#147D64] admin-display-initials select-none">
+              SA
+            </div>
+            <span class="hidden md:inline-block text-xs font-bold admin-display-name">Administrator</span>
+            <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform duration-200" id="userMenuChevron"></i>
+          </button>
+
+          <!-- Functional Profile Dropdown Menu (Phase 2 Requirement) -->
+          <div id="userAccountDropdown" class="hidden absolute right-0 mt-2 w-72 rounded-2xl bg-white border border-[#E3E9EF] shadow-2xl p-2.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+            <!-- User Profile Summary Header -->
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-100 mb-2">
+              <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-[#147D64]/15 border border-[#147D64]/30 flex items-center justify-center font-bold text-sm text-[#147D64] admin-display-initials select-none">
+                  SA
+                </div>
+                <div class="min-w-0 flex-1">
+                  <p class="text-xs font-bold text-[#172B36] truncate admin-display-name">Administrator</p>
+                  <p class="text-[11px] text-slate-500 font-mono truncate admin-display-username">@admin</p>
+                </div>
               </div>
-              <div class="min-w-0 flex-1">
-                <p class="text-xs font-bold text-[#172B36] truncate admin-display-name">Administrator</p>
-                <p class="text-[11px] text-slate-500 font-mono truncate admin-display-username">@admin</p>
+              <div class="mt-2.5 pt-2 border-t border-slate-200/70 flex items-center justify-between text-[11px]">
+                <span class="text-slate-500 font-medium">Session Role</span>
+                <span class="font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-[#147D64] border border-emerald-200 text-[10px] uppercase" id="dropdownRoleBadge">Super Admin</span>
               </div>
             </div>
-            <div class="mt-2.5 pt-2 border-t border-slate-200/70 flex items-center justify-between text-[11px]">
-              <span class="text-slate-500 font-medium">Session Role</span>
-              <span class="font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-[#147D64] border border-emerald-200 text-[10px] uppercase" id="dropdownRoleBadge">Super Admin</span>
+
+            <!-- Navigation Links -->
+            <div class="space-y-1 text-xs text-slate-700">
+              <button type="button" id="dropdownLinkProfile" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 hover:text-[#172B36] active:bg-slate-100 transition-colors text-left cursor-pointer">
+                <i class="fa-solid fa-user-circle w-4 text-slate-400 text-sm"></i>
+                <div class="flex-1">
+                  <p class="font-semibold text-[#172B36]">My Profile</p>
+                  <p class="text-[10px] text-slate-400">View identity &amp; account info</p>
+                </div>
+              </button>
+              <button type="button" id="dropdownLinkSettings" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 hover:text-[#172B36] active:bg-slate-100 transition-colors text-left cursor-pointer">
+                <i class="fa-solid fa-sliders w-4 text-slate-400 text-sm"></i>
+                <div class="flex-1">
+                  <p class="font-semibold text-[#172B36]">Account Settings</p>
+                  <p class="text-[10px] text-slate-400">User preferences &amp; workspace</p>
+                </div>
+              </button>
+              <button type="button" id="dropdownLinkSecurity" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 hover:text-[#172B36] active:bg-slate-100 transition-colors text-left cursor-pointer">
+                <i class="fa-solid fa-shield-halved w-4 text-slate-400 text-sm"></i>
+                <div class="flex-1">
+                  <p class="font-semibold text-[#172B36]">Account Security</p>
+                  <p class="text-[10px] text-slate-400">Clerk password &amp; sessions</p>
+                </div>
+              </button>
             </div>
-          </div>
 
-          <!-- Navigation Links -->
-          <div class="space-y-1 text-xs text-slate-700">
-            <button type="button" id="dropdownLinkProfile" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 hover:text-[#172B36] active:bg-slate-100 transition-colors text-left cursor-pointer">
-              <i class="fa-solid fa-user-circle w-4 text-slate-400 text-sm"></i>
-              <div class="flex-1">
-                <p class="font-semibold text-[#172B36]">My Profile</p>
-                <p class="text-[10px] text-slate-400">View identity &amp; account info</p>
-              </div>
-            </button>
-            <button type="button" id="dropdownLinkSettings" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 hover:text-[#172B36] active:bg-slate-100 transition-colors text-left cursor-pointer">
-              <i class="fa-solid fa-sliders w-4 text-slate-400 text-sm"></i>
-              <div class="flex-1">
-                <p class="font-semibold text-[#172B36]">Account Settings</p>
-                <p class="text-[10px] text-slate-400">User preferences &amp; workspace</p>
-              </div>
-            </button>
-            <button type="button" id="dropdownLinkSecurity" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 hover:text-[#172B36] active:bg-slate-100 transition-colors text-left cursor-pointer">
-              <i class="fa-solid fa-shield-halved w-4 text-slate-400 text-sm"></i>
-              <div class="flex-1">
-                <p class="font-semibold text-[#172B36]">Account Security</p>
-                <p class="text-[10px] text-slate-400">Clerk password &amp; sessions</p>
-              </div>
-            </button>
-          </div>
-
-          <!-- Sign Out Action -->
-          <div class="mt-2 pt-2 border-t border-[#E3E9EF]">
-            <button type="button" class="btn-admin-signout w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-rose-600 hover:bg-rose-50 active:bg-rose-100 transition-colors text-left cursor-pointer font-bold">
-              <i class="fa-solid fa-arrow-right-from-bracket w-4 text-rose-500 text-sm"></i>
-              <span>Sign Out of Console</span>
-            </button>
+            <!-- Sign Out Action -->
+            <div class="mt-2 pt-2 border-t border-[#E3E9EF]">
+              <button type="button" class="btn-admin-signout w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-rose-600 hover:bg-rose-50 active:bg-rose-100 transition-colors text-left cursor-pointer font-bold">
+                <i class="fa-solid fa-arrow-right-from-bracket w-4 text-rose-500 text-sm"></i>
+                <span>Sign Out of Console</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
     </header>
-
-    <!-- MOBILE SUBHEADER SECTION (Phase 2: Separate page title section below header) -->
-    <div class="md:hidden bg-white border-b border-[#E3E9EF] px-4 py-3 flex items-center justify-between shrink-0 shadow-xs z-20">
-      <div class="min-w-0 flex-1">
-        <span class="text-[10px] font-bold uppercase tracking-wider text-[#147D64]">Admin Workspace</span>
-        <h2 id="mobileSubheaderTitle" class="text-base font-black text-[#172B36] truncate leading-tight capitalize">Overview & KPIs</h2>
-      </div>
-      <div class="flex items-center space-x-2 shrink-0" id="mobileSubheaderActions">
-        <button type="button" id="mobileQuickRefreshBtn" class="w-8 h-8 rounded-xl bg-slate-50 border border-[#E3E9EF] flex items-center justify-center text-slate-600 hover:text-[#147D64] active:bg-slate-100 transition-colors cursor-pointer" title="Refresh Current Tab">
-          <i class="fa-solid fa-arrows-rotate text-xs"></i>
-        </button>
-      </div>
-    </div>
 
     <!-- WORKSPACE BODY (SIDEBAR + MAIN CANVAS) -->
     <div class="flex-1 flex overflow-hidden">
@@ -1288,39 +1282,43 @@
                TAB 8: TEAM & ACCESS (STAFF / ADMINS)
                ================================================================= -->
           <div id="view_team" class="hidden space-y-6">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
-              <div>
-                <h2 class="text-2xl font-black text-[#172B36] tracking-tight">User & Access Management</h2>
-                <p class="text-xs text-slate-500">Manage platform users, roles, and access permissions.</p>
+            <div class="flex flex-col sm:flex-row sm:items-start sm:items-center justify-between gap-4 pb-2">
+              <div class="min-w-0 flex-1">
+                <h2 class="text-2xl sm:text-3xl font-black text-[#172B36] tracking-tight break-words whitespace-normal">User &amp; Access Management</h2>
+                <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Manage platform accounts, administrative permissions, and security roles.</p>
               </div>
-              <div class="flex items-center gap-3">
-                <button type="button" id="btnRefreshUserDir" class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 flex items-center gap-2 cursor-pointer transition-all">
-                  <i class="fa-solid fa-arrows-rotate text-xs text-brand-whiz"></i>
+              <div class="flex items-center gap-2.5 shrink-0 self-start sm:self-auto">
+                <button type="button" id="btnRefreshUserDir" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-white hover:bg-slate-50 text-[#172B36] border border-[#E3E9EF] shadow-xs hover:border-[#147D64]/30 flex items-center gap-2 cursor-pointer transition-all" title="Refresh User Directory">
+                  <i class="fa-solid fa-arrows-rotate text-xs text-[#147D64]" id="btnRefreshUserDirIcon"></i>
                   <span>Refresh Directory</span>
                 </button>
               </div>
             </div>
 
-            <!-- Search & Filter Controls -->
-            <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] backdrop-blur-xl flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-              <div class="relative flex-1">
-                <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500">
-                  <i class="fa-solid fa-magnifying-glass text-xs"></i>
-                </span>
-                <input type="text" id="userDirectorySearch" placeholder="Search by name, email, or username..." class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] placeholder-slate-500 focus:outline-none focus:border-brand-whiz transition-all">
-              </div>
-              <div class="flex items-center gap-2">
-                <select id="userDirectoryRoleFilter" class="px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-slate-600 focus:outline-none focus:border-brand-whiz">
-                  <option value="all">All Roles</option>
-                  <option value="client">Clients Only</option>
-                  <option value="admin">Admins Only</option>
-                  <option value="owner">Owners Only</option>
-                </select>
-                <select id="userDirectoryStatusFilter" class="px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-slate-600 focus:outline-none focus:border-brand-whiz">
-                  <option value="all">All Statuses</option>
-                  <option value="active">Active Accounts</option>
-                  <option value="suspended">Suspended Accounts</option>
-                </select>
+            <!-- Search & Filter Controls (Responsive Grid: 1 col on mobile, 2 col on tablet, 12-col on desktop) -->
+            <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs space-y-3">
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 min-w-0">
+                <div class="sm:col-span-2 lg:col-span-6 relative min-w-0">
+                  <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                    <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                  </span>
+                  <input type="text" id="userDirectorySearch" placeholder="Search by name, email, or ID..." class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] placeholder-slate-400 focus:outline-none focus:border-[#147D64] focus:bg-white transition-all shadow-inner/5">
+                </div>
+                <div class="sm:col-span-1 lg:col-span-3 min-w-0">
+                  <select id="userDirectoryRoleFilter" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs font-semibold text-[#172B36] focus:outline-none focus:border-[#147D64] focus:bg-white transition-all shadow-inner/5 cursor-pointer">
+                    <option value="all">All Roles</option>
+                    <option value="client">Clients Only</option>
+                    <option value="admin">Admins Only</option>
+                    <option value="owner">Owners Only</option>
+                  </select>
+                </div>
+                <div class="sm:col-span-1 lg:col-span-3 min-w-0">
+                  <select id="userDirectoryStatusFilter" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs font-semibold text-[#172B36] focus:outline-none focus:border-[#147D64] focus:bg-white transition-all shadow-inner/5 cursor-pointer">
+                    <option value="all">All Statuses</option>
+                    <option value="active">Active Accounts</option>
+                    <option value="suspended">Suspended Accounts</option>
+                  </select>
+                </div>
               </div>
             </div>
 

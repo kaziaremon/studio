@@ -249,12 +249,19 @@
         </div>
 
         <!-- Right Controls: Desktop Live Sync & Interactive Profile Dropdown -->
-        <div class="flex items-center space-x-2.5">
+        <div class="flex items-center space-x-2 sm:space-x-2.5">
           <!-- Live Sync / Refresh button (Desktop) -->
           <button type="button" id="btnRefreshClientDashboard" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-[#EAF7F1] border border-[#E3E9EF] hover:border-[#147D64]/30 text-[11px] font-bold text-[#172B36] hover:text-[#147D64] transition-all cursor-pointer shadow-xs" title="Synchronize with Cloudflare D1">
             <i class="fa-solid fa-rotate text-xs text-[#147D64]" id="btnRefreshClientIcon"></i>
             <span>Sync Live</span>
           </button>
+
+          <!-- Live Sync button (Mobile) -->
+          <button type="button" id="btnRefreshClientDashboardMobile" class="sm:hidden w-10 h-10 rounded-xl bg-slate-50 hover:bg-[#EAF7F1] border border-[#E3E9EF] flex items-center justify-center text-[#147D64] transition-all cursor-pointer touch-manipulation" aria-label="Sync Workspace" title="Synchronize Live">
+            <i class="fa-solid fa-rotate text-xs text-[#147D64]" id="btnRefreshClientIconMobile"></i>
+          </button>
+          
+          <span id="clientSubheaderTitle" class="hidden"></span>
           
           <!-- Verified badge -->
           <div class="hidden md:flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-semibold text-[#147D64]">
@@ -326,18 +333,6 @@
           </div>
         </div>
       </header>
-
-      <!-- MOBILE SUBHEADER (Phase 2 & 11: Current page title immediately below header) -->
-      <div class="lg:hidden bg-white border-b border-[#E3E9EF] px-4 py-2.5 flex items-center justify-between shrink-0 shadow-xs z-20">
-        <div class="min-w-0 flex-1">
-          <span class="text-[10px] font-bold uppercase tracking-wider text-[#147D64]">Client Portal</span>
-          <h2 id="clientSubheaderTitle" class="text-base font-black text-[#172B36] truncate leading-tight capitalize">Campaign Overview</h2>
-        </div>
-        <button type="button" id="btnRefreshClientDashboardMobile" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-[#EAF7F1] border border-[#E3E9EF] text-[11px] font-bold text-[#172B36] transition-colors cursor-pointer" title="Synchronize Live">
-          <i class="fa-solid fa-rotate text-xs text-[#147D64]" id="btnRefreshClientIconMobile"></i>
-          <span>Sync</span>
-        </button>
-      </div>
 
       <!-- SCROLLABLE CONTENT AREA -->
       <div class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
