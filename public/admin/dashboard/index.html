@@ -109,45 +109,113 @@
        ========================================================================= -->
   <div id="dashboardMainLayout" class="hidden h-full flex flex-col overflow-hidden">
 
-    <!-- TOP NAVIGATION BAR -->
-    <header class="h-16 border-b border-[#E3E9EF] bg-white/95 backdrop-blur-xl shrink-0 flex items-center justify-between px-4 sm:px-6 z-30 shadow-xs">
-      <div class="flex items-center space-x-3 sm:space-x-4">
-        <!-- Mobile Drawer Hamburger Toggle -->
-        <button type="button" id="mobileMenuToggleBtn" class="md:hidden w-9 h-9 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-600 hover:text-slate-900 cursor-pointer" aria-label="Open Navigation">
+    <!-- TOP NAVIGATION BAR (Phase 2: Mobile-First Redesign) -->
+    <header class="h-16 border-b border-[#E3E9EF] bg-white/95 backdrop-blur-xl shrink-0 flex items-center justify-between px-3 sm:px-6 z-30 shadow-xs relative">
+      <!-- Left: Mobile Menu Toggle / Desktop Brand + Breadcrumb -->
+      <div class="flex items-center space-x-3">
+        <!-- Mobile Drawer Hamburger Toggle (Clean 40px touch target) -->
+        <button type="button" id="mobileMenuToggleBtn" class="md:hidden w-10 h-10 rounded-xl bg-slate-50 hover:bg-slate-100 active:bg-slate-200 border border-slate-200 flex items-center justify-center text-[#172B36] cursor-pointer touch-manipulation transition-colors select-none" aria-label="Open Navigation">
           <i class="fa-solid fa-bars text-sm"></i>
         </button>
 
-        <!-- Brand Icon & Breadcrumbs -->
-        <div class="flex items-center space-x-3">
+        <!-- Desktop Brand Icon & Breadcrumbs (Hidden on mobile to eliminate clutter) -->
+        <div class="hidden md:flex items-center space-x-3">
           <a href="/" class="flex items-center group">
             <img src="/assets/images/logo.png" alt="Whiz Studio" class="h-8 sm:h-9 w-auto object-contain transition-opacity group-hover:opacity-90">
           </a>
           <span class="text-slate-300">/</span>
           <div class="flex items-center space-x-2">
             <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Console</span>
-            <span class="text-slate-600">/</span>
-            <span id="breadcrumbActiveTab" class="text-xs font-extrabold text-brand-whiz capitalize">Overview</span>
+            <span class="text-slate-300">/</span>
+            <span id="breadcrumbActiveTab" class="text-xs font-extrabold text-[#147D64] capitalize">Overview & KPIs</span>
           </div>
         </div>
       </div>
 
-      <!-- Top Right Controls -->
-      <div class="flex items-center space-x-3">
-        <!-- System Health Badge -->
-        <!-- System status badge removed -->
+      <!-- Center: Original Whiz Studio Logo (Mobile only, centered) -->
+      <div class="md:hidden flex items-center justify-center absolute left-1/2 -translate-x-1/2 pointer-events-auto">
+        <a href="/" class="flex items-center py-1">
+          <img src="/assets/images/logo.png" alt="Whiz Studio" class="h-7 w-auto object-contain">
+        </a>
+      </div>
 
-        <!-- User Dropdown & Profile -->
-        <div class="relative">
-          <button type="button" id="userMenuBtn" class="flex items-center space-x-2.5 p-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 transition-all cursor-pointer">
-            <div class="w-7 h-7 rounded-lg bg-brand-whiz/20 border border-brand-whiz/40 flex items-center justify-center font-bold text-xs text-brand-whiz admin-display-initials">
-              SA
+      <!-- Right: User Avatar Trigger + Interactive Dropdown -->
+      <div class="relative">
+        <button type="button" id="userMenuBtn" class="flex items-center space-x-2 p-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 active:bg-slate-200 border border-slate-200 text-[#172B36] transition-all cursor-pointer touch-manipulation select-none" aria-expanded="false" aria-haspopup="true">
+          <div class="w-8 h-8 rounded-lg bg-[#147D64]/15 border border-[#147D64]/30 flex items-center justify-center font-bold text-xs text-[#147D64] admin-display-initials select-none">
+            SA
+          </div>
+          <span class="hidden md:inline-block text-xs font-bold admin-display-name">Administrator</span>
+          <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform duration-200" id="userMenuChevron"></i>
+        </button>
+
+        <!-- Functional Profile Dropdown Menu (Phase 2 Requirement) -->
+        <div id="userAccountDropdown" class="hidden absolute right-0 mt-2 w-72 rounded-2xl bg-white border border-[#E3E9EF] shadow-2xl p-2.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+          <!-- User Profile Summary Header -->
+          <div class="p-3 rounded-xl bg-slate-50 border border-slate-100 mb-2">
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 rounded-xl bg-[#147D64]/15 border border-[#147D64]/30 flex items-center justify-center font-bold text-sm text-[#147D64] admin-display-initials select-none">
+                SA
+              </div>
+              <div class="min-w-0 flex-1">
+                <p class="text-xs font-bold text-[#172B36] truncate admin-display-name">Administrator</p>
+                <p class="text-[11px] text-slate-500 font-mono truncate admin-display-username">@admin</p>
+              </div>
             </div>
-            <span class="hidden md:inline-block text-xs font-bold admin-display-name">Administrator</span>
-            <i class="fa-solid fa-chevron-down text-[10px] text-slate-500 pr-1"></i>
-          </button>
+            <div class="mt-2.5 pt-2 border-t border-slate-200/70 flex items-center justify-between text-[11px]">
+              <span class="text-slate-500 font-medium">Session Role</span>
+              <span class="font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-[#147D64] border border-emerald-200 text-[10px] uppercase" id="dropdownRoleBadge">Super Admin</span>
+            </div>
+          </div>
+
+          <!-- Navigation Links -->
+          <div class="space-y-1 text-xs text-slate-700">
+            <button type="button" id="dropdownLinkProfile" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 hover:text-[#172B36] active:bg-slate-100 transition-colors text-left cursor-pointer">
+              <i class="fa-solid fa-user-circle w-4 text-slate-400 text-sm"></i>
+              <div class="flex-1">
+                <p class="font-semibold text-[#172B36]">My Profile</p>
+                <p class="text-[10px] text-slate-400">View identity &amp; account info</p>
+              </div>
+            </button>
+            <button type="button" id="dropdownLinkSettings" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 hover:text-[#172B36] active:bg-slate-100 transition-colors text-left cursor-pointer">
+              <i class="fa-solid fa-sliders w-4 text-slate-400 text-sm"></i>
+              <div class="flex-1">
+                <p class="font-semibold text-[#172B36]">Account Settings</p>
+                <p class="text-[10px] text-slate-400">User preferences &amp; workspace</p>
+              </div>
+            </button>
+            <button type="button" id="dropdownLinkSecurity" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 hover:text-[#172B36] active:bg-slate-100 transition-colors text-left cursor-pointer">
+              <i class="fa-solid fa-shield-halved w-4 text-slate-400 text-sm"></i>
+              <div class="flex-1">
+                <p class="font-semibold text-[#172B36]">Account Security</p>
+                <p class="text-[10px] text-slate-400">Clerk password &amp; sessions</p>
+              </div>
+            </button>
+          </div>
+
+          <!-- Sign Out Action -->
+          <div class="mt-2 pt-2 border-t border-[#E3E9EF]">
+            <button type="button" class="btn-admin-signout w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-rose-600 hover:bg-rose-50 active:bg-rose-100 transition-colors text-left cursor-pointer font-bold">
+              <i class="fa-solid fa-arrow-right-from-bracket w-4 text-rose-500 text-sm"></i>
+              <span>Sign Out of Console</span>
+            </button>
+          </div>
         </div>
       </div>
     </header>
+
+    <!-- MOBILE SUBHEADER SECTION (Phase 2: Separate page title section below header) -->
+    <div class="md:hidden bg-white border-b border-[#E3E9EF] px-4 py-3 flex items-center justify-between shrink-0 shadow-xs z-20">
+      <div class="min-w-0 flex-1">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-[#147D64]">Admin Workspace</span>
+        <h2 id="mobileSubheaderTitle" class="text-base font-black text-[#172B36] truncate leading-tight capitalize">Overview & KPIs</h2>
+      </div>
+      <div class="flex items-center space-x-2 shrink-0" id="mobileSubheaderActions">
+        <button type="button" id="mobileQuickRefreshBtn" class="w-8 h-8 rounded-xl bg-slate-50 border border-[#E3E9EF] flex items-center justify-center text-slate-600 hover:text-[#147D64] active:bg-slate-100 transition-colors cursor-pointer" title="Refresh Current Tab">
+          <i class="fa-solid fa-arrows-rotate text-xs"></i>
+        </button>
+      </div>
+    </div>
 
     <!-- WORKSPACE BODY (SIDEBAR + MAIN CANVAS) -->
     <div class="flex-1 flex overflow-hidden">
@@ -243,70 +311,101 @@
         </div>
       </aside>
 
-      <!-- MOBILE SLIDE-OUT DRAWER OVERLAY -->
-      <div id="mobileDrawerBackdrop" class="hidden md:hidden fixed inset-0 z-40 bg-white/40 backdrop-blur-sm transition-opacity"></div>
-      <aside id="mobileDrawer" class="fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-[#E3E9EF] p-5 transform -translate-x-full transition-transform duration-300 ease-in-out md:hidden flex flex-col justify-between shadow-2xl">
-        <div class="space-y-6 overflow-y-auto">
-          <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
-            <a href="/" class="flex items-center">
-              <img src="/assets/images/logo.png" alt="Whiz Studio" class="h-7 w-auto object-contain">
+      <!-- MOBILE SLIDE-OUT DRAWER OVERLAY (Phase 3: Refined Mobile Drawer) -->
+      <div id="mobileDrawerBackdrop" class="hidden md:hidden fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-300"></div>
+      <aside id="mobileDrawer" class="fixed inset-y-0 left-0 z-50 w-80 max-w-[85vw] bg-white border-r border-[#E3E9EF] p-5 transform -translate-x-full transition-transform duration-300 ease-in-out md:hidden flex flex-col justify-between shadow-2xl safe-top safe-bottom">
+        <div class="space-y-5 overflow-y-auto pr-1">
+          <div class="flex items-center justify-between pb-3.5 border-b border-[#E3E9EF]">
+            <a href="/" class="flex flex-col space-y-0.5">
+              <img src="/assets/images/logo.png" alt="Whiz Studio" class="h-7 w-auto object-contain self-start">
+              <span class="text-[10px] text-[#147D64] font-extrabold uppercase tracking-wider pl-0.5">Super Admin Console</span>
             </a>
-            <button type="button" id="mobileDrawerCloseBtn" class="w-8 h-8 rounded-lg bg-white border border-[#E3E9EF] flex items-center justify-center text-slate-500 hover:text-[#172B36] cursor-pointer">
-              <i class="fa-solid fa-xmark text-xs"></i>
+            <button type="button" id="mobileDrawerCloseBtn" class="w-9 h-9 rounded-xl bg-slate-50 hover:bg-slate-100 active:bg-slate-200 border border-[#E3E9EF] flex items-center justify-center text-slate-600 hover:text-[#172B36] cursor-pointer touch-manipulation transition-colors select-none" aria-label="Close Navigation">
+              <i class="fa-solid fa-xmark text-sm"></i>
             </button>
           </div>
-          <nav class="space-y-1">
-            <button type="button" data-dash-tab="overview" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36] hover:bg-slate-50 hover:text-[#172B36] border border-transparent transition-all text-left">
-              <i class="fa-solid fa-gauge-high text-xs w-4"></i>
-              <span>Overview & KPIs</span>
-            </button>
-            <button type="button" data-dash-tab="clients" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36] hover:bg-slate-50 hover:text-[#172B36] border border-transparent transition-all text-left">
-              <i class="fa-solid fa-users text-xs w-4"></i>
-              <span>Client Directory</span>
-            </button>
-            <button type="button" data-dash-tab="services" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36] hover:bg-slate-50 hover:text-[#172B36] border border-transparent transition-all text-left">
-              <i class="fa-solid fa-layer-group text-xs w-4"></i>
-              <span>Service Management</span>
-            </button>
-            <button type="button" data-dash-tab="projects" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36] hover:bg-slate-50 hover:text-[#172B36] border border-transparent transition-all text-left">
-              <i class="fa-solid fa-folder-tree text-xs w-4"></i>
-              <span>Service Projects</span>
-            </button>
-            <button type="button" data-dash-tab="tasks" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36] hover:bg-slate-50 hover:text-[#172B36] border border-transparent transition-all text-left">
-              <i class="fa-solid fa-list-check text-xs w-4"></i>
-              <span>Live Tasks</span>
-            </button>
-            <button type="button" data-dash-tab="finance" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36] hover:bg-slate-50 hover:text-[#172B36] border border-transparent transition-all text-left">
-              <i class="fa-solid fa-money-bill-wave text-xs w-4"></i>
-              <span>Payments & Ledger</span>
-            </button>
-            <button type="button" data-dash-tab="receipt_template" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36] hover:bg-slate-50 hover:text-[#172B36] border border-transparent transition-all text-left">
-              <i class="fa-solid fa-receipt text-xs w-4"></i>
-              <span>Receipt Template</span>
-            </button>
-            <button type="button" data-dash-tab="team" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36] hover:bg-slate-50 hover:text-[#172B36] border border-transparent transition-all text-left">
-              <i class="fa-solid fa-user-shield text-xs w-4"></i>
-              <span>User & Access Management</span>
-            </button>
-            <button type="button" data-dash-tab="support" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36] hover:bg-slate-50 hover:text-[#172B36] border border-transparent transition-all text-left">
-              <i class="fa-solid fa-inbox text-xs w-4"></i>
-              <span>Support Requests</span>
-            </button>
-            <button type="button" data-dash-tab="history" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36] hover:bg-slate-50 hover:text-[#172B36] border border-transparent transition-all text-left">
-              <i class="fa-solid fa-clock-rotate-left text-xs w-4"></i>
-              <span>Audit History</span>
-            </button>
-            <button type="button" data-dash-tab="settings" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36] hover:bg-slate-50 hover:text-[#172B36] border border-transparent transition-all text-left">
-              <i class="fa-solid fa-key text-xs w-4"></i>
-              <span>Account Security</span>
-            </button>
-          </nav>
+
+          <!-- Section 1: Core Operations -->
+          <div>
+            <div class="text-[10px] font-black uppercase tracking-wider text-slate-400 px-3 mb-1.5">Core Operations</div>
+            <nav class="space-y-1">
+              <button type="button" data-dash-tab="overview" class="w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl text-xs font-bold bg-[#147D64]/10 text-[#147D64] border border-[#147D64]/30 transition-all text-left touch-manipulation">
+                <i class="fa-solid fa-gauge-high text-xs w-4"></i>
+                <span class="flex-1">Overview & KPIs</span>
+              </button>
+              <button type="button" data-dash-tab="clients" class="w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl text-xs font-medium text-slate-600 hover:text-[#172B36] hover:bg-slate-50 active:bg-slate-100 border border-transparent transition-all text-left touch-manipulation">
+                <i class="fa-solid fa-users text-xs w-4"></i>
+                <span class="flex-1">Client Directory</span>
+              </button>
+              <button type="button" data-dash-tab="services" class="w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl text-xs font-medium text-slate-600 hover:text-[#172B36] hover:bg-slate-50 active:bg-slate-100 border border-transparent transition-all text-left touch-manipulation">
+                <i class="fa-solid fa-layer-group text-xs w-4"></i>
+                <span class="flex-1">Service Management</span>
+                <span class="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">12 Srv</span>
+              </button>
+              <button type="button" data-dash-tab="projects" class="w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl text-xs font-medium text-slate-600 hover:text-[#172B36] hover:bg-slate-50 active:bg-slate-100 border border-transparent transition-all text-left touch-manipulation">
+                <i class="fa-solid fa-folder-tree text-xs w-4"></i>
+                <span class="flex-1">Service Projects</span>
+              </button>
+              <button type="button" data-dash-tab="tasks" class="w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl text-xs font-medium text-slate-600 hover:text-[#172B36] hover:bg-slate-50 active:bg-slate-100 border border-transparent transition-all text-left touch-manipulation">
+                <i class="fa-solid fa-list-check text-xs w-4"></i>
+                <span class="flex-1">Live Tasks (SOPs)</span>
+              </button>
+            </nav>
+          </div>
+
+          <!-- Section 2: Finance & Receipts -->
+          <div>
+            <div class="text-[10px] font-black uppercase tracking-wider text-slate-400 px-3 mb-1.5">Finance & Documents</div>
+            <nav class="space-y-1">
+              <button type="button" data-dash-tab="finance" class="w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl text-xs font-medium text-slate-600 hover:text-[#172B36] hover:bg-slate-50 active:bg-slate-100 border border-transparent transition-all text-left touch-manipulation">
+                <i class="fa-solid fa-money-bill-wave text-xs w-4"></i>
+                <span class="flex-1">Payments & Ledger</span>
+              </button>
+              <button type="button" data-dash-tab="receipt_template" class="w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl text-xs font-medium text-slate-600 hover:text-[#172B36] hover:bg-slate-50 active:bg-slate-100 border border-transparent transition-all text-left touch-manipulation">
+                <i class="fa-solid fa-receipt text-xs w-4"></i>
+                <span class="flex-1">Receipt Template</span>
+                <span class="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">Vector</span>
+              </button>
+            </nav>
+          </div>
+
+          <!-- Section 3: Governance & Security -->
+          <div>
+            <div class="text-[10px] font-black uppercase tracking-wider text-slate-400 px-3 mb-1.5">Governance & Security</div>
+            <nav class="space-y-1">
+              <button type="button" data-dash-tab="team" class="w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl text-xs font-medium text-slate-600 hover:text-[#172B36] hover:bg-slate-50 active:bg-slate-100 border border-transparent transition-all text-left touch-manipulation">
+                <i class="fa-solid fa-user-shield text-xs w-4"></i>
+                <span class="flex-1">User & Access Management</span>
+              </button>
+              <button type="button" data-dash-tab="support" class="w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl text-xs font-medium text-slate-600 hover:text-[#172B36] hover:bg-slate-50 active:bg-slate-100 border border-transparent transition-all text-left touch-manipulation">
+                <i class="fa-solid fa-inbox text-xs w-4"></i>
+                <span class="flex-1">Support Requests</span>
+              </button>
+              <button type="button" data-dash-tab="history" class="w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl text-xs font-medium text-slate-600 hover:text-[#172B36] hover:bg-slate-50 active:bg-slate-100 border border-transparent transition-all text-left touch-manipulation">
+                <i class="fa-solid fa-clock-rotate-left text-xs w-4"></i>
+                <span class="flex-1">Audit & History</span>
+              </button>
+              <button type="button" data-dash-tab="settings" class="w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl text-xs font-medium text-slate-600 hover:text-[#172B36] hover:bg-slate-50 active:bg-slate-100 border border-transparent transition-all text-left touch-manipulation">
+                <i class="fa-solid fa-key text-xs w-4"></i>
+                <span class="flex-1">Account Security</span>
+              </button>
+            </nav>
+          </div>
         </div>
 
-        <div class="pt-4 border-t border-[#E3E9EF]">
-          <button type="button" class="btn-admin-signout w-full py-2.5 px-3 rounded-xl text-xs font-bold text-rose-600 bg-rose-50 border border-rose-200 flex items-center justify-center space-x-2">
+        <div class="pt-4 border-t border-[#E3E9EF] space-y-2.5">
+          <div class="flex items-center space-x-2.5 p-2 rounded-xl bg-slate-50 border border-slate-100">
+            <div class="w-8 h-8 rounded-lg bg-[#147D64]/15 border border-[#147D64]/30 flex items-center justify-center font-bold text-xs text-[#147D64] uppercase admin-display-initials select-none">
+              SA
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="text-xs font-bold text-[#172B36] truncate admin-display-name">Administrator</p>
+              <p class="text-[10px] text-slate-400 font-mono truncate admin-display-username">@admin</p>
+            </div>
+          </div>
+          <button type="button" class="btn-admin-signout w-full py-2.5 px-3 rounded-xl text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 flex items-center justify-center space-x-2 cursor-pointer touch-manipulation transition-colors">
             <i class="fa-solid fa-arrow-right-from-bracket"></i>
-            <span>Sign Out</span>
+            <span>Sign Out of Console</span>
           </button>
         </div>
       </aside>
@@ -505,8 +604,11 @@
               </div>
             </div>
 
-            <!-- Clients Table Card -->
-            <div class="rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl overflow-hidden shadow-xl">
+            <!-- Clients Mobile Cards (Phase 5: Responsive Card Pattern) -->
+            <div id="adminClientsCardsContainer" class="md:hidden space-y-3"></div>
+
+            <!-- Clients Desktop Table Card -->
+            <div class="hidden md:block rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl overflow-hidden shadow-xl">
               <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs text-slate-600 min-w-[680px]">
                   <thead class="bg-slate-50/70 border-b border-[#E3E9EF] text-[11px] uppercase font-bold text-slate-500">
@@ -708,7 +810,7 @@
               <div>
                 <div class="flex items-center space-x-2">
                   <h2 class="text-2xl font-black text-[#172B36] tracking-tight">Service Catalog & SOP Blueprints</h2>
-                  <span class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-500/40 font-bold">12 Active Services</span>
+                  <span class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-50 text-[#147D64] border border-emerald-200 font-bold">12 Active Services</span>
                 </div>
                 <p class="text-xs text-slate-500 mt-0.5">Authoritative service catalog. Edit descriptions, pricing, and inspect all 240 master SOP task blueprints.</p>
               </div>
@@ -737,7 +839,7 @@
                   <div class="flex items-center space-x-2.5">
                     <span id="serviceTasksCodeBadge" class="text-xs font-mono font-bold text-brand-whiz bg-brand-whiz/10 border border-brand-whiz/30 px-2 py-0.5 rounded">CODE</span>
                     <h2 class="text-2xl font-black text-[#172B36] tracking-tight" id="serviceTasksTitle">Service Name</h2>
-                    <span id="serviceTasksVersionBadge" class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-600 border border-[#E3E9EF]">v1</span>
+                    <span id="serviceTasksVersionBadge" class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">v1</span>
                   </div>
                   <p class="text-xs text-slate-500 mt-0.5" id="serviceTasksDescription">Managing 20 Master SOP Task Blueprints in Cloudflare D1</p>
                 </div>
@@ -747,7 +849,7 @@
                   <i class="fa-solid fa-plus text-xs"></i>
                   <span>Add New Task</span>
                 </button>
-                <button type="button" id="btnOpenApplyTemplateModal" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-white hover:bg-slate-800 text-emerald-400 border border-emerald-500/30 transition-all flex items-center gap-1.5 cursor-pointer">
+                <button type="button" id="btnOpenApplyTemplateModal" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-white hover:bg-emerald-50 text-[#147D64] border border-emerald-200 transition-all flex items-center gap-1.5 cursor-pointer">
                   <i class="fa-solid fa-arrows-spin text-xs"></i>
                   <span>Apply to Active Projects</span>
                 </button>
@@ -809,7 +911,11 @@
               <p class="text-xs text-slate-500">Live client project progress, synchronized automatically from completed operational tasks.</p>
             </div>
 
-            <div class="rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl overflow-hidden shadow-xl">
+            <!-- Projects Mobile Cards (Phase 5: Responsive Card Pattern) -->
+            <div id="adminProjectsCardsContainer" class="md:hidden space-y-3"></div>
+
+            <!-- Projects Desktop Table Card -->
+            <div class="hidden md:block rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl overflow-hidden shadow-xl">
               <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs text-slate-600 min-w-[680px]">
                   <thead class="bg-slate-50/70 border-b border-[#E3E9EF] text-[11px] uppercase font-bold text-slate-500">
@@ -882,8 +988,11 @@
               </button>
             </div>
 
-            <!-- Payments Ledger Table -->
-            <div class="rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl overflow-hidden shadow-xl">
+            <!-- Finance Mobile Cards (Phase 5: Responsive Card Pattern) -->
+            <div id="adminFinanceCardsContainer" class="md:hidden space-y-3"></div>
+
+            <!-- Payments Ledger Desktop Table -->
+            <div class="hidden md:block rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl overflow-hidden shadow-xl">
               <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs text-slate-600 min-w-[680px]">
                   <thead class="bg-slate-50/70 border-b border-[#E3E9EF] text-[11px] uppercase font-bold text-slate-500">
@@ -1035,15 +1144,15 @@
               </div>
 
               <!-- Right Column: Live A4 Stationery Visual Preview (7 cols on xl) -->
-              <div class="xl:col-span-7">
-                <div class="rounded-3xl bg-slate-100/80 border border-slate-200 p-4 sm:p-6 overflow-x-auto shadow-inner">
+              <div class="xl:col-span-7 w-full overflow-hidden">
+                <div class="rounded-3xl bg-slate-100/80 border border-slate-200 p-2 sm:p-6 overflow-x-auto shadow-inner">
                   
-                  <!-- Simulated A4 Paper Sheet (Ratio 1:1.414) -->
-                  <div id="tplA4PreviewSheet" class="relative bg-white text-[#172B36] w-full max-w-[620px] mx-auto rounded-xl shadow-2xl p-6 sm:p-10 overflow-hidden font-sans select-none border border-slate-200 min-h-[820px] flex flex-col justify-between">
+                  <!-- Simulated A4 Paper Sheet (Ratio 1:1.414) with responsive mobile scale -->
+                  <div id="tplA4PreviewSheet" class="relative bg-white text-[#172B36] w-full max-w-[620px] mx-auto rounded-xl shadow-2xl p-4 sm:p-10 overflow-hidden font-sans select-none border border-slate-200 min-h-[640px] sm:min-h-[820px] flex flex-col justify-between">
                     
                     <!-- Luxury Corner Accents from Template -->
-                    <img src="/assets/images/template-corner-top-right.png" alt="" class="absolute top-0 right-0 w-36 sm:w-44 pointer-events-none select-none">
-                    <img src="/assets/images/template-corner-bottom-left.png" alt="" class="absolute bottom-0 left-0 w-32 sm:w-40 pointer-events-none select-none">
+                    <img src="/assets/images/template-corner-top-right.png" alt="" class="absolute top-0 right-0 w-24 sm:w-44 pointer-events-none select-none">
+                    <img src="/assets/images/template-corner-bottom-left.png" alt="" class="absolute bottom-0 left-0 w-20 sm:w-40 pointer-events-none select-none">
 
                     <div class="relative z-10 space-y-6">
                       <!-- Top Header Row: Logo & Document Title -->
@@ -1178,7 +1287,7 @@
                 <p class="text-xs text-slate-500">Manage platform users, roles, and access permissions.</p>
               </div>
               <div class="flex items-center gap-3">
-                <button type="button" id="btnRefreshUserDir" class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-slate-800 text-slate-600 border border-[#E3E9EF] flex items-center gap-2 cursor-pointer transition-all">
+                <button type="button" id="btnRefreshUserDir" class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 flex items-center gap-2 cursor-pointer transition-all">
                   <i class="fa-solid fa-arrows-rotate text-xs text-brand-whiz"></i>
                   <span>Refresh Directory</span>
                 </button>
@@ -1208,8 +1317,11 @@
               </div>
             </div>
 
-            <!-- User Directory Table Card -->
-            <div class="rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl overflow-hidden shadow-xl">
+            <!-- User Directory Mobile Cards (Phase 5: Responsive Card Pattern) -->
+            <div id="adminUserCardsContainer" class="md:hidden space-y-3"></div>
+
+            <!-- User Directory Desktop Table Card -->
+            <div class="hidden md:block rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl overflow-hidden shadow-xl">
               <div class="px-6 py-4 border-b border-[#E3E9EF] flex items-center justify-between">
                 <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-600 flex items-center gap-2">
                   <i class="fa-solid fa-address-book text-brand-whiz"></i>
@@ -1261,9 +1373,11 @@
                   <i class="fa-solid fa-clock-rotate-left text-brand-whiz"></i>
                   <span>Role Transition Audit History</span>
                 </h3>
-                <span class="text-[10px] font-mono uppercase text-emerald-400 bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-500/30">Authoritative D1 Audit</span>
+                <span class="text-[10px] font-mono uppercase text-[#147D64] bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 font-bold">Authoritative D1 Audit</span>
               </div>
-              <div class="overflow-x-auto">
+              <!-- Role History Mobile Cards -->
+              <div id="roleHistoryCardsContainer" class="md:hidden p-4 space-y-3"></div>
+              <div class="hidden md:block overflow-x-auto">
                 <table class="w-full text-left text-xs text-slate-600 min-w-[680px]">
                   <thead class="bg-slate-50/70 border-b border-[#E3E9EF] text-[11px] uppercase font-bold text-slate-500">
                     <tr>
@@ -1294,7 +1408,11 @@
               <p class="text-xs text-slate-500">Review and resolve priority client inquiries submitted through the portal.</p>
             </div>
 
-            <div class="rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl overflow-hidden shadow-xl">
+            <!-- Support Mobile Cards (Phase 5: Responsive Card Pattern) -->
+            <div id="adminSupportCardsContainer" class="md:hidden space-y-3"></div>
+
+            <!-- Support Desktop Table Card -->
+            <div class="hidden md:block rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl overflow-hidden shadow-xl">
               <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs text-slate-600 min-w-[680px]">
                   <thead class="bg-slate-50/70 border-b border-[#E3E9EF] text-[11px] uppercase font-bold text-slate-500">
@@ -1394,7 +1512,7 @@
                   </div>
 
                   <div class="flex items-center space-x-2.5 pt-2">
-                    <input type="checkbox" id="adminSignOutOfOthers" name="signOutOfOtherSessions" checked class="w-4 h-4 rounded text-brand-whiz bg-slate-50 border-[#E3E9EF] focus:ring-brand-whiz focus:ring-offset-slate-950 cursor-pointer">
+                    <input type="checkbox" id="adminSignOutOfOthers" name="signOutOfOtherSessions" checked class="w-4 h-4 rounded text-brand-whiz bg-slate-50 border-[#E3E9EF] focus:ring-brand-whiz focus:ring-offset-white cursor-pointer">
                     <label for="adminSignOutOfOthers" class="text-xs text-slate-600 select-none cursor-pointer">
                       Sign out of all other active sessions across devices
                     </label>

@@ -168,17 +168,23 @@
       }
     });
 
+    const labels = {
+      overview: 'Campaign Overview',
+      services: 'My Active Services',
+      tasks: 'Deliverables Progress',
+      finance: 'Billing & Receipts',
+      support: 'Support & Inquiries',
+      settings: 'Account Security'
+    };
+
     const breadcrumb = document.getElementById('breadcrumbActiveTab');
     if (breadcrumb) {
-      const labels = {
-        overview: 'Overview',
-        services: 'My Active Services',
-        tasks: 'Deliverables & Tasks',
-        finance: 'Invoices & Receipts',
-        support: 'Support & Requests',
-        settings: 'Account Settings'
-      };
       breadcrumb.textContent = labels[tabId] || tabId;
+    }
+
+    const subheaderTitle = document.getElementById('clientSubheaderTitle');
+    if (subheaderTitle) {
+      subheaderTitle.textContent = labels[tabId] || tabId;
     }
 
     // Scroll to top of content
@@ -552,7 +558,43 @@
 
     list.innerHTML = `
       ${currencyCardsHtml}
-      <div class="rounded-3xl bg-white border border-[#E3E9EF] overflow-hidden shadow-xs">
+      <!-- Mobile Cards (Table-to-Card Pattern, md:hidden) -->
+      <div class="md:hidden space-y-3">
+        ${records.map(r => {
+          const num = r.receipt_number || r.receiptNumber || r.invoice_number || 'INV-1001';
+          const date = r.payment_date || r.paymentDate || r.issue_date || 'N/A';
+          const paymentId = r.id;
+          return `
+            <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs space-y-3">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <span class="font-mono text-xs font-bold text-[#147D64]">${escapeHtml(num)}</span>
+                  <div class="text-[11px] text-slate-500 font-mono mt-0.5">${escapeHtml(date)}</div>
+                </div>
+                <div class="text-right">
+                  <span class="text-sm font-black font-mono text-[#147D64] block">${formatCurrency((r.amount_cents || r.amountCents || r.total_cents || r.totalCents || 0), r.currency || "USD")}</span>
+                  <span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 inline-block mt-0.5">Paid</span>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-100">
+                <span class="text-[10px] uppercase font-bold text-slate-400">Payment Method</span>
+                <span class="uppercase text-slate-700 font-semibold">${escapeHtml(r.payment_method || r.paymentMethod || 'Online')}</span>
+              </div>
+
+              <div class="pt-2 border-t border-slate-100">
+                <button type="button" class="btn-download-client-receipt w-full py-2.5 rounded-xl bg-[#147D64]/10 hover:bg-[#147D64]/20 text-[#147D64] border border-[#147D64]/30 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-all shadow-xs" data-payment-id="${paymentId}" data-receipt-num="${num}">
+                  <i class="fa-solid fa-file-arrow-down text-xs"></i>
+                  <span>Download PDF Receipt</span>
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+
+      <!-- Desktop Table (hidden md:block) -->
+      <div class="hidden md:block rounded-3xl bg-white border border-[#E3E9EF] overflow-hidden shadow-xs">
         <div class="overflow-x-auto">
           <table class="w-full text-left text-xs text-slate-600 min-w-[650px]">
             <thead class="bg-slate-50/80 border-b border-[#E3E9EF] text-[11px] uppercase font-bold text-slate-500">
@@ -1123,32 +1165,106 @@
       });
     });
 
-    // 2. Mobile Drawer Controls
+    // 2. Mobile Drawer Controls with Body Scroll Locking
     const toggleBtn = document.getElementById('clientMobileToggleBtn');
     const closeBtn = document.getElementById('clientMobileCloseBtn');
     const drawer = document.getElementById('clientMobileDrawer');
     const backdrop = document.getElementById('clientMobileBackdrop');
 
-    if (toggleBtn && drawer && backdrop) {
-      toggleBtn.addEventListener('click', () => {
+    function openClientDrawer() {
+      if (drawer && backdrop) {
         drawer.classList.remove('-translate-x-full');
         backdrop.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+      }
+    }
+
+    function closeClientDrawer() {
+      if (drawer && backdrop) {
+        drawer.classList.add('-translate-x-full');
+        backdrop.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+      }
+    }
+
+    if (toggleBtn) toggleBtn.addEventListener('click', openClientDrawer);
+    if (closeBtn) closeBtn.addEventListener('click', closeClientDrawer);
+    if (backdrop) backdrop.addEventListener('click', closeClientDrawer);
+
+    if (drawer) {
+      drawer.querySelectorAll('[data-client-tab]').forEach(tabBtn => {
+        tabBtn.addEventListener('click', closeClientDrawer);
       });
     }
 
-    if (closeBtn && drawer && backdrop) {
-      closeBtn.addEventListener('click', () => {
-        drawer.classList.add('-translate-x-full');
-        backdrop.classList.add('hidden');
+    // Interactive Client Profile Dropdown Menu Wiring
+    const userMenuBtn = document.getElementById('clientUserMenuBtn');
+    const userDropdown = document.getElementById('clientUserAccountDropdown');
+    const userChevron = document.getElementById('clientUserMenuChevron');
+
+    function toggleClientDropdown() {
+      if (!userDropdown) return;
+      const isHidden = userDropdown.classList.contains('hidden');
+      if (isHidden) {
+        userDropdown.classList.remove('hidden');
+        if (userChevron) userChevron.classList.add('rotate-180');
+        if (userMenuBtn) userMenuBtn.setAttribute('aria-expanded', 'true');
+      } else {
+        closeClientDropdown();
+      }
+    }
+
+    function closeClientDropdown() {
+      if (!userDropdown) return;
+      userDropdown.classList.add('hidden');
+      if (userChevron) userChevron.classList.remove('rotate-180');
+      if (userMenuBtn) userMenuBtn.setAttribute('aria-expanded', 'false');
+    }
+
+    if (userMenuBtn) {
+      userMenuBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleClientDropdown();
       });
     }
 
-    if (backdrop && drawer) {
-      backdrop.addEventListener('click', () => {
-        drawer.classList.add('-translate-x-full');
-        backdrop.classList.add('hidden');
+    // Close on outside click & Escape key
+    document.addEventListener('click', (e) => {
+      if (userDropdown && !userDropdown.classList.contains('hidden')) {
+        if (!userDropdown.contains(e.target) && !userMenuBtn?.contains(e.target)) {
+          closeClientDropdown();
+        }
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeClientDropdown();
+        closeClientDrawer();
+      }
+    });
+
+    // Dropdown Navigation Links
+    document.querySelectorAll('.client-dropdown-tab-link').forEach(link => {
+      link.addEventListener('click', () => {
+        closeClientDropdown();
+        switchTab(link.dataset.tab);
       });
-    }
+    });
+
+    // Mobile Subheader Refresh Button
+    document.getElementById('btnRefreshClientDashboardMobile')?.addEventListener('click', async () => {
+      const icon = document.getElementById('btnRefreshClientIconMobile');
+      if (icon) icon.classList.add('fa-spin');
+      try {
+        await loadClientData();
+        showToast('Portal synchronized with Cloudflare D1.', 'success');
+      } catch (e) {
+        showToast('Failed to refresh data.', 'error');
+      } finally {
+        if (icon) icon.classList.remove('fa-spin');
+      }
+    });
 
     // 3. Sign Out Buttons
     document.querySelectorAll('.btn-client-signout').forEach(btn => {

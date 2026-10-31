@@ -21,6 +21,8 @@
 }
 
 html {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
   scroll-behavior: smooth;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   width: 100%;
@@ -37,7 +39,7 @@ body {
   max-width: 100vw;
   overflow-x: hidden;
   position: relative;
-  min-height: 100vh;
+  min-height: 100dvh;
   margin: 0;
   padding: 0;
 }
@@ -755,4 +757,49 @@ select.glass-input option:hover {
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 20px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+
+/* ==========================================================================
+   MOBILE-FIRST NATIVE TOUCH & RESPONSIVE FOUNDATIONS (Phase 2 & 4)
+   ========================================================================== */
+button, a, input, select, textarea {
+  touch-action: manipulation;
+}
+
+button {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Prevent auto-zooming on mobile browsers for inputs under 16px */
+@media (max-width: 767px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="search"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Strict mobile safe areas & zero horizontal overflow */
+.safe-top {
+  padding-top: max(env(safe-area-inset-top), 0.75rem);
+}
+.safe-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);
+}
+
+/* Prevent any sideways drag or overflow on mobile */
+@media (max-width: 767px) {
+  #dashboardMainLayout,
+  #clientDashboardMainLayout {
+    width: 100vw;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
 }

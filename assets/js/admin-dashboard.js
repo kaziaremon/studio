@@ -166,7 +166,7 @@
     const allViews = [
       'overview', 'clients', 'client_details', 'services', 'service_tasks',
       'projects', 'tasks', 'finance', 'receipt_template', 'team',
-      'support', 'history', 'settings'
+      'support', 'history', 'security'
     ];
 
     allViews.forEach(v => {
@@ -176,6 +176,31 @@
         else el.classList.add('hidden');
       }
     });
+
+    // Friendly Title Mapping
+    const tabTitles = {
+      overview: 'Overview & KPIs',
+      clients: 'Client Directory',
+      client_details: 'Client Workspace',
+      services: 'Service Catalog',
+      service_tasks: 'Task Blueprints',
+      projects: 'Service Projects',
+      tasks: 'Live Tasks',
+      finance: 'Payments & Ledger',
+      receipt_template: 'Receipt Template Studio',
+      team: 'User & Access Management',
+      support: 'Support Requests',
+      history: 'Audit & History',
+      security: 'Account Security'
+    };
+
+    const activeTitle = tabTitles[tabId] || tabId.replace(/_/g, ' ');
+
+    // Update Mobile Subheader Title
+    const subheaderTitle = document.getElementById('mobileSubheaderTitle');
+    if (subheaderTitle) {
+      subheaderTitle.textContent = activeTitle;
+    }
 
     // Sidebar active styling
     document.querySelectorAll('[data-dash-tab]').forEach(btn => {
@@ -474,33 +499,42 @@
 
   function renderClientsTable(clients) {
     const tbody = document.getElementById('adminClientsTableBody');
+    const cardsContainer = document.getElementById('adminClientsCardsContainer');
     if (!tbody) return;
 
     if (!clients || clients.length === 0) {
+      const emptyHtml = `
+        <div class="p-8 rounded-2xl bg-white border border-[#E3E9EF] text-center max-w-sm mx-auto space-y-3">
+          <div class="w-12 h-12 mx-auto rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 text-lg">
+            <i class="fa-solid fa-users-slash"></i>
+          </div>
+          <div>
+            <h4 class="text-sm font-bold text-[#172B36]">No Clients Found</h4>
+            <p class="text-xs text-slate-500 mt-0.5">No registered client accounts match the selected filter or search criteria.</p>
+          </div>
+          <button type="button" class="btn-empty-add-client inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#147D64] text-white hover:bg-[#116954] text-xs font-bold transition-all shadow-xs cursor-pointer">
+            <i class="fa-solid fa-user-plus"></i> Add New Client
+          </button>
+        </div>
+      `;
+
       tbody.innerHTML = `
         <tr>
-          <td colspan="5" class="px-6 py-12 text-center">
-            <div class="max-w-sm mx-auto space-y-3">
-              <div class="w-12 h-12 mx-auto rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 text-lg">
-                <i class="fa-solid fa-users-slash"></i>
-              </div>
-              <div>
-                <h4 class="text-sm font-bold text-[#172B36]">No Clients Found</h4>
-                <p class="text-xs text-slate-500 mt-0.5">No registered client accounts match the selected filter or search criteria.</p>
-              </div>
-              <button type="button" id="btnEmptyAddClient" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-brand-whiz text-white hover:bg-brand-whiz/90 text-xs font-bold transition-all shadow-xs cursor-pointer">
-                <i class="fa-solid fa-user-plus"></i> Add New Client
-              </button>
-            </div>
-          </td>
+          <td colspan="5" class="px-6 py-12 text-center">${emptyHtml}</td>
         </tr>
       `;
-      document.getElementById('btnEmptyAddClient')?.addEventListener('click', () => {
-        document.getElementById('btnOpenAddClientModal')?.click();
+
+      if (cardsContainer) cardsContainer.innerHTML = emptyHtml;
+
+      document.querySelectorAll('.btn-empty-add-client').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.getElementById('btnOpenAddClientModal')?.click();
+        });
       });
       return;
     }
 
+    // 1. Desktop Table Rows
     tbody.innerHTML = clients.map(c => {
       const isSuspended = c.status === 'suspended';
       const isDeleted = c.status === 'deleted';
@@ -513,7 +547,7 @@
       }
 
       const companyDisplay = (c.company_name && c.company_name.trim())
-        ? `<div class="text-xs text-brand-whiz font-medium truncate max-w-[220px]">${escapeHtml(c.company_name)}</div>`
+        ? `<div class="text-xs text-[#147D64] font-medium truncate max-w-[220px]">${escapeHtml(c.company_name)}</div>`
         : `<div class="mt-0.5"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200"><i class="fa-solid fa-building-circle-exclamation text-amber-500 text-[9px]"></i> Unassigned Company</span></div>`;
 
       return `
@@ -542,8 +576,65 @@
       `;
     }).join('');
 
-    // Wire Manage buttons
-    tbody.querySelectorAll('.btn-manage-client').forEach(btn => {
+    // 2. Mobile Cards List (Table-to-Card Pattern)
+    if (cardsContainer) {
+      cardsContainer.innerHTML = clients.map(c => {
+        const isSuspended = c.status === 'suspended';
+        const isDeleted = c.status === 'deleted';
+
+        let statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">Active</span>';
+        if (isSuspended) {
+          statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-200">Suspended</span>';
+        } else if (isDeleted) {
+          statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-rose-50 text-rose-700 border border-rose-200">Deleted</span>';
+        }
+
+        const companyDisplay = (c.company_name && c.company_name.trim())
+          ? `<span class="text-xs font-semibold text-[#147D64] truncate">${escapeHtml(c.company_name)}</span>`
+          : `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200"><i class="fa-solid fa-building-circle-exclamation text-amber-500 text-[9px]"></i> Unassigned</span>`;
+
+        return `
+          <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs space-y-3">
+            <div class="flex items-start justify-between gap-2">
+              <div class="min-w-0">
+                <h4 class="text-sm font-black text-[#172B36] truncate">${escapeHtml(c.full_name || 'Client')}</h4>
+                <div class="mt-0.5">${companyDisplay}</div>
+              </div>
+              <div class="shrink-0">${statusBadge}</div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-600 pt-1 border-t border-slate-100">
+              <div class="flex items-center space-x-2 truncate">
+                <i class="fa-solid fa-envelope text-slate-400 text-xs w-3.5"></i>
+                <span class="truncate font-mono text-[11px]">${escapeHtml(c.email)}</span>
+              </div>
+              <div class="flex items-center space-x-2 truncate">
+                <i class="fa-solid fa-phone text-slate-400 text-xs w-3.5"></i>
+                <span class="text-[11px]">${escapeHtml(c.phone || 'No phone')}</span>
+              </div>
+              <div class="flex items-center space-x-2 truncate">
+                <i class="fa-solid fa-location-dot text-slate-400 text-xs w-3.5"></i>
+                <span class="text-[11px]">${escapeHtml(c.city || 'Dhaka')}, ${escapeHtml(c.country || 'Bangladesh')}</span>
+              </div>
+              <div class="flex items-center space-x-2 truncate">
+                <i class="fa-solid fa-id-badge text-slate-400 text-xs w-3.5"></i>
+                <span class="font-mono text-[10px] text-slate-400 truncate">${escapeHtml(c.id)}</span>
+              </div>
+            </div>
+
+            <div class="pt-2 border-t border-slate-100">
+              <button type="button" class="btn-manage-client w-full py-2.5 rounded-xl text-xs font-bold bg-[#147D64] hover:bg-[#116954] active:bg-[#0e5645] text-white flex items-center justify-center gap-2 cursor-pointer transition-all shadow-xs" data-id="${escapeHtml(c.id)}">
+                <i class="fa-solid fa-sliders text-xs"></i>
+                <span>Manage Client Workspace</span>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Wire Manage buttons on both table and cards
+    document.querySelectorAll('.btn-manage-client').forEach(btn => {
       btn.addEventListener('click', () => {
         openClientDetails(btn.dataset.id);
       });
@@ -1010,6 +1101,7 @@
   async function loadProjectsData() {
     const res = await apiFetch('/projects');
     const tbody = document.getElementById('adminProjectsTableBody');
+    const cardsContainer = document.getElementById('adminProjectsCardsContainer');
     if (!tbody) return;
 
     if (res.ok && res.data && res.data.data) {
@@ -1020,34 +1112,70 @@
       if (actCount) actCount.textContent = projects.length;
 
       if (projects.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-6 text-center text-slate-500 italic">No active projects. Add a client with services to auto-provision projects.</td></tr>';
+        const emptyMsg = '<tr><td colspan="6" class="px-6 py-6 text-center text-slate-500 italic">No active projects. Add a client with services to auto-provision projects.</td></tr>';
+        tbody.innerHTML = emptyMsg;
+        if (cardsContainer) cardsContainer.innerHTML = '<div class="p-6 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 italic">No active projects provisioned yet.</div>';
         return;
       }
 
+      // Desktop Table
       tbody.innerHTML = projects.map(p => {
         const percent = p.progress_percent || 0;
         return `
           <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
             <td class="px-6 py-4 font-bold text-[#172B36]">${p.name}</td>
-            <td class="px-6 py-4 text-slate-400">${p.organization_name || 'Organization'}</td>
-            <td class="px-6 py-4 font-mono text-xs text-brand-whiz">${p.service_name || 'Service'}</td>
+            <td class="px-6 py-4 text-slate-600">${p.organization_name || 'Organization'}</td>
+            <td class="px-6 py-4 font-mono text-xs text-[#147D64] font-semibold">${p.service_name || 'Service'}</td>
             <td class="px-6 py-4">
               <div class="flex items-center space-x-2">
                 <div class="w-24 bg-slate-100 h-2 border border-[#E3E9EF] rounded-full overflow-hidden">
-                  <div class="bg-brand-whiz h-full rounded-full transition-all duration-500" style="width: ${percent}%"></div>
+                  <div class="bg-[#147D64] h-full rounded-full transition-all duration-500" style="width: ${percent}%"></div>
                 </div>
                 <span class="text-xs font-mono font-bold text-[#172B36]">${percent}%</span>
               </div>
             </td>
             <td class="px-6 py-4">
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-950 text-emerald-300 border border-emerald-500/30">${p.status}</span>
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">${p.status || 'Active'}</span>
             </td>
-            <td class="px-6 py-4 text-right font-mono text-slate-400">
+            <td class="px-6 py-4 text-right font-mono text-slate-500 text-xs">
               ${p.completed_tasks || 0} / ${p.total_tasks || 20}
             </td>
           </tr>
         `;
       }).join('');
+
+      // Mobile Cards
+      if (cardsContainer) {
+        cardsContainer.innerHTML = projects.map(p => {
+          const percent = p.progress_percent || 0;
+          return `
+            <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs space-y-3">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <h4 class="text-sm font-black text-[#172B36]">${p.name}</h4>
+                  <p class="text-xs text-slate-500">${p.organization_name || 'Organization'}</p>
+                </div>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">${p.status || 'Active'}</span>
+              </div>
+
+              <div class="space-y-1.5">
+                <div class="flex items-center justify-between text-xs font-semibold">
+                  <span class="text-[#147D64]">${p.service_name || 'Service'}</span>
+                  <span class="font-mono text-[#172B36]">${percent}% Complete</span>
+                </div>
+                <div class="w-full bg-slate-100 h-2 border border-[#E3E9EF] rounded-full overflow-hidden">
+                  <div class="bg-[#147D64] h-full rounded-full" style="width: ${percent}%"></div>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs text-slate-500">
+                <span>Completed Tasks</span>
+                <span class="font-mono font-bold text-slate-700">${p.completed_tasks || 0} of ${p.total_tasks || 20}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
     }
   }
 
@@ -1074,18 +1202,18 @@
       list.innerHTML = tasks.map(t => {
         const isCompleted = t.status === 'completed';
         return `
-          <div class="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-xl flex items-center justify-between gap-4">
+          <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs flex items-center justify-between gap-4">
             <div class="flex items-center space-x-3.5 min-w-0">
-              <input type="checkbox" class="task-checkbox w-4 h-4 rounded text-brand-whiz bg-slate-950 border-slate-700 cursor-pointer" data-id="${t.id}" ${isCompleted ? 'checked' : ''}>
+              <input type="checkbox" class="task-checkbox w-4 h-4 rounded text-[#147D64] bg-white border-slate-300 cursor-pointer" data-id="${t.id}" ${isCompleted ? 'checked' : ''}>
               <div class="min-w-0">
-                <div class="text-xs font-bold text-white truncate ${isCompleted ? 'line-through text-slate-500' : ''}">${t.title}</div>
+                <div class="text-xs font-bold text-[#172B36] truncate ${isCompleted ? 'line-through text-slate-500' : ''}">${t.title}</div>
                 <div class="text-[11px] text-slate-400">${t.project_name} (${t.organization_name})</div>
               </div>
             </div>
             <div class="flex items-center space-x-3 shrink-0">
-              <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded ${isCompleted ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30' : 'bg-slate-950 text-slate-400 border border-slate-800'}">${t.status}</span>
+              <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded ${isCompleted ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-600 border border-slate-200'}">${t.status}</span>
               <span class="text-xs font-mono font-bold text-brand-whiz">${t.progress_percent}% Proj</span>
-              <button type="button" class="btn-live-task-detail px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer transition-all" data-id="${t.id}">
+              <button type="button" class="btn-live-task-detail px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-50 hover:bg-slate-100 text-slate-700 border border-[#E3E9EF] cursor-pointer transition-all" data-id="${t.id}">
                 Details
               </button>
             </div>
@@ -1230,6 +1358,7 @@
   function renderUserDirectory() {
     const tbody = document.getElementById('userDirectoryTableBody');
     const countEl = document.getElementById('userDirectoryCount');
+    const cardsContainer = document.getElementById('adminUserCardsContainer');
     if (!tbody) return;
 
     const query = (document.getElementById('userDirectorySearch')?.value || '').toLowerCase().trim();
@@ -1255,10 +1384,13 @@
     if (countEl) countEl.textContent = `${filtered.length} account${filtered.length === 1 ? '' : 's'}`;
 
     if (filtered.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">No users match the search filter.</td></tr>';
+      const emptyMsg = '<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">No users match the search filter.</td></tr>';
+      tbody.innerHTML = emptyMsg;
+      if (cardsContainer) cardsContainer.innerHTML = '<div class="p-6 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 italic">No users match search criteria.</div>';
       return;
     }
 
+    // Desktop Table
     tbody.innerHTML = filtered.map(u => {
       const isOwner = u.email && u.email.toLowerCase() === 'kaziaremon@gmail.com';
       const initials = (u.full_name || u.email || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
@@ -1323,178 +1455,127 @@
       `;
     }).join('');
 
-    // Bind action buttons
-    tbody.querySelectorAll('.btn-role-action').forEach(btn => {
+    // Mobile Cards
+    if (cardsContainer) {
+      cardsContainer.innerHTML = filtered.map(u => {
+        const isOwner = u.email && u.email.toLowerCase() === 'kaziaremon@gmail.com';
+        const initials = (u.full_name || u.email || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+
+        let roleBadge = '';
+        if (isOwner || u.role === 'owner' || u.role === 'super_admin') {
+          roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-crown text-[9px]"></i> Owner</span>';
+        } else if (u.role === 'admin') {
+          roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-blue-50 text-blue-700 border border-blue-200"><i class="fa-solid fa-shield-halved text-[9px]"></i> Admin</span>';
+        } else {
+          roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-slate-100 text-slate-700 border border-slate-200"><i class="fa-solid fa-user text-[9px]"></i> Client</span>';
+        }
+
+        const statusBadge = u.status === 'active' 
+          ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase text-emerald-700 bg-emerald-50 border border-emerald-200">Active</span>'
+          : '<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase text-amber-700 bg-amber-50 border border-amber-200">Suspended</span>';
+
+        return `
+          <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs space-y-3">
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex items-center space-x-3 min-w-0">
+                <div class="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-xs text-[#172B36] uppercase shrink-0">
+                  ${initials}
+                </div>
+                <div class="min-w-0">
+                  <h4 class="text-sm font-black text-[#172B36] truncate">${u.full_name || 'Registered User'}</h4>
+                  <p class="text-xs font-mono text-slate-500 truncate">${u.email}</p>
+                </div>
+              </div>
+              <div class="shrink-0 flex flex-col items-end gap-1">
+                ${roleBadge}
+                ${statusBadge}
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100">
+              <span>Company: <strong class="text-slate-700">${u.company_name || 'None'}</strong></span>
+              <span class="font-mono text-[11px]">${u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}</span>
+            </div>
+
+            ${!isOwner ? `
+              <div class="pt-2 border-t border-slate-100 flex items-center gap-2">
+                ${u.role === 'admin'
+                  ? `<button type="button" class="btn-role-action flex-1 py-2 rounded-xl text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 text-center cursor-pointer" data-id="${u.id}" data-role="client" data-email="${u.email}" data-name="${u.full_name || u.email}">Demote to Client</button>`
+                  : `<button type="button" class="btn-role-action flex-1 py-2 rounded-xl text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 text-center cursor-pointer" data-id="${u.id}" data-role="admin" data-email="${u.email}" data-name="${u.full_name || u.email}">Promote to Admin</button>`
+                }
+                ${u.status === 'suspended'
+                  ? `<button type="button" class="btn-user-reactivate px-3 py-2 rounded-xl text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 cursor-pointer" data-id="${u.id}">Reactivate</button>`
+                  : `<button type="button" class="btn-user-suspend px-3 py-2 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 cursor-pointer" data-id="${u.id}">Suspend</button>`
+                }
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Bind action buttons on both
+    document.querySelectorAll('.btn-role-action').forEach(btn => {
       btn.addEventListener('click', () => {
         openRoleChangeModal(btn.dataset.id, btn.dataset.role, btn.dataset.email, btn.dataset.name);
       });
     });
 
-    tbody.querySelectorAll('.btn-user-view-details').forEach(btn => {
+    document.querySelectorAll('.btn-user-view-details').forEach(btn => {
       btn.addEventListener('click', () => {
         openClientDetails(btn.dataset.id);
       });
     });
 
-    tbody.querySelectorAll('.btn-user-reactivate').forEach(btn => {
+    document.querySelectorAll('.btn-user-reactivate').forEach(btn => {
       btn.addEventListener('click', async () => {
-        btn.disabled = true;
-        const res = await apiFetch(`/clients/${btn.dataset.id}/reactivate`, { method: 'POST' });
-        if (res.ok && res.data && res.data.success) {
-          showToast('Account reactivated successfully.', 'success');
+        const uid = btn.dataset.id;
+        const res = await apiFetch(`/portal/admin/users/${uid}/status`, {
+          method: 'PUT',
+          body: JSON.stringify({ status: 'active' })
+        });
+        if (res.ok) {
+          showToast('Account reactivated.', 'success');
           loadTeamData();
-          loadClientsData();
         } else {
-          showToast(res.data?.error || 'Failed to reactivate account.', 'error');
-          btn.disabled = false;
+          showToast('Failed to reactivate.', 'error');
         }
       });
     });
 
-    tbody.querySelectorAll('.btn-user-suspend').forEach(btn => {
+    document.querySelectorAll('.btn-user-suspend').forEach(btn => {
       btn.addEventListener('click', async () => {
-        if (!confirm('Are you sure you want to suspend this account? Access will be paused.')) return;
-        btn.disabled = true;
-        const res = await apiFetch(`/clients/${btn.dataset.id}/suspend`, { method: 'POST' });
-        if (res.ok && res.data && res.data.success) {
+        const uid = btn.dataset.id;
+        if (!confirm('Suspend this user account?')) return;
+        const res = await apiFetch(`/portal/admin/users/${uid}/status`, {
+          method: 'PUT',
+          body: JSON.stringify({ status: 'suspended' })
+        });
+        if (res.ok) {
           showToast('Account suspended.', 'success');
           loadTeamData();
-          loadClientsData();
         } else {
-          showToast(res.data?.error || 'Failed to suspend account.', 'error');
-          btn.disabled = false;
+          showToast('Failed to suspend.', 'error');
         }
       });
     });
 
-    tbody.querySelectorAll('.btn-user-delete').forEach(btn => {
+    document.querySelectorAll('.btn-user-delete').forEach(btn => {
       btn.addEventListener('click', async () => {
-        if (!confirm(`Are you sure you want to permanently delete account '${btn.dataset.name}'?`)) return;
-        btn.disabled = true;
-        try {
-          const res = await apiFetch(`/clients/${btn.dataset.id}?delete_clerk=false`, { method: 'DELETE' });
-          if (res.ok && res.data && res.data.success) {
-            showToast(res.data.message || 'Account successfully deleted.', 'success');
-            loadTeamData();
-            loadClientsData();
-          } else {
-            showToast(res.data?.error || 'Unable to delete account. Please review any associated records.', 'error');
-            btn.disabled = false;
-          }
-        } catch (err) {
-          showToast('Network error while deleting account.', 'error');
-          btn.disabled = false;
+        const uid = btn.dataset.id;
+        const uname = btn.dataset.name;
+        if (!confirm(`Permanently delete user account for ${uname}? This action cannot be undone.`)) return;
+        const res = await apiFetch(`/portal/admin/users/${uid}`, {
+          method: 'DELETE'
+        });
+        if (res.ok) {
+          showToast('Account permanently removed.', 'success');
+          loadTeamData();
+        } else {
+          showToast('Failed to delete account.', 'error');
         }
       });
     });
-  }
-
-  function renderRoleHistory() {
-    const tbody = document.getElementById('roleHistoryTableBody');
-    if (!tbody) return;
-
-    if (state.roleHistoryCache.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-6 text-center text-slate-500 italic">No role changes recorded in audit log.</td></tr>';
-      return;
-    }
-
-    tbody.innerHTML = state.roleHistoryCache.map(h => {
-      const prevRoleBadge = `<span class="px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-slate-900 text-slate-400 border border-slate-800">${h.previous_role}</span>`;
-      const newRoleBadge = h.new_role === 'admin'
-        ? '<span class="px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-blue-950 text-blue-400 border border-blue-500/30">admin</span>'
-        : '<span class="px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-slate-900 text-slate-300 border border-slate-700">client</span>';
-
-      return `
-        <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
-          <td class="px-6 py-3.5 text-xs text-slate-400 font-mono">${h.action_timestamp || 'N/A'}</td>
-          <td class="px-6 py-3.5">
-            <div class="font-bold text-white text-xs">${h.target_name || 'User'}</div>
-            <div class="text-[11px] text-slate-400 font-mono">${h.target_email || h.target_clerk_user_id}</div>
-          </td>
-          <td class="px-6 py-3.5 text-xs flex items-center gap-1.5 mt-2">
-            ${prevRoleBadge} <i class="fa-solid fa-arrow-right text-[10px] text-slate-500"></i> ${newRoleBadge}
-          </td>
-          <td class="px-6 py-3.5 text-xs text-slate-400 font-mono truncate max-w-[120px]">${h.actor_clerk_user_id}</td>
-          <td class="px-6 py-3.5 text-xs text-slate-300 italic">${h.reason || 'None provided'}</td>
-          <td class="px-6 py-3.5">
-            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase text-emerald-400 bg-emerald-950/60 border border-emerald-500/20">${h.action_result}</span>
-          </td>
-        </tr>
-      `;
-    }).join('');
-  }
-
-  function openRoleChangeModal(userId, targetRole, email, name) {
-    const modal = document.getElementById('modalRoleChange');
-    const title = document.getElementById('modalRoleChangeTitle');
-    const desc = document.getElementById('modalRoleChangeDesc');
-    const inputId = document.getElementById('roleChangeUserId');
-    const inputRole = document.getElementById('roleChangeTargetRole');
-    const inputReason = document.getElementById('roleChangeReason');
-
-    if (!modal) return;
-
-    if (inputId) inputId.value = userId;
-    if (inputRole) inputRole.value = targetRole;
-    if (inputReason) inputReason.value = '';
-
-    if (targetRole === 'admin') {
-      if (title) title.innerHTML = '<i class="fa-solid fa-user-shield text-blue-400"></i><span>Promote Account to Admin</span>';
-      if (desc) desc.textContent = `You are about to promote ${name} (${email}) to an Administrator. They will have access to the Super Admin Console.`;
-    } else {
-      if (title) title.innerHTML = '<i class="fa-solid fa-user text-amber-400"></i><span>Demote Account to Client</span>';
-      if (desc) desc.textContent = `You are about to demote ${name} (${email}) to a Client. Their administrative privileges will be revoked immediately.`;
-    }
-
-    modal.classList.remove('hidden');
-  }
-
-  // =========================================================================
-  // 8. SUPPORT DESK
-  // =========================================================================
-  async function loadSupportData() {
-    const res = await apiFetch('/portal/admin/support');
-    const tbody = document.getElementById('adminSupportTableBody');
-    if (!tbody) return;
-
-    if (res.ok && res.data && res.data.data) {
-      const tickets = res.data.data;
-      if (tickets.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-6 text-center text-slate-500 italic">No support tickets found.</td></tr>';
-        return;
-      }
-      tbody.innerHTML = tickets.map(t => `
-        <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
-          <td class="px-6 py-4">
-            <div class="font-bold text-white">${t.full_name || 'Client'}</div>
-            <div class="text-xs text-slate-400">${t.email}</div>
-          </td>
-          <td class="px-6 py-4 font-bold text-slate-200">${t.subject}</td>
-          <td class="px-6 py-4 text-slate-400 text-xs line-clamp-2">${t.message}</td>
-          <td class="px-6 py-4">
-            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${t.status === 'resolved' ? 'bg-emerald-950 text-emerald-400' : 'bg-amber-950 text-amber-400'}">${t.status}</span>
-          </td>
-          <td class="px-6 py-4 text-right">
-            <button type="button" class="btn-resolve-ticket px-3 py-1 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white cursor-pointer" data-id="${t.id}" data-status="${t.status}">
-              ${t.status === 'resolved' ? 'Reopen' : 'Resolve'}
-            </button>
-          </td>
-        </tr>
-      `).join('');
-
-      tbody.querySelectorAll('.btn-resolve-ticket').forEach(b => {
-        b.addEventListener('click', async () => {
-          const tid = b.dataset.id;
-          const newStatus = b.dataset.status === 'resolved' ? 'open' : 'resolved';
-          await apiFetch(`/portal/admin/support/${tid}/status`, {
-            method: 'PUT',
-            body: JSON.stringify({ status: newStatus })
-          });
-          showToast(`Ticket status updated to ${newStatus}.`, 'success');
-          loadSupportData();
-        });
-      });
-    }
   }
 
   // =========================================================================
@@ -2929,41 +3010,120 @@
       }
     });
 
-    // Mobile Drawer Toggle
+    // Mobile Drawer Toggle with Body Scroll Locking
     const toggleBtn = document.getElementById('mobileMenuToggleBtn');
     const closeBtn = document.getElementById('mobileDrawerCloseBtn');
     const drawer = document.getElementById('mobileDrawer');
     const backdrop = document.getElementById('mobileDrawerBackdrop');
 
-    if (toggleBtn && drawer && backdrop) {
-      toggleBtn.addEventListener('click', () => {
+    function openMobileDrawer() {
+      if (drawer && backdrop) {
         drawer.classList.remove('-translate-x-full');
         backdrop.classList.remove('hidden');
-      });
+        document.body.classList.add('overflow-hidden');
+      }
     }
 
-    if (closeBtn && drawer && backdrop) {
-      closeBtn.addEventListener('click', () => {
+    function closeMobileDrawer() {
+      if (drawer && backdrop) {
         drawer.classList.add('-translate-x-full');
         backdrop.classList.add('hidden');
-      });
+        document.body.classList.remove('overflow-hidden');
+      }
     }
 
-    if (backdrop && drawer) {
-      backdrop.addEventListener('click', () => {
-        drawer.classList.add('-translate-x-full');
-        backdrop.classList.add('hidden');
-      });
-    }
+    if (toggleBtn) toggleBtn.addEventListener('click', openMobileDrawer);
+    if (closeBtn) closeBtn.addEventListener('click', closeMobileDrawer);
+    if (backdrop) backdrop.addEventListener('click', closeMobileDrawer);
 
-    if (drawer && backdrop) {
+    if (drawer) {
       drawer.querySelectorAll('[data-dash-tab]').forEach(tabBtn => {
-        tabBtn.addEventListener('click', () => {
-          drawer.classList.add('-translate-x-full');
-          backdrop.classList.add('hidden');
-        });
+        tabBtn.addEventListener('click', closeMobileDrawer);
       });
     }
+
+    // Interactive Profile Dropdown Menu Wiring
+    const userMenuBtn = document.getElementById('userMenuBtn');
+    const userDropdown = document.getElementById('userAccountDropdown');
+    const userChevron = document.getElementById('userMenuChevron');
+
+    function toggleUserDropdown() {
+      if (!userDropdown) return;
+      const isHidden = userDropdown.classList.contains('hidden');
+      if (isHidden) {
+        userDropdown.classList.remove('hidden');
+        if (userChevron) userChevron.classList.add('rotate-180');
+        if (userMenuBtn) userMenuBtn.setAttribute('aria-expanded', 'true');
+      } else {
+        closeUserDropdown();
+      }
+    }
+
+    function closeUserDropdown() {
+      if (!userDropdown) return;
+      userDropdown.classList.add('hidden');
+      if (userChevron) userChevron.classList.remove('rotate-180');
+      if (userMenuBtn) userMenuBtn.setAttribute('aria-expanded', 'false');
+    }
+
+    if (userMenuBtn) {
+      userMenuBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleUserDropdown();
+      });
+    }
+
+    // Close dropdown on outside click or Escape key
+    document.addEventListener('click', (e) => {
+      if (userDropdown && !userDropdown.classList.contains('hidden')) {
+        if (!userDropdown.contains(e.target) && !userMenuBtn?.contains(e.target)) {
+          closeUserDropdown();
+        }
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeUserDropdown();
+        closeMobileDrawer();
+      }
+    });
+
+    // Dropdown Navigation Links
+    document.getElementById('dropdownLinkProfile')?.addEventListener('click', () => {
+      closeUserDropdown();
+      switchTab('overview');
+    });
+
+    document.getElementById('dropdownLinkSettings')?.addEventListener('click', () => {
+      closeUserDropdown();
+      switchTab('team');
+    });
+
+    document.getElementById('dropdownLinkSecurity')?.addEventListener('click', () => {
+      closeUserDropdown();
+      switchTab('security');
+    });
+
+    // Mobile Quick Refresh Button
+    document.getElementById('mobileQuickRefreshBtn')?.addEventListener('click', () => {
+      const icon = document.getElementById('mobileQuickRefreshIcon');
+      if (icon) icon.classList.add('fa-spin');
+      const tabId = state.activeTab || 'overview';
+      if (tabId === 'overview') loadOverviewData();
+      else if (tabId === 'clients') loadClientsData();
+      else if (tabId === 'services') loadServicesData();
+      else if (tabId === 'projects') loadProjectsData();
+      else if (tabId === 'tasks') loadTasksData();
+      else if (tabId === 'finance') loadFinanceData();
+      else if (tabId === 'team') loadTeamData();
+      else if (tabId === 'support') loadSupportData();
+      else if (tabId === 'history') loadHistoryData();
+      setTimeout(() => {
+        if (icon) icon.classList.remove('fa-spin');
+        showToast('Console synchronized with Cloudflare D1.', 'success');
+      }, 500);
+    });
 
     // Sign out buttons
     document.querySelectorAll('.btn-admin-signout').forEach(btn => {

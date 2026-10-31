@@ -230,44 +230,121 @@
     <!-- MAIN WORKSPACE -->
     <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#F7F9FC]">
 
-      <!-- TOP HEADER -->
-      <header class="h-16 border-b border-[#E3E9EF] bg-white/95 backdrop-blur-xl shrink-0 flex items-center justify-between px-4 sm:px-6 z-30 shadow-sm">
+      <!-- TOP HEADER (Phase 2 & 11: Clean Mobile-First Header) -->
+      <header class="h-16 border-b border-[#E3E9EF] bg-white/95 backdrop-blur-xl shrink-0 flex items-center justify-between px-3 sm:px-6 z-30 shadow-xs relative">
+        <!-- Left: Mobile Toggle / Desktop Breadcrumb -->
         <div class="flex items-center space-x-3">
-          <!-- Mobile hamburger -->
-          <button type="button" id="clientMobileToggleBtn" class="lg:hidden w-9 h-9 rounded-xl bg-slate-50 border border-[#E3E9EF] flex items-center justify-center text-[#5F7180] hover:text-[#172B36] cursor-pointer">
+          <button type="button" id="clientMobileToggleBtn" class="lg:hidden w-10 h-10 rounded-xl bg-slate-50 hover:bg-slate-100 active:bg-slate-200 border border-[#E3E9EF] flex items-center justify-center text-[#172B36] cursor-pointer touch-manipulation transition-colors select-none" aria-label="Open Navigation">
             <i class="fa-solid fa-bars text-sm"></i>
           </button>
-          <a href="/" class="lg:hidden flex items-center">
-            <img src="/assets/images/logo.png" alt="Whiz Studio" class="h-6 w-auto object-contain">
-          </a>
-          <!-- Breadcrumb -->
-          <div class="hidden sm:flex items-center space-x-2 text-xs">
+          <!-- Desktop Breadcrumbs -->
+          <div class="hidden lg:flex items-center space-x-2 text-xs">
+            <a href="/" class="flex items-center group mr-2">
+              <img src="/assets/images/logo.png" alt="Whiz Studio" class="h-7 w-auto object-contain">
+            </a>
+            <span class="text-slate-300">/</span>
             <span class="font-extrabold text-[#5F7180] uppercase tracking-wider">Client Portal</span>
             <span class="text-slate-300">/</span>
             <span id="breadcrumbActiveTab" class="font-extrabold text-[#147D64] capitalize">Overview</span>
           </div>
         </div>
-        <div class="flex items-center space-x-3">
-          <!-- Live Sync / Refresh button -->
-          <button type="button" id="btnRefreshClientDashboard" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-[#EAF7F1] border border-[#E3E9EF] hover:border-[#147D64]/30 text-[11px] font-bold text-[#172B36] hover:text-[#147D64] transition-all cursor-pointer shadow-xs" title="Synchronize with Cloudflare D1">
+
+        <!-- Center: Original Whiz Studio Logo (Mobile only, centered) -->
+        <div class="lg:hidden flex items-center justify-center absolute left-1/2 -translate-x-1/2 pointer-events-auto">
+          <a href="/" class="flex items-center py-1">
+            <img src="/assets/images/logo.png" alt="Whiz Studio" class="h-7 w-auto object-contain">
+          </a>
+        </div>
+
+        <!-- Right Controls: Desktop Live Sync & Interactive Profile Dropdown -->
+        <div class="flex items-center space-x-2.5">
+          <!-- Live Sync / Refresh button (Desktop) -->
+          <button type="button" id="btnRefreshClientDashboard" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-[#EAF7F1] border border-[#E3E9EF] hover:border-[#147D64]/30 text-[11px] font-bold text-[#172B36] hover:text-[#147D64] transition-all cursor-pointer shadow-xs" title="Synchronize with Cloudflare D1">
             <i class="fa-solid fa-rotate text-xs text-[#147D64]" id="btnRefreshClientIcon"></i>
-            <span class="hidden sm:inline">Sync Live</span>
+            <span>Sync Live</span>
           </button>
+          
           <!-- Verified badge -->
-          <div class="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-semibold text-[#147D64]">
+          <div class="hidden md:flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-semibold text-[#147D64]">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
             <span>Verified</span>
           </div>
-          <!-- User name + signout (top right) -->
-          <div class="flex items-center space-x-2.5">
-            <div class="w-7 h-7 rounded-lg bg-[#147D64]/10 border border-[#147D64]/30 flex items-center justify-center font-bold text-xs text-[#147D64] uppercase userAvatarText">CL</div>
-            <span class="hidden md:inline-block text-xs font-bold text-[#172B36] truncate max-w-[120px] client-greeting-name">Client</span>
+
+          <!-- Interactive Client Account Trigger + Dropdown Menu -->
+          <div class="relative">
+            <button type="button" id="clientUserMenuBtn" class="flex items-center space-x-2 p-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 active:bg-slate-200 border border-[#E3E9EF] text-[#172B36] transition-all cursor-pointer touch-manipulation select-none" aria-expanded="false" aria-haspopup="true">
+              <div class="w-8 h-8 rounded-lg bg-[#147D64]/10 border border-[#147D64]/30 flex items-center justify-center font-bold text-xs text-[#147D64] uppercase userAvatarText select-none">
+                CL
+              </div>
+              <span class="hidden md:inline-block text-xs font-bold text-[#172B36] truncate max-w-[120px] client-greeting-name">Client</span>
+              <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform duration-200" id="clientUserMenuChevron"></i>
+            </button>
+
+            <!-- Interactive Client Account Dropdown Menu -->
+            <div id="clientUserAccountDropdown" class="hidden absolute right-0 mt-2 w-72 rounded-2xl bg-white border border-[#E3E9EF] shadow-2xl p-2.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+              <div class="p-3 rounded-xl bg-slate-50 border border-slate-100 mb-2">
+                <div class="flex items-center space-x-3">
+                  <div class="w-10 h-10 rounded-xl bg-[#147D64]/10 border border-[#147D64]/30 flex items-center justify-center font-bold text-sm text-[#147D64] uppercase userAvatarText select-none">
+                    CL
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <p class="text-xs font-bold text-[#172B36] truncate client-greeting-name">Client User</p>
+                    <p class="text-[11px] text-slate-500 font-mono truncate" id="clientDropdownEmail">client@whizstudio.art</p>
+                  </div>
+                </div>
+                <div class="mt-2.5 pt-2 border-t border-slate-200/70 flex items-center justify-between text-[11px]">
+                  <span class="text-slate-500 font-medium">Account Access</span>
+                  <span class="font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-[#147D64] border border-emerald-200 text-[10px] uppercase">Client Portal</span>
+                </div>
+              </div>
+
+              <!-- Menu Links -->
+              <div class="space-y-1 text-xs text-slate-700">
+                <button type="button" class="client-dropdown-tab-link w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 hover:text-[#172B36] active:bg-slate-100 transition-colors text-left cursor-pointer" data-tab="overview">
+                  <i class="fa-solid fa-gauge-high w-4 text-[#147D64]"></i>
+                  <span class="font-semibold text-[#172B36]">Campaign Overview</span>
+                </button>
+                <button type="button" class="client-dropdown-tab-link w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 hover:text-[#172B36] active:bg-slate-100 transition-colors text-left cursor-pointer" data-tab="services">
+                  <i class="fa-solid fa-layer-group w-4 text-[#147D64]"></i>
+                  <span class="font-semibold text-[#172B36]">My Active Services</span>
+                </button>
+                <button type="button" class="client-dropdown-tab-link w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 hover:text-[#172B36] active:bg-slate-100 transition-colors text-left cursor-pointer" data-tab="tasks">
+                  <i class="fa-solid fa-list-check w-4 text-[#147D64]"></i>
+                  <span class="font-semibold text-[#172B36]">Deliverables Progress</span>
+                </button>
+                <button type="button" class="client-dropdown-tab-link w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 hover:text-[#172B36] active:bg-slate-100 transition-colors text-left cursor-pointer" data-tab="finance">
+                  <i class="fa-solid fa-receipt w-4 text-[#147D64]"></i>
+                  <span class="font-semibold text-[#172B36]">Billing &amp; Receipts</span>
+                </button>
+                <button type="button" class="client-dropdown-tab-link w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 hover:text-[#172B36] active:bg-slate-100 transition-colors text-left cursor-pointer" data-tab="support">
+                  <i class="fa-solid fa-headset w-4 text-[#147D64]"></i>
+                  <span class="font-semibold text-[#172B36]">Support &amp; Inquiries</span>
+                </button>
+              </div>
+
+              <!-- Sign Out -->
+              <div class="mt-2 pt-2 border-t border-[#E3E9EF]">
+                <button type="button" class="btn-client-signout w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-rose-600 hover:bg-rose-50 active:bg-rose-100 transition-colors text-left cursor-pointer font-bold">
+                  <i class="fa-solid fa-arrow-right-from-bracket w-4 text-rose-500 text-sm"></i>
+                  <span>Sign Out of Portal</span>
+                </button>
+              </div>
+            </div>
           </div>
-          <button type="button" class="btn-client-signout w-8 h-8 rounded-xl bg-slate-50 hover:bg-rose-50 border border-[#E3E9EF] hover:border-rose-200 flex items-center justify-center text-[#5F7180] hover:text-rose-600 transition-all cursor-pointer" title="Sign Out">
-            <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i>
-          </button>
         </div>
       </header>
+
+      <!-- MOBILE SUBHEADER (Phase 2 & 11: Current page title immediately below header) -->
+      <div class="lg:hidden bg-white border-b border-[#E3E9EF] px-4 py-2.5 flex items-center justify-between shrink-0 shadow-xs z-20">
+        <div class="min-w-0 flex-1">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-[#147D64]">Client Portal</span>
+          <h2 id="clientSubheaderTitle" class="text-base font-black text-[#172B36] truncate leading-tight capitalize">Campaign Overview</h2>
+        </div>
+        <button type="button" id="btnRefreshClientDashboardMobile" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-[#EAF7F1] border border-[#E3E9EF] text-[11px] font-bold text-[#172B36] transition-colors cursor-pointer" title="Synchronize Live">
+          <i class="fa-solid fa-rotate text-xs text-[#147D64]" id="btnRefreshClientIconMobile"></i>
+          <span>Sync</span>
+        </button>
+      </div>
 
       <!-- SCROLLABLE CONTENT AREA -->
       <div class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
