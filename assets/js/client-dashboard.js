@@ -65,6 +65,8 @@
     invoices: [],
     payments: [],
     finance: null,
+    cif: null,
+    receiptQuota: { used: 0, max: 2, remaining: 2, isLimitReached: false },
     overallProgress: 0,
     organizations: [],
     selectedOrganizationId: null,
@@ -205,6 +207,10 @@
         state.payments = d.recentPayments || d.payments || [];
         state.invoices = d.invoices || [];
         state.finance = d.finance || null;
+      state.cif = d.cif || null;
+      if (d.receiptQuota) state.receiptQuota = d.receiptQuota;
+      updateCifUi();
+      updateQuotaUi();
         state.overallProgress = Math.round(Number(d.overallProgressPercent || 0));
         state.organizations = d.organizations || [];
 
@@ -499,15 +505,197 @@
     }).join('');
   }
 
-  // 4. Render Finance, Multi-Currency Ledger & Invoices
+  // 4. Client Information Form (CIF) & Daily Quota Management
+  function updateCifUi() {
+    const card = document.getElementById('cifStatusCard');
+    const icon = document.getElementById('cifStatusIcon');
+    const title = document.getElementById('cifStatusTitle');
+    const desc = document.getElementById('cifStatusDescription');
+    const badge = document.getElementById('cifPercentageBadge');
+    const bar = document.getElementById('cifProgressBar');
+    const missingBox = document.getElementById('cifMissingFieldsContainer');
+    const missingList = document.getElementById('cifMissingFieldsList');
+    const btnAction = document.getElementById('btnCifAction');
+
+    if (!card) return;
+
+    const cif = state.cif || {};
+    const percent = cif.completionPercentage || 0;
+    const isComplete = cif.isComplete || percent === 100;
+    const missing = cif.missingFields || [];
+
+    if (badge) badge.textContent = `${percent}% Complete`;
+    if (bar) {
+      bar.style.width = `${percent}%`;
+      bar.className = isComplete ? 'h-full bg-emerald-500 transition-all duration-300' : 'h-full bg-amber-500 transition-all duration-300';
+    }
+
+    if (isComplete) {
+      if (icon) {
+        icon.className = 'w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold text-sm';
+        icon.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+      }
+      if (title) title.textContent = 'CIF Profile Complete (100%)';
+      if (desc) desc.textContent = 'All mandatory billing fields verified. Official PDF generation is enabled.';
+      if (missingBox) missingBox.classList.add('hidden');
+      if (btnAction) {
+        btnAction.textContent = 'Edit CIF Profile';
+        btnAction.className = 'px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all shadow-xs cursor-pointer';
+      }
+    } else {
+      if (icon) {
+        icon.className = 'w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold text-sm';
+        icon.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+      }
+      if (title) title.textContent = `CIF Profile Incomplete (${percent}%)`;
+      if (desc) desc.textContent = `Complete all mandatory fields to unlock official PDF downloads.`;
+      if (missingBox) {
+        missingBox.classList.remove('hidden');
+        if (missingList) missingList.textContent = missing.length > 0 ? missing.join(', ') : 'Mandatory invoice fields required';
+      }
+      if (btnAction) {
+        btnAction.textContent = 'Complete CIF';
+        btnAction.className = 'px-3 py-1.5 rounded-xl text-xs font-bold bg-[#147D64] hover:bg-[#12694f] text-white transition-all shadow-xs cursor-pointer';
+      }
+    }
+  }
+
+  function updateQuotaUi() {
+    const quotaText = document.getElementById('quotaRemainingText');
+    const notice = document.getElementById('previewAllowanceNotice');
+    const q = state.receiptQuota || { remaining: 2, max: 2, used: 0 };
+    const str = `Daily PDF Allowance: ${q.remaining}/${q.max} remaining`;
+    if (quotaText) quotaText.textContent = str;
+    if (notice) notice.textContent = `Daily Allowance: ${q.remaining}/${q.max} remaining today (Resets at midnight Dhaka time)`;
+  }
+
+  async function loadCifProfile() {
+    try {
+      const res = await apiFetch('/portal/client/cif');
+      if (res.ok && res.data && res.data.success) {
+        state.cif = res.data.data;
+        updateCifUi();
+        populateCifModal(state.cif);
+      }
+    } catch (e) {
+      console.warn('Failed to load CIF profile:', e);
+    }
+  }
+
+  function populateCifModal(cif) {
+    if (!cif) return;
+    const setVal = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.value = val || '';
+    };
+    setVal('cifInputFullName', cif.fullName);
+    setVal('cifInputBillingName', cif.billingName);
+    setVal('cifInputCompanyName', cif.companyName);
+    setVal('cifInputEmail', cif.email);
+    setVal('cifInputPhone', cif.phone);
+    setVal('cifInputAddress', cif.billingAddress);
+    setVal('cifInputCity', cif.city);
+    setVal('cifInputCountry', cif.country);
+    setVal('cifInputPostalCode', cif.postalCode);
+    setVal('cifInputCurrency', cif.billingCurrency || 'USD');
+    setVal('cifInputTaxId', cif.taxId);
+    updateModalCifProgress();
+  }
+
+  function updateModalCifProgress() {
+    const requiredIds = [
+      'cifInputFullName', 'cifInputBillingName', 'cifInputEmail',
+      'cifInputPhone', 'cifInputAddress', 'cifInputCity',
+      'cifInputCountry', 'cifInputCurrency'
+    ];
+    let filled = 0;
+    requiredIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el && el.value.trim().length > 0) filled++;
+    });
+    const percent = Math.round((filled / requiredIds.length) * 100);
+    const pText = document.getElementById('modalCifPercentText');
+    const pBar = document.getElementById('modalCifProgressBar');
+    if (pText) pText.textContent = `${percent}% (${filled}/8 Mandatory Fields)`;
+    if (pBar) {
+      pBar.style.width = `${percent}%`;
+      pBar.className = percent === 100 ? 'h-full bg-emerald-500 transition-all duration-300' : 'h-full bg-[#147D64] transition-all duration-300';
+    }
+  }
+
+  function openCifModal() {
+    const modal = document.getElementById('modalClientCif');
+    if (!modal) return;
+    if (state.cif) populateCifModal(state.cif);
+    modal.classList.remove('hidden');
+  }
+
+  function closeCifModal() {
+    const modal = document.getElementById('modalClientCif');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  async function handleSaveCif(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btnSaveCif');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Saving...';
+    }
+
+    try {
+      const payload = {
+        fullName: document.getElementById('cifInputFullName')?.value.trim(),
+        billingName: document.getElementById('cifInputBillingName')?.value.trim(),
+        companyName: document.getElementById('cifInputCompanyName')?.value.trim(),
+        email: document.getElementById('cifInputEmail')?.value.trim(),
+        phone: document.getElementById('cifInputPhone')?.value.trim(),
+        billingAddress: document.getElementById('cifInputAddress')?.value.trim(),
+        city: document.getElementById('cifInputCity')?.value.trim(),
+        country: document.getElementById('cifInputCountry')?.value.trim(),
+        postalCode: document.getElementById('cifInputPostalCode')?.value.trim(),
+        billingCurrency: document.getElementById('cifInputCurrency')?.value || 'USD',
+        taxId: document.getElementById('cifInputTaxId')?.value.trim()
+      };
+
+      const res = await apiFetch('/portal/client/cif', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok || !res.data || !res.data.success) {
+        throw new Error(res.data?.error || 'Failed to save CIF profile.');
+      }
+
+      state.cif = res.data.data;
+      updateCifUi();
+      closeCifModal();
+      showToast(res.data.message || 'CIF profile saved successfully!', 'success');
+    } catch (err) {
+      showToast(err.message || 'Error saving CIF profile.', 'error');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save &amp; Validate CIF';
+      }
+    }
+  }
+
+  // 5. Render Finance Invoices & Payment Receipts
   function renderFinanceReceipts() {
     const list = document.getElementById('financeFullList');
     const countEl = document.getElementById('financeReceiptsCount');
-    const records = state.payments.length > 0 ? state.payments : state.invoices;
-    if (countEl) countEl.textContent = `${records.length} Records`;
     if (!list) return;
 
-    // Multi-Currency Breakdown Cards
+    updateCifUi();
+    updateQuotaUi();
+
+    const invoices = state.invoices || [];
+    const payments = state.payments || [];
+    const totalRecords = invoices.length + payments.length;
+    if (countEl) countEl.textContent = `${totalRecords} Published Records (${invoices.length} Invoices, ${payments.length} Confirmed Payments)`;
+
+    // Multi-Currency Ledger Breakdown Cards
     let currencyCardsHtml = '';
     if (state.finance && state.finance.byCurrency) {
       const currs = Object.values(state.finance.byCurrency);
@@ -518,23 +706,19 @@
               <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs space-y-2">
                 <div class="flex items-center justify-between pb-2 border-b border-[#E3E9EF]">
                   <span class="text-xs font-black uppercase text-brand-whiz bg-brand-whiz/10 px-2 py-0.5 rounded-md border border-brand-whiz/20">${escapeHtml(c.currency)}</span>
-                  <span class="text-[10px] uppercase font-bold text-slate-500">Currency Summary</span>
+                  <span class="text-[10px] uppercase font-bold text-slate-500">Balance Status</span>
                 </div>
                 <div class="space-y-1.5 text-xs">
-                  <div class="flex justify-between">
-                    <span class="text-slate-500">Contract Value:</span>
-                    <span class="font-bold text-[#172B36] font-mono">${formatCurrency(c.contractValueCents || 0, c.currency)}</span>
-                  </div>
                   <div class="flex justify-between">
                     <span class="text-slate-500">Total Invoiced:</span>
                     <span class="font-mono text-slate-700">${formatCurrency(c.totalInvoicedCents || 0, c.currency)}</span>
                   </div>
                   <div class="flex justify-between">
                     <span class="text-slate-500">Confirmed Paid:</span>
-                    <span class="font-bold text-emerald-600 font-mono">${formatCurrency(c.totalConfirmedPaidCents || 0, c.currency)}</span>
+                    <span class="font-bold text-emerald-600 font-mono">${formatCurrency(c.totalConfirmedPaidCents || c.totalPaidCents || 0, c.currency)}</span>
                   </div>
                   <div class="flex justify-between pt-1 border-t border-slate-100">
-                    <span class="text-slate-600 font-semibold">Outstanding Due:</span>
+                    <span class="text-slate-600 font-semibold">Outstanding Balance:</span>
                     <span class="font-bold text-amber-600 font-mono">${formatCurrency(c.outstandingBalanceCents || 0, c.currency)}</span>
                   </div>
                 </div>
@@ -545,543 +729,637 @@
       }
     }
 
-    if (records.length === 0) {
-      list.innerHTML = `
-        ${currencyCardsHtml}
-        <div class="p-8 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 space-y-2">
-          <i class="fa-solid fa-file-invoice-dollar text-2xl text-slate-400 block mb-1"></i>
-          <p>No individual payment transactions or invoices published yet.</p>
-          <p class="text-[11px] text-slate-400">Your provisioned service contract amounts are recorded in the ledger above.</p>
+    // Invoices HTML Table & Cards
+    let invoicesSectionHtml = '';
+    if (invoices.length > 0) {
+      invoicesSectionHtml = `
+        <div class="space-y-3 mb-8">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-black text-[#172B36] flex items-center gap-2">
+              <i class="fa-solid fa-file-invoice text-[#147D64]"></i>
+              <span>Invoices (Billing Documents)</span>
+            </h3>
+            <span class="text-[11px] font-bold text-slate-500">${invoices.length} Invoices</span>
+          </div>
+
+          <!-- Mobile Cards -->
+          <div class="md:hidden space-y-3">
+            ${invoices.map(inv => {
+              const num = inv.invoice_number || 'INV-1001';
+              const date = inv.issue_date || 'N/A';
+              const isPaid = (inv.outstanding_balance_cents === 0) || inv.status === 'paid';
+              return `
+                <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs space-y-3">
+                  <div class="flex items-start justify-between gap-2">
+                    <div>
+                      <span class="font-mono text-xs font-bold text-[#172B36]">${escapeHtml(num)}</span>
+                      <div class="text-[11px] text-slate-500 font-mono mt-0.5">Issued: ${escapeHtml(date)}</div>
+                    </div>
+                    <div class="text-right">
+                      <span class="text-sm font-black font-mono text-[#172B36] block">${formatCurrency(inv.total_cents || 0, inv.currency || "USD")}</span>
+                      <span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase ${isPaid ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'} inline-block mt-0.5">
+                        ${isPaid ? 'Paid' : 'Due: ' + formatCurrency(inv.outstanding_balance_cents || 0, inv.currency || 'USD')}
+                      </span>
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
+                    <button type="button" class="btn-preview-doc py-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-all" data-type="invoice" data-id="${inv.id}" data-num="${num}">
+                      <i class="fa-solid fa-eye text-[11px]"></i>
+                      <span>Preview</span>
+                    </button>
+                    <button type="button" class="btn-download-doc py-2 rounded-xl bg-[#147D64] hover:bg-[#12694f] text-white text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-all shadow-xs" data-type="invoice" data-id="${inv.id}" data-num="${num}">
+                      <i class="fa-solid fa-download text-[11px]"></i>
+                      <span>Download PDF</span>
+                    </button>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+
+          <!-- Desktop Table -->
+          <div class="hidden md:block rounded-3xl bg-white border border-[#E3E9EF] overflow-hidden shadow-xs">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs text-slate-600 min-w-[650px]">
+                <thead class="bg-slate-50/80 border-b border-[#E3E9EF] text-[11px] uppercase font-bold text-slate-500">
+                  <tr>
+                    <th class="p-4">Invoice #</th>
+                    <th class="p-4">Issue Date</th>
+                    <th class="p-4">Due Date</th>
+                    <th class="p-4">Total Amount</th>
+                    <th class="p-4">Status</th>
+                    <th class="p-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-[#E3E9EF]">
+                  ${invoices.map(inv => {
+                    const num = inv.invoice_number || 'INV-1001';
+                    const isPaid = (inv.outstanding_balance_cents === 0) || inv.status === 'paid';
+                    return `
+                      <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="p-4 font-mono font-bold text-[#172B36]">${escapeHtml(num)}</td>
+                        <td class="p-4 text-slate-500">${escapeHtml(inv.issue_date || 'N/A')}</td>
+                        <td class="p-4 text-slate-500">${escapeHtml(inv.due_date || 'N/A')}</td>
+                        <td class="p-4 font-mono font-bold text-[#172B36]">${formatCurrency(inv.total_cents || 0, inv.currency || "USD")}</td>
+                        <td class="p-4">
+                          <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${isPaid ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}">
+                            ${isPaid ? 'Paid in Full' : 'Pending: ' + formatCurrency(inv.outstanding_balance_cents || 0, inv.currency || 'USD')}
+                          </span>
+                        </td>
+                        <td class="p-4 text-right space-x-1.5">
+                          <button type="button" class="btn-preview-doc px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold transition-all cursor-pointer" data-type="invoice" data-id="${inv.id}" data-num="${num}">
+                            <i class="fa-solid fa-eye mr-1"></i> Preview
+                          </button>
+                          <button type="button" class="btn-download-doc px-3 py-1.5 rounded-xl bg-[#147D64] hover:bg-[#12694f] text-white text-xs font-bold transition-all cursor-pointer shadow-xs" data-type="invoice" data-id="${inv.id}" data-num="${num}">
+                            <i class="fa-solid fa-download mr-1"></i> PDF Invoice
+                          </button>
+                        </td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       `;
-      return;
+    }
+
+    // Payment Receipts HTML Table & Cards
+    let paymentsSectionHtml = '';
+    if (payments.length > 0) {
+      paymentsSectionHtml = `
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-black text-[#172B36] flex items-center gap-2">
+              <i class="fa-solid fa-receipt text-[#147D64]"></i>
+              <span>Payment Receipts (Evidence of Payment)</span>
+            </h3>
+            <span class="text-[11px] font-bold text-slate-500">${payments.length} Receipts</span>
+          </div>
+
+          <!-- Mobile Cards -->
+          <div class="md:hidden space-y-3">
+            ${payments.map(p => {
+              const num = p.receipt_number || p.receiptNumber || 'RCPT-1001';
+              const date = p.payment_date || p.paymentDate || 'N/A';
+              const method = p.payment_method || p.paymentMethod || 'Online';
+              return `
+                <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs space-y-3">
+                  <div class="flex items-start justify-between gap-2">
+                    <div>
+                      <span class="font-mono text-xs font-bold text-[#147D64]">${escapeHtml(num)}</span>
+                      <div class="text-[11px] text-slate-500 font-mono mt-0.5">Paid: ${escapeHtml(date)}</div>
+                    </div>
+                    <div class="text-right">
+                      <span class="text-sm font-black font-mono text-emerald-600 block">${formatCurrency(p.amount_cents || p.amountCents || 0, p.currency || "USD")}</span>
+                      <span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 inline-block mt-0.5">Confirmed</span>
+                    </div>
+                  </div>
+                  <div class="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-100">
+                    <span class="text-[10px] uppercase font-bold text-slate-400">Payment Method</span>
+                    <span class="uppercase text-slate-700 font-semibold">${escapeHtml(method)}</span>
+                  </div>
+                  <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
+                    <button type="button" class="btn-preview-doc py-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-all" data-type="receipt" data-id="${p.id}" data-num="${num}">
+                      <i class="fa-solid fa-eye text-[11px]"></i>
+                      <span>Preview</span>
+                    </button>
+                    <button type="button" class="btn-download-doc py-2 rounded-xl bg-[#147D64] hover:bg-[#12694f] text-white text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-all shadow-xs" data-type="receipt" data-id="${p.id}" data-num="${num}">
+                      <i class="fa-solid fa-download text-[11px]"></i>
+                      <span>Download PDF</span>
+                    </button>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+
+          <!-- Desktop Table -->
+          <div class="hidden md:block rounded-3xl bg-white border border-[#E3E9EF] overflow-hidden shadow-xs">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs text-slate-600 min-w-[650px]">
+                <thead class="bg-slate-50/80 border-b border-[#E3E9EF] text-[11px] uppercase font-bold text-slate-500">
+                  <tr>
+                    <th class="p-4">Receipt #</th>
+                    <th class="p-4">Payment Date</th>
+                    <th class="p-4">Payment Method</th>
+                    <th class="p-4">Amount Paid</th>
+                    <th class="p-4">Invoice Link</th>
+                    <th class="p-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-[#E3E9EF]">
+                  ${payments.map(p => {
+                    const num = p.receipt_number || p.receiptNumber || 'RCPT-1001';
+                    return `
+                      <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="p-4 font-mono font-bold text-[#147D64]">${escapeHtml(num)}</td>
+                        <td class="p-4 text-slate-500">${escapeHtml(p.payment_date || p.paymentDate || 'N/A')}</td>
+                        <td class="p-4 uppercase text-[11px] text-slate-600 font-semibold">${escapeHtml(p.payment_method || p.paymentMethod || 'Online')}</td>
+                        <td class="p-4 font-mono font-bold text-emerald-600">${formatCurrency(p.amount_cents || p.amountCents || 0, p.currency || "USD")}</td>
+                        <td class="p-4 font-mono text-slate-500">${escapeHtml(p.invoice_number || '—')}</td>
+                        <td class="p-4 text-right space-x-1.5">
+                          <button type="button" class="btn-preview-doc px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold transition-all cursor-pointer" data-type="receipt" data-id="${p.id}" data-num="${num}">
+                            <i class="fa-solid fa-eye mr-1"></i> Preview
+                          </button>
+                          <button type="button" class="btn-download-doc px-3 py-1.5 rounded-xl bg-[#147D64] hover:bg-[#12694f] text-white text-xs font-bold transition-all cursor-pointer shadow-xs" data-type="receipt" data-id="${p.id}" data-num="${num}">
+                            <i class="fa-solid fa-download mr-1"></i> PDF Receipt
+                          </button>
+                        </td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    let emptyNotice = '';
+    if (invoices.length === 0 && payments.length === 0) {
+      emptyNotice = `
+        <div class="p-8 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 space-y-2">
+          <i class="fa-solid fa-file-invoice-dollar text-3xl text-slate-300 block mb-2"></i>
+          <p class="font-bold text-[#172B36]">No billing records published yet.</p>
+          <p class="text-[11px] text-slate-400">Contracts and invoices confirmed by Whiz Studio finance will appear here for PDF download.</p>
+        </div>
+      `;
     }
 
     list.innerHTML = `
       ${currencyCardsHtml}
-      <!-- Mobile Cards (Table-to-Card Pattern, md:hidden) -->
-      <div class="md:hidden space-y-3">
-        ${records.map(r => {
-          const num = r.receipt_number || r.receiptNumber || r.invoice_number || 'INV-1001';
-          const date = r.payment_date || r.paymentDate || r.issue_date || 'N/A';
-          const paymentId = r.id;
-          return `
-            <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs space-y-3">
-              <div class="flex items-start justify-between gap-2">
-                <div>
-                  <span class="font-mono text-xs font-bold text-[#147D64]">${escapeHtml(num)}</span>
-                  <div class="text-[11px] text-slate-500 font-mono mt-0.5">${escapeHtml(date)}</div>
-                </div>
-                <div class="text-right">
-                  <span class="text-sm font-black font-mono text-[#147D64] block">${formatCurrency((r.amount_cents || r.amountCents || r.total_cents || r.totalCents || 0), r.currency || "USD")}</span>
-                  <span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 inline-block mt-0.5">Paid</span>
-                </div>
-              </div>
-
-              <div class="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-100">
-                <span class="text-[10px] uppercase font-bold text-slate-400">Payment Method</span>
-                <span class="uppercase text-slate-700 font-semibold">${escapeHtml(r.payment_method || r.paymentMethod || 'Online')}</span>
-              </div>
-
-              <div class="pt-2 border-t border-slate-100">
-                <button type="button" class="btn-download-client-receipt w-full py-2.5 rounded-xl bg-[#147D64]/10 hover:bg-[#147D64]/20 text-[#147D64] border border-[#147D64]/30 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-all shadow-xs" data-payment-id="${paymentId}" data-receipt-num="${num}">
-                  <i class="fa-solid fa-file-arrow-down text-xs"></i>
-                  <span>Download PDF Receipt</span>
-                </button>
-              </div>
-            </div>
-          `;
-        }).join('')}
-      </div>
-
-      <!-- Desktop Table (hidden md:block) -->
-      <div class="hidden md:block rounded-3xl bg-white border border-[#E3E9EF] overflow-hidden shadow-xs">
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs text-slate-600 min-w-[650px]">
-            <thead class="bg-slate-50/80 border-b border-[#E3E9EF] text-[11px] uppercase font-bold text-slate-500">
-              <tr>
-                <th class="p-4">Receipt / Invoice #</th>
-                <th class="p-4">Date</th>
-                <th class="p-4">Amount</th>
-                <th class="p-4">Method</th>
-                <th class="p-4">Status</th>
-                <th class="p-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-[#E3E9EF]">
-              ${records.map(r => {
-                const num = r.receipt_number || r.receiptNumber || r.invoice_number || 'INV-1001';
-                const date = r.payment_date || r.paymentDate || r.issue_date || 'N/A';
-                const paymentId = r.id;
-                return `
-                  <tr class="hover:bg-slate-50 transition-colors">
-                    <td class="p-4 font-mono font-bold text-[#172B36]">${escapeHtml(num)}</td>
-                    <td class="p-4 text-slate-500">${escapeHtml(date)}</td>
-                    <td class="p-4 font-mono font-bold text-emerald-600">${formatCurrency((r.amount_cents || r.amountCents || r.total_cents || r.totalCents || 0), r.currency || "USD")}</td>
-                    <td class="p-4 uppercase text-[11px] text-slate-500">${escapeHtml(r.payment_method || r.paymentMethod || 'Online')}</td>
-                    <td class="p-4">
-                      <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        Paid
-                      </span>
-                    </td>
-                    <td class="p-4 text-right">
-                      <button type="button" class="btn-download-client-receipt px-3 py-1.5 rounded-xl bg-brand-whiz/15 hover:bg-brand-whiz/25 text-brand-whiz border border-brand-whiz/30 text-xs font-bold transition-all cursor-pointer shadow-xs" data-payment-id="${paymentId}" data-receipt-num="${num}">
-                        <i class="fa-solid fa-download mr-1"></i> PDF Receipt
-                      </button>
-                    </td>
-                  </tr>
-                `;
-              }).join('')}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      ${invoicesSectionHtml}
+      ${paymentsSectionHtml}
+      ${emptyNotice}
     `;
 
-    // Wire PDF Download buttons
-    list.querySelectorAll('.btn-download-client-receipt').forEach(btn => {
+    // Wire actions
+    list.querySelectorAll('.btn-preview-doc').forEach(btn => {
       btn.addEventListener('click', () => {
-        downloadPdfReceipt(btn.dataset.paymentId, btn.dataset.receiptNum, btn);
+        handleDocumentAction(btn.dataset.type, btn.dataset.id, btn.dataset.num, true, btn);
+      });
+    });
+
+    list.querySelectorAll('.btn-download-doc').forEach(btn => {
+      btn.addEventListener('click', () => {
+        handleDocumentAction(btn.dataset.type, btn.dataset.id, btn.dataset.num, false, btn);
       });
     });
   }
 
-  // 5. In-Browser PDF Receipt Generation via pdf-lib (100% Free, Zero Server Storage)
-  // Exact High-Fidelity Reproduction of Official Whiz Studio Stationery
-  async function downloadPdfReceipt(paymentId, receiptNum, buttonEl) {
-    if (!buttonEl) return;
-    const originalText = buttonEl.innerHTML;
-    buttonEl.disabled = true;
-    buttonEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-1"></i> Generating...';
+  // 6. In-Browser High-Fidelity PDF Generation Engine via pdf-lib
+  // Uses authentic Whiz Studio clean master template with zero server binary storage
+  async function buildDocumentPdf(docData) {
+    if (!window.PDFLib) {
+      throw new Error('PDF generation engine unavailable.');
+    }
+
+    const { PDFDocument, rgb, StandardFonts } = window.PDFLib;
+    const pdfDoc = await PDFDocument.create();
+    
+    // A4 Size in points: 595.44 x 842.16
+    const page = pdfDoc.addPage([595.44, 842.16]);
+    const { width, height } = page.getSize();
+
+    // Scale factors from 2481 x 3509 master image
+    const toPdfX = (imgX) => (imgX / 2481) * width;
+    const toPdfY = (imgY) => height - ((imgY / 3509) * height);
+
+    // Pick appropriate template
+    const isReceipt = docData.documentType === 'receipt';
+    const templateUrl = isReceipt
+      ? '/assets/images/receipt-master-template-clean-2481x3509.png'
+      : '/assets/images/invoice-master-template-clean-2481x3509.png';
 
     try {
-      // 1. Authorize receipt with Cloudflare D1 Authority
-      const authRes = await apiFetch('/pdf/authorize-receipt', {
-        method: 'POST',
-        body: JSON.stringify({ paymentId })
+      const templateBytes = await fetch(templateUrl).then(r => {
+        if (!r.ok) throw new Error(`Failed to load template ${templateUrl}`);
+        return r.arrayBuffer();
       });
-
-      if (!authRes.ok || !authRes.data || !authRes.data.success) {
-        throw new Error(authRes.data?.error || 'Authorization for receipt generation failed.');
-      }
-
-      const receiptData = authRes.data.data;
-      if (!window.PDFLib) {
-        throw new Error('PDF generation engine unavailable.');
-      }
-
-      // 2. Compile Vector PDF in Browser Memory
-      const { PDFDocument, rgb, StandardFonts } = window.PDFLib;
-      const pdfDoc = await PDFDocument.create();
-      const page = pdfDoc.addPage([595.28, 841.89]); // A4 Size in points
-      const { width, height } = page.getSize();
-
-      const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-      const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
-
-      // Template Color Palette
-      const tealPrimary = rgb(0.08, 0.49, 0.39); // #147D64
-      const textDark = rgb(0.09, 0.17, 0.21);   // #172B36
-      const textMuted = rgb(0.37, 0.44, 0.50);  // #5F7180
-
-      // 1. Embed Images
-      try {
-        const [logoBuf, topCornerBuf, botCornerBuf, sigBuf] = await Promise.all([
-          fetch('/assets/images/logo.png').then(r => r.arrayBuffer()).catch(() => null),
-          fetch('/assets/images/template-corner-top-right.png').then(r => r.arrayBuffer()).catch(() => null),
-          fetch('/assets/images/template-corner-bottom-left.png').then(r => r.arrayBuffer()).catch(() => null),
-          fetch('/assets/images/official-signature.png').then(r => r.arrayBuffer()).catch(() => null)
-        ]);
-
-        if (topCornerBuf) {
-          const topCornerImg = await pdfDoc.embedPng(topCornerBuf);
-          page.drawImage(topCornerImg, {
-            x: width - 150,
-            y: height - 61.5,
-            width: 150,
-            height: 61.5
-          });
-        }
-
-        if (botCornerBuf) {
-          const botCornerImg = await pdfDoc.embedPng(botCornerBuf);
-          page.drawImage(botCornerImg, {
-            x: 0,
-            y: 0,
-            width: 130,
-            height: 120
-          });
-        }
-
-        if (logoBuf) {
-          const logoImg = await pdfDoc.embedPng(logoBuf);
-          const logoW = 140;
-          const logoH = 140 * (576 / 1024);
-          page.drawImage(logoImg, {
-            x: 50,
-            y: height - 110,
-            width: logoW,
-            height: logoH
-          });
-        } else {
-          page.drawText('WHIZ STUDIO', {
-            x: 50,
-            y: height - 80,
-            size: 20,
-            font: fontBold,
-            color: tealPrimary
-          });
-        }
-
-        if (sigBuf) {
-          const sigImg = await pdfDoc.embedPng(sigBuf);
-          page.drawImage(sigImg, {
-            x: width - 175,
-            y: 75,
-            width: 95,
-            height: 66
-          });
-        }
-      } catch (imgErr) {
-        console.warn('Image embedding fallback:', imgErr);
-      }
-
-      // 2. Top-Right Title & Client Copy
-      page.drawText('RECEIPT', {
-        x: width - 210,
-        y: height - 85,
-        size: 28,
-        font: fontBold,
-        color: tealPrimary
-      });
-
-      page.drawText('Client Copy', {
-        x: width - 210,
-        y: height - 103,
-        size: 11,
-        font: fontBold,
-        color: textDark
-      });
-
-      page.drawLine({
-        start: { x: width - 210, y: height - 115 },
-        end: { x: width - 50, y: height - 115 },
-        thickness: 1.5,
-        color: tealPrimary
-      });
-
-      // 3. BILLED TO (Left) & Metadata (Right)
-      let leftY = height - 160;
-      page.drawText('BILLED TO:', {
-        x: 50,
-        y: leftY,
-        size: 10,
-        font: fontBold,
-        color: tealPrimary
-      });
-
-      leftY -= 15;
-      page.drawText(receiptData.client?.name || receiptData.client?.companyName || 'Valued Client', {
-        x: 50,
-        y: leftY,
-        size: 11.5,
-        font: fontBold,
-        color: textDark
-      });
-
-      leftY -= 13;
-      page.drawText('Address: ', {
-        x: 50,
-        y: leftY,
-        size: 8.5,
-        font: fontBold,
-        color: textDark
-      });
-
-      const addressText = receiptData.client?.address || 'Dhaka, Bangladesh';
-      const words = addressText.split(' ');
-      let addrLine = '';
-      let addrLines = [];
-      for (const w of words) {
-        if ((addrLine + w).length > 38) {
-          addrLines.push(addrLine.trim());
-          addrLine = w + ' ';
-        } else {
-          addrLine += w + ' ';
-        }
-      }
-      if (addrLine.trim()) addrLines.push(addrLine.trim());
-
-      let currAddrY = leftY;
-      addrLines.slice(0, 3).forEach((line, idx) => {
-        page.drawText(line, {
-          x: idx === 0 ? 95 : 50,
-          y: currAddrY,
-          size: 8.5,
-          font: fontRegular,
-          color: textDark
-        });
-        currAddrY -= 11;
-      });
-
-      currAddrY -= 2;
-      page.drawText('Phone Number: ', {
-        x: 50,
-        y: currAddrY,
-        size: 8.5,
-        font: fontBold,
-        color: textDark
-      });
-      page.drawText(receiptData.client?.phone || '+880...', {
-        x: 120,
-        y: currAddrY,
-        size: 8.5,
-        font: fontRegular,
-        color: textDark
-      });
-
-      // Right Column
-      const rightX = width - 210;
-      let rightY = height - 160;
-
-      const numLabel = 'RECEIPT NO: ';
-      page.drawText(numLabel, {
-        x: rightX,
-        y: rightY,
-        size: 10,
-        font: fontBold,
-        color: tealPrimary
-      });
-      page.drawText(String(receiptData.receiptNumber || receiptNum || '829926'), {
-        x: rightX + fontBold.widthOfTextAtSize(numLabel, 10),
-        y: rightY,
-        size: 10,
-        font: fontBold,
-        color: textDark
-      });
-
-      rightY -= 14;
-      page.drawText(receiptData.paymentDate || new Date().toISOString().split('T')[0], {
-        x: rightX,
-        y: rightY,
-        size: 9,
-        font: fontRegular,
-        color: textMuted
-      });
-
-      rightY -= 18;
-      page.drawText('PAYMENT TYPE', {
-        x: rightX,
-        y: rightY,
-        size: 9.5,
-        font: fontBold,
-        color: tealPrimary
-      });
-      rightY -= 13;
-      page.drawText(receiptData.service?.name || 'Growth Retainer', {
-        x: rightX,
-        y: rightY,
-        size: 9,
-        font: fontRegular,
-        color: textDark
-      });
-
-      rightY -= 16;
-      page.drawText('PAYMENT METHOD', {
-        x: rightX,
-        y: rightY,
-        size: 9.5,
-        font: fontBold,
-        color: tealPrimary
-      });
-      rightY -= 13;
-      page.drawText((receiptData.paymentMethod || 'Bkash').toUpperCase(), {
-        x: rightX,
-        y: rightY,
-        size: 9,
-        font: fontRegular,
-        color: textDark
-      });
-
-      rightY -= 12;
-      page.drawText('Account Details –', {
-        x: rightX,
-        y: rightY,
-        size: 8,
-        font: fontRegular,
-        color: textMuted
-      });
-      rightY -= 11;
-      page.drawText('Md Kazi Abdur Rahim Emon', {
-        x: rightX,
-        y: rightY,
-        size: 8.5,
-        font: fontRegular,
-        color: textDark
-      });
-      rightY -= 11;
-      page.drawText('Phone Number: +880 1560066374', {
-        x: rightX,
-        y: rightY,
-        size: 8,
-        font: fontRegular,
-        color: textDark
-      });
-
-      // 4. Line Items Table
-      const tableY = Math.min(currAddrY, rightY) - 25;
-
-      page.drawLine({
-        start: { x: 50, y: tableY + 16 },
-        end: { x: width - 50, y: tableY + 16 },
-        thickness: 1,
-        color: tealPrimary
-      });
-
-      page.drawText('Description', { x: 55, y: tableY + 4, size: 9.5, font: fontBold, color: tealPrimary });
-      page.drawText('Quantity', { x: 280, y: tableY + 4, size: 9.5, font: fontBold, color: tealPrimary });
-      page.drawText('Rate', { x: 380, y: tableY + 4, size: 9.5, font: fontBold, color: tealPrimary });
-      page.drawText('Amount', { x: 490, y: tableY + 4, size: 9.5, font: fontBold, color: tealPrimary });
-
-      page.drawLine({
-        start: { x: 50, y: tableY - 4 },
-        end: { x: width - 50, y: tableY - 4 },
-        thickness: 1,
-        color: tealPrimary
-      });
-
-      const totalVal = Math.round((receiptData.amountCents || 250000) / 100);
-
-      let itemY = tableY - 22;
-      page.drawText(receiptData.service?.name || 'Retainer Marketing & Growth Engineering', {
-        x: 55,
-        y: itemY,
-        size: 9,
-        font: fontRegular,
-        color: textDark
-      });
-      page.drawText('1', {
-        x: 295,
-        y: itemY,
-        size: 9,
-        font: fontRegular,
-        color: textDark
-      });
-      page.drawText(String(totalVal), {
-        x: 385,
-        y: itemY,
-        size: 9,
-        font: fontRegular,
-        color: textDark
-      });
-      page.drawText(String(totalVal), {
-        x: 495,
-        y: itemY,
-        size: 9,
-        font: fontBold,
-        color: textDark
-      });
-
-      page.drawLine({
-        start: { x: 50, y: itemY - 12 },
-        end: { x: width - 50, y: itemY - 12 },
-        thickness: 1,
-        color: tealPrimary
-      });
-
-      const totalY = itemY - 30;
-      page.drawText('TOTAL', {
-        x: 380,
-        y: totalY,
-        size: 11,
-        font: fontBold,
-        color: tealPrimary
-      });
-      page.drawText(String(totalVal), {
-        x: 495,
-        y: totalY,
-        size: 11,
-        font: fontBold,
-        color: tealPrimary
-      });
-
-      // 5. Notes & Signature
-      const notesY = 135;
-      page.drawText('NOTES:', {
-        x: 120,
-        y: notesY,
-        size: 9.5,
-        font: fontBold,
-        color: tealPrimary
-      });
-
-      page.drawText('Whiz Studio', {
-        x: 120,
-        y: notesY - 14,
-        size: 9.5,
-        font: fontBold,
-        color: textDark
-      });
-
-      page.drawText('Address: Road 7, Block A, Mirpur 12, Dhaka, Bangladesh – 1216', {
-        x: 120,
-        y: notesY - 26,
-        size: 7.5,
-        font: fontRegular,
-        color: textDark
-      });
-
-      page.drawText('Phone Number: +880 1322196665', {
-        x: 120,
-        y: notesY - 38,
-        size: 7.5,
-        font: fontRegular,
-        color: textDark
-      });
-
-      page.drawText('Email: info@whizstudio.art', {
-        x: 120,
-        y: notesY - 50,
-        size: 7.5,
-        font: fontRegular,
-        color: textDark
-      });
-
-      page.drawLine({
-        start: { x: width - 200, y: 68 },
-        end: { x: width - 60, y: 68 },
-        thickness: 1.5,
-        color: tealPrimary
-      });
-
-      page.drawText('SIGNATURE', {
-        x: width - 150,
-        y: 53,
-        size: 9.5,
-        font: fontBold,
-        color: tealPrimary
-      });
-
-      // 6. Trigger Browser Download
-      const pdfBytes = await pdfDoc.save();
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-      const downloadUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = downloadUrl;
-      a.download = `WhizStudio_Receipt_${receiptData.receiptNumber || receiptNum}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(downloadUrl);
-
-      showToast(`Receipt ${receiptNum} downloaded successfully!`, 'success');
-    } catch (err) {
-      console.error('PDF Generation Error:', err);
-      showToast(err.message || 'Failed to download receipt.', 'error');
-    } finally {
-      buttonEl.disabled = false;
-      buttonEl.innerHTML = originalText;
+      const bgImg = await pdfDoc.embedPng(templateBytes);
+      page.drawImage(bgImg, { x: 0, y: 0, width, height });
+    } catch (e) {
+      console.warn('Fallback template embed:', e);
+      // Fallback: load invoice template if receipt template 404
+      const fallbackBytes = await fetch('/assets/images/invoice-master-template-clean-2481x3509.png').then(r => r.arrayBuffer());
+      const bgImg = await pdfDoc.embedPng(fallbackBytes);
+      page.drawImage(bgImg, { x: 0, y: 0, width, height });
     }
+
+    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+    // Brand Colors
+    const tealColor = rgb(43/255, 138/255, 121/255); // #2B8A79
+    const darkColor = rgb(34/255, 34/255, 34/255);   // #222222
+    const mutedColor = rgb(100/255, 100/255, 100/255); // #666666
+
+    // Text wrapping helper
+    function wrapAddress(text, maxChars = 38) {
+      if (!text) return [];
+      const words = String(text).split(' ');
+      const lines = [];
+      let current = '';
+      for (const w of words) {
+        if ((current + ' ' + w).trim().length > maxChars) {
+          if (current) lines.push(current.trim());
+          current = w;
+        } else {
+          current = (current + ' ' + w).trim();
+        }
+      }
+      if (current) lines.push(current.trim());
+      return lines;
+    }
+
+    // 1. If Receipt: Draw "RECEIPT" title and "Client Copy" in top right
+    if (isReceipt) {
+      page.drawText('RECEIPT', {
+        x: toPdfX(1383),
+        y: toPdfY(450),
+        size: 38,
+        font: fontBold,
+        color: tealColor
+      });
+      page.drawText('Official Payment Confirmation', {
+        x: toPdfX(1410),
+        y: toPdfY(560),
+        size: 11,
+        font: fontBold,
+        color: darkColor
+      });
+    }
+
+    // 2. BILLED TO (Left Column)
+    const client = docData.client || {};
+    const clientName = client.billingName || client.fullName || 'Valued Client';
+    page.drawText(clientName, {
+      x: toPdfX(252),
+      y: toPdfY(840),
+      size: 12.5,
+      font: fontBold,
+      color: darkColor
+    });
+
+    const fullAddr = [client.billingAddress, client.city, client.country].filter(Boolean).join(', ');
+    const addrLines = wrapAddress(fullAddr, 40);
+    let addrY = 905;
+    addrLines.slice(0, 4).forEach((line, idx) => {
+      const prefix = idx === 0 ? 'Address: ' : '';
+      page.drawText(prefix + line, {
+        x: toPdfX(252),
+        y: toPdfY(addrY),
+        size: 9.5,
+        font: idx === 0 ? fontBold : fontRegular,
+        color: darkColor
+      });
+      addrY += 65;
+    });
+
+    if (client.phone) {
+      page.drawText(`Phone Number: ${client.phone}`, {
+        x: toPdfX(252),
+        y: toPdfY(1185),
+        size: 9.5,
+        font: fontBold,
+        color: darkColor
+      });
+    }
+
+    // 3. Right Details Block (Right-aligned to edge 2238)
+    const rightEdgeX = toPdfX(2238);
+    const numLabel = isReceipt ? 'RECEIPT NO: ' : 'INVOICE NO: ';
+    const docNumber = isReceipt ? (docData.receiptNumber || 'RCPT-1001') : (docData.invoiceNumber || 'INV-1001');
+
+    const numValW = fontRegular.widthOfTextAtSize(docNumber, 10.5);
+    const numLabelW = fontBold.widthOfTextAtSize(numLabel, 10.5);
+
+    page.drawText(docNumber, {
+      x: rightEdgeX - numValW,
+      y: toPdfY(745),
+      size: 10.5,
+      font: fontRegular,
+      color: darkColor
+    });
+    page.drawText(numLabel, {
+      x: rightEdgeX - numValW - numLabelW,
+      y: toPdfY(745),
+      size: 10.5,
+      font: fontBold,
+      color: tealColor
+    });
+
+    // Date
+    const rawDate = isReceipt ? (docData.paymentDate || docData.generatedAt) : (docData.issueDate || docData.generatedAt);
+    let formattedDate = rawDate;
+    try {
+      formattedDate = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(rawDate));
+    } catch (_) {}
+    const dateW = fontRegular.widthOfTextAtSize(formattedDate, 10.5);
+    page.drawText(formattedDate, {
+      x: rightEdgeX - dateW,
+      y: toPdfY(835),
+      size: 10.5,
+      font: fontRegular,
+      color: darkColor
+    });
+
+    // PAYMENT TYPE
+    const pTypeLabel = 'PAYMENT TYPE';
+    const pTypeLabelW = fontBold.widthOfTextAtSize(pTypeLabel, 9.5);
+    page.drawText(pTypeLabel, {
+      x: rightEdgeX - pTypeLabelW,
+      y: toPdfY(910),
+      size: 9.5,
+      font: fontBold,
+      color: tealColor
+    });
+
+    const pTypeVal = docData.serviceName || 'Digital Agency Services';
+    const pTypeValW = fontRegular.widthOfTextAtSize(pTypeVal, 10);
+    page.drawText(pTypeVal, {
+      x: rightEdgeX - pTypeValW,
+      y: toPdfY(1000),
+      size: 10,
+      font: fontRegular,
+      color: darkColor
+    });
+
+    // PAYMENT METHOD
+    const pMethodLabel = 'PAYMENT METHOD';
+    const pMethodLabelW = fontBold.widthOfTextAtSize(pMethodLabel, 9.5);
+    page.drawText(pMethodLabel, {
+      x: rightEdgeX - pMethodLabelW,
+      y: toPdfY(1090),
+      size: 9.5,
+      font: fontBold,
+      color: tealColor
+    });
+
+    const pMethodVal = docData.paymentMethod || 'Bank Transfer';
+    const pMethodValW = fontRegular.widthOfTextAtSize(pMethodVal, 10.5);
+    page.drawText(pMethodVal, {
+      x: rightEdgeX - pMethodValW,
+      y: toPdfY(1170),
+      size: 10.5,
+      font: fontRegular,
+      color: darkColor
+    });
+
+    // Payment Account Details
+    const accConfig = docData.paymentAccountDetails || {};
+    const accLabel = 'Account Details -';
+    const accLabelW = fontRegular.widthOfTextAtSize(accLabel, 9);
+    page.drawText(accLabel, {
+      x: rightEdgeX - accLabelW,
+      y: toPdfY(1240),
+      size: 9,
+      font: fontRegular,
+      color: mutedColor
+    });
+
+    const accName = accConfig.accountName || 'Md Kazi Abdur Rahim Emon';
+    const accNameW = fontRegular.widthOfTextAtSize(accName, 9.5);
+    page.drawText(accName, {
+      x: rightEdgeX - accNameW,
+      y: toPdfY(1305),
+      size: 9.5,
+      font: fontRegular,
+      color: darkColor
+    });
+
+    const accNumStr = accConfig.accountNumber ? `Phone / A/C: ${accConfig.accountNumber}` : (docData.paymentReference ? `Ref: ${docData.paymentReference}` : 'Verified Ledger Record');
+    const accNumW = fontRegular.widthOfTextAtSize(accNumStr, 9);
+    page.drawText(accNumStr, {
+      x: rightEdgeX - accNumW,
+      y: toPdfY(1375),
+      size: 9,
+      font: fontRegular,
+      color: darkColor
+    });
+
+    // 4. Line Items Table
+    const items = (docData.items && docData.items.length > 0) ? docData.items : [{
+      description: docData.serviceName || 'Retainer Services',
+      quantity: 1,
+      unitPriceCents: isReceipt ? docData.amountPaidCents : docData.totalCents,
+      totalCents: isReceipt ? docData.amountPaidCents : docData.totalCents
+    }];
+
+    const firstItem = items[0];
+    const itemDescLines = wrapAddress(firstItem.description || 'Agency Services', 35);
+    let descY = 1850;
+    itemDescLines.slice(0, 2).forEach(line => {
+      page.drawText(line, {
+        x: toPdfX(289),
+        y: toPdfY(descY),
+        size: 9.5,
+        font: fontRegular,
+        color: darkColor
+      });
+      descY += 50;
+    });
+
+    const qtyStr = String(firstItem.quantity || 1);
+    const qtyW = fontRegular.widthOfTextAtSize(qtyStr, 9.5);
+    page.drawText(qtyStr, {
+      x: toPdfX(1236) - qtyW / 2,
+      y: toPdfY(1875),
+      size: 9.5,
+      font: fontRegular,
+      color: darkColor
+    });
+
+    const rateVal = ((firstItem.unitPriceCents || firstItem.totalCents || 0) / 100).toFixed(2);
+    const rateW = fontRegular.widthOfTextAtSize(rateVal, 9.5);
+    page.drawText(rateVal, {
+      x: toPdfX(1614) - rateW / 2,
+      y: toPdfY(1875),
+      size: 9.5,
+      font: fontRegular,
+      color: darkColor
+    });
+
+    const lineTotalVal = ((firstItem.totalCents || 0) / 100).toFixed(2);
+    const lineTotalW = fontRegular.widthOfTextAtSize(lineTotalVal, 9.5);
+    page.drawText(lineTotalVal, {
+      x: toPdfX(2100) - lineTotalW,
+      y: toPdfY(1875),
+      size: 9.5,
+      font: fontRegular,
+      color: darkColor
+    });
+
+    // 5. TOTAL Row
+    const grandTotalCents = isReceipt ? (docData.amountPaidCents || 0) : (docData.totalCents || 0);
+    const curr = docData.currency || 'USD';
+    const totalFormatted = `${curr} ${(grandTotalCents / 100).toFixed(2)}`;
+    const totalFormattedW = fontBold.widthOfTextAtSize(totalFormatted, 11);
+    page.drawText(totalFormatted, {
+      x: toPdfX(2100) - totalFormattedW,
+      y: toPdfY(2090),
+      size: 11,
+      font: fontBold,
+      color: tealColor
+    });
+
+    return await pdfDoc.save();
+  }
+
+  // 7. Document Action Handler (Preview vs Official Download)
+  async function handleDocumentAction(type, id, number, isPreview = false, buttonEl = null) {
+    const originalText = buttonEl ? buttonEl.innerHTML : '';
+    if (buttonEl) {
+      buttonEl.disabled = true;
+      buttonEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Processing...';
+    }
+
+    try {
+      // Rule 4: If not preview, check CIF completion first!
+      if (!isPreview && state.cif && !state.cif.isComplete) {
+        openCifModal();
+        showToast('Client Information Form (CIF) is incomplete. 100% profile completion required before PDF download.', 'error');
+        return;
+      }
+
+      // Rule 8: If not preview, check daily quota
+      if (!isPreview && state.receiptQuota && state.receiptQuota.remaining <= 0) {
+        showToast("You have reached today's PDF generation limit (2/2). Allowance resets at midnight Dhaka time.", 'error');
+        return;
+      }
+
+      let docData = null;
+
+      if (isPreview) {
+        // Free preview does NOT consume quota!
+        const endpoint = type === 'receipt' ? `/pdf/data/receipt/${encodeURIComponent(number)}` : `/pdf/data/invoice/${encodeURIComponent(number)}`;
+        const res = await apiFetch(endpoint);
+        if (!res.ok || !res.data || !res.data.success) {
+          throw new Error(res.data?.error || 'Failed to retrieve preview data.');
+        }
+        docData = res.data.data;
+
+        // Compile PDF in browser memory
+        const pdfBytes = await buildDocumentPdf(docData);
+        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+        const blobUrl = URL.createObjectURL(blob);
+
+        const iframe = document.getElementById('previewDocIframe');
+        const spinner = document.getElementById('previewLoadingSpinner');
+        const title = document.getElementById('previewDocTitle');
+        const modal = document.getElementById('modalDocumentPreview');
+        const downloadBtn = document.getElementById('btnDownloadFromPreview');
+
+        if (title) title.textContent = `${type === 'receipt' ? 'Receipt' : 'Invoice'} Preview: ${number}`;
+        if (iframe) iframe.src = blobUrl;
+        if (spinner) spinner.classList.add('hidden');
+        if (downloadBtn) {
+          downloadBtn.onclick = () => {
+            closePreviewModal();
+            handleDocumentAction(type, id, number, false, buttonEl);
+          };
+        }
+        if (modal) modal.classList.remove('hidden');
+
+      } else {
+        // Official Issuance Workflow: Atomically enforced with Cloudflare D1
+        const endpoint = type === 'receipt' ? '/pdf/authorize-receipt' : '/pdf/authorize-invoice';
+        const idempotencyKey = `whiz_pdf_${type}_${number}_${Date.now()}`;
+        const payload = type === 'receipt'
+          ? { paymentId: id, receiptNumber: number, idempotencyKey }
+          : { invoiceId: id, invoiceNumber: number, idempotencyKey };
+
+        const authRes = await apiFetch(endpoint, {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+
+        if (!authRes.ok || !authRes.data || !authRes.data.success) {
+          if (authRes.data?.code === 'CIF_INCOMPLETE') {
+            openCifModal();
+            throw new Error(authRes.data.error || 'CIF profile must be 100% complete.');
+          }
+          throw new Error(authRes.data?.error || 'Authorization for PDF generation failed.');
+        }
+
+        docData = authRes.data.data;
+        if (authRes.data.quota) {
+          state.receiptQuota = authRes.data.quota;
+          updateQuotaUi();
+        }
+
+        const pdfBytes = await buildDocumentPdf(docData);
+        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+        const downloadUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = `WhizStudio_${type === 'receipt' ? 'Receipt' : 'Invoice'}_${number}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(downloadUrl);
+
+        showToast(`Official ${type === 'receipt' ? 'Receipt' : 'Invoice'} ${number} downloaded successfully!`, 'success');
+      }
+    } catch (err) {
+      console.error('Document generation error:', err);
+      showToast(err.message || 'Operation failed.', 'error');
+    } finally {
+      if (buttonEl) {
+        buttonEl.disabled = false;
+        buttonEl.innerHTML = originalText;
+      }
+    }
+  }
+
+  function closePreviewModal() {
+    const modal = document.getElementById('modalDocumentPreview');
+    if (modal) modal.classList.add('hidden');
+    const iframe = document.getElementById('previewDocIframe');
+    if (iframe) iframe.src = 'about:blank';
   }
 
   // Authentication Guard & Initializer

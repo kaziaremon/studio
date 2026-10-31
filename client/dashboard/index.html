@@ -488,9 +488,49 @@
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h2 class="text-2xl font-black text-[#172B36] tracking-tight">Invoices &amp; Receipts</h2>
-                <p class="text-xs text-[#5F7180] mt-0.5" id="financeReceiptsCount">Loading...</p>
+                <p class="text-xs text-[#5F7180] mt-0.5" id="financeReceiptsCount">Official financial ledger and authenticated PDF documents</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <span id="quotaBadgePill" class="px-3 py-1.5 rounded-full text-xs font-bold bg-[#147D64]/10 text-[#147D64] border border-[#147D64]/20 flex items-center gap-1.5 shadow-xs">
+                  <i class="fa-solid fa-file-pdf"></i>
+                  <span id="quotaRemainingText">Daily PDF Allowance: 2/2 remaining</span>
+                </span>
+                <button type="button" id="btnOpenCifModal" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white text-[#172B36] border border-[#E3E9EF] hover:bg-slate-50 transition-all flex items-center gap-1.5 shadow-xs cursor-pointer">
+                  <i class="fa-solid fa-id-card text-[#147D64]"></i>
+                  <span>Client Profile (CIF)</span>
+                </button>
               </div>
             </div>
+
+            <!-- CIF Profile Completion Status Card -->
+            <div id="cifStatusCard" class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs space-y-3">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div class="flex items-center gap-2.5">
+                  <div id="cifStatusIcon" class="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold text-sm">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                  </div>
+                  <div>
+                    <h4 class="text-xs font-bold text-[#172B36]" id="cifStatusTitle">CIF Profile Status</h4>
+                    <p class="text-[11px] text-[#5F7180]" id="cifStatusDescription">Evaluating client information...</p>
+                  </div>
+                </div>
+                <div class="flex items-center gap-3">
+                  <span id="cifPercentageBadge" class="text-xs font-extrabold text-[#172B36] font-mono">0% Complete</span>
+                  <button type="button" id="btnCifAction" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-[#147D64] text-white hover:bg-[#12694f] transition-all shadow-xs cursor-pointer">
+                    Complete CIF
+                  </button>
+                </div>
+              </div>
+              <!-- Progress Bar -->
+              <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div id="cifProgressBar" class="h-full bg-amber-500 transition-all duration-300" style="width: 0%"></div>
+              </div>
+              <div id="cifMissingFieldsContainer" class="hidden text-[11px] text-amber-800 bg-amber-50/70 p-2.5 rounded-xl border border-amber-200/60">
+                <span class="font-bold">Missing mandatory fields for PDF generation:</span>
+                <span id="cifMissingFieldsList" class="ml-1"></span>
+              </div>
+            </div>
+
             <div id="financeFullList">
               <p class="text-xs text-[#5F7180] italic">Loading financial records...</p>
             </div>
@@ -603,6 +643,162 @@
         </button>
       </nav>
     </main>
+  </div>
+
+  
+  <!-- MODAL: CLIENT INFORMATION FORM (CIF) -->
+  <div id="modalClientCif" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
+    <div class="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-[#E3E9EF] p-5 sm:p-7 space-y-5 my-8">
+      <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-[#147D64]/10 text-[#147D64] flex items-center justify-center font-bold text-base">
+            <i class="fa-solid fa-address-card"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-black text-[#172B36]">Client Information Form (CIF)</h3>
+            <p class="text-[11px] text-[#5F7180]">Complete mandatory fields to enable official PDF invoice &amp; receipt downloads.</p>
+          </div>
+        </div>
+        <button type="button" id="btnCloseCifModal" class="text-slate-400 hover:text-slate-700 text-lg cursor-pointer p-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Live Completion Meter -->
+      <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E3E9EF] space-y-2">
+        <div class="flex items-center justify-between text-xs">
+          <span class="font-bold text-[#172B36]">Profile Completion</span>
+          <span id="modalCifPercentText" class="font-extrabold text-[#147D64] font-mono">0% (8 Mandatory Fields)</span>
+        </div>
+        <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+          <div id="modalCifProgressBar" class="h-full bg-[#147D64] transition-all duration-300" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <form id="formClientCif" class="space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Full Legal Name *</label>
+            <input type="text" name="fullName" id="cifInputFullName" required placeholder="e.g. Pholl Bihar" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:border-[#147D64] focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Billing / Invoicing Name *</label>
+            <input type="text" name="billingName" id="cifInputBillingName" required placeholder="e.g. Pholl Bihar or Brand Name" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:border-[#147D64] focus:outline-none">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Company / Organization Name (Optional)</label>
+            <input type="text" name="companyName" id="cifInputCompanyName" placeholder="e.g. Pholl Enterprises" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:border-[#147D64] focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Verified Email *</label>
+            <input type="email" name="email" id="cifInputEmail" required placeholder="client@example.com" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:border-[#147D64] focus:outline-none">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Phone Number (with Country Code) *</label>
+            <input type="text" name="phone" id="cifInputPhone" required placeholder="+880 1624644435" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-mono focus:border-[#147D64] focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Billing Currency *</label>
+            <select name="billingCurrency" id="cifInputCurrency" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-bold focus:border-[#147D64] focus:outline-none">
+              <option value="USD">USD ($) - US Dollar</option>
+              <option value="BDT">BDT (৳) - Bangladeshi Taka</option>
+              <option value="EUR">EUR (€) - Euro</option>
+              <option value="GBP">GBP (£) - British Pound</option>
+              <option value="AED">AED (د.إ) - UAE Dirham</option>
+              <option value="SAR">SAR (﷼) - Saudi Riyal</option>
+              <option value="CAD">CAD ($) - Canadian Dollar</option>
+              <option value="AUD">AUD ($) - Australian Dollar</option>
+              <option value="SGD">SGD ($) - Singapore Dollar</option>
+              <option value="INR">INR (₹) - Indian Rupee</option>
+              <option value="MYR">MYR (RM) - Malaysian Ringgit</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Full Billing Address *</label>
+          <textarea name="billingAddress" id="cifInputAddress" rows="2" required placeholder="Street address, building, road, area..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:border-[#147D64] focus:outline-none resize-none"></textarea>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">City *</label>
+            <input type="text" name="city" id="cifInputCity" required placeholder="Gazipur / Dhaka" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:border-[#147D64] focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Country *</label>
+            <input type="text" name="country" id="cifInputCountry" required placeholder="Bangladesh" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:border-[#147D64] focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Postal Code (Optional)</label>
+            <input type="text" name="postalCode" id="cifInputPostalCode" placeholder="1710" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-mono focus:border-[#147D64] focus:outline-none">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Tax Identification Number / VAT (Optional)</label>
+          <input type="text" name="taxId" id="cifInputTaxId" placeholder="TIN-98472948" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-mono focus:border-[#147D64] focus:outline-none">
+        </div>
+
+        <div class="flex items-center justify-end gap-3 pt-3 border-t border-[#E3E9EF]">
+          <button type="button" id="btnCancelCif" class="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-800 cursor-pointer">
+            Cancel
+          </button>
+          <button type="submit" id="btnSaveCif" class="px-5 py-2.5 rounded-xl text-xs font-bold bg-[#147D64] text-white hover:bg-[#12694f] transition-all shadow-sm flex items-center gap-2 cursor-pointer">
+            <i class="fa-solid fa-floppy-disk"></i>
+            <span>Save &amp; Validate CIF</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: DOCUMENT PREVIEW MODAL -->
+  <div id="modalDocumentPreview" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
+    <div class="relative w-full max-w-3xl bg-white rounded-3xl shadow-2xl border border-[#E3E9EF] p-5 sm:p-6 space-y-4 my-6 flex flex-col max-h-[92vh]">
+      <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-xl bg-[#147D64]/10 text-[#147D64] flex items-center justify-center font-bold text-sm">
+            <i class="fa-solid fa-eye"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-black text-[#172B36]" id="previewDocTitle">Document Preview</h3>
+            <p class="text-[11px] text-[#5F7180]">Free preview mode does not count toward your daily 2-PDF generation limit.</p>
+          </div>
+        </div>
+        <button type="button" id="btnClosePreviewModal" class="text-slate-400 hover:text-slate-700 text-lg cursor-pointer p-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Preview iframe or content -->
+      <div class="flex-1 w-full bg-slate-100 rounded-2xl overflow-hidden min-h-[480px] border border-[#E3E9EF] flex items-center justify-center relative">
+        <iframe id="previewDocIframe" class="w-full h-full min-h-[480px] border-0" title="PDF Preview"></iframe>
+        <div id="previewLoadingSpinner" class="absolute inset-0 bg-white/90 flex flex-col items-center justify-center gap-2 text-xs font-bold text-[#147D64]">
+          <i class="fa-solid fa-circle-notch fa-spin text-2xl"></i>
+          <span>Compiling Document Preview...</span>
+        </div>
+      </div>
+
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-[#E3E9EF]">
+        <span class="text-[11px] text-[#5F7180] font-medium" id="previewAllowanceNotice">Daily Allowance: 2/2 remaining today</span>
+        <div class="flex items-center gap-2">
+          <button type="button" id="btnClosePreviewModalBottom" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-800 cursor-pointer">
+            Close Preview
+          </button>
+          <button type="button" id="btnDownloadFromPreview" class="px-5 py-2 rounded-xl text-xs font-bold bg-[#147D64] text-white hover:bg-[#12694f] transition-all shadow-sm flex items-center gap-2 cursor-pointer">
+            <i class="fa-solid fa-download"></i>
+            <span>Download Official PDF</span>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Toast Container -->
