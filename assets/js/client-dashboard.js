@@ -1244,11 +1244,17 @@
       }
     });
 
-    // Dropdown Navigation Links
-    document.querySelectorAll('.client-dropdown-tab-link').forEach(link => {
+    // Dropdown Navigation & Account Links (Priority 6)
+    document.querySelectorAll('.client-dropdown-account-link, .client-dropdown-tab-link').forEach(link => {
       link.addEventListener('click', () => {
         closeClientDropdown();
-        switchTab(link.dataset.tab);
+        const action = link.dataset.clientAction;
+        const tab = link.dataset.tab;
+        if (action) {
+          switchTab('settings');
+        } else if (tab) {
+          switchTab(tab);
+        }
       });
     });
 

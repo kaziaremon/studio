@@ -234,15 +234,10 @@
           <button type="button" id="clientMobileToggleBtn" class="lg:hidden w-10 h-10 rounded-xl bg-slate-50 hover:bg-slate-100 active:bg-slate-200 border border-[#E3E9EF] flex items-center justify-center text-[#172B36] cursor-pointer touch-manipulation transition-colors select-none" aria-label="Open Navigation">
             <i class="fa-solid fa-bars text-sm"></i>
           </button>
-          <!-- Desktop Breadcrumbs -->
+          <!-- Desktop Clean Context -->
           <div class="hidden lg:flex items-center space-x-2 text-xs">
-            <a href="/" class="flex items-center group mr-2">
-              <img src="/assets/images/logo.png" alt="Whiz Studio" class="h-7 w-auto object-contain">
-            </a>
-            <span class="text-slate-300">/</span>
-            <span class="font-extrabold text-[#5F7180] uppercase tracking-wider">Client Portal</span>
-            <span class="text-slate-300">/</span>
-            <span id="breadcrumbActiveTab" class="font-extrabold text-[#147D64] capitalize">Overview</span>
+            <span class="text-xs font-bold text-[#172B36]" id="clientHeaderActiveTitle">Client Workspace</span>
+            <span id="breadcrumbActiveTab" class="hidden"></span>
           </div>
         </div>
 
@@ -286,7 +281,7 @@
                   </div>
                   <div class="min-w-0 flex-1">
                     <p class="text-xs font-bold text-[#172B36] truncate client-greeting-name">Client User</p>
-                    <p class="text-[11px] text-slate-500 font-mono truncate" id="clientDropdownEmail">client@whizstudio.art</p>
+                    <p class="text-[11px] text-slate-500 font-mono truncate clientDisplayEmail" id="clientDropdownEmail">—</p>
                   </div>
                 </div>
                 <div class="mt-2.5 pt-2 border-t border-slate-200/70 flex items-center justify-between text-[11px]">
@@ -295,27 +290,28 @@
                 </div>
               </div>
 
-              <!-- Menu Links -->
+              <!-- Dedicated Account Action Links (Priority 6) -->
               <div class="space-y-1 text-xs text-slate-700">
-                <button type="button" class="client-dropdown-tab-link w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 hover:text-[#172B36] active:bg-slate-100 transition-colors text-left cursor-pointer" data-tab="overview">
-                  <i class="fa-solid fa-gauge-high w-4 text-[#147D64]"></i>
-                  <span class="font-semibold text-[#172B36]">Campaign Overview</span>
+                <button type="button" class="client-dropdown-account-link w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 hover:text-[#172B36] active:bg-slate-100 transition-colors text-left cursor-pointer" data-client-action="profile">
+                  <i class="fa-solid fa-user-circle w-4 text-[#147D64] text-sm"></i>
+                  <div class="flex-1">
+                    <p class="font-semibold text-[#172B36]">My Profile</p>
+                    <p class="text-[10px] text-[#5F7180]">View identity &amp; account info</p>
+                  </div>
                 </button>
-                <button type="button" class="client-dropdown-tab-link w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 hover:text-[#172B36] active:bg-slate-100 transition-colors text-left cursor-pointer" data-tab="services">
-                  <i class="fa-solid fa-layer-group w-4 text-[#147D64]"></i>
-                  <span class="font-semibold text-[#172B36]">My Active Services</span>
+                <button type="button" class="client-dropdown-account-link w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 hover:text-[#172B36] active:bg-slate-100 transition-colors text-left cursor-pointer" data-client-action="settings">
+                  <i class="fa-solid fa-sliders w-4 text-[#147D64] text-sm"></i>
+                  <div class="flex-1">
+                    <p class="font-semibold text-[#172B36]">Account Settings</p>
+                    <p class="text-[10px] text-[#5F7180]">Workspace preferences</p>
+                  </div>
                 </button>
-                <button type="button" class="client-dropdown-tab-link w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 hover:text-[#172B36] active:bg-slate-100 transition-colors text-left cursor-pointer" data-tab="tasks">
-                  <i class="fa-solid fa-list-check w-4 text-[#147D64]"></i>
-                  <span class="font-semibold text-[#172B36]">Deliverables Progress</span>
-                </button>
-                <button type="button" class="client-dropdown-tab-link w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 hover:text-[#172B36] active:bg-slate-100 transition-colors text-left cursor-pointer" data-tab="finance">
-                  <i class="fa-solid fa-receipt w-4 text-[#147D64]"></i>
-                  <span class="font-semibold text-[#172B36]">Billing &amp; Receipts</span>
-                </button>
-                <button type="button" class="client-dropdown-tab-link w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 hover:text-[#172B36] active:bg-slate-100 transition-colors text-left cursor-pointer" data-tab="support">
-                  <i class="fa-solid fa-headset w-4 text-[#147D64]"></i>
-                  <span class="font-semibold text-[#172B36]">Support &amp; Inquiries</span>
+                <button type="button" class="client-dropdown-account-link w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 hover:text-[#172B36] active:bg-slate-100 transition-colors text-left cursor-pointer" data-client-action="security">
+                  <i class="fa-solid fa-shield-halved w-4 text-[#147D64] text-sm"></i>
+                  <div class="flex-1">
+                    <p class="font-semibold text-[#172B36]">Account Security</p>
+                    <p class="text-[10px] text-[#5F7180]">Clerk sessions &amp; authentication</p>
+                  </div>
                 </button>
               </div>
 

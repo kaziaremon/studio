@@ -1513,25 +1513,29 @@
     }
 
     try {
-      const [usersRes, historyRes] = await Promise.all([
+      const [usersSettled, historySettled] = await Promise.allSettled([
         apiFetch('/portal/admin/users'),
         apiFetch('/portal/admin/role-history')
       ]);
 
-      if (usersRes.ok && usersRes.data && usersRes.data.data) {
+      const usersRes = usersSettled.status === 'fulfilled' ? usersSettled.value : null;
+      const historyRes = historySettled.status === 'fulfilled' ? historySettled.value : null;
+
+      if (usersRes && usersRes.ok && usersRes.data && usersRes.data.data) {
         state.usersCache = usersRes.data.data.users || [];
         renderUserDirectory();
       } else {
-        if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-6 text-center text-rose-400">Failed to load users directory.</td></tr>';
+        const errorMsg = usersRes?.data?.error || (usersSettled.status === 'rejected' ? 'Connection error' : 'Failed to load users directory.');
+        if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-6 text-center text-rose-500 font-medium">${errorMsg}</td></tr>`;
       }
 
-      if (historyRes.ok && historyRes.data) {
+      if (historyRes && historyRes.ok && historyRes.data) {
         state.roleHistoryCache = historyRes.data.data || [];
         renderRoleHistory();
       }
     } catch (err) {
       console.error('User Directory Fetch Error:', err);
-      if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-6 text-center text-rose-400">Network error fetching users directory.</td></tr>';
+      if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-6 text-center text-rose-500 font-medium">Failed to load user directory. Please retry.</td></tr>';
     }
   }
 
@@ -1759,28 +1763,159 @@
   }
 
   // =========================================================================
-  // 9. AUDIT & HISTORY DATA
+  // 9. AUDIT & HISTORY DATA (Redesigned Light-Themed Activity Feed - Priority 7)
   // =========================================================================
+  let auditLogsCache = [];
+
+  const ACTION_CONFIG = {
+    'PAYMENT_RECORDED': { label: 'Payment Recorded', category: 'payments', badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: 'fa-receipt' },
+    'PAYMENT_CORRECTED': { label: 'Payment Corrected', category: 'payments', badgeClass: 'bg-amber-50 text-amber-700 border-amber-200', icon: 'fa-pen-to-square' },
+    'PAYMENT_VOIDED': { label: 'Payment Voided', category: 'payments', badgeClass: 'bg-rose-50 text-rose-700 border-rose-200', icon: 'fa-ban' },
+    'PAYMENT_DELETED': { label: 'Payment Removed', category: 'payments', badgeClass: 'bg-rose-50 text-rose-700 border-rose-200', icon: 'fa-trash' },
+    'CLIENT_CREATED': { label: 'Client Registered', category: 'clients', badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: 'fa-user-plus' },
+    'CLIENT_STATUS_UPDATED': { label: 'Client Status Changed', category: 'clients', badgeClass: 'bg-amber-50 text-amber-700 border-amber-200', icon: 'fa-user-gear' },
+    'CLIENT_SUSPENDED': { label: 'Client Suspended', category: 'clients', badgeClass: 'bg-amber-50 text-amber-700 border-amber-200', icon: 'fa-user-lock' },
+    'CLIENT_REACTIVATED': { label: 'Client Reactivated', category: 'clients', badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: 'fa-user-check' },
+    'CLIENT_DELETED': { label: 'Client Permanently Deleted', category: 'clients', badgeClass: 'bg-rose-50 text-rose-700 border-rose-200', icon: 'fa-user-xmark' },
+    'ROLE_ASSIGNED': { label: 'Access Role Assigned', category: 'access', badgeClass: 'bg-sky-50 text-sky-700 border-sky-200', icon: 'fa-shield-halved' },
+    'ROLE_REVOKED': { label: 'Access Role Revoked', category: 'access', badgeClass: 'bg-slate-100 text-slate-700 border-slate-200', icon: 'fa-user-shield' },
+    'SERVICE_PROVISIONED': { label: 'Service Provisioned', category: 'services', badgeClass: 'bg-blue-50 text-blue-700 border-blue-200', icon: 'fa-layer-group' },
+    'TASK_COMPLETED': { label: 'Task Milestone Delivered', category: 'tasks', badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: 'fa-circle-check' },
+    'TASK_CREATED': { label: 'Task Created', category: 'tasks', badgeClass: 'bg-slate-100 text-slate-700 border-slate-200', icon: 'fa-list-check' },
+    'PROJECT_CREATED': { label: 'Project Created', category: 'services', badgeClass: 'bg-indigo-50 text-indigo-700 border-indigo-200', icon: 'fa-folder-plus' }
+  };
+
   async function loadHistoryData() {
-    const res = await apiFetch('/portal/admin/stats');
     const container = document.getElementById('adminFullHistoryList');
     if (!container) return;
 
-    if (res.ok && res.data && res.data.data && res.data.data.recentActivity) {
-      const logs = res.data.data.recentActivity;
-      container.innerHTML = logs.map(l => `
-        <div class="p-3 rounded-2xl bg-slate-950/60 border border-slate-800 flex items-center justify-between text-xs">
-          <div class="flex items-center space-x-3">
-            <i class="fa-solid fa-clock-rotate-left text-brand-whiz"></i>
-            <div>
-              <span class="font-bold text-white uppercase">${l.action}</span>
-              <span class="text-slate-400 ml-2">${l.resource_type}</span>
+    container.innerHTML = `
+      <div class="p-8 rounded-2xl bg-white border border-[#E3E9EF] text-center text-slate-500 italic shadow-xs">
+        Loading immutable audit trail...
+      </div>
+    `;
+
+    // Fetch up to 100 immutable audit entries
+    const res = await apiFetch('/audit-logs?limit=100');
+    if (res.ok && res.data && res.data.data) {
+      auditLogsCache = res.data.data;
+    } else {
+      // Fallback to recentActivity from stats
+      const statsRes = await apiFetch('/portal/admin/stats');
+      if (statsRes.ok && statsRes.data && statsRes.data.data?.recentActivity) {
+        auditLogsCache = statsRes.data.data.recentActivity;
+      }
+    }
+
+    renderAuditHistoryList();
+  }
+
+  function renderAuditHistoryList() {
+    const container = document.getElementById('adminFullHistoryList');
+    const countBadge = document.getElementById('auditLogCount');
+    if (!container) return;
+
+    const searchTerm = (document.getElementById('auditSearchInput')?.value || '').toLowerCase().trim();
+    const category = document.getElementById('auditCategoryFilter')?.value || 'all';
+
+    const filtered = auditLogsCache.filter(l => {
+      const conf = ACTION_CONFIG[l.action] || {};
+      const cat = conf.category || 'all';
+
+      const matchesCat = category === 'all' || cat === category;
+      if (!matchesCat) return false;
+
+      if (!searchTerm) return true;
+
+      const actText = (conf.label || l.action || '').toLowerCase();
+      const emailText = (l.user_email || '').toLowerCase();
+      const resText = (l.resource_type || '').toLowerCase();
+      const resId = (l.resource_id || '').toLowerCase();
+
+      return actText.includes(searchTerm) || emailText.includes(searchTerm) || resText.includes(searchTerm) || resId.includes(searchTerm);
+    });
+
+    if (countBadge) {
+      countBadge.textContent = `${filtered.length} Event${filtered.length === 1 ? '' : 's'}`;
+    }
+
+    if (filtered.length === 0) {
+      container.innerHTML = `
+        <div class="p-8 rounded-2xl bg-white border border-[#E3E9EF] text-center text-slate-500 italic shadow-xs">
+          No audit log events match the current filter.
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = filtered.map(l => {
+      const conf = ACTION_CONFIG[l.action] || {
+        label: (l.action || 'ACTIVITY').replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase()),
+        badgeClass: 'bg-slate-100 text-slate-700 border-slate-200',
+        icon: 'fa-clock-rotate-left'
+      };
+
+      const dateStr = l.created_at ? new Date(l.created_at).toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      }) : '—';
+
+      const actorEmail = l.user_email || 'System';
+      const resourceInfo = l.resource_type ? `${l.resource_type}${l.resource_id ? ` #${l.resource_id.slice(0, 12)}` : ''}` : '';
+
+      let detailsHtml = '';
+      if (l.details) {
+        let detailsFormatted = '';
+        try {
+          const parsed = typeof l.details === 'string' ? JSON.parse(l.details) : l.details;
+          detailsFormatted = JSON.stringify(parsed, null, 2);
+        } catch (e) {
+          detailsFormatted = String(l.details);
+        }
+
+        detailsHtml = `
+          <details class="mt-2.5 pt-2 border-t border-slate-100 text-slate-600">
+            <summary class="cursor-pointer text-[#147D64] hover:underline font-semibold text-[11px] select-none inline-flex items-center gap-1">
+              <i class="fa-solid fa-code text-[10px]"></i>
+              <span>Inspection Details</span>
+            </summary>
+            <pre class="mt-2 p-2.5 rounded-xl bg-slate-50 border border-slate-200 overflow-x-auto text-[10px] font-mono text-slate-700 leading-relaxed">${escapeHtml(detailsFormatted)}</pre>
+          </details>
+        `;
+      }
+
+      return `
+        <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs hover:border-[#147D64]/30 hover:shadow-sm transition-all duration-150">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div class="flex items-center space-x-3 min-w-0">
+              <div class="w-9 h-9 rounded-xl bg-slate-50 border border-[#E3E9EF] flex items-center justify-center text-slate-600 shrink-0">
+                <i class="fa-solid ${conf.icon || 'fa-clock-rotate-left'} text-xs text-[#147D64]"></i>
+              </div>
+              <div class="min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="font-bold text-xs text-[#172B36]">${escapeHtml(conf.label)}</span>
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase border ${conf.badgeClass}">
+                    ${escapeHtml(l.action)}
+                  </span>
+                </div>
+                <div class="text-[11px] text-slate-500 mt-0.5 flex items-center gap-2 flex-wrap">
+                  <span>By <strong class="text-slate-700">${escapeHtml(actorEmail)}</strong></span>
+                  ${resourceInfo ? `<span class="text-slate-300">•</span><span class="font-mono text-slate-600">${escapeHtml(resourceInfo)}</span>` : ''}
+                </div>
+              </div>
+            </div>
+            <div class="text-left sm:text-right shrink-0">
+              <span class="text-[11px] font-mono text-slate-500">${escapeHtml(dateStr)}</span>
             </div>
           </div>
-          <span class="text-slate-500 font-mono text-[11px]">${new Date(l.created_at).toLocaleString()}</span>
+          ${detailsHtml}
         </div>
-      `).join('');
-    }
+      `;
+    }).join('');
   }
 
   // =========================================================================
@@ -3241,6 +3376,66 @@
         if (drawer) drawer.classList.add('-translate-x-full');
         if (backdrop) backdrop.classList.add('hidden');
       });
+    });
+
+    // KPI Metric Cards Navigation Mapping (Priority 1)
+    document.querySelectorAll('[data-kpi-nav]').forEach(card => {
+      const handleKpiNavigation = () => {
+        const targetTab = card.dataset.kpiNav;
+        const targetFilter = card.dataset.kpiFilter;
+        if (!targetTab) return;
+
+        // Switch to the target view
+        switchTab(targetTab);
+
+        // Apply tab-specific filters & load data
+        if (targetTab === 'clients') {
+          const filterSelect = document.getElementById('adminClientStatusFilter');
+          if (filterSelect) {
+            filterSelect.value = targetFilter || 'active';
+          }
+          loadClientsData();
+        } else if (targetTab === 'projects') {
+          loadProjectsData();
+        } else if (targetTab === 'services') {
+          loadServicesData();
+        } else if (targetTab === 'tasks') {
+          const targetStatus = targetFilter === 'pending' ? 'in_progress' : (targetFilter || 'all');
+          document.querySelectorAll('.task-filter-btn').forEach(b => {
+            const matches = b.dataset.filter === targetStatus || (targetFilter === 'pending' && b.dataset.filter === 'in_progress');
+            if (matches) {
+              b.classList.add('bg-slate-800', 'text-white', 'font-bold');
+              b.classList.remove('text-slate-400', 'font-medium');
+            } else {
+              b.classList.remove('bg-slate-800', 'text-white', 'font-bold');
+              b.classList.add('text-slate-400', 'font-medium');
+            }
+          });
+          loadTasksData(targetStatus);
+        } else if (targetTab === 'finance') {
+          loadFinanceData();
+        }
+      };
+
+      card.addEventListener('click', handleKpiNavigation);
+      card.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleKpiNavigation();
+        }
+      });
+    });
+
+    // Audit & History Filters & Refresh (Priority 7)
+    document.getElementById('auditSearchInput')?.addEventListener('input', () => {
+      renderAuditHistoryList();
+    });
+    document.getElementById('auditCategoryFilter')?.addEventListener('change', () => {
+      renderAuditHistoryList();
+    });
+    document.getElementById('btnRefreshAuditHistory')?.addEventListener('click', async () => {
+      await loadHistoryData();
+      showToast('Audit feed updated.', 'success');
     });
 
     // Hash change handler for deep linking & back/forward
