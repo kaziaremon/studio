@@ -1258,7 +1258,7 @@
       if (icon) icon.classList.add('fa-spin');
       try {
         await loadClientData();
-        showToast('Portal synchronized with Cloudflare D1.', 'success');
+        showToast('Portal synchronized successfully.', 'success');
       } catch (e) {
         showToast('Failed to refresh data.', 'error');
       } finally {
@@ -1283,7 +1283,7 @@
       if (icon) icon.classList.add('fa-spin');
       try {
         await loadClientData();
-        showToast('Dashboard synchronized with Cloudflare D1.', 'success');
+        showToast('Dashboard synchronized successfully.', 'success');
       } catch (e) {
         showToast('Failed to refresh data.', 'error');
       } finally {

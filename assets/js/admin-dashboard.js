@@ -459,7 +459,7 @@
         <td colspan="5" class="px-6 py-10 text-center">
           <div class="inline-flex items-center gap-2.5 text-xs font-semibold text-slate-500">
             <i class="fa-solid fa-circle-notch fa-spin text-brand-whiz text-sm"></i>
-            <span>Loading clients directory from Cloudflare D1...</span>
+            <span>Loading clients directory...</span>
           </div>
         </td>
       </tr>
@@ -474,7 +474,7 @@
       state.clientsCache = res.data.data;
       renderClientsTable(state.clientsCache);
     } else {
-      const errMsg = res.data?.error || 'Failed to communicate with Cloudflare D1.';
+      const errMsg = res.data?.error || 'Failed to communicate with database.';
       tbody.innerHTML = `
         <tr>
           <td colspan="5" class="px-6 py-8 text-center">
@@ -1279,47 +1279,227 @@
   // =========================================================================
   // 6. FINANCE & PAYMENTS
   // =========================================================================
+  // Store payments in state cache for modal operations
+  let paymentsCache = [];
+
   async function loadFinanceData() {
     const res = await apiFetch('/finance/payments');
     const tbody = document.getElementById('adminPaymentsTableBody');
+    const cardsContainer = document.getElementById('adminFinanceCardsContainer');
     if (!tbody) return;
 
     if (res.ok && res.data && res.data.data) {
       const payments = res.data.data;
+      paymentsCache = payments;
+
       if (payments.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-6 text-center text-slate-500 italic">No payments recorded. Click "Record New Payment" above.</td></tr>';
+        if (cardsContainer) cardsContainer.innerHTML = '<div class="p-6 rounded-2xl bg-white border border-[#E3E9EF] text-center text-slate-500 italic">No payments recorded.</div>';
         return;
       }
 
-      tbody.innerHTML = payments.map(p => `
-        <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
-          <td class="px-6 py-4 font-mono font-bold text-brand-whiz">${p.receipt_number}</td>
-          <td class="px-6 py-4">
-            <div class="font-bold text-[#172B36]">${p.organization_name || 'Client'}</div>
-            <div class="text-[11px] text-slate-500 font-mono">${p.invoice_number || 'INV-DIRECT'}</div>
-          </td>
-          <td class="px-6 py-4 font-mono font-bold text-brand-whiz">${formatCurrency(p.amount_cents || 0, p.currency || "USD")}</td>
-          <td class="px-6 py-4 uppercase text-slate-400 text-xs">${p.payment_method || 'CARD'}</td>
-          <td class="px-6 py-4 text-slate-400 text-xs">${p.payment_date || 'N/A'}</td>
-          <td class="px-6 py-4 text-right">
-            <button type="button" class="btn-download-receipt-admin px-3 py-1 rounded-lg text-xs font-bold btn-glass-primary shadow-xs cursor-pointer" data-receipt="${p.receipt_number}">
-              Download PDF
-            </button>
-          </td>
-        </tr>
-      `).join('');
+      // Desktop Table
+      tbody.innerHTML = payments.map(p => {
+        const isVoided = (p.financial_notes && p.financial_notes.includes('[VOIDED]')) || (p.payment_reference && p.payment_reference.startsWith('VOIDED'));
+        const formattedAmount = formatCurrency(p.amount_cents || 0, p.currency || "USD");
 
-      tbody.querySelectorAll('.btn-download-receipt-admin').forEach(b => {
-        b.addEventListener('click', async () => {
-          const receiptNum = b.dataset.receipt;
-          const res = await apiFetch(`/pdf/data/receipt/${receiptNum}`);
-          if (res.ok && res.data && res.data.data) {
-            await generateReceiptPdfInBrowser(res.data.data);
-          } else {
-            showToast('Failed to fetch receipt data for download.', 'error');
-          }
+        return `
+          <tr class="hover:bg-slate-50/80 transition-colors border-b border-[#E3E9EF] ${isVoided ? 'opacity-60 bg-rose-50/20' : ''}">
+            <td class="px-6 py-4 font-mono font-bold text-brand-whiz">
+              ${p.receipt_number}
+              ${isVoided ? '<span class="ml-2 text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">VOIDED</span>' : ''}
+            </td>
+            <td class="px-6 py-4">
+              <div class="font-bold text-[#172B36]">${p.organization_name || 'Client'}</div>
+              <div class="text-[11px] text-slate-500 font-mono">${p.invoice_number || 'INV-DIRECT'}</div>
+            </td>
+            <td class="px-6 py-4 font-mono font-bold ${isVoided ? 'line-through text-slate-400' : 'text-brand-whiz'}">${formattedAmount}</td>
+            <td class="px-6 py-4 uppercase text-slate-500 text-xs font-semibold">${(p.payment_method || 'card').replace('_', ' ')}</td>
+            <td class="px-6 py-4 text-slate-500 text-xs">${p.payment_date || 'N/A'}</td>
+            <td class="px-6 py-4 text-right">
+              <div class="flex items-center justify-end space-x-1.5">
+                <button type="button" class="btn-download-receipt-admin px-2.5 py-1 rounded-lg text-xs font-bold btn-glass-primary shadow-xs cursor-pointer" data-receipt="${p.receipt_number}" title="Download Vector PDF Receipt">
+                  <i class="fa-solid fa-file-pdf mr-1"></i> Receipt
+                </button>
+                <button type="button" class="btn-edit-payment-admin px-2 py-1 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer" data-id="${p.id}" title="Edit Metadata">
+                  <i class="fa-solid fa-pen"></i>
+                </button>
+                <button type="button" class="btn-correct-payment-admin px-2 py-1 rounded-lg text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-700 transition-colors cursor-pointer" data-id="${p.id}" title="Financial Correction">
+                  <i class="fa-solid fa-scale-balanced"></i>
+                </button>
+                ${!isVoided ? `
+                  <button type="button" class="btn-void-payment-admin px-2 py-1 rounded-lg text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-600 transition-colors cursor-pointer" data-id="${p.id}" title="Void Payment">
+                    <i class="fa-solid fa-ban"></i>
+                  </button>
+                ` : ''}
+                <button type="button" class="btn-delete-payment-admin px-2 py-1 rounded-lg text-xs font-semibold text-slate-400 hover:text-rose-600 transition-colors cursor-pointer" data-id="${p.id}" title="Delete Test Payment">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      // Mobile Responsive Cards
+      if (cardsContainer) {
+        cardsContainer.innerHTML = payments.map(p => {
+          const isVoided = (p.financial_notes && p.financial_notes.includes('[VOIDED]')) || (p.payment_reference && p.payment_reference.startsWith('VOIDED'));
+          const formattedAmount = formatCurrency(p.amount_cents || 0, p.currency || "USD");
+
+          return `
+            <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-sm space-y-3 ${isVoided ? 'opacity-60 bg-rose-50/20' : ''}">
+              <div class="flex items-center justify-between">
+                <div>
+                  <span class="font-mono text-xs font-bold text-brand-whiz">${p.receipt_number}</span>
+                  ${isVoided ? '<span class="ml-2 text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">VOIDED</span>' : ''}
+                </div>
+                <div class="font-mono font-bold text-sm ${isVoided ? 'line-through text-slate-400' : 'text-brand-whiz'}">${formattedAmount}</div>
+              </div>
+
+              <div class="space-y-1 text-xs">
+                <div class="font-bold text-[#172B36]">${p.organization_name || 'Client'}</div>
+                <div class="flex items-center justify-between text-slate-500 text-[11px]">
+                  <span>Invoice: <strong class="font-mono text-slate-700">${p.invoice_number || 'INV-DIRECT'}</strong></span>
+                  <span>${p.payment_date || 'N/A'}</span>
+                </div>
+                <div class="text-[11px] text-slate-500 uppercase">
+                  Method: <strong class="text-slate-700">${(p.payment_method || 'card').replace('_', ' ')}</strong>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-end gap-1.5 pt-2 border-t border-[#E3E9EF]">
+                <button type="button" class="btn-download-receipt-admin flex-1 py-1.5 rounded-xl text-xs font-bold btn-glass-primary text-center cursor-pointer" data-receipt="${p.receipt_number}">
+                  <i class="fa-solid fa-file-pdf mr-1"></i> Receipt
+                </button>
+                <button type="button" class="btn-edit-payment-admin px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer" data-id="${p.id}">
+                  Edit
+                </button>
+                <button type="button" class="btn-correct-payment-admin px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-700 cursor-pointer" data-id="${p.id}">
+                  Correct
+                </button>
+                ${!isVoided ? `
+                  <button type="button" class="btn-void-payment-admin px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-600 cursor-pointer" data-id="${p.id}" title="Void">
+                    <i class="fa-solid fa-ban"></i>
+                  </button>
+                ` : ''}
+                <button type="button" class="btn-delete-payment-admin px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-rose-600 cursor-pointer" data-id="${p.id}" title="Delete">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Attach Event Listeners
+      const attachListeners = (container) => {
+        if (!container) return;
+
+        // Download Receipt PDF
+        container.querySelectorAll('.btn-download-receipt-admin').forEach(b => {
+          b.addEventListener('click', async () => {
+            const receiptNum = b.dataset.receipt;
+            const res = await apiFetch(`/pdf/data/receipt/${receiptNum}`);
+            if (res.ok && res.data && res.data.data) {
+              await generateReceiptPdfInBrowser(res.data.data);
+            } else {
+              showToast('Failed to fetch receipt data for download.', 'error');
+            }
+          });
         });
-      });
+
+        // Edit Payment Details Modal
+        container.querySelectorAll('.btn-edit-payment-admin').forEach(b => {
+          b.addEventListener('click', () => {
+            const pid = b.dataset.id;
+            const p = paymentsCache.find(x => x.id === pid);
+            if (!p) return;
+
+            document.getElementById('editPaymentId').value = p.id;
+            document.getElementById('editPaymentReceiptNum').textContent = p.receipt_number;
+            document.getElementById('editPaymentInvoiceNum').textContent = p.invoice_number || 'INV-DIRECT';
+            document.getElementById('editPaymentAmountDisplay').textContent = formatCurrency(p.amount_cents || 0, p.currency || 'USD');
+            document.getElementById('editPaymentDate').value = p.payment_date || new Date().toISOString().split('T')[0];
+            document.getElementById('editPaymentMethod').value = p.payment_method || 'bank_transfer';
+            document.getElementById('editPaymentReference').value = p.payment_reference || '';
+            document.getElementById('editPaymentNotes').value = p.financial_notes || '';
+
+            document.getElementById('modalEditPayment')?.classList.remove('hidden');
+          });
+        });
+
+        // Financial Correction Modal
+        container.querySelectorAll('.btn-correct-payment-admin').forEach(b => {
+          b.addEventListener('click', () => {
+            const pid = b.dataset.id;
+            const p = paymentsCache.find(x => x.id === pid);
+            if (!p) return;
+
+            document.getElementById('correctPaymentId').value = p.id;
+            document.getElementById('correctOriginalAmountDisplay').textContent = formatCurrency(p.amount_cents || 0, p.currency || 'USD');
+            document.getElementById('correctInvoiceNumDisplay').textContent = p.invoice_number || 'INV-DIRECT';
+            document.getElementById('correctAmountInput').value = ((p.amount_cents || 0) / 100).toFixed(2);
+            document.getElementById('correctCurrencySelect').value = p.currency || 'USD';
+            document.getElementById('correctReasonInput').value = '';
+
+            document.getElementById('modalCorrectPayment')?.classList.remove('hidden');
+          });
+        });
+
+        // Void Payment
+        container.querySelectorAll('.btn-void-payment-admin').forEach(b => {
+          b.addEventListener('click', async () => {
+            const pid = b.dataset.id;
+            const p = paymentsCache.find(x => x.id === pid);
+            if (!p) return;
+
+            const confirmed = window.confirm(`Are you sure you want to VOID payment ${p.payment_number} (${formatCurrency(p.amount_cents, p.currency)})?\n\nThis will record an audited reversal and adjust the client invoice balance.`);
+            if (!confirmed) return;
+
+            const reason = window.prompt('Please enter the reason for voiding this payment:', 'Audited administrative reversal');
+            if (!reason) return;
+
+            const vRes = await apiFetch(`/finance/payments/${pid}/void`, {
+              method: 'POST',
+              body: JSON.stringify({ reason })
+            });
+
+            if (vRes.ok && vRes.data && vRes.data.success) {
+              showToast(`Payment ${p.payment_number} voided successfully. Invoice balance adjusted.`, 'success');
+              loadFinanceData();
+            } else {
+              showToast(vRes.data?.error || 'Failed to void payment.', 'error');
+            }
+          });
+        });
+
+        // Delete Disposable Test Payment
+        container.querySelectorAll('.btn-delete-payment-admin').forEach(b => {
+          b.addEventListener('click', async () => {
+            const pid = b.dataset.id;
+            const p = paymentsCache.find(x => x.id === pid);
+            if (!p) return;
+
+            const confirmed = window.confirm(`Permanently delete test payment ${p.payment_number} (${formatCurrency(p.amount_cents, p.currency)})?\n\nThis will remove the test payment record and recalculate invoice balances. This action cannot be undone.`);
+            if (!confirmed) return;
+
+            const dRes = await apiFetch(`/finance/payments/${pid}`, {
+              method: 'DELETE'
+            });
+
+            if (dRes.ok && dRes.data && dRes.data.success) {
+              showToast(`Payment ${p.payment_number} permanently removed from ledger.`, 'success');
+              loadFinanceData();
+            } else {
+              showToast(dRes.data?.error || 'Failed to delete payment.', 'error');
+            }
+          });
+        });
+      };
+
+      attachListeners(tbody);
+      if (cardsContainer) attachListeners(cardsContainer);
     }
   }
 
@@ -1329,7 +1509,7 @@
   async function loadTeamData() {
     const tbody = document.getElementById('userDirectoryTableBody');
     if (tbody) {
-      tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-6 text-center text-slate-500 italic">Fetching authoritative users directory from Cloudflare D1...</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-6 text-center text-slate-500 italic">Loading user directory...</td></tr>';
     }
 
     try {
@@ -2233,7 +2413,7 @@
       setBtnLoading(submitBtn, false);
 
       if (res.ok && res.data && res.data.success) {
-        showToast('Client profile updated successfully in Cloudflare D1!', 'success');
+        showToast('Client profile updated successfully!', 'success');
         document.getElementById('modalEditClient')?.classList.add('hidden');
         openClientDetails(clientId);
         loadClientsData();
@@ -2534,7 +2714,7 @@
         qaCriteria: f.qaCriteria.value
       };
 
-      setBtnLoading(submitBtn, true, 'Saving to Cloudflare D1...');
+      setBtnLoading(submitBtn, true, 'Saving changes...');
 
       const res = await apiFetch(`/services/blueprints/${bpId}`, {
         method: 'PUT',
@@ -2690,6 +2870,73 @@
         loadFinanceData();
       } else {
         showToast(payRes.data?.error || 'Failed to record payment.', 'error');
+      }
+    });
+
+
+    // Form Edit Payment Submit
+    document.getElementById('formEditPayment')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const f = e.target;
+      const submitBtn = f.querySelector('button[type="submit"]');
+      const pid = f.paymentId.value;
+      const paymentDate = f.paymentDate.value;
+      const paymentMethod = f.paymentMethod.value;
+      const paymentReference = f.paymentReference.value;
+      const financialNotes = f.financialNotes.value;
+
+      setBtnLoading(submitBtn, true, 'Updating payment...');
+      const res = await apiFetch(`/finance/payments/${pid}`, {
+        method: 'PUT',
+        body: JSON.stringify({ paymentDate, paymentMethod, paymentReference, financialNotes })
+      });
+      setBtnLoading(submitBtn, false);
+
+      if (res.ok && res.data && res.data.success) {
+        showToast('Payment details updated successfully.', 'success');
+        document.getElementById('modalEditPayment')?.classList.add('hidden');
+        loadFinanceData();
+      } else {
+        showToast(res.data?.error || 'Failed to update payment details.', 'error');
+      }
+    });
+
+    // Form Correct Payment Submit
+    document.getElementById('formCorrectPayment')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const f = e.target;
+      const submitBtn = f.querySelector('button[type="submit"]');
+      const pid = f.paymentId.value;
+      const amountDollars = parseFloat(f.amount.value) || 0;
+      const currency = f.currency.value;
+      const reason = f.reason.value;
+
+      if (amountDollars <= 0) {
+        showToast('Please enter a valid positive corrected amount.', 'error');
+        return;
+      }
+      if (!reason || reason.trim().length < 3) {
+        showToast('A reason for the financial correction is required.', 'error');
+        return;
+      }
+
+      setBtnLoading(submitBtn, true, 'Committing correction...');
+      const res = await apiFetch(`/finance/payments/${pid}/correct`, {
+        method: 'POST',
+        body: JSON.stringify({
+          amountCents: Math.round(amountDollars * 100),
+          currency,
+          reason
+        })
+      });
+      setBtnLoading(submitBtn, false);
+
+      if (res.ok && res.data && res.data.success) {
+        showToast('Financial correction committed! Invoice balance recalculated.', 'success');
+        document.getElementById('modalCorrectPayment')?.classList.add('hidden');
+        loadFinanceData();
+      } else {
+        showToast(res.data?.error || 'Failed to commit financial correction.', 'error');
       }
     });
 
@@ -3121,7 +3368,7 @@
       else if (tabId === 'history') loadHistoryData();
       setTimeout(() => {
         if (icon) icon.classList.remove('fa-spin');
-        showToast('Console synchronized with Cloudflare D1.', 'success');
+        showToast('Console synchronized successfully.', 'success');
       }, 500);
     });
 

@@ -70,16 +70,13 @@
        1. AUTH PRELOADER & GUARD (SHOWS UNTIL CLERK AUTH VERIFIES ROLE)
        ========================================================================= -->
   <div id="dashboardAuthGuard" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white/95 backdrop-blur-md text-center p-6 transition-opacity duration-300">
-    <div class="relative w-16 h-16 mb-5">
-      <div class="absolute inset-0 rounded-2xl bg-brand-whiz/20 border border-brand-whiz/40 animate-ping"></div>
-      <div class="relative w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center shadow-xl">
-        <i class="fa-solid fa-shield-halved text-brand-whiz text-2xl"></i>
-      </div>
+    <div class="mb-5 flex items-center justify-center">
+      <img src="/assets/images/logo.png" alt="Whiz Studio" class="h-12 w-auto object-contain">
     </div>
-    <h2 class="text-xl font-extrabold text-[#172B36] tracking-tight">Whiz Studio Console</h2>
-    <p class="text-xs text-slate-500 mt-1.5 flex items-center gap-2">
-      <i class="fa-solid fa-circle-notch fa-spin text-brand-whiz"></i>
-      <span>Verifying Administrator Credentials & Cloudflare D1 Authority...</span>
+    <h2 class="text-xl font-bold text-[#172B36] tracking-tight">Welcome to Whiz Studio</h2>
+    <p class="text-xs text-slate-500 mt-2 flex items-center justify-center gap-2">
+      <i class="fa-solid fa-circle-notch fa-spin text-[#147D64]"></i>
+      <span>Preparing your workspace...</span>
     </p>
   </div>
 
@@ -426,7 +423,7 @@
                   <p class="text-[11px] font-bold uppercase tracking-wider text-[#147D64] mb-1">Super Admin Console</p>
                   <h1 class="text-2xl sm:text-3xl font-black text-[#172B36] tracking-tight">Super Admin Command Center</h1>
                   <p class="text-xs sm:text-sm text-slate-500 mt-1 max-w-2xl">
-                    100% Cloudflare-backed agency management. Notion is no longer called during live operations.
+                    High-performance agency management. Real-time operational synchronization.
                   </p>
                 </div>
                 <div class="flex flex-wrap items-center gap-3">
@@ -547,7 +544,7 @@
               <div class="p-5 sm:p-6 rounded-2xl bg-white border border-[#E3E9EF] shadow-sm space-y-3">
                 <div class="flex items-center justify-between pb-2 border-b border-[#E3E9EF]">
                   <div>
-                    <h3 class="text-xs font-bold uppercase tracking-wider text-[#172B36]">Financial Inflow (D1 Verified)</h3>
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-[#172B36]">Financial Inflow (Verified)</h3>
                     <p class="text-[11px] text-slate-500">Confirmed ledger payments recorded by Super Admin</p>
                   </div>
                   <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">Zero Fake Stats</span>
@@ -562,16 +559,7 @@
               </div>
             </div>
 
-            <!-- Recent System Activity Log -->
-            <div class="p-6 rounded-3xl bg-white border border-[#E3E9EF] shadow-sm space-y-4">
-              <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
-                <h3 class="text-sm font-extrabold text-[#172B36] uppercase tracking-wider">Live Activity Audit Trail</h3>
-                <span class="text-xs text-slate-500 font-mono">Cloudflare D1 Ledger</span>
-              </div>
-              <div id="overviewActivityList" class="space-y-2 text-xs">
-                <p class="text-slate-500 italic">Loading activity stream...</p>
-              </div>
-            </div>
+
           </div>
 
           <!-- =================================================================
@@ -822,7 +810,7 @@
 
             <!-- Services Grid -->
             <div id="adminServicesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              <p class="text-slate-500 italic col-span-3">Loading master services from Cloudflare D1...</p>
+              <p class="text-slate-500 italic col-span-3">Loading master services...</p>
             </div>
           </div>
 
@@ -1007,7 +995,7 @@
                   </thead>
                   <tbody id="adminPaymentsTableBody" class="divide-y divide-[#E3E9EF]">
                     <tr>
-                      <td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">Loading payment ledger from Cloudflare D1...</td>
+                      <td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">Loading payment records...</td>
                     </tr>
                   </tbody>
                 </table>
@@ -1135,7 +1123,7 @@
                 <div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs space-y-1.5">
                   <div class="flex items-center gap-2 font-bold">
                     <i class="fa-solid fa-signature text-base text-[#147D64]"></i>
-                    <span>Official Ink Signature &amp; Zero Storage Policy</span>
+                    <span>Official Ink Signature &amp; Vector PDF Engine</span>
                   </div>
                   <p class="text-[11px] text-emerald-700 leading-relaxed">
                     Embedded official signature with cryptographic audit reference. Generated vector PDFs run 100% inside client browser memory with zero server disk storage.
@@ -2326,6 +2314,152 @@
           <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center gap-1.5 cursor-pointer">
             <i class="fa-solid fa-check text-xs"></i>
             <span>Commit Payment to Ledger</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+
+  <!-- =========================================================================
+       MODAL: EDIT PAYMENT DETAILS
+       ========================================================================= -->
+  <div id="modalEditPayment" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
+    <div class="bg-white border border-[#E3E9EF] rounded-3xl max-w-lg w-full p-5 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
+        <h3 class="text-lg font-bold text-[#172B36] flex items-center gap-2">
+          <i class="fa-solid fa-pen-to-square text-[#147D64] text-sm"></i>
+          <span>Edit Payment Details</span>
+        </h3>
+        <button type="button" class="btn-close-modal text-slate-500 hover:text-[#172B36] cursor-pointer" data-modal="modalEditPayment">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="formEditPayment" class="space-y-4">
+        <input type="hidden" name="paymentId" id="editPaymentId">
+        
+        <div class="p-3.5 rounded-xl bg-slate-50 border border-[#E3E9EF] space-y-1">
+          <div class="flex justify-between text-xs">
+            <span class="text-slate-500">Receipt Ref:</span>
+            <span class="font-mono font-bold text-[#172B36]" id="editPaymentReceiptNum">-</span>
+          </div>
+          <div class="flex justify-between text-xs">
+            <span class="text-slate-500">Invoice:</span>
+            <span class="font-mono text-slate-700" id="editPaymentInvoiceNum">-</span>
+          </div>
+          <div class="flex justify-between text-xs">
+            <span class="text-slate-500">Amount:</span>
+            <span class="font-bold text-[#147D64]" id="editPaymentAmountDisplay">-</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Payment Date *</label>
+            <input type="date" name="paymentDate" id="editPaymentDate" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:border-[#147D64]">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Payment Method *</label>
+            <select name="paymentMethod" id="editPaymentMethod" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:border-[#147D64]">
+              <option value="bank_transfer">Bank Transfer / Wire Transfer</option>
+              <option value="card">Credit / Debit Card</option>
+              <option value="cash_cheque">Cash / Cheque</option>
+              <option value="online_banking">Online Banking</option>
+              <option value="mobile_banking">Mobile Banking / MFS</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Transaction Reference *</label>
+          <input type="text" name="paymentReference" id="editPaymentReference" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-mono focus:border-[#147D64]">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Financial Notes</label>
+          <textarea name="financialNotes" id="editPaymentNotes" rows="2" placeholder="Optional notes, bank slip info..." class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:border-[#147D64]"></textarea>
+        </div>
+
+        <div class="flex items-center justify-end space-x-3 pt-3 border-t border-[#E3E9EF]">
+          <button type="button" class="btn-close-modal px-4 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36]" data-modal="modalEditPayment">Cancel</button>
+          <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-check text-xs"></i>
+            <span>Save Payment Details</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL: CORRECT PAYMENT AMOUNT
+       ========================================================================= -->
+  <div id="modalCorrectPayment" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
+    <div class="bg-white border border-[#E3E9EF] rounded-3xl max-w-lg w-full p-5 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
+        <h3 class="text-lg font-bold text-[#172B36] flex items-center gap-2">
+          <i class="fa-solid fa-scale-balanced text-[#147D64] text-sm"></i>
+          <span>Financial Correction</span>
+        </h3>
+        <button type="button" class="btn-close-modal text-slate-500 hover:text-[#172B36] cursor-pointer" data-modal="modalCorrectPayment">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <p class="text-xs text-slate-500">
+        Adjusting payment amount automatically updates the authoritative financial ledger, recalculates invoice balances, and preserves an audited correction trail.
+      </p>
+
+      <form id="formCorrectPayment" class="space-y-4">
+        <input type="hidden" name="paymentId" id="correctPaymentId">
+        
+        <div class="p-3.5 rounded-xl bg-amber-50/60 border border-amber-200/60 space-y-1.5 text-xs">
+          <div class="flex justify-between">
+            <span class="text-amber-800">Original Amount:</span>
+            <span class="font-bold text-amber-900" id="correctOriginalAmountDisplay">-</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-amber-800">Invoice:</span>
+            <span class="font-mono text-amber-900" id="correctInvoiceNumDisplay">-</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Corrected Amount *</label>
+            <input type="number" step="0.01" min="0.01" name="amount" id="correctAmountInput" required placeholder="0.00" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-mono focus:border-[#147D64]">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Currency *</label>
+            <select name="currency" id="correctCurrencySelect" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:border-[#147D64]">
+              <option value="BDT">BDT — ৳ (Bangladeshi Taka)</option>
+              <option value="USD">USD — $ (US Dollar)</option>
+              <option value="GBP">GBP — £ (British Pound)</option>
+              <option value="EUR">EUR — € (Euro)</option>
+              <option value="AED">AED — د.إ (UAE Dirham)</option>
+              <option value="SAR">SAR — ر.س (Saudi Riyal)</option>
+              <option value="CAD">CAD — CA$ (Canadian Dollar)</option>
+              <option value="AUD">AUD — A$ (Australian Dollar)</option>
+              <option value="SGD">SGD — S$ (Singapore Dollar)</option>
+              <option value="INR">INR — ₹ (Indian Rupee)</option>
+              <option value="JPY">JPY — ¥ (Japanese Yen)</option>
+              <option value="MYR">MYR — RM (Malaysian Ringgit)</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Reason for Financial Correction *</label>
+          <textarea name="reason" id="correctReasonInput" rows="3" required placeholder="e.g. Corrected overbilling error; client received partial credit discount per SLA agreement..." class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:border-[#147D64]"></textarea>
+        </div>
+
+        <div class="flex items-center justify-end space-x-3 pt-3 border-t border-[#E3E9EF]">
+          <button type="button" class="btn-close-modal px-4 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36]" data-modal="modalCorrectPayment">Cancel</button>
+          <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-check text-xs"></i>
+            <span>Commit Financial Correction</span>
           </button>
         </div>
       </form>
