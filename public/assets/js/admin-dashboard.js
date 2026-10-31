@@ -67,6 +67,8 @@
     tasksCache: [],
     usersCache: [],
     roleHistoryCache: [],
+    supportCache: [],
+    trustedDevicesCache: [],
     currentBlueprints: []
   };
 
@@ -183,6 +185,7 @@
   // TAB NAVIGATION & ROUTING
   // =========================================================================
   function switchTab(tabId, updateHash = true) {
+    if (tabId === 'settings') tabId = 'security';
     state.activeTab = tabId;
 
     const allViews = [
@@ -258,6 +261,7 @@
     else if (tabId === 'team') loadTeamData();
     else if (tabId === 'support') loadSupportData();
     else if (tabId === 'history') loadHistoryData();
+    else if (tabId === 'security') loadSecurityData();
   }
 
   // =========================================================================
@@ -2876,6 +2880,369 @@
     }
   }
 
+
+  // =========================================================================
+  // 10. CLIENT SUPPORT DESK DATA & WORKFLOWS
+  // =========================================================================
+  async function loadSupportData(showNotification = false) {
+    const tbody = document.getElementById('adminSupportTableBody');
+    const cards = document.getElementById('adminSupportCardsContainer');
+    const emptyState = document.getElementById('supportEmptyState');
+    const refreshBtn = document.getElementById('btnRefreshSupport');
+
+    if (refreshBtn) {
+      const icon = refreshBtn.querySelector('i');
+      if (icon) icon.classList.add('fa-spin');
+    }
+
+    try {
+      const res = await apiFetch('/portal/admin/support');
+      if (refreshBtn) {
+        const icon = refreshBtn.querySelector('i');
+        if (icon) icon.classList.remove('fa-spin');
+      }
+
+      if (res.ok && res.data) {
+        state.supportCache = Array.isArray(res.data.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
+        renderSupport();
+        if (showNotification) showToast('Support tickets synchronized.', 'success');
+      } else {
+        const err = res.data?.error || 'Failed to retrieve support requests.';
+        console.error('Support Fetch Error:', err);
+        if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-6 text-center text-rose-500 font-medium">${err}</td></tr>`;
+        if (cards) cards.innerHTML = `<div class="p-6 rounded-2xl bg-white border border-rose-200 text-center text-xs text-rose-500 font-medium shadow-xs">${err}</div>`;
+        if (showNotification) showToast(err, 'error');
+      }
+    } catch (e) {
+      console.error('loadSupportData exception:', e);
+      if (refreshBtn) {
+        const icon = refreshBtn.querySelector('i');
+        if (icon) icon.classList.remove('fa-spin');
+      }
+      const failMsg = 'Network error fetching support tickets. Please retry.';
+      if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-6 text-center text-rose-500 font-medium">${failMsg}</td></tr>`;
+      if (cards) cards.innerHTML = `<div class="p-6 rounded-2xl bg-white border border-rose-200 text-center text-xs text-rose-500 font-medium shadow-xs">${failMsg}</div>`;
+      if (showNotification) showToast(failMsg, 'error');
+    }
+  }
+
+  function renderSupport() {
+    const tbody = document.getElementById('adminSupportTableBody');
+    const cards = document.getElementById('adminSupportCardsContainer');
+    const emptyState = document.getElementById('supportEmptyState');
+    const tableCard = document.getElementById('adminSupportTableCard');
+
+    const totalEl = document.getElementById('supportTotalCount');
+    const openEl = document.getElementById('supportOpenCount');
+    const inProgEl = document.getElementById('supportInProgressCount');
+    const resolvedEl = document.getElementById('supportResolvedCount');
+
+    const tickets = state.supportCache || [];
+
+    const totalCount = tickets.length;
+    const openCount = tickets.filter(t => t.status === 'open').length;
+    const inProgCount = tickets.filter(t => t.status === 'in_progress').length;
+    const resolvedCount = tickets.filter(t => t.status === 'resolved' || t.status === 'closed').length;
+
+    if (totalEl) totalEl.textContent = totalCount;
+    if (openEl) openEl.textContent = openCount;
+    if (inProgEl) inProgEl.textContent = inProgCount;
+    if (resolvedEl) resolvedEl.textContent = resolvedCount;
+
+    if (totalCount === 0) {
+      if (emptyState) emptyState.classList.remove('hidden');
+      if (tableCard) tableCard.classList.add('hidden');
+      if (cards) cards.innerHTML = '';
+      return;
+    } else {
+      if (emptyState) emptyState.classList.add('hidden');
+      if (tableCard) tableCard.classList.remove('hidden');
+    }
+
+    const query = (document.getElementById('supportSearchInput')?.value || '').toLowerCase().trim();
+    const statusFilter = document.getElementById('supportStatusFilter')?.value || 'all';
+
+    const filtered = tickets.filter(t => {
+      const matchQuery = !query ||
+        (t.full_name || '').toLowerCase().includes(query) ||
+        (t.email || '').toLowerCase().includes(query) ||
+        (t.organization_name || '').toLowerCase().includes(query) ||
+        (t.subject || '').toLowerCase().includes(query) ||
+        (t.message || '').toLowerCase().includes(query);
+
+      const matchStatus = statusFilter === 'all' || t.status === statusFilter;
+      return matchQuery && matchStatus;
+    });
+
+    if (filtered.length === 0) {
+      const noMatchMsg = '<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">No support requests match your search criteria.</td></tr>';
+      if (tbody) tbody.innerHTML = noMatchMsg;
+      if (cards) cards.innerHTML = '<div class="p-6 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 italic shadow-xs">No support requests match your search criteria.</div>';
+      return;
+    }
+
+    const STATUS_BADGES = {
+      open: '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-blue-50 text-blue-700 border border-blue-200">Open</span>',
+      in_progress: '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-200">In Progress</span>',
+      resolved: '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">Resolved</span>',
+      closed: '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-slate-100 text-slate-600 border border-slate-200">Closed</span>'
+    };
+
+    if (tbody) {
+      tbody.innerHTML = filtered.map(t => {
+        const dateStr = t.created_at ? new Date(t.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
+        const excerpt = (t.message || '').length > 65 ? (t.message.slice(0, 65) + '...') : t.message;
+        const orgBadge = t.organization_name ? `<span class="text-[10px] text-slate-400 font-medium">(${escapeHtml(t.organization_name)})</span>` : '';
+        const badge = STATUS_BADGES[t.status] || STATUS_BADGES.open;
+
+        return `
+          <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
+            <td class="px-6 py-4">
+              <div class="font-bold text-[#172B36] flex items-center gap-1.5">
+                <span>${escapeHtml(t.full_name || 'Client')}</span>
+                ${orgBadge}
+              </div>
+              <div class="font-mono text-xs text-slate-500">${escapeHtml(t.email)}</div>
+            </td>
+            <td class="px-6 py-4 font-semibold text-[#172B36] max-w-[200px] truncate">${escapeHtml(t.subject)}</td>
+            <td class="px-6 py-4 text-xs text-slate-600 max-w-[260px] truncate">${escapeHtml(excerpt)}</td>
+            <td class="px-6 py-4 font-mono text-xs text-slate-500">${escapeHtml(dateStr)}</td>
+            <td class="px-6 py-4">${badge}</td>
+            <td class="px-6 py-4 text-right">
+              <button type="button" class="btn-view-support-ticket px-3 py-1.5 rounded-xl text-xs font-bold bg-[#147D64]/10 text-[#147D64] hover:bg-[#147D64]/20 border border-[#147D64]/20 transition-all cursor-pointer" data-id="${t.id}">
+                <i class="fa-solid fa-eye mr-1 text-[10px]"></i>View Request
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    if (cards) {
+      cards.innerHTML = filtered.map(t => {
+        const dateStr = t.created_at ? new Date(t.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
+        const excerpt = (t.message || '').length > 90 ? (t.message.slice(0, 90) + '...') : t.message;
+        const badge = STATUS_BADGES[t.status] || STATUS_BADGES.open;
+
+        return `
+          <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs space-y-2.5">
+            <div class="flex items-center justify-between">
+              <div class="font-bold text-[#172B36] text-sm">${escapeHtml(t.full_name || 'Client')}</div>
+              ${badge}
+            </div>
+            <div class="text-xs font-mono text-slate-500">${escapeHtml(t.email)}</div>
+            ${t.organization_name ? `<div class="text-[11px] text-slate-400">Org: <strong class="text-slate-600">${escapeHtml(t.organization_name)}</strong></div>` : ''}
+            <div class="pt-2 border-t border-slate-100">
+              <div class="text-xs font-bold text-[#172B36] mb-1">${escapeHtml(t.subject)}</div>
+              <p class="text-xs text-slate-600 line-clamp-2">${escapeHtml(excerpt)}</p>
+            </div>
+            <div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs text-slate-400">
+              <span class="font-mono text-[11px]">${escapeHtml(dateStr)}</span>
+              <button type="button" class="btn-view-support-ticket px-3 py-1.5 rounded-xl text-xs font-bold bg-[#147D64]/10 text-[#147D64] hover:bg-[#147D64]/20 border border-[#147D64]/20 transition-all cursor-pointer" data-id="${t.id}">
+                View &amp; Resolve
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    document.querySelectorAll('.btn-view-support-ticket').forEach(btn => {
+      btn.addEventListener('click', () => {
+        openSupportDetailModal(btn.dataset.id);
+      });
+    });
+  }
+
+  function openSupportDetailModal(ticketId) {
+    const ticket = (state.supportCache || []).find(t => t.id === ticketId);
+    if (!ticket) return;
+
+    const modal = document.getElementById('modalSupportDetail');
+    if (!modal) return;
+
+    const idEl = document.getElementById('modalSupportTicketId');
+    const nameEl = document.getElementById('modalSupportClientName');
+    const emailEl = document.getElementById('modalSupportClientEmail');
+    const orgEl = document.getElementById('modalSupportOrgName');
+    const dateEl = document.getElementById('modalSupportCreatedAt');
+    const subjEl = document.getElementById('modalSupportSubject');
+    const msgEl = document.getElementById('modalSupportMessage');
+    const statusSelect = document.getElementById('modalSupportNewStatus');
+    const notesEl = document.getElementById('modalSupportAdminNotes');
+    const hiddenId = document.getElementById('modalSupportHiddenId');
+    const badgeEl = document.getElementById('modalSupportStatusBadge');
+
+    if (idEl) idEl.textContent = ticket.id;
+    if (nameEl) nameEl.textContent = ticket.full_name || 'Client';
+    if (emailEl) emailEl.textContent = ticket.email;
+    if (orgEl) orgEl.textContent = ticket.organization_name || 'Individual Client';
+    if (dateEl) dateEl.textContent = ticket.created_at ? new Date(ticket.created_at).toLocaleString() : 'N/A';
+    if (subjEl) subjEl.textContent = ticket.subject;
+    if (msgEl) msgEl.textContent = ticket.message;
+    if (statusSelect) statusSelect.value = ticket.status || 'open';
+    if (notesEl) notesEl.value = ticket.admin_notes || '';
+    if (hiddenId) hiddenId.value = ticket.id;
+
+    if (badgeEl) {
+      badgeEl.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ' +
+        (ticket.status === 'resolved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+         ticket.status === 'in_progress' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+         'bg-blue-50 text-blue-700 border-blue-200');
+      badgeEl.textContent = (ticket.status || 'open').replace('_', ' ');
+    }
+
+    modal.classList.remove('hidden');
+  }
+
+  // =========================================================================
+  // 11. ACCOUNT SECURITY & TRUSTED DEVICES WORKFLOWS
+  // =========================================================================
+  async function loadSecurityData() {
+    const user = window.Clerk?.user || state.currentUser;
+    const profile = state.adminProfile || {};
+
+    const fullName = user?.fullName || profile.full_name || 'Administrator';
+    const email = user?.primaryEmailAddress?.emailAddress || profile.email || 'admin@example.com';
+    const username = user?.username ? `@${user.username}` : (profile.email ? `@${profile.email.split('@')[0]}` : '@admin');
+    const clerkId = user?.id || profile.clerkUserId || 'user_...';
+    const isOwner = isCurrentUserOwner();
+
+    const fullNameEl = document.getElementById('secFullName');
+    const emailEl = document.getElementById('secUserEmail');
+    const usernameEl = document.getElementById('secUsername');
+    const clerkIdEl = document.getElementById('secClerkUserId');
+    const clerkIdShortEl = document.getElementById('secClerkIdShort');
+    const roleBadgeEl = document.getElementById('secRoleBadge');
+    const authProviderEl = document.getElementById('secAuthProvider');
+    const currentDeviceEl = document.getElementById('secCurrentDevice');
+    const lastActiveEl = document.getElementById('secLastActiveTime');
+
+    if (fullNameEl) fullNameEl.textContent = fullName;
+    if (emailEl) emailEl.textContent = email;
+    if (usernameEl) usernameEl.textContent = username;
+    if (clerkIdEl) clerkIdEl.textContent = clerkId;
+    if (clerkIdShortEl) clerkIdShortEl.textContent = clerkId ? (clerkId.slice(0, 14) + '...') : 'user_...';
+    if (lastActiveEl) lastActiveEl.textContent = `Session Active (${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`;
+
+    if (roleBadgeEl) {
+      roleBadgeEl.innerHTML = isOwner
+        ? '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Founding Owner</span>'
+        : '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-blue-50 text-blue-700 border border-blue-200"><i class="fa-solid fa-shield-halved text-[9px]"></i> Administrator</span>';
+    }
+
+    const hasGoogle = user?.externalAccounts?.some(a => a.provider === 'google');
+    if (authProviderEl) {
+      if (hasGoogle) {
+        authProviderEl.innerHTML = '<i class="fa-brands fa-google text-slate-700 text-xs"></i><span>Google OAuth SSO</span>';
+      } else {
+        authProviderEl.innerHTML = '<i class="fa-solid fa-key text-slate-700 text-xs"></i><span>Clerk Password</span>';
+      }
+    }
+
+    const googleNotice = document.getElementById('adminGoogleOnlyNotice');
+    const currentPassDiv = document.getElementById('divCurrentPassword');
+    const hasPassword = user?.passwordEnabled ?? true;
+
+    if (!hasPassword && hasGoogle) {
+      if (googleNotice) googleNotice.classList.remove('hidden');
+      if (currentPassDiv) currentPassDiv.classList.add('hidden');
+    } else {
+      if (googleNotice) googleNotice.classList.add('hidden');
+      if (currentPassDiv) currentPassDiv.classList.remove('hidden');
+    }
+
+    if (currentDeviceEl) {
+      const ua = navigator.userAgent;
+      let dev = 'Desktop Browser';
+      if (/Android/i.test(ua)) dev = 'Android Device';
+      else if (/iPhone/i.test(ua)) dev = 'Apple iPhone';
+      else if (/iPad/i.test(ua)) dev = 'Apple iPad';
+      else if (/Macintosh/i.test(ua)) dev = 'macOS Workstation';
+      else if (/Windows/i.test(ua)) dev = 'Windows PC';
+      currentDeviceEl.textContent = dev;
+    }
+
+    await loadTrustedDevices();
+  }
+
+  async function loadTrustedDevices() {
+    const container = document.getElementById('trustedDevicesList');
+    if (!container) return;
+
+    try {
+      const res = await apiFetch('/security/trusted-devices');
+      if (res.ok && res.data) {
+        state.trustedDevicesCache = Array.isArray(res.data.data) ? res.data.data : [];
+        renderTrustedDevices();
+      } else {
+        container.innerHTML = `<div class="p-6 rounded-2xl bg-slate-50 border border-slate-100 text-center text-xs text-slate-500 italic">No application-trusted devices registered yet.</div>`;
+      }
+    } catch (e) {
+      console.error('loadTrustedDevices error:', e);
+      container.innerHTML = `<div class="p-6 rounded-2xl bg-rose-50 border border-rose-100 text-center text-xs text-rose-500 font-medium">Failed to load recognized devices.</div>`;
+    }
+  }
+
+  function renderTrustedDevices() {
+    const container = document.getElementById('trustedDevicesList');
+    if (!container) return;
+
+    const devices = state.trustedDevicesCache || [];
+
+    if (devices.length === 0) {
+      container.innerHTML = `
+        <div class="p-6 rounded-2xl bg-slate-50 border border-slate-100 text-center space-y-2">
+          <div class="text-xs font-bold text-[#172B36]">No Trusted Devices Registered</div>
+          <p class="text-[11px] text-slate-500 max-w-sm mx-auto">Click "Trust Current Device" above to register this browser into Cloudflare security policies.</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = devices.map(d => {
+      const dateStr = d.last_used_at ? new Date(d.last_used_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recently';
+      return `
+        <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600">
+              <i class="fa-solid fa-laptop text-xs"></i>
+            </div>
+            <div>
+              <div class="text-xs font-bold text-[#172B36] flex items-center gap-2">
+                <span>${escapeHtml(d.device_name || 'Browser Device')}</span>
+                <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase">Trusted</span>
+              </div>
+              <div class="text-[11px] font-mono text-slate-400 mt-0.5">${escapeHtml(d.ip_address || '127.0.0.1')} • Last active: ${escapeHtml(dateStr)}</div>
+            </div>
+          </div>
+          <button type="button" class="btn-revoke-device px-3 py-1.5 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-all self-start sm:self-auto cursor-pointer" data-id="${d.id}" data-name="${escapeHtml(d.device_name || 'Device')}">
+            <i class="fa-solid fa-trash-can mr-1 text-[10px]"></i>Revoke
+          </button>
+        </div>
+      `;
+    }).join('');
+
+    document.querySelectorAll('.btn-revoke-device').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.id;
+        const name = btn.dataset.name;
+        if (!confirm(`Are you sure you want to revoke trust for '${name}'?`)) return;
+
+        setBtnLoading(btn, true, 'Revoking...');
+        const res = await apiFetch(`/security/trusted-devices/${id}`, { method: 'DELETE' });
+        setBtnLoading(btn, false);
+
+        if (res.ok && res.data?.success) {
+          showToast(`Device '${name}' revoked successfully.`, 'success');
+          loadTrustedDevices();
+        } else {
+          showToast(res.data?.error || 'Failed to revoke device.', 'error');
+        }
+      });
+    });
+  }
+
   // =========================================================================
   // MODALS & EVENT HANDLERS
   // =========================================================================
@@ -3818,7 +4185,7 @@
         const sId = hash.replace('service-tasks-', '');
         openServiceTasksWorkspace(sId);
       } else {
-        const validTabs = ['overview', 'clients', 'services', 'projects', 'tasks', 'finance', 'receipt_template', 'team', 'support', 'history', 'settings'];
+        const validTabs = ['overview', 'clients', 'services', 'projects', 'tasks', 'finance', 'receipt_template', 'team', 'support', 'history', 'security', 'settings'];
         const initialTab = validTabs.includes(hash) ? hash : 'overview';
         switchTab(initialTab);
       }
@@ -4017,6 +4384,74 @@
       switchTab('security');
     });
 
+    // Support Requests Event Listeners
+    document.getElementById('btnRefreshSupport')?.addEventListener('click', () => loadSupportData(true));
+    document.getElementById('supportSearchInput')?.addEventListener('input', () => renderSupport());
+    document.getElementById('supportStatusFilter')?.addEventListener('change', () => renderSupport());
+
+    // Support Modal Close Listeners
+    const closeSupportModal = () => {
+      document.getElementById('modalSupportDetail')?.classList.add('hidden');
+    };
+    document.getElementById('btnCloseSupportModal')?.addEventListener('click', closeSupportModal);
+    document.getElementById('btnCancelSupportModal')?.addEventListener('click', closeSupportModal);
+
+    // Support Status Form Submit
+    document.getElementById('formUpdateSupportStatus')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const ticketId = document.getElementById('modalSupportHiddenId')?.value;
+      const status = document.getElementById('modalSupportNewStatus')?.value;
+      const adminNotes = document.getElementById('modalSupportAdminNotes')?.value;
+      const submitBtn = document.getElementById('btnSubmitSupportStatus');
+
+      if (!ticketId) return;
+
+      setBtnLoading(submitBtn, true, 'Saving...');
+      const res = await apiFetch(`/portal/admin/support/${ticketId}/status`, {
+        method: 'PUT',
+        body: JSON.stringify({ status, adminNotes })
+      });
+      setBtnLoading(submitBtn, false);
+
+      if (res.ok && res.data?.success) {
+        showToast(`Support request marked as ${status.replace('_', ' ')}!`, 'success');
+        closeSupportModal();
+        loadSupportData();
+      } else {
+        showToast(res.data?.error || 'Failed to update ticket status.', 'error');
+      }
+    });
+
+    // Trusted Devices Actions
+    document.getElementById('btnTrustThisDevice')?.addEventListener('click', async () => {
+      const devName = prompt('Enter a label for this trusted device (e.g. Work Laptop, Chrome on Windows):', `Device ${new Date().toLocaleDateString()}`);
+      if (!devName) return;
+
+      const res = await apiFetch('/security/trusted-devices', {
+        method: 'POST',
+        body: JSON.stringify({ deviceName: devName.trim() })
+      });
+
+      if (res.ok && res.data?.success) {
+        showToast('Device added to trusted devices!', 'success');
+        loadTrustedDevices();
+      } else {
+        showToast(res.data?.error || 'Failed to register trusted device.', 'error');
+      }
+    });
+
+    document.getElementById('btnRevokeAllDevices')?.addEventListener('click', async () => {
+      if (!confirm('Are you sure you want to revoke ALL trusted devices for your account?')) return;
+
+      const res = await apiFetch('/security/trusted-devices', { method: 'DELETE' });
+      if (res.ok && res.data?.success) {
+        showToast('All trusted devices revoked.', 'success');
+        loadTrustedDevices();
+      } else {
+        showToast(res.data?.error || 'Failed to revoke devices.', 'error');
+      }
+    });
+
     // Mobile Quick Refresh Button
     document.getElementById('mobileQuickRefreshBtn')?.addEventListener('click', () => {
       const icon = document.getElementById('mobileQuickRefreshIcon');
@@ -4031,6 +4466,7 @@
       else if (tabId === 'team') loadTeamData();
       else if (tabId === 'support') loadSupportData();
       else if (tabId === 'history') loadHistoryData();
+      else if (tabId === 'security') loadSecurityData();
       setTimeout(() => {
         if (icon) icon.classList.remove('fa-spin');
         showToast('Console synchronized successfully.', 'success');

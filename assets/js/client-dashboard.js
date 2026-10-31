@@ -190,6 +190,7 @@
     // Scroll to top of content
     const container = document.querySelector('main > div.overflow-y-auto');
     if (container) container.scrollTop = 0;
+    if (tabId === 'support') loadClientSupportTickets();
   }
 
   // Load All Workspace Data
@@ -1150,6 +1151,70 @@
     }
   }
 
+
+  // =========================================================================
+  // CLIENT SUPPORT DESK DATA & HANDLERS
+  // =========================================================================
+  async function loadClientSupportTickets() {
+    const container = document.getElementById('clientSupportTicketsContainer');
+    if (!container) return;
+
+    try {
+      const res = await apiFetch('/portal/support/my');
+      if (res.ok && res.data) {
+        const tickets = Array.isArray(res.data.data) ? res.data.data : [];
+        renderClientSupportTickets(tickets);
+      } else {
+        container.innerHTML = '<div class="p-6 rounded-2xl bg-slate-50 text-center text-xs text-slate-500 italic">No support requests found.</div>';
+      }
+    } catch (e) {
+      console.error('loadClientSupportTickets error:', e);
+      container.innerHTML = '<div class="p-6 rounded-2xl bg-rose-50 text-center text-xs text-rose-500 font-medium">Failed to load support requests.</div>';
+    }
+  }
+
+  function renderClientSupportTickets(tickets) {
+    const container = document.getElementById('clientSupportTicketsContainer');
+    if (!container) return;
+
+    if (!tickets || tickets.length === 0) {
+      container.innerHTML = '<div class="p-6 rounded-2xl bg-slate-50 text-center text-xs text-slate-500 italic">No support requests submitted yet. Use the form above to reach our team.</div>';
+      return;
+    }
+
+    const STATUS_BADGES = {
+      open: '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-blue-50 text-blue-700 border border-blue-200">Open</span>',
+      in_progress: '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-200">In Progress</span>',
+      resolved: '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">Resolved</span>',
+      closed: '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-slate-100 text-slate-600 border border-slate-200">Closed</span>'
+    };
+
+    container.innerHTML = tickets.map(t => {
+      const dateStr = t.created_at ? new Date(t.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
+      const badge = STATUS_BADGES[t.status] || STATUS_BADGES.open;
+
+      return `
+        <div class="p-4 rounded-2xl bg-slate-50 border border-[#E3E9EF] space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-xs text-[#172B36]">${escapeHtml(t.subject)}</span>
+            ${badge}
+          </div>
+          <p class="text-xs text-slate-600 whitespace-pre-wrap leading-relaxed">${escapeHtml(t.message)}</p>
+          ${t.admin_notes ? `
+            <div class="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200/60 text-xs text-emerald-900 mt-2 space-y-1">
+              <div class="font-bold text-[10px] uppercase tracking-wider text-emerald-700">Team Response / Notes:</div>
+              <div>${escapeHtml(t.admin_notes)}</div>
+            </div>
+          ` : ''}
+          <div class="text-[10px] font-mono text-slate-400 pt-1 border-t border-slate-200/60 flex items-center justify-between">
+            <span>Ticket: ${escapeHtml(t.id)}</span>
+            <span>Submitted: ${escapeHtml(dateStr)}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
   function init() {
     // 1. Tab Switching Listeners (Desktop, Drawer, Bottom Bar)
     document.querySelectorAll('[data-client-tab]').forEach(btn => {
@@ -1281,6 +1346,40 @@
         }
         window.location.href = '/';
       });
+    });
+
+    // Support Request Form Submit & Refresh
+    document.getElementById('supportRequestForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const f = e.target;
+      const subject = f.subject.value.trim();
+      const message = f.message.value.trim();
+      const btn = document.getElementById('btnSubmitClientSupport');
+
+      if (!subject || !message) {
+        showToast('Please enter both subject and message.', 'warn');
+        return;
+      }
+
+      setBtnLoading(btn, true, 'Sending...');
+      const res = await apiFetch('/portal/support/submit', {
+        method: 'POST',
+        body: JSON.stringify({ subject, message })
+      });
+      setBtnLoading(btn, false);
+
+      if (res.ok && res.data?.success) {
+        showToast('Support request submitted successfully! Our team will review it shortly.', 'success');
+        f.reset();
+        loadClientSupportTickets();
+      } else {
+        showToast(res.data?.error || 'Failed to submit request.', 'error');
+      }
+    });
+
+    document.getElementById('btnRefreshClientSupport')?.addEventListener('click', () => {
+      loadClientSupportTickets();
+      showToast('Support history refreshed.', 'info');
     });
 
     // 4. Manual Live Refresh / Sync Button
