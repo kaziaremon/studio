@@ -70,6 +70,28 @@
     currentBlueprints: []
   };
 
+  function isCurrentUserOwner() {
+    if (!state.adminProfile) return false;
+    const email = (state.adminProfile.email || '').toLowerCase();
+    return email === 'kaziaremon@gmail.com' || state.adminProfile.role === 'owner' || Boolean(state.adminProfile.isSuperAdmin);
+  }
+
+  function isCurrentAdminSelf(target) {
+    if (!target) return false;
+    const currentEmail = (state.adminProfile?.email || state.currentUser?.primaryEmailAddress?.emailAddress || '').toLowerCase();
+    const currentUserId = state.adminProfile?.id;
+    const currentClerkId = state.currentUser?.id || state.adminProfile?.clerkUserId;
+
+    const targetEmail = (target.email || target.approved_email || '').toLowerCase();
+    const targetId = target.id;
+    const targetClerkId = target.clerk_user_id || target.clerkUserId;
+
+    if (currentEmail && targetEmail && currentEmail === targetEmail) return true;
+    if (currentUserId && targetId && currentUserId === targetId) return true;
+    if (currentClerkId && targetClerkId && currentClerkId === targetClerkId) return true;
+    return false;
+  }
+
   // =========================================================================
   // AUTHENTICATED API FETCH HELPER
   // =========================================================================
@@ -1630,28 +1652,39 @@
           ? '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase text-emerald-700 bg-emerald-50 border border-emerald-200">Active</span>'
           : '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase text-amber-700 bg-amber-50 border border-amber-200">Suspended</span>';
 
+        const isSelf = isCurrentAdminSelf(u);
+        const isOwnerActor = isCurrentUserOwner();
+        const isTargetOwner = isOwner || (email && email.toLowerCase() === 'kaziaremon@gmail.com') || u.role === 'owner' || u.role === 'super_admin';
+
         let actionsHtml = '';
-        if (isOwner) {
-          actionsHtml = '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-mono font-bold text-emerald-700 bg-emerald-50 border border-emerald-200"><i class="fa-solid fa-lock text-[10px]"></i> Founding Owner</span>';
+        if (isTargetOwner) {
+          actionsHtml = '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-mono font-bold text-emerald-700 bg-emerald-50 border border-emerald-200"><i class="fa-solid fa-crown text-[10px] text-amber-500"></i> Founding Owner</span>';
+        } else if (isSelf) {
+          actionsHtml = '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold text-slate-600 bg-slate-100 border border-slate-200"><i class="fa-solid fa-user-check text-brand-whiz text-[10px]"></i> Current Account</span>';
         } else if (u.status === 'suspended') {
+          const canManageSuspended = u.role !== 'admin' || isOwnerActor;
           actionsHtml = `
             <div class="flex items-center justify-end gap-1.5">
               ${u.role === 'client' ? `<button type="button" class="btn-user-view-details px-2.5 py-1 rounded-lg text-xs font-bold bg-white hover:bg-slate-50 text-[#172B36] border border-[#E3E9EF] cursor-pointer" data-id="${u.id}"><i class="fa-solid fa-eye mr-1 text-brand-whiz"></i>Details</button>` : ''}
-              <button type="button" class="btn-user-reactivate px-2.5 py-1 rounded-lg text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 cursor-pointer" data-id="${u.id}"><i class="fa-solid fa-play mr-1"></i>Reactivate</button>
-              <button type="button" class="btn-user-delete px-2.5 py-1 rounded-lg text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 cursor-pointer" data-id="${u.id}" data-name="${escapeHtml(fullName)}"><i class="fa-solid fa-trash-can mr-1"></i>Delete</button>
+              ${canManageSuspended ? `<button type="button" class="btn-user-reactivate px-2.5 py-1 rounded-lg text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 cursor-pointer" data-id="${u.id}"><i class="fa-solid fa-play mr-1"></i>Reactivate</button>` : ''}
+              ${canManageSuspended ? `<button type="button" class="btn-user-delete px-2.5 py-1 rounded-lg text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 cursor-pointer" data-id="${u.id}" data-name="${escapeHtml(fullName)}"><i class="fa-solid fa-trash-can mr-1"></i>Delete</button>` : ''}
             </div>
           `;
         } else {
-          const roleBtn = (!isOwner && u.role === 'admin')
+          const canRevokeAdmin = isOwnerActor && u.role === 'admin';
+          const canSuspend = u.role === 'client' || (u.role === 'admin' && isOwnerActor);
+
+          const roleBtn = canRevokeAdmin
             ? `<button type="button" class="btn-role-action px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition-all cursor-pointer" data-id="${u.id}" data-role="client" data-email="${escapeHtml(email)}" data-name="${escapeHtml(fullName)}"><i class="fa-solid fa-arrow-down mr-1 text-[10px]"></i>Revoke Admin Access</button>`
             : '';
 
-          actionsHtml = `
-            <div class="flex items-center justify-end gap-1.5">
-              ${roleBtn}
-              ${!isOwner ? `<button type="button" class="btn-user-suspend px-2.5 py-1 rounded-lg text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 cursor-pointer" data-id="${u.id}"><i class="fa-solid fa-pause mr-1"></i>Suspend</button>` : ''}
-            </div>
-          `;
+          const suspendBtn = canSuspend
+            ? `<button type="button" class="btn-user-suspend px-2.5 py-1 rounded-lg text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 cursor-pointer" data-id="${u.id}"><i class="fa-solid fa-pause mr-1"></i>Suspend</button>`
+            : '';
+
+          actionsHtml = (roleBtn || suspendBtn)
+            ? `<div class="flex items-center justify-end gap-1.5">${roleBtn}${suspendBtn}</div>`
+            : '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-slate-500 bg-slate-50 border border-slate-200">Active</span>';
         }
 
         return `
@@ -1724,24 +1757,54 @@
               <span class="font-mono text-[11px]">${createdAt ? new Date(createdAt).toLocaleDateString() : 'N/A'}</span>
             </div>
 
-            ${!isOwner ? `
-              <div class="pt-2 border-t border-slate-100 flex items-center gap-2">
-                ${u.role === 'admin'
-                  ? `<button type="button" class="btn-role-action flex-1 py-2 rounded-xl text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 text-center cursor-pointer" data-id="${u.id}" data-role="client" data-email="${escapeHtml(email)}" data-name="${escapeHtml(fullName)}">Revoke Admin Access</button>`
-                  : ''
-                }
-                ${u.status === 'suspended'
-                  ? `<button type="button" class="btn-user-reactivate px-3 py-2 rounded-xl text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 cursor-pointer" data-id="${u.id}">Reactivate</button>`
-                  : `<button type="button" class="btn-user-suspend px-3 py-2 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 cursor-pointer" data-id="${u.id}">Suspend</button>`
-                }
-              </div>
-            ` : ''}
+            ${(() => {
+              const isSelf = isCurrentAdminSelf(u);
+              const isOwnerActor = isCurrentUserOwner();
+              const isTargetOwner = isOwner || (email && email.toLowerCase() === 'kaziaremon@gmail.com') || u.role === 'owner' || u.role === 'super_admin';
+
+              if (isTargetOwner) {
+                return '<div class="pt-2 border-t border-slate-100 text-xs font-mono font-bold text-emerald-700"><i class="fa-solid fa-crown text-[10px] text-amber-500 mr-1"></i> Founding Owner</div>';
+              }
+              if (isSelf) {
+                return '<div class="pt-2 border-t border-slate-100 text-xs font-bold text-slate-600"><i class="fa-solid fa-user-check text-brand-whiz text-[10px] mr-1"></i> Current Account (You)</div>';
+              }
+
+              const canRevokeAdmin = isOwnerActor && u.role === 'admin';
+              const canSuspend = u.role === 'client' || (u.role === 'admin' && isOwnerActor);
+              const canManageSuspended = u.role !== 'admin' || isOwnerActor;
+
+              if (u.status === 'suspended') {
+                return `
+                  <div class="pt-2 border-t border-slate-100 flex items-center gap-2">
+                    ${canManageSuspended ? `<button type="button" class="btn-user-reactivate flex-1 py-2 rounded-xl text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 cursor-pointer text-center" data-id="${u.id}">Reactivate</button>` : ''}
+                    ${canManageSuspended ? `<button type="button" class="btn-user-delete px-3 py-2 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 cursor-pointer" data-id="${u.id}" data-name="${escapeHtml(fullName)}">Delete</button>` : ''}
+                  </div>
+                `;
+              }
+              if (canRevokeAdmin || canSuspend) {
+                return `
+                  <div class="pt-2 border-t border-slate-100 flex items-center gap-2">
+                    ${canRevokeAdmin ? `<button type="button" class="btn-role-action flex-1 py-2 rounded-xl text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 text-center cursor-pointer" data-id="${u.id}" data-role="client" data-email="${escapeHtml(email)}" data-name="${escapeHtml(fullName)}">Revoke Admin Access</button>` : ''}
+                    ${canSuspend ? `<button type="button" class="btn-user-suspend px-3 py-2 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 cursor-pointer" data-id="${u.id}">Suspend</button>` : ''}
+                  </div>
+                `;
+              }
+              return '';
+            })()}
           </div>
         `;
       }).join('');
     }
 
     function openRoleChangeModal(id, targetRole, email, name) {
+      if (!isCurrentUserOwner()) {
+        showToast('Action denied: Only the Founding Super Admin may revoke administrator access.', 'error');
+        return;
+      }
+      if (isCurrentAdminSelf({ id, email })) {
+        showToast('Self-management violation: You cannot revoke or alter your own account permissions.', 'error');
+        return;
+      }
       const modal = document.getElementById('modalRoleChange');
       if (!modal) return;
       const idInput = document.getElementById('roleChangeUserId');
@@ -1792,6 +1855,15 @@
     document.querySelectorAll('.btn-user-suspend').forEach(btn => {
       btn.addEventListener('click', async () => {
         const uid = btn.dataset.id;
+        const targetUser = state.usersCache.find(u => u.id === uid);
+        if (isCurrentAdminSelf(targetUser)) {
+          showToast('Self-management violation: You cannot suspend your own account.', 'error');
+          return;
+        }
+        if (targetUser?.role === 'admin' && !isCurrentUserOwner()) {
+          showToast('Action denied: Only the Founding Super Admin may suspend an Administrator.', 'error');
+          return;
+        }
         if (!confirm('Suspend this user account?')) return;
         const res = await apiFetch(`/portal/admin/users/${uid}/status`, {
           method: 'PUT',
@@ -1810,6 +1882,15 @@
       btn.addEventListener('click', async () => {
         const uid = btn.dataset.id;
         const uname = btn.dataset.name;
+        const targetUser = state.usersCache.find(u => u.id === uid);
+        if (isCurrentAdminSelf(targetUser)) {
+          showToast('Self-management violation: You cannot delete your own account.', 'error');
+          return;
+        }
+        if (targetUser?.role === 'admin' && !isCurrentUserOwner()) {
+          showToast('Action denied: Only the Founding Super Admin may delete an Administrator.', 'error');
+          return;
+        }
         if (!confirm(`Permanently delete user account for ${uname}? This action cannot be undone.`)) return;
         const res = await apiFetch(`/portal/admin/users/${uid}`, {
           method: 'DELETE'
@@ -1917,6 +1998,30 @@
     const rawAdmins = teamData.admins || [];
     const pendingInvs = teamData.pendingInvitations || [];
 
+    const isOwnerActor = isCurrentUserOwner();
+
+    // Hide or disable the pre-approval form if actor is not the Founding Super Admin
+    const inviteForm = document.getElementById('adminInviteForm');
+    if (inviteForm) {
+      if (!isOwnerActor) {
+        const inputs = inviteForm.querySelectorAll('input, button');
+        inputs.forEach(el => el.disabled = true);
+        const submitBtn = inviteForm.querySelector('button[type="submit"]');
+        if (submitBtn) {
+          submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+          submitBtn.title = 'Only Founding Super Admin may authorize administrator accounts';
+        }
+      } else {
+        const inputs = inviteForm.querySelectorAll('input, button');
+        inputs.forEach(el => el.disabled = false);
+        const submitBtn = inviteForm.querySelector('button[type="submit"]');
+        if (submitBtn) {
+          submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+          submitBtn.title = '';
+        }
+      }
+    }
+
     const pendingList = pendingInvs.length > 0
       ? pendingInvs
       : rawAdmins.filter(a => a.status === 'pending');
@@ -1938,6 +2043,12 @@
           const email = p.email || p.approved_email || '';
           const role = p.role === 'super_admin' ? 'Super Admin' : 'Admin';
           const createdAt = p.created_at ? new Date(p.created_at).toLocaleDateString() : 'N/A';
+          const actionCol = isOwnerActor
+            ? `<button type="button" class="btn-revoke-invitation px-2.5 py-1 rounded-lg text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 cursor-pointer transition-all" data-id="${p.id}" data-email="${escapeHtml(email)}">
+                <i class="fa-solid fa-ban mr-1 text-[10px]"></i>Revoke Approval
+              </button>`
+            : '<span class="text-xs font-medium text-slate-400 italic">Owner Only</span>';
+
           return `
             <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
               <td class="px-6 py-4 font-bold text-[#172B36]">${escapeHtml(name)}</td>
@@ -1945,11 +2056,7 @@
               <td class="px-6 py-4"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 uppercase">${escapeHtml(role)}</span></td>
               <td class="px-6 py-4 font-mono text-xs text-slate-500">${escapeHtml(createdAt)}</td>
               <td class="px-6 py-4"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 uppercase">Pending Verification</span></td>
-              <td class="px-6 py-4 text-right">
-                <button type="button" class="btn-revoke-invitation px-2.5 py-1 rounded-lg text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 cursor-pointer transition-all" data-id="${p.id}" data-email="${escapeHtml(email)}">
-                  <i class="fa-solid fa-ban mr-1 text-[10px]"></i>Revoke Approval
-                </button>
-              </td>
+              <td class="px-6 py-4 text-right">${actionCol}</td>
             </tr>
           `;
         }).join('');
@@ -1972,9 +2079,11 @@
                 <span>Role: <strong class="text-slate-700">${escapeHtml(role)}</strong></span>
                 <span class="font-mono text-[11px]">${escapeHtml(createdAt)}</span>
               </div>
-              <button type="button" class="btn-revoke-invitation w-full py-2 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-center cursor-pointer transition-all" data-id="${p.id}" data-email="${escapeHtml(email)}">
-                Revoke Approval
-              </button>
+              ${isOwnerActor ? `
+                <button type="button" class="btn-revoke-invitation w-full py-2 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-center cursor-pointer transition-all" data-id="${p.id}" data-email="${escapeHtml(email)}">
+                  Revoke Approval
+                </button>
+              ` : ''}
             </div>
           `;
         }).join('');
@@ -1993,14 +2102,23 @@
           const isOwner = email.toLowerCase() === 'kaziaremon@gmail.com';
           const name = a.full_name || (isOwner ? 'Kazi Emon' : 'Administrator');
           const clerkId = a.clerk_user_id || '—';
+          const isSelf = isCurrentAdminSelf(a);
+
           const roleBadge = isOwner
             ? '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Owner</span>'
             : '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-blue-50 text-blue-700 border border-blue-200"><i class="fa-solid fa-shield-halved text-[9px]"></i> Admin</span>';
           const activatedAt = a.activated_at ? new Date(a.activated_at).toLocaleDateString() : (a.created_at ? new Date(a.created_at).toLocaleDateString() : 'N/A');
 
-          const actionHtml = isOwner
-            ? '<span class="px-2.5 py-1 rounded-lg text-xs font-bold text-emerald-800 bg-emerald-100 border border-emerald-300"><i class="fa-solid fa-shield mr-1"></i>Founding Super Admin</span>'
-            : `<button type="button" class="btn-revoke-admin-access px-2.5 py-1 rounded-lg text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 cursor-pointer transition-all" data-id="${a.id}" data-email="${escapeHtml(email)}" data-name="${escapeHtml(name)}"><i class="fa-solid fa-user-xmark mr-1 text-[10px]"></i>Revoke Admin Access</button>`;
+          let actionHtml = '';
+          if (isOwner) {
+            actionHtml = '<span class="px-2.5 py-1 rounded-lg text-xs font-bold text-emerald-800 bg-emerald-100 border border-emerald-300"><i class="fa-solid fa-shield mr-1"></i>Founding Super Admin</span>';
+          } else if (isSelf) {
+            actionHtml = '<span class="px-2.5 py-1 rounded-lg text-xs font-bold text-slate-600 bg-slate-100 border border-slate-200"><i class="fa-solid fa-user-check text-brand-whiz mr-1 text-[10px]"></i>Current Account (You)</span>';
+          } else if (isOwnerActor) {
+            actionHtml = `<button type="button" class="btn-revoke-admin-access px-2.5 py-1 rounded-lg text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 cursor-pointer transition-all" data-id="${a.id}" data-email="${escapeHtml(email)}" data-name="${escapeHtml(name)}"><i class="fa-solid fa-user-xmark mr-1 text-[10px]"></i>Revoke Admin Access</button>`;
+          } else {
+            actionHtml = '<span class="text-xs font-medium text-slate-400 italic">Protected</span>';
+          }
 
           return `
             <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
@@ -2021,7 +2139,19 @@
           const isOwner = email.toLowerCase() === 'kaziaremon@gmail.com';
           const name = a.full_name || (isOwner ? 'Kazi Emon' : 'Administrator');
           const clerkId = a.clerk_user_id || '—';
+          const isSelf = isCurrentAdminSelf(a);
           const activatedAt = a.activated_at ? new Date(a.activated_at).toLocaleDateString() : (a.created_at ? new Date(a.created_at).toLocaleDateString() : 'N/A');
+
+          let cardActionHtml = '';
+          if (isOwner) {
+            cardActionHtml = '<span class="text-xs font-bold text-emerald-700">Founding Owner</span>';
+          } else if (isSelf) {
+            cardActionHtml = '<span class="text-xs font-bold text-slate-600">Current Account (You)</span>';
+          } else if (isOwnerActor) {
+            cardActionHtml = `<button type="button" class="btn-revoke-admin-access px-3 py-1.5 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 cursor-pointer" data-id="${a.id}" data-email="${escapeHtml(email)}" data-name="${escapeHtml(name)}">Revoke Access</button>`;
+          } else {
+            cardActionHtml = '<span class="text-xs font-medium text-slate-400 italic">Protected</span>';
+          }
 
           return `
             <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs space-y-2.5">
@@ -2036,11 +2166,7 @@
               <div class="text-[10px] font-mono text-slate-400">${escapeHtml(clerkId)}</div>
               <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
                 <span>Active since: ${escapeHtml(activatedAt)}</span>
-                ${!isOwner ? `
-                  <button type="button" class="btn-revoke-admin-access px-3 py-1.5 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 cursor-pointer" data-id="${a.id}" data-email="${escapeHtml(email)}" data-name="${escapeHtml(name)}">
-                    Revoke Access
-                  </button>
-                ` : '<span class="text-xs font-bold text-emerald-700">Protected</span>'}
+                ${cardActionHtml}
               </div>
             </div>
           `;
@@ -2051,6 +2177,10 @@
     // Attach listeners for Revoke Pre-Approval
     document.querySelectorAll('.btn-revoke-invitation').forEach(btn => {
       btn.addEventListener('click', async () => {
+        if (!isCurrentUserOwner()) {
+          showToast('Action denied: Only the Founding Super Admin may revoke administrator pre-approvals.', 'error');
+          return;
+        }
         const id = btn.dataset.id;
         const email = btn.dataset.email;
         if (!confirm(`Are you sure you want to revoke administrator pre-approval for ${email}?`)) return;
@@ -2077,6 +2207,14 @@
         const id = btn.dataset.id;
         const email = btn.dataset.email;
         const name = btn.dataset.name;
+        if (!isCurrentUserOwner()) {
+          showToast('Action denied: Only the Founding Super Admin may revoke administrator access.', 'error');
+          return;
+        }
+        if (isCurrentAdminSelf({ id, email })) {
+          showToast('Self-management violation: You cannot revoke your own account.', 'error');
+          return;
+        }
         openRoleChangeModal(id, 'client', email, name);
       });
     });
@@ -3398,6 +3536,10 @@
     // 8. Authorize Admin Pre-Approval Form (Phase 12)
     document.getElementById('adminInviteForm')?.addEventListener('submit', async (e) => {
       e.preventDefault();
+      if (!isCurrentUserOwner()) {
+        showToast('Action denied: Only the Founding Super Admin may authorize administrator pre-approvals.', 'error');
+        return;
+      }
       const f = e.target;
       const submitBtn = f.querySelector('button[type="submit"]');
       const fullName = f.fullName.value.trim();
