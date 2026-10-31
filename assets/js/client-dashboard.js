@@ -1363,20 +1363,42 @@
   }
 
   // Authentication Guard & Initializer
+  let clientClerkAttempts = 0;
   async function checkAuthAndInit() {
     const authGuard = document.getElementById('clientAuthGuard');
     const mainLayout = document.getElementById('clientMainLayout');
 
     if (!window.Clerk) {
+      clientClerkAttempts++;
+      if (clientClerkAttempts > 50) {
+        console.error('Clerk SDK load timeout in client dashboard');
+        if (authGuard) {
+          authGuard.innerHTML = `
+            <div class="mb-5 flex items-center justify-center">
+              <img src="/assets/images/logo.png" alt="Whiz Studio" class="h-12 w-auto object-contain">
+            </div>
+            <h2 class="text-xl font-bold text-[#172B36] tracking-tight">Authentication Service Unavailable</h2>
+            <p class="text-xs text-rose-500 mt-2 max-w-sm">Unable to connect to Clerk authentication services. Please verify your internet connection or disable tracking blockers.</p>
+            <div class="mt-5 flex items-center justify-center gap-3">
+              <button onclick="window.location.reload()" class="px-4 py-2 bg-[#147D64] text-white text-xs font-bold rounded-xl hover:bg-[#12694f] cursor-pointer">Retry Connection</button>
+              <a href="/?login=client" class="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-200 cursor-pointer">Return to Login</a>
+            </div>
+          `;
+        }
+        return;
+      }
       setTimeout(checkAuthAndInit, 100);
       return;
     }
 
     try {
       if (!window.Clerk.loaded) {
-        await window.Clerk.load({
-          publishableKey: CLERK_PUBLISHABLE_KEY
-        });
+        await Promise.race([
+          window.Clerk.load({
+            publishableKey: CLERK_PUBLISHABLE_KEY
+          }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Authentication system connection timeout')), 8000))
+        ]);
       }
 
       const user = window.Clerk.user;
@@ -1425,7 +1447,19 @@
       loadClientData();
     } catch (err) {
       console.error('Client Auth Guard Error:', err);
-      window.location.href = '/?login=client';
+      if (authGuard) {
+        authGuard.innerHTML = `
+          <div class="mb-5 flex items-center justify-center">
+            <img src="/assets/images/logo.png" alt="Whiz Studio" class="h-12 w-auto object-contain">
+          </div>
+          <h2 class="text-xl font-bold text-[#172B36] tracking-tight">Workspace Initialization Failed</h2>
+          <p class="text-xs text-rose-500 mt-2 max-w-sm">${escapeHtml(err.message || 'An unexpected error occurred while preparing your workspace.')}</p>
+          <div class="mt-5 flex items-center justify-center gap-3">
+            <button onclick="window.location.reload()" class="px-4 py-2 bg-[#147D64] text-white text-xs font-bold rounded-xl hover:bg-[#12694f] cursor-pointer">Retry</button>
+            <a href="/?login=client" class="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-200 cursor-pointer">Return to Login</a>
+          </div>
+        `;
+      }
     }
   }
 

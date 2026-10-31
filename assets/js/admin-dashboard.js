@@ -3912,10 +3912,6 @@
         showToast(payRes.data?.error || 'Failed to record payment.', 'error');
       }
     });
-      } else {
-        showToast(payRes.data?.error || 'Failed to record payment.', 'error');
-      }
-    });
 
 
     // Form Edit Payment Submit
@@ -4189,21 +4185,43 @@
   // =========================================================================
   // CLERK AUTHENTICATION & INITIALIZATION
   // =========================================================================
+  let clerkCheckAttempts = 0;
   async function checkAuthAndInit() {
     const authGuard = document.getElementById('dashboardAuthGuard');
     const accessDenied = document.getElementById('dashboardAccessDenied');
     const mainLayout = document.getElementById('dashboardMainLayout');
 
     if (!window.Clerk) {
+      clerkCheckAttempts++;
+      if (clerkCheckAttempts > 50) {
+        console.error('Clerk SDK load timeout in admin dashboard');
+        if (authGuard) {
+          authGuard.innerHTML = `
+            <div class="mb-5 flex items-center justify-center">
+              <img src="/assets/images/logo.png" alt="Whiz Studio" class="h-12 w-auto object-contain">
+            </div>
+            <h2 class="text-xl font-bold text-[#172B36] tracking-tight">Authentication Service Unavailable</h2>
+            <p class="text-xs text-rose-500 mt-2 max-w-sm">Unable to connect to Clerk authentication services. Please verify your internet connection or disable tracking blockers.</p>
+            <div class="mt-5 flex items-center justify-center gap-3">
+              <button onclick="window.location.reload()" class="px-4 py-2 bg-[#147D64] text-white text-xs font-bold rounded-xl hover:bg-[#12694f] cursor-pointer">Retry Connection</button>
+              <a href="/?login=admin" class="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-200 cursor-pointer">Return to Login</a>
+            </div>
+          `;
+        }
+        return;
+      }
       setTimeout(checkAuthAndInit, 100);
       return;
     }
 
     try {
       if (!window.Clerk.loaded) {
-        await window.Clerk.load({
-          publishableKey: CLERK_PUBLISHABLE_KEY
-        });
+        await Promise.race([
+          window.Clerk.load({
+            publishableKey: CLERK_PUBLISHABLE_KEY
+          }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Authentication system connection timeout')), 8000))
+        ]);
       }
 
       const user = window.Clerk.user;
@@ -4278,8 +4296,19 @@
       loadServicesData();
     } catch (err) {
       console.error('Console Auth Error:', err);
-      if (authGuard) authGuard.classList.add('hidden');
-      if (accessDenied) accessDenied.classList.remove('hidden');
+      if (authGuard) {
+        authGuard.innerHTML = `
+          <div class="mb-5 flex items-center justify-center">
+            <img src="/assets/images/logo.png" alt="Whiz Studio" class="h-12 w-auto object-contain">
+          </div>
+          <h2 class="text-xl font-bold text-[#172B36] tracking-tight">Workspace Initialization Failed</h2>
+          <p class="text-xs text-rose-500 mt-2 max-w-sm">${escapeHtml(err.message || 'An unexpected error occurred while preparing your workspace.')}</p>
+          <div class="mt-5 flex items-center justify-center gap-3">
+            <button onclick="window.location.reload()" class="px-4 py-2 bg-[#147D64] text-white text-xs font-bold rounded-xl hover:bg-[#12694f] cursor-pointer">Retry</button>
+            <a href="/" class="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-200 cursor-pointer">Return Home</a>
+          </div>
+        `;
+      }
     }
   }
 
