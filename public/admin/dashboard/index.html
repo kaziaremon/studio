@@ -1257,51 +1257,60 @@
           <!-- =================================================================
                TAB 3: SERVICE MANAGEMENT (12 SERVICES + 240 BLUEPRINTS)
                ================================================================= -->
-          <div id="view_services" class="hidden space-y-6">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
-              <div>
-                <div class="flex items-center space-x-2">
-                  <h2 class="text-2xl font-black text-[#172B36] tracking-tight">Service Catalog & SOP Blueprints</h2>
-                  <span id="serviceCatalogCountBadge" class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-50 text-[#147D64] border border-emerald-200 font-bold">12 Active Services</span>
+          <div id="view_services" class="hidden space-y-5 sm:space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 sm:gap-4 pb-1 sm:pb-2">
+              <div class="space-y-1">
+                <div class="flex flex-wrap items-center gap-2">
+                  <h2 class="text-xl sm:text-2xl font-extrabold text-[#202D2A] tracking-tight">Service Catalog &amp; SOP Blueprints</h2>
+                  <span id="serviceCatalogCountBadge" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20 whitespace-nowrap">12 Active Services</span>
                 </div>
-                <p class="text-xs text-slate-500 mt-0.5">Authoritative service catalog. Edit descriptions, pricing, and inspect all 240 master SOP task blueprints.</p>
+                <p class="text-xs text-[#74817D] leading-relaxed max-w-2xl">Authoritative agency service catalog. Manage pricing, deliverables, and 240 operational task blueprints.</p>
               </div>
-              <button type="button" id="btnOpenAddServiceModal" class="px-4 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm hover:shadow-md transition-all flex items-center space-x-2 cursor-pointer self-start sm:self-auto">
+              <button type="button" id="btnOpenAddServiceModal" class="w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold bg-[#087F70] hover:bg-[#06685c] text-white shadow-2xs hover:shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer touch-manipulation shrink-0 select-none">
                 <i class="fa-solid fa-plus text-xs"></i>
                 <span>Add New Service</span>
               </button>
             </div>
 
             <!-- Services Grid -->
-            <div id="adminServicesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              <p class="text-slate-500 italic col-span-3">Loading master services...</p>
+            <div id="adminServicesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+              <p class="text-[#74817D] italic col-span-3 text-xs">Loading master services...</p>
             </div>
           </div>
 
           <!-- =================================================================
                VIEW: SOP TASK BLUEPRINT MANAGEMENT WORKSPACE (Phase 7)
                ================================================================= -->
-          <div id="view_service_tasks" class="hidden space-y-6">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-[#E3E9EF]">
-              <div class="flex items-center space-x-3">
-                <button type="button" id="btnBackToServices" class="w-9 h-9 rounded-xl bg-white hover:bg-slate-100 border border-[#E3E9EF] flex items-center justify-center text-[#5F7180] hover:text-[#172B36] transition-all cursor-pointer">
-                  <i class="fa-solid fa-arrow-left text-xs"></i>
+          <div id="view_service_tasks" class="hidden space-y-5 sm:space-y-6">
+            <!-- Header Card with Smart Responsive Layout -->
+            <div class="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white border border-[#E6ECE9] shadow-xs space-y-4">
+              <!-- Row 1: Back Navigation Bar + Metadata Badges -->
+              <div class="flex items-center justify-between gap-3 pb-3 border-b border-[#E6ECE9] flex-wrap">
+                <button type="button" id="btnBackToServices" class="inline-flex items-center gap-2 py-1.5 px-3 rounded-xl bg-[#F7FAF9] hover:bg-[#EAF5F1] text-xs font-semibold text-[#202D2A] border border-[#E6ECE9] hover:border-[#087F70]/30 transition-all cursor-pointer touch-manipulation select-none" aria-label="Back to Service Catalog">
+                  <i class="fa-solid fa-arrow-left text-xs text-[#087F70]"></i>
+                  <span>Back to Services</span>
                 </button>
-                <div>
-                  <div class="flex items-center space-x-2.5">
-                    <span id="serviceTasksCodeBadge" class="text-xs font-mono font-bold text-brand-whiz bg-brand-whiz/10 border border-brand-whiz/30 px-2 py-0.5 rounded">CODE</span>
-                    <h2 class="text-2xl font-black text-[#172B36] tracking-tight" id="serviceTasksTitle">Service Name</h2>
-                    <span id="serviceTasksVersionBadge" class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">v1</span>
-                  </div>
-                  <p class="text-xs text-slate-500 mt-0.5" id="serviceTasksDescription">Managing 20 Master SOP Task Blueprints in Cloudflare D1</p>
+
+                <!-- Metadata Badges: Code & Version -->
+                <div class="flex items-center gap-2">
+                  <span id="serviceTasksCodeBadge" class="text-xs font-mono font-bold text-[#087F70] bg-[#EAF5F1] border border-[#087F70]/25 px-2.5 py-0.5 rounded-md whitespace-nowrap">CODE</span>
+                  <span id="serviceTasksVersionBadge" class="text-[10px] font-mono font-semibold text-[#74817D] bg-[#F7FAF9] border border-[#E6ECE9] px-2 py-0.5 rounded-full whitespace-nowrap">v1</span>
                 </div>
               </div>
-              <div class="flex flex-wrap items-center gap-2.5">
-                <button type="button" id="btnOpenAddBlueprintModal" class="px-3.5 py-2 rounded-xl text-xs font-bold btn-glass-primary shadow-sm hover:shadow-md transition-all flex items-center gap-1.5 cursor-pointer">
+
+              <!-- Row 2: Service Title & Description -->
+              <div class="space-y-1.5">
+                <h2 class="text-xl sm:text-2xl lg:text-3xl font-extrabold text-[#202D2A] tracking-tight leading-snug break-words" id="serviceTasksTitle">Service Name</h2>
+                <p class="text-xs sm:text-sm text-[#74817D] leading-relaxed max-w-3xl" id="serviceTasksDescription">Managing 20 Master SOP Task Blueprints in Cloudflare D1</p>
+              </div>
+
+              <!-- Row 3: Action Buttons (Responsive Stack / Row) -->
+              <div class="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                <button type="button" id="btnOpenAddBlueprintModal" class="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl text-xs font-bold bg-[#087F70] hover:bg-[#06685c] text-white shadow-2xs hover:shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer touch-manipulation select-none">
                   <i class="fa-solid fa-plus text-xs"></i>
                   <span>Add New Task</span>
                 </button>
-                <button type="button" id="btnOpenApplyTemplateModal" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-white hover:bg-emerald-50 text-[#147D64] border border-emerald-200 transition-all flex items-center gap-1.5 cursor-pointer">
+                <button type="button" id="btnOpenApplyTemplateModal" class="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl text-xs font-bold bg-[#F7FAF9] hover:bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/25 transition-all flex items-center justify-center gap-2 cursor-pointer touch-manipulation select-none">
                   <i class="fa-solid fa-arrows-spin text-xs"></i>
                   <span>Apply to Active Projects</span>
                 </button>
@@ -1309,46 +1318,61 @@
             </div>
 
             <!-- 3 Phase Blueprint Sections (Beginning 7 + Intermediate 7 + Advanced 6) -->
-            <div class="space-y-6">
-              <!-- Beginning Phase -->
-              <div class="p-6 rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl space-y-4">
-                <div class="flex items-center justify-between pb-2 border-b border-[#E3E9EF]">
-                  <h3 class="text-xs font-extrabold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
-                    <i class="fa-solid fa-flag-checkered"></i>
-                    <span>Phase 1: Beginning / Foundation SOPs</span>
-                  </h3>
-                  <span class="text-[11px] font-mono text-slate-500" id="phaseBeginningCount">7 Tasks</span>
+            <div class="space-y-5 sm:space-y-6">
+              <!-- Phase 1: Beginning -->
+              <div class="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white border border-[#E6ECE9] shadow-xs space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-[#E6ECE9] gap-2">
+                  <div class="flex items-center gap-2.5 min-w-0">
+                    <div class="w-7 h-7 rounded-lg bg-[#EAF5F1] border border-[#087F70]/20 flex items-center justify-center text-[#087F70] text-xs shrink-0">
+                      <i class="fa-solid fa-flag-checkered"></i>
+                    </div>
+                    <div class="min-w-0">
+                      <h3 class="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#202D2A] truncate">Phase 1: Foundation &amp; Setup</h3>
+                      <p class="text-[11px] text-[#74817D] hidden sm:block">Prerequisites, technical audits, and onboarding milestones</p>
+                    </div>
+                  </div>
+                  <span class="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20 shrink-0" id="phaseBeginningCount">7 Tasks</span>
                 </div>
-                <div id="blueprintsPhaseBeginning" class="space-y-3">
-                  <p class="text-slate-500 italic text-xs">Loading foundation tasks...</p>
-                </div>
-              </div>
-
-              <!-- Intermediate Phase -->
-              <div class="p-6 rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl space-y-4">
-                <div class="flex items-center justify-between pb-2 border-b border-[#E3E9EF]">
-                  <h3 class="text-xs font-extrabold uppercase tracking-wider text-blue-400 flex items-center gap-2">
-                    <i class="fa-solid fa-gears"></i>
-                    <span>Phase 2: Intermediate / Execution SOPs</span>
-                  </h3>
-                  <span class="text-[11px] font-mono text-slate-500" id="phaseIntermediateCount">7 Tasks</span>
-                </div>
-                <div id="blueprintsPhaseIntermediate" class="space-y-3">
-                  <p class="text-slate-500 italic text-xs">Loading intermediate tasks...</p>
+                <div id="blueprintsPhaseBeginning" class="space-y-3.5">
+                  <p class="text-[#74817D] italic text-xs p-3">Loading foundation tasks...</p>
                 </div>
               </div>
 
-              <!-- Advanced Phase -->
-              <div class="p-6 rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl space-y-4">
-                <div class="flex items-center justify-between pb-2 border-b border-[#E3E9EF]">
-                  <h3 class="text-xs font-extrabold uppercase tracking-wider text-purple-400 flex items-center gap-2">
-                    <i class="fa-solid fa-chart-line"></i>
-                    <span>Phase 3: Advanced / Optimization & Scaling SOPs</span>
-                  </h3>
-                  <span class="text-[11px] font-mono text-slate-500" id="phaseAdvancedCount">6 Tasks</span>
+              <!-- Phase 2: Intermediate -->
+              <div class="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white border border-[#E6ECE9] shadow-xs space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-[#E6ECE9] gap-2">
+                  <div class="flex items-center gap-2.5 min-w-0">
+                    <div class="w-7 h-7 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-700 text-xs shrink-0">
+                      <i class="fa-solid fa-gears"></i>
+                    </div>
+                    <div class="min-w-0">
+                      <h3 class="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#202D2A] truncate">Phase 2: Execution &amp; Deployment</h3>
+                      <p class="text-[11px] text-[#74817D] hidden sm:block">Core deliverable production, automation setups, and active sprints</p>
+                    </div>
+                  </div>
+                  <span class="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 shrink-0" id="phaseIntermediateCount">7 Tasks</span>
                 </div>
-                <div id="blueprintsPhaseAdvanced" class="space-y-3">
-                  <p class="text-slate-500 italic text-xs">Loading advanced tasks...</p>
+                <div id="blueprintsPhaseIntermediate" class="space-y-3.5">
+                  <p class="text-[#74817D] italic text-xs p-3">Loading intermediate tasks...</p>
+                </div>
+              </div>
+
+              <!-- Phase 3: Advanced -->
+              <div class="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white border border-[#E6ECE9] shadow-xs space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-[#E6ECE9] gap-2">
+                  <div class="flex items-center gap-2.5 min-w-0">
+                    <div class="w-7 h-7 rounded-lg bg-purple-50 border border-purple-200 flex items-center justify-center text-purple-700 text-xs shrink-0">
+                      <i class="fa-solid fa-chart-line"></i>
+                    </div>
+                    <div class="min-w-0">
+                      <h3 class="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#202D2A] truncate">Phase 3: Optimization &amp; Scaling</h3>
+                      <p class="text-[11px] text-[#74817D] hidden sm:block">Performance tuning, governance, analytics, and scaling</p>
+                    </div>
+                  </div>
+                  <span class="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 shrink-0" id="phaseAdvancedCount">6 Tasks</span>
+                </div>
+                <div id="blueprintsPhaseAdvanced" class="space-y-3.5">
+                  <p class="text-[#74817D] italic text-xs p-3">Loading advanced tasks...</p>
                 </div>
               </div>
             </div>

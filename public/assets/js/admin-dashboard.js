@@ -1018,39 +1018,66 @@
         countBadge.textContent = `${state.servicesCache.length} Active Services`;
       }
 
-      grid.innerHTML = state.servicesCache.map(s => `
-        <div class="p-5 rounded-3xl bg-white border border-[#E3E9EF] flex flex-col justify-between space-y-4 hover:border-brand-whiz/50 hover:shadow-md transition-all shadow-xs group">
-          <div class="space-y-2.5">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center space-x-2">
-                <span class="text-[10px] font-black uppercase tracking-wider text-brand-whiz bg-brand-whiz/10 px-2 py-0.5 rounded-md border border-brand-whiz/20">${s.code}</span>
-                <span class="text-[10px] font-mono text-slate-500">v${s.version || 1}</span>
-              </div>
-              ${state.adminProfile?.role !== 'employee' && s.standard_price_cents != null ? `<span class="text-xs font-mono font-bold text-[#172B36]">${((s.standard_price_cents || 100000) / 100).toFixed(0)}</span>` : ''}
-            </div>
-            <h3 class="text-base font-extrabold text-[#172B36] group-hover:text-brand-whiz transition-colors">${s.name}</h3>
-            <p class="text-xs text-slate-400 line-clamp-2 leading-relaxed">${s.description || 'Comprehensive operational service package.'}</p>
-          </div>
+      grid.innerHTML = state.servicesCache.map(s => {
+        const canViewPricing = state.adminProfile?.role !== 'employee';
+        const priceCents = s.standard_price_cents != null ? s.standard_price_cents : s.pricing_cents;
+        const priceFormatted = priceCents != null ? formatCurrency(priceCents, s.currency || 'USD') : null;
 
-          <div class="pt-3 border-t border-[#E3E9EF] flex items-center justify-between gap-2">
-            <div class="text-[11px] text-slate-400 flex items-center gap-1.5 font-semibold">
-              <i class="fa-solid fa-list-check text-brand-whiz text-xs"></i>
-              <span>${s.blueprint_count || 0} SOP Tasks</span>
+        return `
+          <div class="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white border border-[#E6ECE9] flex flex-col justify-between space-y-4 hover:border-[#087F70]/40 hover:shadow-md transition-all shadow-2xs group">
+            <div class="space-y-3">
+              <!-- Top Row: Code Badge, Version Tag, Price -->
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span class="text-xs font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-2.5 py-0.5 rounded-md border border-[#087F70]/25 whitespace-nowrap shrink-0">${escapeHtml(s.code || (s.id || "").toUpperCase())}</span>
+                  <span class="text-[10px] font-mono font-semibold text-[#74817D] bg-[#F7FAF9] px-1.5 py-0.5 rounded border border-[#E6ECE9] whitespace-nowrap">v${s.version || 1}</span>
+                </div>
+                ${canViewPricing && priceFormatted ? `
+                  <div class="text-right shrink-0">
+                    <span class="text-xs sm:text-sm font-mono font-bold text-[#202D2A]">${priceFormatted}</span>
+                    <span class="text-[10px] text-[#74817D] font-medium hidden sm:inline ml-0.5">/mo</span>
+                  </div>
+                ` : ''}
+              </div>
+
+              <!-- Service Title & Description -->
+              <div class="space-y-1">
+                <h3 class="text-base font-bold text-[#202D2A] group-hover:text-[#087F70] transition-colors leading-snug break-words">${escapeHtml(s.name)}</h3>
+                <p class="text-xs text-[#74817D] line-clamp-2 leading-relaxed" title="${escapeHtml(s.description || '')}">${escapeHtml(s.description || 'Comprehensive operational service package.')}</p>
+              </div>
+
+              <!-- Metadata Pills -->
+              <div class="flex flex-wrap items-center gap-1.5 text-[11px] pt-0.5">
+                <span class="inline-flex items-center gap-1 font-semibold text-[#087F70] bg-[#EAF5F1] px-2 py-0.5 rounded-md border border-[#087F70]/20 truncate max-w-[180px]">
+                  <i class="fa-solid fa-layer-group text-[10px]"></i>
+                  <span class="truncate">${escapeHtml(s.category || 'Core Service')}</span>
+                </span>
+                <span class="inline-flex items-center gap-1 font-medium text-[#74817D] bg-[#F7FAF9] px-2 py-0.5 rounded-md border border-[#E6ECE9] whitespace-nowrap">
+                  <i class="fa-solid fa-list-check text-[10px] text-[#087F70]"></i>
+                  <span>${s.blueprint_count != null ? s.blueprint_count : (s.blueprints_count || 0)} SOPs</span>
+                </span>
+              </div>
             </div>
-            <div class="flex items-center gap-1.5">
-              <button type="button" class="btn-delete-service p-1.5 rounded-xl text-xs font-semibold bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 border border-[#E3E9EF] hover:border-rose-200 cursor-pointer transition-all" data-id="${s.id}" title="Permanently Delete Service">
-                <i class="fa-solid fa-trash-can text-xs"></i>
+
+            <!-- Actions: Prominent Primary Button + Secondary Row -->
+            <div class="pt-3 border-t border-[#E6ECE9] space-y-2">
+              <button type="button" class="btn-view-service-tasks w-full py-2.5 px-3 rounded-xl text-xs font-bold bg-[#087F70] hover:bg-[#06685c] text-white shadow-2xs hover:shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer touch-manipulation select-none" data-id="${s.id}">
+                <i class="fa-solid fa-list-check text-xs"></i>
+                <span>View &amp; Edit Tasks (${s.blueprint_count != null ? s.blueprint_count : (s.blueprints_count || 0)})</span>
               </button>
-              <button type="button" class="btn-manage-service px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-50 hover:bg-[#EAF7F1] text-slate-700 hover:text-brand-whiz border border-[#E3E9EF] cursor-pointer transition-all" data-id="${s.id}">
-                Manage
-              </button>
-              <button type="button" class="btn-view-service-tasks px-3 py-1.5 rounded-xl text-xs font-bold btn-glass-primary shadow-xs cursor-pointer transition-all" data-id="${s.id}">
-                View & Edit Tasks
-              </button>
+              <div class="flex items-center gap-2">
+                <button type="button" class="btn-manage-service flex-1 py-2 px-3 rounded-xl text-xs font-semibold bg-[#F7FAF9] hover:bg-[#EAF5F1] text-[#202D2A] border border-[#E6ECE9] hover:border-[#087F70]/30 transition-all flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation select-none" data-id="${s.id}">
+                  <i class="fa-solid fa-sliders text-[11px] text-[#74817D]"></i>
+                  <span>Manage</span>
+                </button>
+                <button type="button" class="btn-delete-service p-2 w-10 h-8 rounded-xl text-xs font-semibold text-[#74817D] hover:text-rose-600 bg-[#F7FAF9] hover:bg-rose-50 border border-[#E6ECE9] hover:border-rose-200 transition-all flex items-center justify-center cursor-pointer touch-manipulation shrink-0 select-none" data-id="${s.id}" title="Permanently Delete Service" aria-label="Delete Service">
+                  <i class="fa-solid fa-trash-can text-xs"></i>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
 
       // Wire View & Edit Tasks
       grid.querySelectorAll('.btn-view-service-tasks').forEach(b => {
@@ -1080,7 +1107,15 @@
     const verEl = document.getElementById('serviceTasksVersionBadge');
     const descEl = document.getElementById('serviceTasksDescription');
 
-    const service = state.servicesCache.find(s => s.id === serviceId);
+    // Ensure services cache is populated
+    if (!state.servicesCache || state.servicesCache.length === 0) {
+      const catRes = await apiFetch('/services/catalog');
+      if (catRes.ok && catRes.data?.data) {
+        state.servicesCache = catRes.data.data;
+      }
+    }
+
+    const service = state.servicesCache?.find(s => s.id === serviceId);
     if (service) {
       if (titleEl) titleEl.textContent = service.name;
       if (codeEl) codeEl.textContent = service.code;
@@ -1123,7 +1158,7 @@
     if (!container) return;
 
     if (!list || list.length === 0) {
-      container.innerHTML = '<p class="text-slate-500 italic text-xs p-3">No tasks in this phase.</p>';
+      container.innerHTML = '<p class="text-[#74817D] italic text-xs p-3">No tasks in this phase.</p>';
       return;
     }
 
@@ -1135,42 +1170,92 @@
         low: 'bg-slate-50 text-slate-600 border-slate-200'
       };
 
+      const hasExtraDetails = Boolean(bp.steps || bp.where_location || bp.qa_criteria);
+
       return `
-        <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] space-y-3">
-          <div class="flex items-center justify-between gap-3">
-            <div class="flex items-center space-x-2.5 min-w-0">
-              <span class="text-xs font-mono font-bold text-brand-whiz bg-brand-whiz/10 border border-brand-whiz/30 px-2 py-0.5 rounded shrink-0">${bp.task_code}</span>
-              <h4 class="text-xs font-bold text-[#172B36] truncate">${bp.title}</h4>
+        <div class="p-3.5 sm:p-5 rounded-2xl bg-[#FDFEFE] hover:bg-white border border-[#E6ECE9] hover:border-[#087F70]/30 shadow-2xs hover:shadow-xs transition-all space-y-3 group" data-blueprint-id="${bp.id}">
+          <!-- Top Row: Code Badge + Priority + Estimate -->
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-mono font-bold text-[#087F70] bg-[#EAF5F1] border border-[#087F70]/25 px-2.5 py-0.5 rounded-md whitespace-nowrap">${escapeHtml(bp.task_code || 'SOP')}</span>
+              <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${priorityColors[bp.priority] || priorityColors.medium}">${escapeHtml(bp.priority || 'medium')}</span>
             </div>
-            <div class="flex items-center space-x-2 shrink-0">
-              <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded border ${priorityColors[bp.priority] || priorityColors.medium}">${bp.priority}</span>
-              <span class="text-[11px] font-mono text-slate-400 hidden sm:inline-block">${bp.estimated_minutes || 60}m</span>
-              <button type="button" class="btn-edit-blueprint px-3 py-1 rounded-lg text-xs font-bold bg-slate-50 hover:bg-slate-100 text-[#172B36] border border-[#E3E9EF] cursor-pointer transition-all" data-id="${bp.id}">
-                <i class="fa-solid fa-pen-to-square text-[10px] mr-1"></i> Edit
+            <div class="flex items-center gap-1.5 text-xs font-mono text-[#74817D]">
+              <i class="fa-regular fa-clock text-[11px] text-[#74817D]/70"></i>
+              <span>${bp.estimated_minutes || (bp.estimated_hours ? bp.estimated_hours * 60 : 60)} min</span>
+            </div>
+          </div>
+
+          <!-- Task Title: Readable, naturally wrapping -->
+          <div>
+            <h4 class="text-sm sm:text-base font-bold text-[#202D2A] leading-snug break-words group-hover:text-[#087F70] transition-colors">${escapeHtml(bp.title)}</h4>
+          </div>
+
+          <!-- Operational Core: WHY (Strategic Objective) -->
+          <div class="p-3 rounded-xl bg-[#F7FAF9] border border-[#E6ECE9] space-y-1">
+            <div class="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[#087F70]">
+              <i class="fa-solid fa-bullseye text-[10px]"></i>
+              <span>Why (Strategic Objective)</span>
+            </div>
+            <p class="text-xs sm:text-[13px] text-[#202D2A] leading-relaxed break-words">${escapeHtml(bp.why || bp.instructions || bp.description || 'Standard operational activity.')}</p>
+          </div>
+
+          <!-- Operational Core: DONE WHEN (Measurable Standard) -->
+          <div class="p-3 rounded-xl bg-white border border-[#E6ECE9] space-y-1">
+            <div class="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[#202D2A]">
+              <i class="fa-solid fa-circle-check text-[10px] text-[#087F70]"></i>
+              <span>Done When (Measurable Standard)</span>
+            </div>
+            <p class="text-xs sm:text-[13px] text-[#202D2A] leading-relaxed break-words">${escapeHtml(bp.done_when || 'Verified milestone output.')}</p>
+          </div>
+
+          <!-- Expandable Detailed Specifications (Steps, QA, Location) -->
+          ${hasExtraDetails ? `
+            <div id="bp_details_${bp.id}" class="hidden pt-2 border-t border-[#E6ECE9] space-y-2.5 text-xs">
+              ${bp.steps ? `
+                <div class="space-y-1">
+                  <span class="text-[11px] font-bold uppercase tracking-wider text-[#74817D] block">Operational Steps:</span>
+                  <div class="p-2.5 rounded-xl bg-[#F7FAF9] border border-[#E6ECE9] text-xs text-[#202D2A] whitespace-pre-line leading-relaxed font-sans">${escapeHtml(bp.steps)}</div>
+                </div>
+              ` : ''}
+              ${bp.where_location ? `
+                <div class="flex items-center gap-1.5 text-xs text-[#74817D]">
+                  <span class="font-semibold text-[#202D2A]">Location:</span>
+                  <span class="truncate font-mono text-[11px]">${escapeHtml(bp.where_location)}</span>
+                </div>
+              ` : ''}
+              ${bp.qa_criteria ? `
+                <div class="p-2.5 rounded-xl bg-[#EAF5F1]/60 border border-[#087F70]/20 text-xs text-[#087F70]">
+                  <span class="font-bold uppercase text-[10px] tracking-wider block mb-0.5">QA Criteria:</span>
+                  <span class="text-[#202D2A]">${escapeHtml(bp.qa_criteria)}</span>
+                </div>
+              ` : ''}
+            </div>
+          ` : ''}
+
+          <!-- Card Action Controls & Expand Toggle -->
+          <div class="pt-2 border-t border-[#E6ECE9] flex items-center justify-between gap-2 flex-wrap">
+            <!-- Expand / Collapse Details Control -->
+            ${hasExtraDetails ? `
+              <button type="button" class="btn-toggle-bp-details text-xs font-semibold text-[#087F70] hover:text-[#06685c] flex items-center gap-1.5 py-1 px-2 rounded-lg hover:bg-[#EAF5F1] transition-all cursor-pointer touch-manipulation select-none" data-target="bp_details_${bp.id}" aria-expanded="false">
+                <span>Show Details</span>
+                <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-200 icon-chevron"></i>
               </button>
-              <button type="button" class="btn-duplicate-blueprint p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer transition-all" data-id="${bp.id}" title="Duplicate Blueprint">
+            ` : '<div class="text-[11px] text-[#74817D] italic">Core SOP Standard</div>'}
+
+            <!-- Task Action Buttons: Edit, Duplicate, Delete -->
+            <div class="flex items-center gap-1.5">
+              <button type="button" class="btn-edit-blueprint px-3 py-1.5 rounded-xl text-xs font-bold bg-[#F7FAF9] hover:bg-[#EAF5F1] text-[#202D2A] hover:text-[#087F70] border border-[#E6ECE9] hover:border-[#087F70]/30 transition-all flex items-center gap-1.5 cursor-pointer touch-manipulation select-none" data-id="${bp.id}" title="Edit Task Blueprint">
+                <i class="fa-solid fa-pen-to-square text-[11px]"></i>
+                <span>Edit</span>
+              </button>
+              <button type="button" class="btn-duplicate-blueprint p-2 rounded-xl text-xs font-semibold text-[#74817D] hover:text-[#202D2A] bg-[#F7FAF9] hover:bg-slate-100 border border-[#E6ECE9] transition-all flex items-center justify-center cursor-pointer touch-manipulation select-none" data-id="${bp.id}" title="Duplicate Task Blueprint" aria-label="Duplicate Task">
                 <i class="fa-solid fa-copy text-xs"></i>
               </button>
-              <button type="button" class="btn-delete-blueprint p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 cursor-pointer transition-all" data-id="${bp.id}" title="Permanently Delete Task">
+              <button type="button" class="btn-delete-blueprint p-2 rounded-xl text-xs font-semibold text-[#74817D] hover:text-rose-600 bg-[#F7FAF9] hover:bg-rose-50 border border-[#E6ECE9] hover:border-rose-200 transition-all flex items-center justify-center cursor-pointer touch-manipulation select-none" data-id="${bp.id}" title="Delete Task Blueprint" aria-label="Delete Task">
                 <i class="fa-solid fa-trash-can text-xs"></i>
               </button>
             </div>
-          </div>
-
-          <!-- Structured Operational Details (Phase 8) -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px] pt-1 border-t border-slate-900">
-            <div>
-              <span class="text-[#5F7180] font-semibold block">WHY (Strategic Objective):</span>
-              <p class="text-[#5F7180] leading-relaxed">${bp.why || bp.instructions || 'Standard operational activity.'}</p>
-            </div>
-            <div>
-              <span class="text-[#5F7180] font-semibold block">DONE WHEN (Measurable Standard):</span>
-              <p class="text-[#5F7180] leading-relaxed">${bp.done_when || 'Verified milestone output.'}</p>
-            </div>
-          </div>
-
-          <div class="text-[11px] text-emerald-700 font-medium bg-emerald-50 p-2 rounded-xl border border-emerald-200">
-            <span class="font-bold uppercase text-[10px] tracking-wider text-emerald-700">QA Criteria:</span> ${bp.qa_criteria || 'Verified standard output.'}
           </div>
         </div>
       `;
@@ -1199,6 +1284,31 @@
     container.querySelectorAll('.btn-delete-blueprint').forEach(b => {
       b.addEventListener('click', () => {
         openDeleteBlueprintModal(b.dataset.id);
+      });
+    });
+
+    // Wire expandable detail toggles
+    container.querySelectorAll('.btn-toggle-bp-details').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetId = btn.dataset.target;
+        const details = document.getElementById(targetId);
+        if (!details) return;
+        const isHidden = details.classList.contains('hidden');
+        if (isHidden) {
+          details.classList.remove('hidden');
+          btn.setAttribute('aria-expanded', 'true');
+          const span = btn.querySelector('span');
+          if (span) span.textContent = 'Hide Details';
+          const icon = btn.querySelector('.icon-chevron');
+          if (icon) icon.classList.add('rotate-180');
+        } else {
+          details.classList.add('hidden');
+          btn.setAttribute('aria-expanded', 'false');
+          const span = btn.querySelector('span');
+          if (span) span.textContent = 'Show Details';
+          const icon = btn.querySelector('.icon-chevron');
+          if (icon) icon.classList.remove('rotate-180');
+        }
       });
     });
   }
