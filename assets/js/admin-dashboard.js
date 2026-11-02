@@ -85,18 +85,22 @@
 
     // 1. Update dropdown role badge
     const badge = document.getElementById('dropdownRoleBadge');
+    const sidebarRoleBadge = document.getElementById('sidebarRoleBadge');
+    const updateRoleText = (txt) => {
+      if (sidebarRoleBadge) sidebarRoleBadge.textContent = txt;
+    };
     if (badge) {
       if (isOwner || role === 'owner' || role === 'super_admin') {
-        badge.textContent = 'Super Admin';
+        badge.textContent = 'Super Admin'; updateRoleText('Super Admin');
         badge.className = 'font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-[#147D64] border border-emerald-200 text-[10px] uppercase';
       } else if (role === 'admin') {
-        badge.textContent = 'Admin';
+        badge.textContent = 'Admin'; updateRoleText('Admin');
         badge.className = 'font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 text-[10px] uppercase';
       } else if (role === 'accounts') {
-        badge.textContent = 'Accounts';
+        badge.textContent = 'Accounts'; updateRoleText('Accounts');
         badge.className = 'font-bold px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200 text-[10px] uppercase';
       } else if (role === 'employee') {
-        badge.textContent = 'Employee';
+        badge.textContent = 'Employee'; updateRoleText('Employee');
         badge.className = 'font-bold px-2 py-0.5 rounded-md bg-teal-50 text-teal-700 border border-teal-200 text-[10px] uppercase';
       }
     }
@@ -110,8 +114,10 @@
     const chartRev = document.getElementById('chartRevenueContainer');
     const clientFinSummary = document.getElementById('clientFinancialSummaryCard');
     const clientFinPrefs = document.getElementById('clientFinancialPreferencesCard');
+    const bottomNavFinance = document.getElementById('bottomNavFinance');
 
     if (role === 'employee') {
+      if (bottomNavFinance) bottomNavFinance.classList.add('hidden');
       // Strict Financial & Team Privacy for Employees
       if (sidebarFinance) sidebarFinance.classList.add('hidden');
       if (drawerFinance) drawerFinance.classList.add('hidden');
@@ -124,6 +130,7 @@
       document.querySelectorAll('.role-financial-only').forEach(el => el.classList.add('hidden'));
     } else if (role === 'accounts') {
       // Accounts users can access finance, but NOT team governance
+      if (bottomNavFinance) bottomNavFinance.classList.remove('hidden');
       if (sidebarFinance) sidebarFinance.classList.remove('hidden');
       if (drawerFinance) drawerFinance.classList.remove('hidden');
       if (sidebarTeam) sidebarTeam.classList.add('hidden');
@@ -134,6 +141,7 @@
       if (clientFinPrefs) clientFinPrefs.classList.remove('hidden');
     } else {
       // Super Admin and Admin have access to all operational & team sections
+      if (bottomNavFinance) bottomNavFinance.classList.remove('hidden');
       if (sidebarFinance) sidebarFinance.classList.remove('hidden');
       if (drawerFinance) drawerFinance.classList.remove('hidden');
       if (sidebarTeam) sidebarTeam.classList.remove('hidden');
@@ -175,6 +183,9 @@
   // AUTHENTICATED API FETCH HELPER
   // =========================================================================
   async function apiFetch(endpoint, options = {}) {
+    if (state.isPreview && window.__whizAdminMock) {
+      return window.__whizAdminMock.handleRequest(endpoint, options, state);
+    }
     const headers = {
       'Content-Type': 'application/json',
       ...(options.headers || {})
@@ -315,15 +326,38 @@
       subheaderTitle.textContent = activeTitle;
     }
 
-    // Sidebar active styling
+    // Sidebar & Mobile Bottom Nav active styling
     document.querySelectorAll('[data-dash-tab]').forEach(btn => {
       const isTarget = btn.dataset.dashTab === tabId;
-      if (isTarget) {
-        btn.classList.add('bg-brand-whiz/15', 'text-brand-whiz', 'border-brand-whiz/30');
-        btn.classList.remove('text-slate-400', 'border-transparent');
+      if (btn.closest('#adminMobileBottomNav')) {
+        const label = btn.querySelector('.dash-bottom-label');
+        if (isTarget) {
+          btn.classList.add('bg-[#EAF5F1]', 'text-[#087F70]', 'border-[#087F70]/25', 'shadow-2xs');
+          btn.classList.remove('text-[#74817D]', 'border-transparent');
+          btn.setAttribute('aria-current', 'page');
+          if (label) {
+            label.classList.add('font-bold');
+            label.classList.remove('font-semibold');
+          }
+        } else {
+          btn.classList.remove('bg-[#EAF5F1]', 'text-[#087F70]', 'border-[#087F70]/25', 'shadow-2xs');
+          btn.classList.add('text-[#74817D]', 'border-transparent');
+          btn.removeAttribute('aria-current');
+          if (label) {
+            label.classList.remove('font-bold');
+            label.classList.add('font-semibold');
+          }
+        }
       } else {
-        btn.classList.remove('bg-brand-whiz/15', 'text-brand-whiz', 'border-brand-whiz/30');
-        btn.classList.add('text-slate-400', 'border-transparent');
+        if (isTarget) {
+          btn.classList.add('dock-active', 'bg-[#EAF5F1]', 'text-[#087F70]', 'border-[#087F70]/20');
+          btn.classList.remove('text-[#74817D]', 'text-slate-400', 'border-transparent', 'hover:bg-[#F7FAF9]');
+          btn.setAttribute('aria-current', 'page');
+        } else {
+          btn.classList.remove('dock-active', 'bg-[#EAF5F1]', 'text-[#087F70]', 'border-[#087F70]/20', 'bg-brand-whiz/15', 'text-brand-whiz', 'border-brand-whiz/30');
+          btn.classList.add('text-[#74817D]', 'border-transparent');
+          btn.removeAttribute('aria-current');
+        }
       }
     });
 
@@ -4548,6 +4582,57 @@
   // =========================================================================
   let clerkCheckAttempts = 0;
   async function checkAuthAndInit() {
+    // PREVIEW & DEMO BYPASS GUARD (For isolated testing & simulator)
+    const urlParams = new URLSearchParams(window.location.search);
+    const isPreview = urlParams.get('preview') === '1' || urlParams.get('demo') === '1' || (window.self !== window.top && urlParams.get('preview') !== '0');
+
+    if (isPreview) {
+      state.isPreview = true;
+      const roleName = urlParams.get('role') || 'super_admin';
+      const profile = {
+        id: 'usr_super_admin_01',
+        fullName: 'Kazi Emon',
+        full_name: 'Kazi Emon',
+        email: 'kaziaremon@gmail.com',
+        username: 'kaziaremon',
+        role: roleName === 'super_admin' ? 'owner' : roleName,
+        isSuperAdmin: roleName === 'super_admin' || roleName === 'owner'
+      };
+
+      state.currentUser = profile;
+      state.adminProfile = profile;
+
+      applyRoleAdaptiveUI(profile);
+
+      const name = profile.fullName;
+      const username = '@' + profile.username;
+      const initials = 'KE';
+
+      document.querySelectorAll('.admin-display-name').forEach(el => el.textContent = name);
+      document.querySelectorAll('.admin-display-username').forEach(el => el.textContent = username);
+      document.querySelectorAll('.admin-display-initials').forEach(el => el.textContent = initials);
+
+      const emailEl = document.getElementById('secUserEmail');
+      if (emailEl) emailEl.textContent = profile.email;
+      const userEl = document.getElementById('secClerkUserId');
+      if (userEl) userEl.innerHTML = '<span class="inline-flex items-center gap-1.5 text-xs text-emerald-700 font-semibold"><i class="fa-solid fa-shield-check text-[#147D64]"></i> Preview Session Active</span>';
+
+      const authGuard = document.getElementById('dashboardAuthGuard');
+      const accessDenied = document.getElementById('dashboardAccessDenied');
+      const mainLayout = document.getElementById('dashboardMainLayout');
+
+      if (authGuard) authGuard.classList.add('hidden');
+      if (accessDenied) accessDenied.classList.add('hidden');
+      if (mainLayout) mainLayout.classList.remove('hidden');
+
+      const hash = (window.location.hash || '').replace('#', '');
+      const validTabs = ['overview', 'clients', 'services', 'projects', 'tasks', 'finance', 'receipt_template', 'team', 'support', 'history', 'security'];
+      const initialTab = validTabs.includes(hash) ? hash : 'overview';
+      switchTab(initialTab, false);
+
+      loadServicesData();
+      return;
+    }
     const authGuard = document.getElementById('dashboardAuthGuard');
     const accessDenied = document.getElementById('dashboardAccessDenied');
     const mainLayout = document.getElementById('dashboardMainLayout');
@@ -4612,9 +4697,15 @@
         profile.role === 'super_admin' || 
         profile.role === 'accounts' || 
         profile.role === 'employee' || 
-        Boolean(profile.isSuperAdmin);
+        Boolean(profile.isSuperAdmin) ||
+        Boolean(profile.isStaff);
 
       if (!isAuthorized) {
+        if (profile.role === 'client') {
+          console.warn('[Route Guard] Client user attempted to access admin portal. Redirecting to client dashboard...');
+          window.location.replace('/client/dashboard/');
+          return;
+        }
         console.warn('Authenticated user does not possess staff permissions:', profile);
         if (authGuard) authGuard.classList.add('hidden');
         if (accessDenied) accessDenied.classList.remove('hidden');
@@ -4690,6 +4781,7 @@
         const backdrop = document.getElementById('mobileDrawerBackdrop');
         if (drawer) drawer.classList.add('-translate-x-full');
         if (backdrop) backdrop.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
       });
     });
 
@@ -4764,6 +4856,64 @@
         openServiceTasksWorkspace(sId);
       } else if (hash) {
         switchTab(hash, false);
+      }
+    });
+
+    // Desktop Dock Collapse/Expand Controller & Persistence (WHIZ Adaptive Dock)
+    const desktopSidebar = document.getElementById('adminDesktopSidebar');
+    const collapseToggleBtn = document.getElementById('sidebarCollapseToggleBtn');
+    const collapseIcon = document.getElementById('sidebarCollapseIcon');
+
+    function applySidebarState(isCollapsed) {
+      if (!desktopSidebar) return;
+      if (isCollapsed) {
+        desktopSidebar.setAttribute('data-collapsed', 'true');
+        document.documentElement.classList.add('dock-init-collapsed');
+        if (collapseToggleBtn) {
+          collapseToggleBtn.setAttribute('title', 'Expand sidebar (260px)');
+          collapseToggleBtn.setAttribute('aria-label', 'Expand sidebar');
+        }
+        if (collapseIcon) {
+          collapseIcon.className = 'fa-solid fa-angles-right text-xs transition-transform duration-200';
+        }
+      } else {
+        desktopSidebar.removeAttribute('data-collapsed');
+        document.documentElement.classList.remove('dock-init-collapsed');
+        if (collapseToggleBtn) {
+          collapseToggleBtn.setAttribute('title', 'Collapse sidebar (72px)');
+          collapseToggleBtn.setAttribute('aria-label', 'Collapse sidebar');
+        }
+        if (collapseIcon) {
+          collapseIcon.className = 'fa-solid fa-angles-left text-xs transition-transform duration-200';
+        }
+      }
+    }
+
+    try {
+      const savedState = localStorage.getItem('whiz_sidebar_state');
+      applySidebarState(savedState === 'collapsed');
+    } catch (e) {
+      applySidebarState(false);
+    }
+
+    if (collapseToggleBtn) {
+      collapseToggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isCollapsed = desktopSidebar?.getAttribute('data-collapsed') === 'true';
+        const nextState = !isCollapsed;
+        applySidebarState(nextState);
+        try {
+          localStorage.setItem('whiz_sidebar_state', nextState ? 'collapsed' : 'expanded');
+        } catch (err) {}
+      });
+    }
+
+    // Keyboard shortcut '[' or 'Ctrl+B' to toggle sidebar
+    document.addEventListener('keydown', (e) => {
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
+      if (e.key === '[' || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b')) {
+        e.preventDefault();
+        collapseToggleBtn?.click();
       }
     });
 
@@ -4954,10 +5104,15 @@
     // Sign out buttons
     document.querySelectorAll('.btn-admin-signout').forEach(btn => {
       btn.addEventListener('click', async () => {
+        document.cookie = 'whiz_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax; Secure';
+        try {
+          localStorage.removeItem('whiz_last_role');
+          sessionStorage.clear();
+        } catch (e) {}
         if (window.Clerk) {
           await window.Clerk.signOut();
         }
-        window.location.href = '/';
+        window.location.replace('/');
       });
     });
 

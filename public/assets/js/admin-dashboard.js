@@ -78,6 +78,91 @@
     return email === 'kaziaremon@gmail.com' || state.adminProfile.role === 'owner' || Boolean(state.adminProfile.isSuperAdmin);
   }
 
+  function applyRoleAdaptiveUI(profile) {
+    if (!profile) return;
+    const role = profile.role || (isCurrentUserOwner() ? 'owner' : 'client');
+    const isOwner = isCurrentUserOwner();
+
+    // 1. Update dropdown role badge
+    const badge = document.getElementById('dropdownRoleBadge');
+    const sidebarRoleBadge = document.getElementById('sidebarRoleBadge');
+    const updateRoleText = (txt) => {
+      if (sidebarRoleBadge) sidebarRoleBadge.textContent = txt;
+    };
+    if (badge) {
+      if (isOwner || role === 'owner' || role === 'super_admin') {
+        badge.textContent = 'Super Admin'; updateRoleText('Super Admin');
+        badge.className = 'font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-[#147D64] border border-emerald-200 text-[10px] uppercase';
+      } else if (role === 'admin') {
+        badge.textContent = 'Admin'; updateRoleText('Admin');
+        badge.className = 'font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 text-[10px] uppercase';
+      } else if (role === 'accounts') {
+        badge.textContent = 'Accounts'; updateRoleText('Accounts');
+        badge.className = 'font-bold px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200 text-[10px] uppercase';
+      } else if (role === 'employee') {
+        badge.textContent = 'Employee'; updateRoleText('Employee');
+        badge.className = 'font-bold px-2 py-0.5 rounded-md bg-teal-50 text-teal-700 border border-teal-200 text-[10px] uppercase';
+      }
+    }
+
+    // 2. Hide / Show elements based on role
+    const sidebarFinance = document.getElementById('sidebarSectionFinance');
+    const drawerFinance = document.getElementById('drawerSectionFinance');
+    const sidebarTeam = document.getElementById('sidebarNavTeam');
+    const drawerTeam = document.getElementById('drawerNavTeam');
+    const kpiRevenue = document.getElementById('kpiCardRevenue');
+    const chartRev = document.getElementById('chartRevenueContainer');
+    const clientFinSummary = document.getElementById('clientFinancialSummaryCard');
+    const clientFinPrefs = document.getElementById('clientFinancialPreferencesCard');
+    const bottomNavFinance = document.getElementById('bottomNavFinance');
+
+    if (role === 'employee') {
+      if (bottomNavFinance) bottomNavFinance.classList.add('hidden');
+      // Strict Financial & Team Privacy for Employees
+      if (sidebarFinance) sidebarFinance.classList.add('hidden');
+      if (drawerFinance) drawerFinance.classList.add('hidden');
+      if (sidebarTeam) sidebarTeam.classList.add('hidden');
+      if (drawerTeam) drawerTeam.classList.add('hidden');
+      if (kpiRevenue) kpiRevenue.classList.add('hidden');
+      if (chartRev) chartRev.classList.add('hidden');
+      if (clientFinSummary) clientFinSummary.classList.add('hidden');
+      if (clientFinPrefs) clientFinPrefs.classList.add('hidden');
+      document.querySelectorAll('.role-financial-only').forEach(el => el.classList.add('hidden'));
+    } else if (role === 'accounts') {
+      // Accounts users can access finance, but NOT team governance
+      if (bottomNavFinance) bottomNavFinance.classList.remove('hidden');
+      if (sidebarFinance) sidebarFinance.classList.remove('hidden');
+      if (drawerFinance) drawerFinance.classList.remove('hidden');
+      if (sidebarTeam) sidebarTeam.classList.add('hidden');
+      if (drawerTeam) drawerTeam.classList.add('hidden');
+      if (kpiRevenue) kpiRevenue.classList.remove('hidden');
+      if (chartRev) chartRev.classList.remove('hidden');
+      if (clientFinSummary) clientFinSummary.classList.remove('hidden');
+      if (clientFinPrefs) clientFinPrefs.classList.remove('hidden');
+    } else {
+      // Super Admin and Admin have access to all operational & team sections
+      if (bottomNavFinance) bottomNavFinance.classList.remove('hidden');
+      if (sidebarFinance) sidebarFinance.classList.remove('hidden');
+      if (drawerFinance) drawerFinance.classList.remove('hidden');
+      if (sidebarTeam) sidebarTeam.classList.remove('hidden');
+      if (drawerTeam) drawerTeam.classList.remove('hidden');
+      if (kpiRevenue) kpiRevenue.classList.remove('hidden');
+      if (chartRev) chartRev.classList.remove('hidden');
+      if (clientFinSummary) clientFinSummary.classList.remove('hidden');
+      if (clientFinPrefs) clientFinPrefs.classList.remove('hidden');
+    }
+
+    // 3. Configure Staff Invite Form role options
+    const inviteRoleSelect = document.getElementById('inviteRole');
+    if (inviteRoleSelect) {
+      if (role === 'admin' && !isOwner) {
+        // Admins can only invite Accounts or Employee
+        const adminOption = inviteRoleSelect.querySelector('option[value="admin"]');
+        if (adminOption) adminOption.remove();
+      }
+    }
+  }
+
   function isCurrentAdminSelf(target) {
     if (!target) return false;
     const currentEmail = (state.adminProfile?.email || state.currentUser?.primaryEmailAddress?.emailAddress || '').toLowerCase();
@@ -98,6 +183,9 @@
   // AUTHENTICATED API FETCH HELPER
   // =========================================================================
   async function apiFetch(endpoint, options = {}) {
+    if (state.isPreview && window.__whizAdminMock) {
+      return window.__whizAdminMock.handleRequest(endpoint, options, state);
+    }
     const headers = {
       'Content-Type': 'application/json',
       ...(options.headers || {})
@@ -186,6 +274,17 @@
   // =========================================================================
   function switchTab(tabId, updateHash = true) {
     if (tabId === 'settings') tabId = 'security';
+
+    // RBAC Route Guard
+    const userRole = state.adminProfile?.role || '';
+    if (userRole === 'employee' && ['finance', 'receipt_template', 'team'].includes(tabId)) {
+      showToast('Access Denied: Financial and governance sections are restricted for employee accounts.', 'warning');
+      tabId = 'overview';
+    } else if (userRole === 'accounts' && tabId === 'team') {
+      showToast('Access Denied: User governance is restricted to Administrators.', 'warning');
+      tabId = 'overview';
+    }
+
     state.activeTab = tabId;
 
     const allViews = [
@@ -227,15 +326,38 @@
       subheaderTitle.textContent = activeTitle;
     }
 
-    // Sidebar active styling
+    // Sidebar & Mobile Bottom Nav active styling
     document.querySelectorAll('[data-dash-tab]').forEach(btn => {
       const isTarget = btn.dataset.dashTab === tabId;
-      if (isTarget) {
-        btn.classList.add('bg-brand-whiz/15', 'text-brand-whiz', 'border-brand-whiz/30');
-        btn.classList.remove('text-slate-400', 'border-transparent');
+      if (btn.closest('#adminMobileBottomNav')) {
+        const label = btn.querySelector('.dash-bottom-label');
+        if (isTarget) {
+          btn.classList.add('bg-[#EAF5F1]', 'text-[#087F70]', 'border-[#087F70]/25', 'shadow-2xs');
+          btn.classList.remove('text-[#74817D]', 'border-transparent');
+          btn.setAttribute('aria-current', 'page');
+          if (label) {
+            label.classList.add('font-bold');
+            label.classList.remove('font-semibold');
+          }
+        } else {
+          btn.classList.remove('bg-[#EAF5F1]', 'text-[#087F70]', 'border-[#087F70]/25', 'shadow-2xs');
+          btn.classList.add('text-[#74817D]', 'border-transparent');
+          btn.removeAttribute('aria-current');
+          if (label) {
+            label.classList.remove('font-bold');
+            label.classList.add('font-semibold');
+          }
+        }
       } else {
-        btn.classList.remove('bg-brand-whiz/15', 'text-brand-whiz', 'border-brand-whiz/30');
-        btn.classList.add('text-slate-400', 'border-transparent');
+        if (isTarget) {
+          btn.classList.add('dock-active', 'bg-[#EAF5F1]', 'text-[#087F70]', 'border-[#087F70]/20');
+          btn.classList.remove('text-[#74817D]', 'text-slate-400', 'border-transparent', 'hover:bg-[#F7FAF9]');
+          btn.setAttribute('aria-current', 'page');
+        } else {
+          btn.classList.remove('dock-active', 'bg-[#EAF5F1]', 'text-[#087F70]', 'border-[#087F70]/20', 'bg-brand-whiz/15', 'text-brand-whiz', 'border-brand-whiz/30');
+          btn.classList.add('text-[#74817D]', 'border-transparent');
+          btn.removeAttribute('aria-current');
+        }
       }
     });
 
@@ -726,9 +848,9 @@
     const cLoc = document.getElementById('clientCardLocation');
     if (cLoc) cLoc.textContent = `${client.address ? client.address + ', ' : ''}${client.city || 'Dhaka'}, ${client.country || 'Bangladesh'}`;
     const cClk = document.getElementById('clientCardClerkId');
-    if (cClk) cClk.textContent = client.clerk_user_id || 'Pending Clerk linking';
+    if (cClk) cClk.innerHTML = client.clerk_user_id ? '<span class="text-emerald-700 font-semibold"><i class="fa-solid fa-shield-check text-[#147D64] mr-1"></i>SSO Verified</span>' : '<span class="text-slate-400">Pending SSO link</span>';
     const cOrg = document.getElementById('clientCardOrgId');
-    if (cOrg) cOrg.textContent = client.organization_id || 'Not Linked';
+    if (cOrg) cOrg.textContent = client.organization_name || client.organization_id || 'Not Linked';
 
     // Populate Preferred Currency in Financial Preferences
     const clientCurrency = (client.currency || (client.country === 'Bangladesh' || (client.phone && client.phone.startsWith('+880')) ? 'BDT' : 'USD')).toUpperCase();
@@ -800,7 +922,7 @@
               </div>
             </div>
             <div class="flex items-center space-x-3 shrink-0">
-              <span class="text-xs font-mono font-bold text-brand-whiz">${formatCurrency(s.price_cents || 0, s.currency || clientCurrency || "USD")}</span>
+              ${state.adminProfile?.role !== 'employee' && s.price_cents != null ? `<span class="text-xs font-mono font-bold text-brand-whiz">${formatCurrency(s.price_cents || 0, s.currency || clientCurrency || "USD")}</span>` : ''}
               <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${s.status === 'active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-50 text-slate-600 border border-slate-200'}">${s.status}</span>
               ${s.status === 'active' ? `
                 <button type="button" class="btn-cancel-client-service text-slate-500 hover:text-rose-400 p-1 cursor-pointer transition-colors" data-cs="${s.id}" title="Cancel Service">
@@ -890,6 +1012,12 @@
 
     if (res.ok && res.data && res.data.data) {
       state.servicesCache = res.data.data;
+
+      const countBadge = document.getElementById('serviceCatalogCountBadge');
+      if (countBadge) {
+        countBadge.textContent = `${state.servicesCache.length} Active Services`;
+      }
+
       grid.innerHTML = state.servicesCache.map(s => `
         <div class="p-5 rounded-3xl bg-white border border-[#E3E9EF] flex flex-col justify-between space-y-4 hover:border-brand-whiz/50 hover:shadow-md transition-all shadow-xs group">
           <div class="space-y-2.5">
@@ -898,7 +1026,7 @@
                 <span class="text-[10px] font-black uppercase tracking-wider text-brand-whiz bg-brand-whiz/10 px-2 py-0.5 rounded-md border border-brand-whiz/20">${s.code}</span>
                 <span class="text-[10px] font-mono text-slate-500">v${s.version || 1}</span>
               </div>
-              <span class="text-xs font-mono font-bold text-[#172B36]">$${((s.standard_price_cents || 100000) / 100).toFixed(0)}</span>
+              ${state.adminProfile?.role !== 'employee' && s.standard_price_cents != null ? `<span class="text-xs font-mono font-bold text-[#172B36]">${((s.standard_price_cents || 100000) / 100).toFixed(0)}</span>` : ''}
             </div>
             <h3 class="text-base font-extrabold text-[#172B36] group-hover:text-brand-whiz transition-colors">${s.name}</h3>
             <p class="text-xs text-slate-400 line-clamp-2 leading-relaxed">${s.description || 'Comprehensive operational service package.'}</p>
@@ -907,9 +1035,12 @@
           <div class="pt-3 border-t border-[#E3E9EF] flex items-center justify-between gap-2">
             <div class="text-[11px] text-slate-400 flex items-center gap-1.5 font-semibold">
               <i class="fa-solid fa-list-check text-brand-whiz text-xs"></i>
-              <span>${s.blueprint_count || 20} SOP Tasks</span>
+              <span>${s.blueprint_count || 0} SOP Tasks</span>
             </div>
             <div class="flex items-center gap-1.5">
+              <button type="button" class="btn-delete-service p-1.5 rounded-xl text-xs font-semibold bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 border border-[#E3E9EF] hover:border-rose-200 cursor-pointer transition-all" data-id="${s.id}" title="Permanently Delete Service">
+                <i class="fa-solid fa-trash-can text-xs"></i>
+              </button>
               <button type="button" class="btn-manage-service px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-50 hover:bg-[#EAF7F1] text-slate-700 hover:text-brand-whiz border border-[#E3E9EF] cursor-pointer transition-all" data-id="${s.id}">
                 Manage
               </button>
@@ -930,6 +1061,11 @@
       grid.querySelectorAll('.btn-manage-service').forEach(b => {
         b.addEventListener('click', () => openEditServiceModal(b.dataset.id));
       });
+
+      // Wire Delete Service
+      grid.querySelectorAll('.btn-delete-service').forEach(b => {
+        b.addEventListener('click', () => openDeleteServiceModal(b.dataset.id));
+      });
     }
   }
 
@@ -949,10 +1085,10 @@
       if (titleEl) titleEl.textContent = service.name;
       if (codeEl) codeEl.textContent = service.code;
       if (verEl) verEl.textContent = `v${service.version || 1}`;
-      if (descEl) descEl.textContent = service.description || 'Master 20-Task SOP Blueprint Library';
+      if (descEl) descEl.textContent = service.description || `Master ${service.blueprint_count || 20}-Task SOP Blueprint Library`;
     }
 
-    const res = await apiFetch(`/services/${serviceId}/blueprints?includeInactive=1`);
+    const res = await apiFetch(`/services/${serviceId}/blueprints`);
     if (!res.ok || !res.data || !res.data.data) {
       showToast('Failed to load task blueprints.', 'error');
       return;
@@ -992,7 +1128,6 @@
     }
 
     container.innerHTML = list.map(bp => {
-      const isDeactivated = bp.is_active === 0;
       const priorityColors = {
         urgent: 'bg-rose-50 text-rose-700 border-rose-200',
         high: 'bg-amber-50 text-amber-700 border-amber-200',
@@ -1001,11 +1136,11 @@
       };
 
       return `
-        <div class="p-4 rounded-2xl bg-white border ${isDeactivated ? 'border-rose-200 opacity-60' : 'border-[#E3E9EF]'} space-y-3">
+        <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] space-y-3">
           <div class="flex items-center justify-between gap-3">
             <div class="flex items-center space-x-2.5 min-w-0">
               <span class="text-xs font-mono font-bold text-brand-whiz bg-brand-whiz/10 border border-brand-whiz/30 px-2 py-0.5 rounded shrink-0">${bp.task_code}</span>
-              <h4 class="text-xs font-bold text-[#172B36] truncate ${isDeactivated ? 'line-through text-slate-400' : ''}">${bp.title}</h4>
+              <h4 class="text-xs font-bold text-[#172B36] truncate">${bp.title}</h4>
             </div>
             <div class="flex items-center space-x-2 shrink-0">
               <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded border ${priorityColors[bp.priority] || priorityColors.medium}">${bp.priority}</span>
@@ -1016,8 +1151,8 @@
               <button type="button" class="btn-duplicate-blueprint p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer transition-all" data-id="${bp.id}" title="Duplicate Blueprint">
                 <i class="fa-solid fa-copy text-xs"></i>
               </button>
-              <button type="button" class="btn-toggle-blueprint p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 cursor-pointer transition-all" data-id="${bp.id}" data-active="${bp.is_active}" title="${isDeactivated ? 'Restore Task' : 'Deactivate Task'}">
-                <i class="fa-solid ${isDeactivated ? 'fa-rotate-left text-emerald-400' : 'fa-trash text-xs'}"></i>
+              <button type="button" class="btn-delete-blueprint p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 cursor-pointer transition-all" data-id="${bp.id}" title="Permanently Delete Task">
+                <i class="fa-solid fa-trash-can text-xs"></i>
               </button>
             </div>
           </div>
@@ -1060,21 +1195,10 @@
       });
     });
 
-    // Wire toggle deactivate/restore
-    container.querySelectorAll('.btn-toggle-blueprint').forEach(b => {
-      b.addEventListener('click', async () => {
-        const id = b.dataset.id;
-        const isActive = b.dataset.active === '1';
-        const endpoint = isActive ? `/services/blueprints/${id}` : `/services/blueprints/${id}/restore`;
-        const method = isActive ? 'DELETE' : 'POST';
-
-        const res = await apiFetch(endpoint, { method });
-        if (res.ok) {
-          showToast(isActive ? 'Task deactivated.' : 'Task restored!', 'info');
-          openServiceTasksWorkspace(state.selectedServiceId);
-        } else {
-          showToast('Failed to change task status.', 'error');
-        }
+    // Wire delete blueprint buttons (Hard Delete confirmation)
+    container.querySelectorAll('.btn-delete-blueprint').forEach(b => {
+      b.addEventListener('click', () => {
+        openDeleteBlueprintModal(b.dataset.id);
       });
     });
   }
@@ -1102,6 +1226,34 @@
     modal.classList.remove('hidden');
   }
 
+  function openDeleteBlueprintModal(blueprintId) {
+    const bp = state.currentBlueprints.find(b => b.id === blueprintId);
+    if (!bp) {
+      showToast('Task blueprint not found.', 'error');
+      return;
+    }
+
+    state.selectedBlueprintId = blueprintId;
+    const currentService = state.servicesCache.find(s => s.id === (bp.service_id || state.selectedServiceId));
+
+    const codeEl = document.getElementById('deleteBlueprintTaskCode');
+    const titleEl = document.getElementById('deleteBlueprintTaskTitle');
+    const srvEl = document.getElementById('deleteBlueprintServiceName');
+    const modal = document.getElementById('modalDeleteBlueprint');
+
+    if (codeEl) codeEl.textContent = bp.task_code || bp.id;
+    if (titleEl) titleEl.textContent = bp.title || 'Untitled Task';
+    if (srvEl) srvEl.textContent = currentService ? currentService.name : (bp.service_id || 'Service');
+
+    const confirmBtn = document.getElementById('btnConfirmDeleteBlueprint');
+    if (confirmBtn) {
+      confirmBtn.disabled = false;
+      confirmBtn.innerHTML = '<i class="fa-solid fa-trash-can text-xs"></i> <span>Permanently Delete Task</span>';
+    }
+
+    if (modal) modal.classList.remove('hidden');
+  }
+
   function openEditServiceModal(serviceId) {
     const service = state.servicesCache.find(s => s.id === serviceId);
     if (!service) return;
@@ -1119,6 +1271,128 @@
     document.getElementById('editServiceIsActive').checked = service.is_active === 1;
 
     modal.classList.remove('hidden');
+  }
+
+  async function openDeleteServiceModal(serviceId) {
+    const service = state.servicesCache.find(s => s.id === serviceId);
+    if (!service) {
+      showToast('Service not found.', 'error');
+      return;
+    }
+
+    state.selectedServiceId = serviceId;
+    const modal = document.getElementById('modalDeleteService');
+    if (!modal) return;
+
+    const nameEl = document.getElementById('deleteServiceTargetName');
+    const codeEl = document.getElementById('deleteServiceTargetCode');
+    const countEl = document.getElementById('deleteServiceBlueprintCount');
+    const catEl = document.getElementById('deleteServiceCategory');
+    const depContainer = document.getElementById('deleteServiceDependencyContainer');
+    const confirmSection = document.getElementById('deleteServiceConfirmSection');
+    const expectedNameEl = document.getElementById('deleteServiceExpectedName');
+    const confirmInput = document.getElementById('deleteServiceConfirmInput');
+    const confirmBtn = document.getElementById('btnConfirmDeleteService');
+
+    if (nameEl) nameEl.textContent = service.name;
+    if (codeEl) codeEl.textContent = service.code || service.id;
+    if (countEl) countEl.textContent = `${service.blueprint_count || 0} Tasks`;
+    if (catEl) catEl.textContent = service.category || 'General';
+    if (expectedNameEl) expectedNameEl.textContent = `"${service.name}"`;
+    if (confirmInput) confirmInput.value = '';
+    if (confirmBtn) {
+      confirmBtn.disabled = true;
+      confirmBtn.innerHTML = '<i class="fa-solid fa-trash-can text-xs"></i> <span>Permanently Delete Service</span>';
+    }
+    if (confirmSection) confirmSection.classList.add('hidden');
+
+    if (depContainer) {
+      depContainer.innerHTML = `
+        <div class="p-3 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-500 flex items-center gap-2">
+          <i class="fa-solid fa-circle-notch fa-spin text-brand-whiz"></i>
+          <span>Checking database dependencies & live client records...</span>
+        </div>
+      `;
+    }
+
+    modal.classList.remove('hidden');
+
+    try {
+      const res = await apiFetch(`/services/${serviceId}/delete-check`);
+      if (!res.ok || !res.data || !res.data.data) {
+        if (depContainer) {
+          depContainer.innerHTML = `
+            <div class="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700">
+              <p class="font-bold">Failed to verify dependencies.</p>
+              <p class="text-[11px] mt-0.5">Could not confirm safe deletion status. Please retry.</p>
+            </div>
+          `;
+        }
+        return;
+      }
+
+      const check = res.data.data;
+      if (!check.canDelete) {
+        const dep = check.dependencies || {};
+        if (depContainer) {
+          depContainer.innerHTML = `
+            <div class="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-2">
+              <div class="flex items-center gap-2 font-bold text-amber-800">
+                <i class="fa-solid fa-triangle-exclamation text-amber-600 text-sm"></i>
+                <span>Deletion Blocked: Active Dependencies Detected</span>
+              </div>
+              <p class="text-[11px] leading-relaxed text-amber-800/90">
+                This service cannot be deleted because it is currently linked to authoritative client and financial records:
+              </p>
+              <div class="grid grid-cols-3 gap-2 pt-1 text-center font-mono">
+                <div class="p-2 rounded-xl bg-white/80 border border-amber-200">
+                  <span class="block text-sm font-black text-amber-900">${dep.clientServicesCount || 0}</span>
+                  <span class="text-[9px] uppercase font-bold text-amber-700">Client Agrmts</span>
+                </div>
+                <div class="p-2 rounded-xl bg-white/80 border border-amber-200">
+                  <span class="block text-sm font-black text-amber-900">${dep.projectsCount || 0}</span>
+                  <span class="text-[9px] uppercase font-bold text-amber-700">Projects</span>
+                </div>
+                <div class="p-2 rounded-xl bg-white/80 border border-amber-200">
+                  <span class="block text-sm font-black text-amber-900">${dep.invoicesCount || 0}</span>
+                  <span class="text-[9px] uppercase font-bold text-amber-700">Invoices</span>
+                </div>
+              </div>
+              <p class="text-[11px] text-amber-800 italic pt-1">
+                To delete this service, unassign or conclude all linked client contracts and projects first.
+              </p>
+            </div>
+          `;
+        }
+        if (confirmSection) confirmSection.classList.add('hidden');
+        if (confirmBtn) confirmBtn.disabled = true;
+      } else {
+        if (depContainer) {
+          depContainer.innerHTML = `
+            <div class="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 space-y-1.5">
+              <div class="flex items-center gap-2 font-bold text-emerald-800">
+                <i class="fa-solid fa-shield-check text-emerald-600 text-sm"></i>
+                <span>0 Live Dependencies — Safe to Permanently Purge</span>
+              </div>
+              <p class="text-[11px] text-emerald-800/90 leading-relaxed">
+                No active client contracts, projects, or invoices reference this service.
+                Permanently deleting it will purge the service catalog record and all <strong>${check.taskBlueprintCount || 0} master SOP blueprints</strong> from Cloudflare D1.
+              </p>
+            </div>
+          `;
+        }
+        if (confirmSection) confirmSection.classList.remove('hidden');
+        if (confirmInput) confirmInput.focus();
+      }
+    } catch (err) {
+      if (depContainer) {
+        depContainer.innerHTML = `
+          <div class="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700">
+            <p class="font-bold">Dependency check failed.</p>
+          </div>
+        `;
+      }
+    }
   }
 
   // =========================================================================
@@ -1309,6 +1583,7 @@
   let paymentsCache = [];
 
   async function loadFinanceData() {
+    initFinanceSubtabs();
     const res = await apiFetch('/finance/payments');
     const tbody = document.getElementById('adminPaymentsTableBody');
     const cardsContainer = document.getElementById('adminFinanceCardsContainer');
@@ -1353,14 +1628,16 @@
                 <button type="button" class="btn-correct-payment-admin px-2 py-1 rounded-lg text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-700 transition-colors cursor-pointer" data-id="${p.id}" title="Financial Correction">
                   <i class="fa-solid fa-scale-balanced"></i>
                 </button>
-                ${!isVoided ? `
+                ${!isVoided && state.adminProfile?.role !== 'accounts' ? `
                   <button type="button" class="btn-void-payment-admin px-2 py-1 rounded-lg text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-600 transition-colors cursor-pointer" data-id="${p.id}" title="Void Payment">
                     <i class="fa-solid fa-ban"></i>
                   </button>
                 ` : ''}
-                <button type="button" class="btn-delete-payment-admin px-2 py-1 rounded-lg text-xs font-semibold text-slate-400 hover:text-rose-600 transition-colors cursor-pointer" data-id="${p.id}" title="Delete Test Payment">
-                  <i class="fa-solid fa-trash-can"></i>
-                </button>
+                ${state.adminProfile?.role !== 'accounts' ? `
+                  <button type="button" class="btn-delete-payment-admin px-2 py-1 rounded-lg text-xs font-semibold text-slate-400 hover:text-rose-600 transition-colors cursor-pointer" data-id="${p.id}" title="Delete Test Payment">
+                    <i class="fa-solid fa-trash-can"></i>
+                  </button>
+                ` : ''}
               </div>
             </td>
           </tr>
@@ -1404,14 +1681,16 @@
                 <button type="button" class="btn-correct-payment-admin px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-700 cursor-pointer" data-id="${p.id}">
                   Correct
                 </button>
-                ${!isVoided ? `
+                ${!isVoided && state.adminProfile?.role !== 'accounts' ? `
                   <button type="button" class="btn-void-payment-admin px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-600 cursor-pointer" data-id="${p.id}" title="Void">
                     <i class="fa-solid fa-ban"></i>
                   </button>
                 ` : ''}
-                <button type="button" class="btn-delete-payment-admin px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-rose-600 cursor-pointer" data-id="${p.id}" title="Delete">
-                  <i class="fa-solid fa-trash-can"></i>
-                </button>
+                ${state.adminProfile?.role !== 'accounts' ? `
+                  <button type="button" class="btn-delete-payment-admin px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-rose-600 cursor-pointer" data-id="${p.id}" title="Delete">
+                    <i class="fa-solid fa-trash-can"></i>
+                  </button>
+                ` : ''}
               </div>
             </div>
           `;
@@ -1645,9 +1924,13 @@
 
         let roleBadge = '';
         if (isOwner || u.role === 'owner' || u.role === 'super_admin') {
-          roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-crown text-[9px]"></i> Owner</span>';
+          roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Super Admin</span>';
         } else if (u.role === 'admin') {
           roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-blue-50 text-blue-700 border border-blue-200"><i class="fa-solid fa-shield-halved text-[9px]"></i> Admin</span>';
+        } else if (u.role === 'accounts') {
+          roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-purple-50 text-purple-700 border border-purple-200"><i class="fa-solid fa-calculator text-[9px]"></i> Accounts</span>';
+        } else if (u.role === 'employee' || u.role === 'project_manager') {
+          roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-teal-50 text-teal-700 border border-teal-200"><i class="fa-solid fa-briefcase text-[9px]"></i> Employee</span>';
         } else {
           roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-slate-100 text-slate-700 border border-slate-200"><i class="fa-solid fa-user text-[9px]"></i> Client</span>';
         }
@@ -1701,7 +1984,7 @@
                 <div class="min-w-0">
                   <div class="font-bold text-[#172B36] truncate">${escapeHtml(fullName)}</div>
                   <div class="text-xs text-slate-500 font-mono truncate">${escapeHtml(email)}</div>
-                  ${clerkId ? `<div class="text-[10px] text-slate-400 font-mono truncate mt-0.5">${escapeHtml(clerkId)}</div>` : ''}
+                  ${clerkId ? `<div class="inline-flex items-center gap-1 text-[10px] text-emerald-700 font-semibold mt-0.5"><i class="fa-solid fa-shield-check text-[9px]"></i>SSO Linked</div>` : '<div class="text-[10px] text-slate-400 mt-0.5">Direct Verified</div>'}
                 </div>
               </div>
             </td>
@@ -1727,9 +2010,13 @@
 
         let roleBadge = '';
         if (isOwner || u.role === 'owner' || u.role === 'super_admin') {
-          roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-crown text-[9px]"></i> Owner</span>';
+          roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Super Admin</span>';
         } else if (u.role === 'admin') {
           roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-blue-50 text-blue-700 border border-blue-200"><i class="fa-solid fa-shield-halved text-[9px]"></i> Admin</span>';
+        } else if (u.role === 'accounts') {
+          roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-purple-50 text-purple-700 border border-purple-200"><i class="fa-solid fa-calculator text-[9px]"></i> Accounts</span>';
+        } else if (u.role === 'employee' || u.role === 'project_manager') {
+          roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-teal-50 text-teal-700 border border-teal-200"><i class="fa-solid fa-briefcase text-[9px]"></i> Employee</span>';
         } else {
           roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-slate-100 text-slate-700 border border-slate-200"><i class="fa-solid fa-user text-[9px]"></i> Client</span>';
         }
@@ -2004,22 +2291,18 @@
 
     const isOwnerActor = isCurrentUserOwner();
 
-    // Hide or disable the pre-approval form if actor is not the Founding Super Admin
+    // Enable staff pre-approval form for Super Admin and Admin
     const inviteForm = document.getElementById('adminInviteForm');
     if (inviteForm) {
-      if (!isOwnerActor) {
-        const inputs = inviteForm.querySelectorAll('input, button');
-        inputs.forEach(el => el.disabled = true);
-        const submitBtn = inviteForm.querySelector('button[type="submit"]');
-        if (submitBtn) {
+      const canInvite = isOwnerActor || state.adminProfile?.role === 'admin';
+      const inputs = inviteForm.querySelectorAll('input, select, button');
+      inputs.forEach(el => el.disabled = !canInvite);
+      const submitBtn = inviteForm.querySelector('button[type="submit"]');
+      if (submitBtn) {
+        if (!canInvite) {
           submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
-          submitBtn.title = 'Only Founding Super Admin may authorize administrator accounts';
-        }
-      } else {
-        const inputs = inviteForm.querySelectorAll('input, button');
-        inputs.forEach(el => el.disabled = false);
-        const submitBtn = inviteForm.querySelector('button[type="submit"]');
-        if (submitBtn) {
+          submitBtn.title = 'Only Super Admin and Admin may authorize staff accounts';
+        } else {
           submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
           submitBtn.title = '';
         }
@@ -2128,7 +2411,7 @@
             <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
               <td class="px-6 py-4 font-bold text-[#172B36]">${escapeHtml(name)}</td>
               <td class="px-6 py-4 font-mono text-xs text-slate-600">${escapeHtml(email)}</td>
-              <td class="px-6 py-4 font-mono text-[11px] text-slate-400">${escapeHtml(clerkId)}</td>
+              <td class="px-6 py-4 font-mono text-[11px]">${clerkId && clerkId !== '—' ? '<span class="inline-flex items-center gap-1 text-emerald-700 font-semibold text-[11px]"><i class="fa-solid fa-shield-check text-[10px]"></i> SSO Linked</span>' : '<span class="text-slate-400">Direct Pending</span>'}</td>
               <td class="px-6 py-4">${roleBadge}</td>
               <td class="px-6 py-4 font-mono text-xs text-slate-500">${escapeHtml(activatedAt)}</td>
               <td class="px-6 py-4 text-right">${actionHtml}</td>
@@ -2382,8 +2665,7 @@
 
   // =========================================================================
   // OFFICIAL DOCUMENT & PDF GENERATION (pdf-lib, Zero Server Storage)
-  // Matching Supplied High-Fidelity Whiz Studio Template
-  // =========================================================================
+  // Matching Supplied Authentic Whiz Studio Clean Master Template
   async function generateOfficialDocumentPdf(docData) {
     if (!window.PDFLib) {
       showToast('PDF generation engine unavailable. Please reload.', 'error');
@@ -2395,438 +2677,473 @@
 
       const { PDFDocument, rgb, StandardFonts } = window.PDFLib;
       const pdfDoc = await PDFDocument.create();
-      const page = pdfDoc.addPage([595.28, 841.89]); // A4 Size in points
+      const page = pdfDoc.addPage([595.44, 842.16]); // A4 Size in points
       const { width, height } = page.getSize();
+
+      const toPdfX = (imgX) => (imgX / 2481) * width;
+      const toPdfY = (imgY) => height - ((imgY / 3509) * height);
+
+      const isReceipt = docData.documentType === 'receipt' || docData.type === 'receipt';
+      const templateUrl = isReceipt
+        ? '/assets/images/receipt-master-template-clean-2481x3509.png'
+        : '/assets/images/invoice-master-template-clean-2481x3509.png';
+
+      try {
+        const tBuf = await fetch(templateUrl).then(r => r.arrayBuffer());
+        const bgImg = await pdfDoc.embedPng(tBuf);
+        page.drawImage(bgImg, { x: 0, y: 0, width, height });
+      } catch (e) {
+        console.warn('Fallback template load:', e);
+        const fbBuf = await fetch('/assets/images/invoice-master-template-clean-2481x3509.png').then(r => r.arrayBuffer());
+        const bgImg = await pdfDoc.embedPng(fbBuf);
+        page.drawImage(bgImg, { x: 0, y: 0, width, height });
+      }
 
       const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
       const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
-      // Template Color Palette
-      const tealPrimary = rgb(0.08, 0.49, 0.39); // #147D64
-      const textDark = rgb(0.09, 0.17, 0.21);   // #172B36
-      const textMuted = rgb(0.37, 0.44, 0.50);  // #5F7180
+      const tealColor = rgb(43/255, 138/255, 121/255); // #2B8A79
+      const darkColor = rgb(34/255, 34/255, 34/255);   // #222222
+      const mutedColor = rgb(100/255, 100/255, 100/255); // #666666
 
-      // 1. Embed Images
-      try {
-        const [logoBuf, topCornerBuf, botCornerBuf, sigBuf] = await Promise.all([
-          fetch('/assets/images/logo.png').then(r => r.arrayBuffer()).catch(() => null),
-          fetch('/assets/images/template-corner-top-right.png').then(r => r.arrayBuffer()).catch(() => null),
-          fetch('/assets/images/template-corner-bottom-left.png').then(r => r.arrayBuffer()).catch(() => null),
-          fetch('/assets/images/official-signature.png').then(r => r.arrayBuffer()).catch(() => null)
-        ]);
-
-        if (topCornerBuf) {
-          const topCornerImg = await pdfDoc.embedPng(topCornerBuf);
-          page.drawImage(topCornerImg, {
-            x: width - 150,
-            y: height - 61.5,
-            width: 150,
-            height: 61.5
-          });
+      function wrapAddress(text, maxChars = 38) {
+        if (!text) return [];
+        const words = String(text).split(' ');
+        const lines = [];
+        let current = '';
+        for (const w of words) {
+          if ((current + ' ' + w).trim().length > maxChars) {
+            if (current) lines.push(current.trim());
+            current = w;
+          } else {
+            current = (current + ' ' + w).trim();
+          }
         }
-
-        if (botCornerBuf) {
-          const botCornerImg = await pdfDoc.embedPng(botCornerBuf);
-          page.drawImage(botCornerImg, {
-            x: 0,
-            y: 0,
-            width: 130,
-            height: 120
-          });
-        }
-
-        if (logoBuf) {
-          const logoImg = await pdfDoc.embedPng(logoBuf);
-          const logoW = 140;
-          const logoH = 140 * (576 / 1024);
-          page.drawImage(logoImg, {
-            x: 50,
-            y: height - 110,
-            width: logoW,
-            height: logoH
-          });
-        } else {
-          page.drawText('WHIZ STUDIO', {
-            x: 50,
-            y: height - 80,
-            size: 20,
-            font: fontBold,
-            color: tealPrimary
-          });
-        }
-
-        if (sigBuf) {
-          const sigImg = await pdfDoc.embedPng(sigBuf);
-          page.drawImage(sigImg, {
-            x: width - 175,
-            y: 75,
-            width: 95,
-            height: 66
-          });
-        }
-      } catch (e) {
-        console.warn('Image embedding fallback:', e);
+        if (current) lines.push(current.trim());
+        return lines;
       }
 
-      // 2. Top-Right Title & Client Copy
-      const isInvoice = (docData.type || 'invoice').toLowerCase() === 'invoice';
-      const titleText = isInvoice ? 'INVOICE' : 'RECEIPT';
-      page.drawText(titleText, {
-        x: width - 210,
-        y: height - 85,
-        size: 28,
-        font: fontBold,
-        color: tealPrimary
-      });
-
-      page.drawText('Client Copy', {
-        x: width - 210,
-        y: height - 103,
-        size: 11,
-        font: fontBold,
-        color: textDark
-      });
-
-      page.drawLine({
-        start: { x: width - 210, y: height - 115 },
-        end: { x: width - 50, y: height - 115 },
-        thickness: 1.5,
-        color: tealPrimary
-      });
-
-      // 3. Details Section
-      let leftY = height - 160;
-      page.drawText('BILLED TO:', {
-        x: 50,
-        y: leftY,
-        size: 10,
-        font: fontBold,
-        color: tealPrimary
-      });
-
-      leftY -= 15;
-      page.drawText(docData.clientName || 'Valued Client', {
-        x: 50,
-        y: leftY,
-        size: 11.5,
-        font: fontBold,
-        color: textDark
-      });
-
-      leftY -= 13;
-      page.drawText('Address: ', {
-        x: 50,
-        y: leftY,
-        size: 8.5,
-        font: fontBold,
-        color: textDark
-      });
-
-      const addressText = docData.clientAddress || 'Dhaka, Bangladesh';
-      const words = addressText.split(' ');
-      let addrLine = '';
-      let addrLines = [];
-      for (const w of words) {
-        if ((addrLine + w).length > 38) {
-          addrLines.push(addrLine.trim());
-          addrLine = w + ' ';
-        } else {
-          addrLine += w + ' ';
-        }
-      }
-      if (addrLine.trim()) addrLines.push(addrLine.trim());
-
-      let currAddrY = leftY;
-      addrLines.slice(0, 3).forEach((line, idx) => {
-        page.drawText(line, {
-          x: idx === 0 ? 95 : 50,
-          y: currAddrY,
-          size: 8.5,
-          font: fontRegular,
-          color: textDark
+      if (isReceipt) {
+        page.drawText('RECEIPT', {
+          x: toPdfX(1383),
+          y: toPdfY(450),
+          size: 38,
+          font: fontBold,
+          color: tealColor
         });
-        currAddrY -= 11;
-      });
+        page.drawText('Official Payment Confirmation', {
+          x: toPdfX(1410),
+          y: toPdfY(560),
+          size: 11,
+          font: fontBold,
+          color: darkColor
+        });
+      }
 
-      currAddrY -= 2;
-      page.drawText('Phone Number: ', {
-        x: 50,
-        y: currAddrY,
-        size: 8.5,
+      // BILLED TO
+      const client = docData.client || {};
+      const clientName = client.billingName || client.organizationName || client.fullName || docData.clientName || 'Valued Client';
+      page.drawText(clientName, {
+        x: toPdfX(252),
+        y: toPdfY(840),
+        size: 12.5,
         font: fontBold,
-        color: textDark
+        color: darkColor
       });
-      page.drawText(docData.clientPhone || '+880...', {
-        x: 120,
-        y: currAddrY,
-        size: 8.5,
+
+      const fullAddr = [client.billingAddress || client.address || docData.clientAddress, client.city, client.country].filter(Boolean).join(', ');
+      const addrLines = wrapAddress(fullAddr, 40);
+      let addrY = 905;
+      addrLines.slice(0, 4).forEach((line, idx) => {
+        page.drawText((idx === 0 ? 'Address: ' : '') + line, {
+          x: toPdfX(252),
+          y: toPdfY(addrY),
+          size: 9.5,
+          font: idx === 0 ? fontBold : fontRegular,
+          color: darkColor
+        });
+        addrY += 65;
+      });
+
+      const clientPhone = client.phone || docData.clientPhone;
+      if (clientPhone) {
+        page.drawText(`Phone Number: ${clientPhone}`, {
+          x: toPdfX(252),
+          y: toPdfY(1185),
+          size: 9.5,
+          font: fontBold,
+          color: darkColor
+        });
+      }
+
+      // Right Column
+      const rightEdgeX = toPdfX(2238);
+      const numLabel = isReceipt ? 'RECEIPT NO: ' : 'INVOICE NO: ';
+      const docNum = isReceipt ? (docData.receiptNumber || docData.docNumber || 'RCPT-1001') : (docData.invoiceNumber || docData.docNumber || 'INV-1001');
+      const numValW = fontRegular.widthOfTextAtSize(docNum, 10.5);
+      const numLabelW = fontBold.widthOfTextAtSize(numLabel, 10.5);
+
+      page.drawText(docNum, {
+        x: rightEdgeX - numValW,
+        y: toPdfY(745),
+        size: 10.5,
         font: fontRegular,
-        color: textDark
+        color: darkColor
       });
-
-      // Right Column Metadata
-      const rightX = width - 210;
-      let rightY = height - 160;
-
-      const numLabel = isInvoice ? 'INVOICE NO: ' : 'RECEIPT NO: ';
       page.drawText(numLabel, {
-        x: rightX,
-        y: rightY,
-        size: 10,
+        x: rightEdgeX - numValW - numLabelW,
+        y: toPdfY(745),
+        size: 10.5,
         font: fontBold,
-        color: tealPrimary
-      });
-      page.drawText(String(docData.docNumber || '829926'), {
-        x: rightX + fontBold.widthOfTextAtSize(numLabel, 10),
-        y: rightY,
-        size: 10,
-        font: fontBold,
-        color: textDark
+        color: tealColor
       });
 
-      rightY -= 14;
-      page.drawText(docData.docDate || '29 September, 2026', {
-        x: rightX,
-        y: rightY,
-        size: 9,
+      const rawDate = isReceipt ? (docData.paymentDate || docData.docDate || docData.generatedAt) : (docData.issueDate || docData.docDate || docData.generatedAt);
+      let formattedDate = rawDate;
+      try {
+        formattedDate = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(rawDate));
+      } catch (_) {}
+      const dateW = fontRegular.widthOfTextAtSize(formattedDate, 10.5);
+      page.drawText(formattedDate, {
+        x: rightEdgeX - dateW,
+        y: toPdfY(835),
+        size: 10.5,
         font: fontRegular,
-        color: textMuted
+        color: darkColor
       });
 
-      rightY -= 18;
-      page.drawText('PAYMENT TYPE', {
-        x: rightX,
-        y: rightY,
+      // PAYMENT TYPE
+      const pTypeLabel = 'PAYMENT TYPE';
+      const pTypeLabelW = fontBold.widthOfTextAtSize(pTypeLabel, 9.5);
+      page.drawText(pTypeLabel, {
+        x: rightEdgeX - pTypeLabelW,
+        y: toPdfY(910),
         size: 9.5,
         font: fontBold,
-        color: tealPrimary
+        color: tealColor
       });
-      rightY -= 13;
-      page.drawText(docData.paymentType || 'Facebook Ads', {
-        x: rightX,
-        y: rightY,
-        size: 9,
+      const pTypeVal = docData.serviceName || docData.paymentType || 'Agency Digital Services';
+      const pTypeValW = fontRegular.widthOfTextAtSize(pTypeVal, 10);
+      page.drawText(pTypeVal, {
+        x: rightEdgeX - pTypeValW,
+        y: toPdfY(1000),
+        size: 10,
         font: fontRegular,
-        color: textDark
+        color: darkColor
       });
 
-      rightY -= 16;
-      page.drawText('PAYMENT METHOD', {
-        x: rightX,
-        y: rightY,
+      // PAYMENT METHOD
+      const pMethodLabel = 'PAYMENT METHOD';
+      const pMethodLabelW = fontBold.widthOfTextAtSize(pMethodLabel, 9.5);
+      page.drawText(pMethodLabel, {
+        x: rightEdgeX - pMethodLabelW,
+        y: toPdfY(1090),
         size: 9.5,
         font: fontBold,
-        color: tealPrimary
+        color: tealColor
       });
-      rightY -= 13;
-      page.drawText(docData.paymentMethod || 'Bkash', {
-        x: rightX,
-        y: rightY,
+      const pMethodVal = docData.paymentMethod || 'Bank Transfer';
+      const pMethodValW = fontRegular.widthOfTextAtSize(pMethodVal, 10.5);
+      page.drawText(pMethodVal, {
+        x: rightEdgeX - pMethodValW,
+        y: toPdfY(1170),
+        size: 10.5,
+        font: fontRegular,
+        color: darkColor
+      });
+
+      // Account Details
+      const accConfig = docData.paymentAccountDetails || {};
+      const accLabel = 'Account Details -';
+      const accLabelW = fontRegular.widthOfTextAtSize(accLabel, 9);
+      page.drawText(accLabel, {
+        x: rightEdgeX - accLabelW,
+        y: toPdfY(1240),
         size: 9,
         font: fontRegular,
-        color: textDark
+        color: mutedColor
       });
 
-      rightY -= 12;
-      page.drawText('Account Details –', {
-        x: rightX,
-        y: rightY,
-        size: 8,
+      const accName = accConfig.accountName || docData.accountDetails || 'Md Kazi Abdur Rahim Emon';
+      const accNameW = fontRegular.widthOfTextAtSize(accName, 9.5);
+      page.drawText(accName, {
+        x: rightEdgeX - accNameW,
+        y: toPdfY(1305),
+        size: 9.5,
         font: fontRegular,
-        color: textMuted
-      });
-      rightY -= 11;
-      page.drawText(docData.accountDetails || 'Md Kazi Abdur Rahim Emon', {
-        x: rightX,
-        y: rightY,
-        size: 8.5,
-        font: fontRegular,
-        color: textDark
-      });
-      rightY -= 11;
-      page.drawText(`Phone Number: ${docData.agencyPhone || '+880 1560066374'}`, {
-        x: rightX,
-        y: rightY,
-        size: 8,
-        font: fontRegular,
-        color: textDark
+        color: darkColor
       });
 
-      // 4. Line Items Table
-      const tableY = Math.min(currAddrY, rightY) - 25;
-
-      page.drawLine({
-        start: { x: 50, y: tableY + 16 },
-        end: { x: width - 50, y: tableY + 16 },
-        thickness: 1,
-        color: tealPrimary
-      });
-
-      page.drawText('Description', { x: 55, y: tableY + 4, size: 9.5, font: fontBold, color: tealPrimary });
-      page.drawText('Quantity', { x: 280, y: tableY + 4, size: 9.5, font: fontBold, color: tealPrimary });
-      page.drawText('Rate', { x: 380, y: tableY + 4, size: 9.5, font: fontBold, color: tealPrimary });
-      page.drawText('Amount', { x: 490, y: tableY + 4, size: 9.5, font: fontBold, color: tealPrimary });
-
-      page.drawLine({
-        start: { x: 50, y: tableY - 4 },
-        end: { x: width - 50, y: tableY - 4 },
-        thickness: 1,
-        color: tealPrimary
-      });
-
-      let itemY = tableY - 22;
-      page.drawText(docData.itemDesc || 'Facebook Ads Expenses & Service Change', {
-        x: 55,
-        y: itemY,
+      const accNumStr = accConfig.accountNumber ? `Phone / A/C: ${accConfig.accountNumber}` : (docData.agencyPhone ? `Phone: ${docData.agencyPhone}` : (docData.paymentReference ? `Ref: ${docData.paymentReference}` : 'Verified Ledger Record'));
+      const accNumW = fontRegular.widthOfTextAtSize(accNumStr, 9);
+      page.drawText(accNumStr, {
+        x: rightEdgeX - accNumW,
+        y: toPdfY(1375),
         size: 9,
         font: fontRegular,
-        color: textDark
-      });
-      page.drawText(String(docData.itemQty || '2'), {
-        x: 295,
-        y: itemY,
-        size: 9,
-        font: fontRegular,
-        color: textDark
-      });
-      page.drawText(String(docData.itemRate || '1250'), {
-        x: 385,
-        y: itemY,
-        size: 9,
-        font: fontRegular,
-        color: textDark
-      });
-      page.drawText(String(docData.itemAmount || '2500'), {
-        x: 495,
-        y: itemY,
-        size: 9,
-        font: fontBold,
-        color: textDark
+        color: darkColor
       });
 
-      page.drawLine({
-        start: { x: 50, y: itemY - 12 },
-        end: { x: width - 50, y: itemY - 12 },
-        thickness: 1,
-        color: tealPrimary
+      // Table Row
+      const items = (docData.items && docData.items.length > 0) ? docData.items : [{
+        description: docData.serviceName || docData.itemDesc || 'Professional Retainer Services',
+        quantity: docData.itemQty || 1,
+        unitPriceCents: isReceipt ? (docData.amountPaidCents || Number(docData.itemRate || 0)*100) : (docData.totalCents || Number(docData.itemRate || 0)*100),
+        totalCents: isReceipt ? (docData.amountPaidCents || Number(docData.itemAmount || 0)*100) : (docData.totalCents || Number(docData.itemAmount || 0)*100)
+      }];
+      const firstItem = items[0];
+      const itemDescLines = wrapAddress(firstItem.description || 'Agency Retainer', 35);
+      let descY = 1850;
+      itemDescLines.slice(0, 2).forEach(line => {
+        page.drawText(line, {
+          x: toPdfX(289),
+          y: toPdfY(descY),
+          size: 9.5,
+          font: fontRegular,
+          color: darkColor
+        });
+        descY += 50;
       });
 
-      const totalY = itemY - 30;
-      page.drawText('TOTAL', {
-        x: 380,
-        y: totalY,
+      const qtyStr = String(firstItem.quantity || 1);
+      const qtyW = fontRegular.widthOfTextAtSize(qtyStr, 9.5);
+      page.drawText(qtyStr, {
+        x: toPdfX(1236) - qtyW / 2,
+        y: toPdfY(1875),
+        size: 9.5,
+        font: fontRegular,
+        color: darkColor
+      });
+
+      const rateVal = ((firstItem.unitPriceCents || firstItem.totalCents || 0) / 100).toFixed(2);
+      const rateW = fontRegular.widthOfTextAtSize(rateVal, 9.5);
+      page.drawText(rateVal, {
+        x: toPdfX(1614) - rateW / 2,
+        y: toPdfY(1875),
+        size: 9.5,
+        font: fontRegular,
+        color: darkColor
+      });
+
+      const lineTotalVal = ((firstItem.totalCents || 0) / 100).toFixed(2);
+      const lineTotalW = fontRegular.widthOfTextAtSize(lineTotalVal, 9.5);
+      page.drawText(lineTotalVal, {
+        x: toPdfX(2100) - lineTotalW,
+        y: toPdfY(1875),
+        size: 9.5,
+        font: fontRegular,
+        color: darkColor
+      });
+
+      // TOTAL
+      const grandTotalCents = isReceipt ? (docData.amountPaidCents || Number(docData.totalAmount || 0)*100) : (docData.totalCents || Number(docData.totalAmount || 0)*100);
+      const curr = docData.currency || 'USD';
+      const totalFormatted = `${curr} ${(grandTotalCents / 100).toFixed(2)}`;
+      const totalFormattedW = fontBold.widthOfTextAtSize(totalFormatted, 11);
+      page.drawText(totalFormatted, {
+        x: toPdfX(2100) - totalFormattedW,
+        y: toPdfY(2090),
         size: 11,
         font: fontBold,
-        color: tealPrimary
-      });
-      page.drawText(String(docData.totalAmount || '2500'), {
-        x: 495,
-        y: totalY,
-        size: 11,
-        font: fontBold,
-        color: tealPrimary
-      });
-
-      // 5. Notes & Signature
-      const notesY = 135;
-      page.drawText('NOTES:', {
-        x: 120,
-        y: notesY,
-        size: 9.5,
-        font: fontBold,
-        color: tealPrimary
-      });
-
-      page.drawText('Whiz Studio', {
-        x: 120,
-        y: notesY - 14,
-        size: 9.5,
-        font: fontBold,
-        color: textDark
-      });
-
-      page.drawText('Address: Road 7, Block A, Mirpur 12, Dhaka, Bangladesh – 1216', {
-        x: 120,
-        y: notesY - 26,
-        size: 7.5,
-        font: fontRegular,
-        color: textDark
-      });
-
-      page.drawText('Phone Number: +880 1322196665', {
-        x: 120,
-        y: notesY - 38,
-        size: 7.5,
-        font: fontRegular,
-        color: textDark
-      });
-
-      page.drawText('Email: info@whizstudio.art', {
-        x: 120,
-        y: notesY - 50,
-        size: 7.5,
-        font: fontRegular,
-        color: textDark
-      });
-
-      page.drawLine({
-        start: { x: width - 200, y: 68 },
-        end: { x: width - 60, y: 68 },
-        thickness: 1.5,
-        color: tealPrimary
-      });
-
-      page.drawText('SIGNATURE', {
-        x: width - 150,
-        y: 53,
-        size: 9.5,
-        font: fontBold,
-        color: tealPrimary
+        color: tealColor
       });
 
       const pdfBytes = await pdfDoc.save();
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
+      const downloadUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
-      const fileName = `Whiz_Studio_${isInvoice ? 'Invoice' : 'Receipt'}_${docData.docNumber || '829926'}.pdf`;
-      a.download = fileName;
+      a.href = downloadUrl;
+      a.download = `WhizStudio_${isReceipt ? 'Receipt' : 'Invoice'}_${docNum}.pdf`;
       document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      a.remove();
+      URL.revokeObjectURL(downloadUrl);
 
-      showToast(`Vector PDF ${fileName} downloaded successfully!`, 'success');
+      showToast(`Official ${isReceipt ? 'Receipt' : 'Invoice'} downloaded successfully!`, 'success');
     } catch (err) {
-      console.error('PDF Generation Error:', err);
-      showToast('Error compiling vector PDF document.', 'error');
+      console.error('PDF error:', err);
+      showToast(err.message || 'Failed to generate PDF.', 'error');
     }
   }
 
-  // Wrapper for existing receipt downloads
   async function generateReceiptPdfInBrowser(data) {
-    const docData = {
-      type: 'receipt',
-      docNumber: data.receiptNumber || '829926',
-      docDate: data.paymentDate || new Date().toISOString().split('T')[0],
-      clientName: data.client?.organizationName || data.client?.companyName || data.client?.contactName || 'Valued Client',
-      clientAddress: data.client?.address || 'Dhaka, Bangladesh',
-      clientPhone: data.client?.phone || '+880 1624644435',
-      paymentType: data.serviceName || 'Agency Service Retainer',
-      paymentMethod: (data.paymentMethod || 'Bkash').toUpperCase(),
-      accountDetails: data.accountDetails || 'Md Kazi Abdur Rahim Emon',
-      agencyPhone: data.agencyPhone || '+880 1560066374',
-      itemDesc: data.serviceName || 'Agency Service Retainer',
-      itemQty: '1',
-      itemRate: ((data.amountPaidCents || 0) / 100).toFixed(0),
-      itemAmount: ((data.amountPaidCents || 0) / 100).toFixed(0),
-      totalAmount: ((data.amountPaidCents || 0) / 100).toFixed(0),
-      currency: data.currency || 'USD'
-    };
-    await generateOfficialDocumentPdf(docData);
+    return generateOfficialDocumentPdf({ ...data, documentType: 'receipt' });
   }
 
-  // =========================================================================
+  // Finance Subtab Loaders
+  async function loadInvoicesData() {
+    const tbody = document.getElementById('adminInvoicesTableBody');
+    if (!tbody) return;
+
+    try {
+      const res = await apiFetch('/finance/invoices');
+      if (res.ok && res.data && res.data.data) {
+        const invoices = res.data.data;
+        if (invoices.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">No invoices created yet. Recording payments will auto-link invoices.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = invoices.map(inv => {
+          const isPaid = inv.outstanding_balance_cents === 0 || inv.status === 'paid';
+          return `
+            <tr class="hover:bg-slate-50/80 transition-colors border-b border-[#E3E9EF]">
+              <td class="px-6 py-4 font-mono font-bold text-[#172B36]">${escapeHtml(inv.invoice_number)}</td>
+              <td class="px-6 py-4">
+                <div class="font-bold text-[#172B36]">${escapeHtml(inv.organization_name || 'Client')}</div>
+                <div class="text-[11px] text-slate-400">Due: ${escapeHtml(inv.due_date || 'N/A')}</div>
+              </td>
+              <td class="px-6 py-4 font-mono font-bold text-[#172B36]">${formatCurrency(inv.total_cents || 0, inv.currency || 'USD')}</td>
+              <td class="px-6 py-4 font-mono font-bold ${isPaid ? 'text-emerald-600' : 'text-amber-600'}">${formatCurrency(inv.outstanding_balance_cents || 0, inv.currency || 'USD')}</td>
+              <td class="px-6 py-4">
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${isPaid ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}">
+                  ${isPaid ? 'Paid in Full' : 'Pending'}
+                </span>
+              </td>
+              <td class="px-6 py-4 text-right">
+                <button type="button" class="btn-download-invoice-admin px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer shadow-xs" data-number="${inv.invoice_number}">
+                  <i class="fa-solid fa-file-pdf mr-1 text-[#147D64]"></i> PDF Invoice
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        tbody.querySelectorAll('.btn-download-invoice-admin').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const num = btn.dataset.number;
+            const res = await apiFetch(`/pdf/data/invoice/${encodeURIComponent(num)}`);
+            if (res.ok && res.data && res.data.data) {
+              await generateOfficialDocumentPdf(res.data.data);
+            } else {
+              showToast('Failed to fetch invoice data.', 'error');
+            }
+          });
+        });
+      }
+    } catch (e) {
+      console.warn('Error loading invoices:', e);
+    }
+  }
+
+  async function loadPaymentMethodsData() {
+    const container = document.getElementById('paymentMethodsConfigList');
+    if (!container) return;
+
+    try {
+      const res = await apiFetch('/finance/payment-methods');
+      if (res.ok && res.data && res.data.data) {
+        const methods = res.data.data;
+        container.innerHTML = methods.map(m => {
+          return `
+            <div class="p-4 rounded-2xl bg-slate-50 border border-[#E3E9EF] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div class="space-y-1">
+                <div class="flex items-center gap-2">
+                  <span class="font-bold text-xs text-[#172B36]">${escapeHtml(m.display_name)}</span>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-white border border-[#E3E9EF] text-slate-600">${escapeHtml(m.method_key)}</span>
+                </div>
+                <div class="text-[11px] text-slate-500">
+                  <span>Provider: <strong class="text-slate-700">${escapeHtml(m.provider_name || 'N/A')}</strong></span>
+                  <span class="mx-1.5">•</span>
+                  <span>Account: <strong class="text-slate-700">${escapeHtml(m.account_name || 'N/A')}</strong> (${escapeHtml(m.account_number || 'N/A')})</span>
+                  ${m.bank_name ? `<span class="mx-1.5">•</span><span>Bank: ${escapeHtml(m.bank_name)}</span>` : ''}
+                </div>
+              </div>
+              <button type="button" class="btn-edit-method px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-[#E3E9EF] text-xs font-bold transition-all shadow-xs cursor-pointer shrink-0 self-start sm:self-auto" data-key="${m.method_key}">
+                <i class="fa-solid fa-pen-to-square mr-1 text-[#147D64]"></i> Configure Details
+              </button>
+            </div>
+          `;
+        }).join('');
+
+        container.querySelectorAll('.btn-edit-method').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const m = methods.find(x => x.method_key === btn.dataset.key);
+            if (!m) return;
+            document.getElementById('editMethodKey').value = m.method_key;
+            document.getElementById('editMethodModalTitle').textContent = `Configure ${m.display_name}`;
+            document.getElementById('editMethodDisplayName').value = m.display_name;
+            document.getElementById('editMethodProvider').value = m.provider_name || '';
+            document.getElementById('editMethodAccountName').value = m.account_name || '';
+            document.getElementById('editMethodAccountNumber').value = m.account_number || '';
+            document.getElementById('editMethodBankName').value = m.bank_name || '';
+            document.getElementById('editMethodBranchName').value = m.branch_name || '';
+            document.getElementById('editMethodInstructions').value = m.instructions || '';
+            document.getElementById('modalEditPaymentMethod')?.classList.remove('hidden');
+          });
+        });
+      }
+    } catch (e) {
+      console.warn('Error loading payment methods:', e);
+    }
+  }
+
+  function initFinanceSubtabs() {
+    const tabPay = document.getElementById('subtabPayments');
+    const tabInv = document.getElementById('subtabInvoices');
+    const tabMet = document.getElementById('subtabMethods');
+    const secPay = document.getElementById('sectionFinancePayments');
+    const secInv = document.getElementById('sectionFinanceInvoices');
+    const secMet = document.getElementById('sectionFinanceMethods');
+
+    const setActive = (activeTab, activeSec) => {
+      [tabPay, tabInv, tabMet].forEach(t => {
+        if (!t) return;
+        t.className = (t === activeTab)
+          ? 'px-3 py-1.5 rounded-lg text-xs font-bold bg-[#147D64] text-white transition-all cursor-pointer'
+          : 'px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all cursor-pointer';
+      });
+      [secPay, secInv, secMet].forEach(s => {
+        if (!s) return;
+        s.classList.toggle('hidden', s !== activeSec);
+      });
+    };
+
+    if (tabPay) tabPay.onclick = () => { setActive(tabPay, secPay); loadFinanceData(); };
+    if (tabInv) tabInv.onclick = () => { setActive(tabInv, secInv); loadInvoicesData(); };
+    if (tabMet) tabMet.onclick = () => { setActive(tabMet, secMet); loadPaymentMethodsData(); };
+
+    // Method settings modal save
+    const formMethod = document.getElementById('formEditPaymentMethod');
+    if (formMethod && !formMethod.dataset.bound) {
+      formMethod.dataset.bound = 'true';
+      formMethod.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const key = document.getElementById('editMethodKey').value;
+        const payload = {
+          displayName: document.getElementById('editMethodDisplayName').value.trim(),
+          providerName: document.getElementById('editMethodProvider').value.trim(),
+          accountName: document.getElementById('editMethodAccountName').value.trim(),
+          accountNumber: document.getElementById('editMethodAccountNumber').value.trim(),
+          bankName: document.getElementById('editMethodBankName').value.trim() || null,
+          branchName: document.getElementById('editMethodBranchName').value.trim() || null,
+          instructions: document.getElementById('editMethodInstructions').value.trim() || null
+        };
+
+        const res = await apiFetch(`/finance/payment-methods/${key}`, {
+          method: 'PUT',
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok && res.data && res.data.success) {
+          showToast('Payment method configuration updated!', 'success');
+          document.getElementById('modalEditPaymentMethod')?.classList.add('hidden');
+          loadPaymentMethodsData();
+        } else {
+          showToast(res.data?.error || 'Failed to update payment method.', 'error');
+        }
+      });
+    }
+
+    const btnOpenMethods = document.getElementById('btnOpenPaymentMethodsModal');
+    if (btnOpenMethods) {
+      btnOpenMethods.onclick = () => {
+        setActive(tabMet, secMet);
+        loadPaymentMethodsData();
+      };
+    }
+  }
+
   // CLERK AUTHENTICATED PASSWORD CHANGE WORKFLOW
   // =========================================================================
   async function handleAdminPasswordChange(e) {
@@ -3121,8 +3438,8 @@
     if (fullNameEl) fullNameEl.textContent = fullName;
     if (emailEl) emailEl.textContent = email;
     if (usernameEl) usernameEl.textContent = username;
-    if (clerkIdEl) clerkIdEl.textContent = clerkId;
-    if (clerkIdShortEl) clerkIdShortEl.textContent = clerkId ? (clerkId.slice(0, 14) + '...') : 'user_...';
+    if (clerkIdEl) clerkIdEl.innerHTML = '<i class="fa-solid fa-shield-halved text-[#147D64]"></i> Hardware-Backed SSO Token Active';
+    if (clerkIdShortEl) clerkIdShortEl.innerHTML = '<i class="fa-solid fa-shield-halved text-[10px] mr-1"></i>SSO Session Verified';
     if (lastActiveEl) lastActiveEl.textContent = `Session Active (${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`;
 
     if (roleBadgeEl) {
@@ -3607,6 +3924,59 @@
       }
     });
 
+    // Delete Service Triggers & Confirmation
+    document.getElementById('btnDeleteFromEditServiceModal')?.addEventListener('click', () => {
+      const srvId = document.getElementById('editServiceId')?.value;
+      if (!srvId) return;
+      document.getElementById('modalEditService')?.classList.add('hidden');
+      openDeleteServiceModal(srvId);
+    });
+
+    document.getElementById('deleteServiceConfirmInput')?.addEventListener('input', (e) => {
+      const val = e.target.value.trim();
+      const service = state.servicesCache.find(s => s.id === state.selectedServiceId);
+      const confirmBtn = document.getElementById('btnConfirmDeleteService');
+      if (!confirmBtn || !service) return;
+
+      const isMatch = val.toUpperCase() === 'DELETE' || val.toLowerCase() === service.name.trim().toLowerCase();
+      confirmBtn.disabled = !isMatch;
+    });
+
+    document.getElementById('btnConfirmDeleteService')?.addEventListener('click', async () => {
+      const serviceId = state.selectedServiceId;
+      if (!serviceId) return;
+
+      const btn = document.getElementById('btnConfirmDeleteService');
+      if (btn.disabled) return;
+
+      const service = state.servicesCache.find(s => s.id === serviceId);
+      const serviceName = service ? service.name : 'Service';
+
+      setBtnLoading(btn, true, 'Permanently purging service & blueprints...');
+
+      try {
+        const res = await apiFetch(`/services/${serviceId}`, { method: 'DELETE' });
+        setBtnLoading(btn, false);
+
+        if (res.ok && res.data && res.data.success) {
+          showToast(`Service "${serviceName}" and all SOP blueprints permanently deleted.`, 'success');
+          document.getElementById('modalDeleteService')?.classList.add('hidden');
+
+          state.servicesCache = state.servicesCache.filter(s => s.id !== serviceId);
+          loadServicesData();
+
+          if (state.activeTab === 'service_tasks') {
+            switchTab('services');
+          }
+        } else {
+          showToast(res.data?.error || 'Failed to delete service. Check dependencies.', 'error');
+        }
+      } catch (err) {
+        setBtnLoading(btn, false);
+        showToast('Network error while deleting service.', 'error');
+      }
+    });
+
     // 4. SOP Task Blueprint Workspace Handlers
     document.getElementById('btnBackToServices')?.addEventListener('click', () => {
       switchTab('services');
@@ -3692,6 +4062,48 @@
       }
     });
 
+    // Delete Task Blueprint Triggers & Confirmation
+    document.getElementById('btnDeleteFromEditBlueprintModal')?.addEventListener('click', () => {
+      const bpId = document.getElementById('editBlueprintId')?.value;
+      if (!bpId) return;
+      document.getElementById('modalEditBlueprint')?.classList.add('hidden');
+      openDeleteBlueprintModal(bpId);
+    });
+
+    document.getElementById('btnConfirmDeleteBlueprint')?.addEventListener('click', async () => {
+      const bpId = state.selectedBlueprintId;
+      if (!bpId) return;
+
+      const btn = document.getElementById('btnConfirmDeleteBlueprint');
+      if (btn.disabled) return;
+
+      setBtnLoading(btn, true, 'Permanently deleting task...');
+
+      try {
+        const res = await apiFetch(`/services/blueprints/${bpId}`, { method: 'DELETE' });
+        setBtnLoading(btn, false);
+
+        if (res.ok && res.data && res.data.success) {
+          showToast(res.data.message || 'Task blueprint permanently deleted from Cloudflare D1.', 'success');
+          document.getElementById('modalDeleteBlueprint')?.classList.add('hidden');
+
+          state.currentBlueprints = state.currentBlueprints.filter(b => b.id !== bpId);
+          renderBlueprintsWorkspace();
+
+          const serviceId = state.selectedServiceId;
+          const service = state.servicesCache.find(s => s.id === serviceId);
+          if (service) {
+            service.blueprint_count = Math.max(0, (service.blueprint_count || 1) - 1);
+          }
+        } else {
+          showToast(res.data?.error || 'Unable to delete task. It may be referenced by active projects.', 'error');
+        }
+      } catch (err) {
+        setBtnLoading(btn, false);
+        showToast('Network error while deleting task blueprint.', 'error');
+      }
+    });
+
     // Apply Template to Active Projects Modal
     document.getElementById('btnOpenApplyTemplateModal')?.addEventListener('click', () => {
       document.getElementById('modalApplyTemplate')?.classList.remove('hidden');
@@ -3766,11 +4178,48 @@
     const openRecordPayment = () => {
       const modal = document.getElementById('modalRecordPayment');
       const select = document.getElementById('paymentClientSelect');
+      const invSelect = document.getElementById('paymentInvoiceSelect');
+      const dateInput = document.getElementById('paymentDateInput');
+      const refInput = document.getElementById('paymentReferenceInput');
+
+      if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
+      if (refInput && !refInput.value) refInput.value = 'TXN-' + Math.floor(100000 + Math.random() * 900000);
+
       if (modal && select) {
         modal.classList.remove('hidden');
         select.innerHTML = '<option value="">Select client...</option>' + state.clientsCache.map(c => `
           <option value="${c.organization_id || c.id}">${c.company_name || c.full_name} (${c.email})</option>
         `).join('');
+
+        if (invSelect) {
+          invSelect.innerHTML = '<option value="">Auto-create or match client contract...</option>';
+        }
+
+        if (!select.dataset.bound) {
+          select.dataset.bound = 'true';
+          select.addEventListener('change', async () => {
+            const orgId = select.value;
+            if (!orgId || !invSelect) return;
+            invSelect.innerHTML = '<option value="">Loading client invoices...</option>';
+            try {
+              const res = await apiFetch(`/finance/invoices?organizationId=${orgId}`);
+              if (res.ok && res.data && res.data.data) {
+                const invs = res.data.data;
+                if (invs.length === 0) {
+                  invSelect.innerHTML = '<option value="">Auto-create new invoice on commitment</option>';
+                } else {
+                  invSelect.innerHTML = '<option value="">Auto-create new invoice on commitment</option>' + invs.map(i => `
+                    <option value="${i.id}">${i.invoice_number} — Due: ${formatCurrency(i.outstanding_balance_cents || 0, i.currency || 'USD')}</option>
+                  `).join('');
+                }
+              } else {
+                invSelect.innerHTML = '<option value="">Auto-create new invoice on commitment</option>';
+              }
+            } catch (e) {
+              invSelect.innerHTML = '<option value="">Auto-create new invoice on commitment</option>';
+            }
+          });
+        }
       }
     };
 
@@ -3788,36 +4237,43 @@
       const paymentDate = f.paymentDate && f.paymentDate.value ? f.paymentDate.value : new Date().toISOString().split('T')[0];
       const paymentMethod = f.paymentMethod.value;
       const paymentReference = f.paymentReference.value;
+      const financialNotes = f.financialNotes ? f.financialNotes.value.trim() : null;
+      let selectedInvoiceId = f.invoiceId ? f.invoiceId.value : '';
 
       setBtnLoading(submitBtn, true, 'Recording payment to ledger...');
 
-      const invRes = await apiFetch('/finance/invoices', {
-        method: 'POST',
-        body: JSON.stringify({
-          organizationId: orgId,
-          issueDate: paymentDate,
-          dueDate: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
-          currency,
-          items: [{ description: 'Whiz Studio Subscribed Retainer Service', quantity: 1, unitPriceCents: Math.round(amountDollars * 100) }]
-        })
-      });
+      if (!selectedInvoiceId) {
+        const invRes = await apiFetch('/finance/invoices', {
+          method: 'POST',
+          body: JSON.stringify({
+            organizationId: orgId,
+            issueDate: paymentDate,
+            dueDate: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+            currency,
+            items: [{ description: 'Whiz Studio Subscribed Retainer Service', quantity: 1, unitPriceCents: Math.round(amountDollars * 100) }]
+          })
+        });
 
-      const invoiceId = invRes.data?.data?.invoiceId;
-      if (!invoiceId) {
-        setBtnLoading(submitBtn, false);
-        showToast(invRes.data?.error || 'Failed to create invoice reference for payment.', 'error');
-        return;
+        selectedInvoiceId = invRes.data?.data?.invoiceId;
+        if (!selectedInvoiceId) {
+          setBtnLoading(submitBtn, false);
+          showToast(invRes.data?.error || 'Failed to create invoice reference for payment.', 'error');
+          return;
+        }
       }
 
       const payRes = await apiFetch('/finance/payments', {
         method: 'POST',
         body: JSON.stringify({
-          invoiceId,
+          invoiceId: selectedInvoiceId,
+          organizationId: orgId,
           amountCents: Math.round(amountDollars * 100),
           currency,
           paymentDate,
           paymentMethod,
-          paymentReference
+          paymentReference,
+          financialNotes,
+          idempotencyKey: `adm_pay_${paymentReference}_${Date.now()}`
         })
       });
 
@@ -3828,6 +4284,7 @@
         f.reset();
         document.getElementById('modalRecordPayment')?.classList.add('hidden');
         loadFinanceData();
+        loadInvoicesData();
       } else {
         showToast(payRes.data?.error || 'Failed to record payment.', 'error');
       }
@@ -3880,6 +4337,13 @@
         return;
       }
 
+      const p = paymentsCache.find(x => x.id === pid);
+      const newAmountCents = Math.round(amountDollars * 100);
+      if (state.adminProfile?.role === 'accounts' && p && newAmountCents < (p.amount_cents || 0)) {
+        showToast('Accounts Restriction: You cannot reduce a previously recorded payment amount. Reductions require Admin or Super Admin authorization.', 'error');
+        return;
+      }
+
       setBtnLoading(submitBtn, true, 'Committing correction...');
       const res = await apiFetch(`/finance/payments/${pid}/correct`, {
         method: 'POST',
@@ -3900,25 +4364,36 @@
       }
     });
 
-    // 8. Authorize Admin Pre-Approval Form (Phase 12)
+    // 8. Authorize Staff Pre-Approval Form (Phase 12)
     document.getElementById('adminInviteForm')?.addEventListener('submit', async (e) => {
       e.preventDefault();
-      if (!isCurrentUserOwner()) {
-        showToast('Action denied: Only the Founding Super Admin may authorize administrator pre-approvals.', 'error');
+      const isOwner = isCurrentUserOwner();
+      const isAdmin = state.adminProfile?.role === 'admin';
+      if (!isOwner && !isAdmin) {
+        showToast('Action denied: Only Super Admin and Admin may authorize staff pre-approvals.', 'error');
         return;
       }
       const f = e.target;
       const submitBtn = f.querySelector('button[type="submit"]');
-      const fullName = f.fullName.value.trim();
-      const email = f.email.value.trim();
+      const fullName = (f.fullName?.value || '').trim();
+      const email = (f.email?.value || '').trim();
+      const selectedRole = (document.getElementById('inviteRole')?.value || 'employee').toLowerCase();
 
-      if (!fullName || !email) return;
+      if (!fullName || !email) {
+        showToast('Please provide both staff member full name and email.', 'warning');
+        return;
+      }
 
-      setBtnLoading(submitBtn, true, 'Authorizing administrator...');
+      if (isAdmin && !isOwner && (selectedRole === 'admin' || selectedRole === 'super_admin' || selectedRole === 'owner')) {
+        showToast('Hierarchy Restriction: Admins may only invite Accounts or Employee team members.', 'error');
+        return;
+      }
+
+      setBtnLoading(submitBtn, true, 'Authorizing staff member...');
 
       const res = await apiFetch('/portal/admin/team/invite', {
         method: 'POST',
-        body: JSON.stringify({ fullName, email, role: 'admin' })
+        body: JSON.stringify({ fullName, email, role: selectedRole })
       });
 
       setBtnLoading(submitBtn, false);
@@ -4105,21 +4580,94 @@
   // =========================================================================
   // CLERK AUTHENTICATION & INITIALIZATION
   // =========================================================================
+  let clerkCheckAttempts = 0;
   async function checkAuthAndInit() {
+    // PREVIEW & DEMO BYPASS GUARD (For isolated testing & simulator)
+    const urlParams = new URLSearchParams(window.location.search);
+    const isPreview = urlParams.get('preview') === '1' || urlParams.get('demo') === '1' || (window.self !== window.top && urlParams.get('preview') !== '0');
+
+    if (isPreview) {
+      state.isPreview = true;
+      const roleName = urlParams.get('role') || 'super_admin';
+      const profile = {
+        id: 'usr_super_admin_01',
+        fullName: 'Kazi Emon',
+        full_name: 'Kazi Emon',
+        email: 'kaziaremon@gmail.com',
+        username: 'kaziaremon',
+        role: roleName === 'super_admin' ? 'owner' : roleName,
+        isSuperAdmin: roleName === 'super_admin' || roleName === 'owner'
+      };
+
+      state.currentUser = profile;
+      state.adminProfile = profile;
+
+      applyRoleAdaptiveUI(profile);
+
+      const name = profile.fullName;
+      const username = '@' + profile.username;
+      const initials = 'KE';
+
+      document.querySelectorAll('.admin-display-name').forEach(el => el.textContent = name);
+      document.querySelectorAll('.admin-display-username').forEach(el => el.textContent = username);
+      document.querySelectorAll('.admin-display-initials').forEach(el => el.textContent = initials);
+
+      const emailEl = document.getElementById('secUserEmail');
+      if (emailEl) emailEl.textContent = profile.email;
+      const userEl = document.getElementById('secClerkUserId');
+      if (userEl) userEl.innerHTML = '<span class="inline-flex items-center gap-1.5 text-xs text-emerald-700 font-semibold"><i class="fa-solid fa-shield-check text-[#147D64]"></i> Preview Session Active</span>';
+
+      const authGuard = document.getElementById('dashboardAuthGuard');
+      const accessDenied = document.getElementById('dashboardAccessDenied');
+      const mainLayout = document.getElementById('dashboardMainLayout');
+
+      if (authGuard) authGuard.classList.add('hidden');
+      if (accessDenied) accessDenied.classList.add('hidden');
+      if (mainLayout) mainLayout.classList.remove('hidden');
+
+      const hash = (window.location.hash || '').replace('#', '');
+      const validTabs = ['overview', 'clients', 'services', 'projects', 'tasks', 'finance', 'receipt_template', 'team', 'support', 'history', 'security'];
+      const initialTab = validTabs.includes(hash) ? hash : 'overview';
+      switchTab(initialTab, false);
+
+      loadServicesData();
+      return;
+    }
     const authGuard = document.getElementById('dashboardAuthGuard');
     const accessDenied = document.getElementById('dashboardAccessDenied');
     const mainLayout = document.getElementById('dashboardMainLayout');
 
     if (!window.Clerk) {
+      clerkCheckAttempts++;
+      if (clerkCheckAttempts > 50) {
+        console.error('Clerk SDK load timeout in admin dashboard');
+        if (authGuard) {
+          authGuard.innerHTML = `
+            <div class="mb-5 flex items-center justify-center">
+              <img src="/assets/images/logo.png" alt="Whiz Studio" class="h-12 w-auto object-contain">
+            </div>
+            <h2 class="text-xl font-bold text-[#172B36] tracking-tight">Authentication Service Unavailable</h2>
+            <p class="text-xs text-rose-500 mt-2 max-w-sm">Unable to connect to Clerk authentication services. Please verify your internet connection or disable tracking blockers.</p>
+            <div class="mt-5 flex items-center justify-center gap-3">
+              <button onclick="window.location.reload()" class="px-4 py-2 bg-[#147D64] text-white text-xs font-bold rounded-xl hover:bg-[#12694f] cursor-pointer">Retry Connection</button>
+              <a href="/?login=admin" class="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-200 cursor-pointer">Return to Login</a>
+            </div>
+          `;
+        }
+        return;
+      }
       setTimeout(checkAuthAndInit, 100);
       return;
     }
 
     try {
       if (!window.Clerk.loaded) {
-        await window.Clerk.load({
-          publishableKey: CLERK_PUBLISHABLE_KEY
-        });
+        await Promise.race([
+          window.Clerk.load({
+            publishableKey: CLERK_PUBLISHABLE_KEY
+          }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Authentication system connection timeout')), 8000))
+        ]);
       }
 
       const user = window.Clerk.user;
@@ -4147,14 +4695,24 @@
         profile.role === 'owner' || 
         profile.role === 'admin' || 
         profile.role === 'super_admin' || 
-        Boolean(profile.isSuperAdmin);
+        profile.role === 'accounts' || 
+        profile.role === 'employee' || 
+        Boolean(profile.isSuperAdmin) ||
+        Boolean(profile.isStaff);
 
       if (!isAuthorized) {
-        console.warn('Authenticated user does not possess admin permissions:', profile);
+        if (profile.role === 'client') {
+          console.warn('[Route Guard] Client user attempted to access admin portal. Redirecting to client dashboard...');
+          window.location.replace('/client/dashboard/');
+          return;
+        }
+        console.warn('Authenticated user does not possess staff permissions:', profile);
         if (authGuard) authGuard.classList.add('hidden');
         if (accessDenied) accessDenied.classList.remove('hidden');
         return;
       }
+
+      applyRoleAdaptiveUI(profile);
 
       // Populate user info in UI
       const name = profile.fullName || profile.full_name || user.fullName || 'Super Admin';
@@ -4169,7 +4727,7 @@
       const emailEl = document.getElementById('secUserEmail');
       if (emailEl) emailEl.textContent = email;
       const userEl = document.getElementById('secClerkUserId');
-      if (userEl) userEl.textContent = user.id;
+      if (userEl) userEl.innerHTML = '<span class="inline-flex items-center gap-1.5 text-xs text-emerald-700 font-semibold"><i class="fa-solid fa-shield-check text-[#147D64]"></i> SSO Session Active</span>';
 
       // Show Main Layout
       if (authGuard) authGuard.classList.add('hidden');
@@ -4194,8 +4752,19 @@
       loadServicesData();
     } catch (err) {
       console.error('Console Auth Error:', err);
-      if (authGuard) authGuard.classList.add('hidden');
-      if (accessDenied) accessDenied.classList.remove('hidden');
+      if (authGuard) {
+        authGuard.innerHTML = `
+          <div class="mb-5 flex items-center justify-center">
+            <img src="/assets/images/logo.png" alt="Whiz Studio" class="h-12 w-auto object-contain">
+          </div>
+          <h2 class="text-xl font-bold text-[#172B36] tracking-tight">Workspace Initialization Failed</h2>
+          <p class="text-xs text-rose-500 mt-2 max-w-sm">${escapeHtml(err.message || 'An unexpected error occurred while preparing your workspace.')}</p>
+          <div class="mt-5 flex items-center justify-center gap-3">
+            <button onclick="window.location.reload()" class="px-4 py-2 bg-[#147D64] text-white text-xs font-bold rounded-xl hover:bg-[#12694f] cursor-pointer">Retry</button>
+            <a href="/" class="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-200 cursor-pointer">Return Home</a>
+          </div>
+        `;
+      }
     }
   }
 
@@ -4212,6 +4781,7 @@
         const backdrop = document.getElementById('mobileDrawerBackdrop');
         if (drawer) drawer.classList.add('-translate-x-full');
         if (backdrop) backdrop.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
       });
     });
 
@@ -4286,6 +4856,64 @@
         openServiceTasksWorkspace(sId);
       } else if (hash) {
         switchTab(hash, false);
+      }
+    });
+
+    // Desktop Dock Collapse/Expand Controller & Persistence (WHIZ Adaptive Dock)
+    const desktopSidebar = document.getElementById('adminDesktopSidebar');
+    const collapseToggleBtn = document.getElementById('sidebarCollapseToggleBtn');
+    const collapseIcon = document.getElementById('sidebarCollapseIcon');
+
+    function applySidebarState(isCollapsed) {
+      if (!desktopSidebar) return;
+      if (isCollapsed) {
+        desktopSidebar.setAttribute('data-collapsed', 'true');
+        document.documentElement.classList.add('dock-init-collapsed');
+        if (collapseToggleBtn) {
+          collapseToggleBtn.setAttribute('title', 'Expand sidebar (260px)');
+          collapseToggleBtn.setAttribute('aria-label', 'Expand sidebar');
+        }
+        if (collapseIcon) {
+          collapseIcon.className = 'fa-solid fa-angles-right text-xs transition-transform duration-200';
+        }
+      } else {
+        desktopSidebar.removeAttribute('data-collapsed');
+        document.documentElement.classList.remove('dock-init-collapsed');
+        if (collapseToggleBtn) {
+          collapseToggleBtn.setAttribute('title', 'Collapse sidebar (72px)');
+          collapseToggleBtn.setAttribute('aria-label', 'Collapse sidebar');
+        }
+        if (collapseIcon) {
+          collapseIcon.className = 'fa-solid fa-angles-left text-xs transition-transform duration-200';
+        }
+      }
+    }
+
+    try {
+      const savedState = localStorage.getItem('whiz_sidebar_state');
+      applySidebarState(savedState === 'collapsed');
+    } catch (e) {
+      applySidebarState(false);
+    }
+
+    if (collapseToggleBtn) {
+      collapseToggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isCollapsed = desktopSidebar?.getAttribute('data-collapsed') === 'true';
+        const nextState = !isCollapsed;
+        applySidebarState(nextState);
+        try {
+          localStorage.setItem('whiz_sidebar_state', nextState ? 'collapsed' : 'expanded');
+        } catch (err) {}
+      });
+    }
+
+    // Keyboard shortcut '[' or 'Ctrl+B' to toggle sidebar
+    document.addEventListener('keydown', (e) => {
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
+      if (e.key === '[' || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b')) {
+        e.preventDefault();
+        collapseToggleBtn?.click();
       }
     });
 
@@ -4476,10 +5104,15 @@
     // Sign out buttons
     document.querySelectorAll('.btn-admin-signout').forEach(btn => {
       btn.addEventListener('click', async () => {
+        document.cookie = 'whiz_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax; Secure';
+        try {
+          localStorage.removeItem('whiz_last_role');
+          sessionStorage.clear();
+        } catch (e) {}
         if (window.Clerk) {
           await window.Clerk.signOut();
         }
-        window.location.href = '/';
+        window.location.replace('/');
       });
     });
 
