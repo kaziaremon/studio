@@ -101,6 +101,27 @@
       </form>
     </div>
 
+    <!-- In-App Browser Notice Box -->
+    <div id="inAppNoticeBox" class="hidden text-left p-4 rounded-2xl bg-amber-950/40 border border-amber-500/30 text-amber-200 space-y-3">
+      <div class="flex items-start gap-3">
+        <i class="fa-solid fa-mobile-screen text-amber-400 text-base mt-0.5 shrink-0"></i>
+        <div>
+          <h4 class="text-xs font-bold uppercase tracking-wider text-amber-300">Social Browser Detected</h4>
+          <p class="text-xs text-amber-100 mt-1 leading-relaxed">
+            Google Sign-In restricts access inside in-app browsers (Facebook, Instagram, LinkedIn).
+          </p>
+          <p class="text-[11px] text-amber-300/80 mt-1">
+            Tap <strong class="text-white">•••</strong> and select <strong class="text-white">"Open in External Browser"</strong> (Chrome / Safari).
+          </p>
+        </div>
+      </div>
+      <div class="pt-2 border-t border-amber-500/20 flex gap-2">
+        <button type="button" id="btnCopyCallbackLink" class="flex-1 text-center py-2 px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-xs font-bold text-amber-300 border border-amber-500/40 transition-all cursor-pointer">
+          <i class="fa-solid fa-copy mr-1"></i> Copy Link to Open in Chrome / Safari
+        </button>
+      </div>
+    </div>
+
     <!-- Error Box (Hidden by default) -->
     <div id="errorBox" class="hidden text-left p-4 rounded-2xl bg-rose-950/50 border border-rose-500/30 text-rose-200 space-y-3">
       <div class="flex items-start gap-3">
@@ -124,6 +145,13 @@
 
       const CLERK_PUBLISHABLE_KEY = window.__CLERK_PUBLISHABLE_KEY__ || 'pk_test_cG9ldGljLWxpZ2VyLTQzNTUuY2xlcmsuYWNjb3VudHMuZGV2JA';
       const API_BASE = 'https://whiz-api.kaziaremon.workers.dev/api/v1';
+
+      function detectInAppBrowser() {
+        const ua = navigator.userAgent || navigator.vendor || window.opera || '';
+        return /FBAN|FBAV|Instagram|Messenger|LinkedInApp|Line\/|TikTok|musical_ly|Snapchat|MicroMessenger/i.test(ua) ||
+          (/(iPhone|iPod|iPad).*AppleWebKit(?!.*Safari)/i.test(ua)) ||
+          (/Android.*Version\/[0-9]/i.test(ua));
+      }
 
       function updateStep(label, percent) {
         const stepLabel = document.getElementById('stepLabel');
@@ -249,7 +277,7 @@
         window.history.replaceState({}, document.title, cleanUrl);
 
         setTimeout(() => {
-          if (userRole === 'owner' || userRole === 'admin' || userRole === 'super_admin' || isSuperAdmin) {
+          if (['owner', 'super_admin', 'admin', 'accounts', 'employee'].includes(userRole) || isSuperAdmin) {
             window.location.href = '/admin/dashboard';
           } else {
             window.location.href = '/client/dashboard';
@@ -258,6 +286,22 @@
       }
 
       async function executeCallback() {
+        if (detectInAppBrowser()) {
+          const inAppBox = document.getElementById('inAppNoticeBox');
+          if (inAppBox) inAppBox.classList.remove('hidden');
+          const copyBtn = document.getElementById('btnCopyCallbackLink');
+          if (copyBtn) {
+            copyBtn.onclick = () => {
+              const url = window.location.origin + '/?login=true';
+              navigator.clipboard.writeText(url).then(() => {
+                copyBtn.innerHTML = '<i class="fa-solid fa-check mr-1"></i> Copied! Paste in Chrome / Safari';
+              }).catch(() => {
+                copyBtn.textContent = 'Link: ' + url;
+              });
+            };
+          }
+        }
+
         if (!window.Clerk) {
           setTimeout(executeCallback, 50);
           return;
@@ -267,32 +311,138 @@
           updateStep('Initializing Clerk security environment...', 30);
           if (!window.Clerk.loaded) {
             await window.Clerk.load({
-              publishableKey: CLERK_PUBLISHABLE_KEY
+              publishableKey: CLERK_PUBLISHABLE_KEY,
+              // Intercept internal routing to prevent hard page-reloads during session finalization
+              routerPush: (to) => {
+                console.log('[SSO Callback] Clerk routerPush intercepted:', to);
+              },
+              routerReplace: (to) => {
+                console.log('[SSO Callback] Clerk routerReplace intercepted:', to);
+              }
             });
           }
 
           updateStep('Validating OAuth callback credentials...', 50);
 
-          // 1. Process redirect callback using customNavigate interceptor to prevent reload loops
-          let interceptedUrl = null;
+          // 1. Process redirect callback
           if (typeof window.Clerk.handleRedirectCallback === 'function') {
             try {
               await window.Clerk.handleRedirectCallback({
-                afterSignInUrl: undefined,
-                afterSignUpUrl: undefined
+                __internal_navigateOnSetActive: async ({ session, redirectUrl }) => {
+                  console.log('[SSO Callback] Session activated in redirect handler:', session?.id);
+                }
               }, async (to) => {
-                interceptedUrl = to;
+                console.log('[SSO Callback] customNavigate intercepted:', to);
               });
             } catch (cbErr) {
-              console.warn('handleRedirectCallback notice:', cbErr);
+              console.warn('[SSO Callback] handleRedirectCallback notice:', cbErr);
             }
           }
 
-          // 2. Resolve active session & user across all standard states
+          // 2. Resilient session resolution loop (up to 3s) allowing cross-domain token sync
           let user = window.Clerk.user;
           const client = window.Clerk.client;
+          const startTime = Date.now();
+          const maxWaitMs = 3000;
 
-          // Case A: User or Session already active
+          while (!user && (Date.now() - startTime < maxWaitMs)) {
+            user = window.Clerk.user;
+            if (user) break;
+
+            if (client) {
+              // Case A: Session already active in Clerk client
+              const activeSession = client.sessions?.find(s => s.status === 'active') || client.sessions?.[0];
+              if (activeSession && activeSession.id) {
+                try {
+                  await window.Clerk.setActive({ session: activeSession.id });
+                  user = window.Clerk.user || activeSession.user;
+                  if (user) break;
+                } catch (actErr) {
+                  console.warn('[SSO Callback] setActive error on client session:', actErr);
+                }
+              }
+
+              // Case B: Completed SignIn with createdSessionId
+              if (client.signIn?.status === 'complete' && client.signIn.createdSessionId) {
+                try {
+                  await window.Clerk.setActive({ session: client.signIn.createdSessionId });
+                  user = window.Clerk.user;
+                  if (user) break;
+                } catch (actErr) {
+                  console.warn('[SSO Callback] setActive error on signIn session:', actErr);
+                }
+              }
+
+              // Case C: Completed SignUp with createdSessionId
+              if (client.signUp?.status === 'complete' && client.signUp.createdSessionId) {
+                try {
+                  await window.Clerk.setActive({ session: client.signUp.createdSessionId });
+                  user = window.Clerk.user;
+                  if (user) break;
+                } catch (actErr) {
+                  console.warn('[SSO Callback] setActive error on signUp session:', actErr);
+                }
+              }
+
+              // Case D: 2FA Required
+              if (client.signIn?.status === 'needs_second_factor') {
+                show2FAPrompt(client.signIn);
+                return;
+              }
+
+              // Case E: Transferable First Factor (new social registration)
+              if (client.signIn?.status === 'needs_first_factor') {
+                const fv = client.signIn.firstFactorVerification;
+                if (fv && fv.status === 'transferable') {
+                  updateStep('Registering new member with Whiz Studio...', 65);
+                  try {
+                    const completeSignUp = await client.signUp.create({ transfer: true });
+                    if (completeSignUp.status === 'complete' && completeSignUp.createdSessionId) {
+                      await window.Clerk.setActive({ session: completeSignUp.createdSessionId });
+                      user = window.Clerk.user;
+                      if (user) break;
+                    } else if (completeSignUp.status === 'missing_requirements') {
+                      if (completeSignUp.missingFields && completeSignUp.missingFields.includes('username')) {
+                        const rawEmail = completeSignUp.emailAddress || 'client';
+                        const basePart = rawEmail.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '');
+                        const candidate = `${basePart.slice(0, 16)}_${Math.random().toString(36).slice(2, 6)}`;
+                        const updated = await completeSignUp.update({ username: candidate });
+                        if (updated.status === 'complete' && updated.createdSessionId) {
+                          await window.Clerk.setActive({ session: updated.createdSessionId });
+                          user = window.Clerk.user;
+                          if (user) break;
+                        }
+                      }
+                    }
+                  } catch (transferErr) {
+                    console.warn('[SSO Callback] Transfer error:', transferErr);
+                  }
+                }
+              }
+
+              // Case F: Direct SignUp missing requirements
+              if (client.signUp?.status === 'missing_requirements') {
+                if (client.signUp.missingFields && client.signUp.missingFields.includes('username')) {
+                  const rawEmail = client.signUp.emailAddress || 'client';
+                  const basePart = rawEmail.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '');
+                  const candidate = `${basePart.slice(0, 16)}_${Math.random().toString(36).slice(2, 6)}`;
+                  try {
+                    const updated = await client.signUp.update({ username: candidate });
+                    if (updated.status === 'complete' && updated.createdSessionId) {
+                      await window.Clerk.setActive({ session: updated.createdSessionId });
+                      user = window.Clerk.user;
+                      if (user) break;
+                    }
+                  } catch (upErr) {
+                    console.warn('[SSO Callback] SignUp username update error:', upErr);
+                  }
+                }
+              }
+            }
+
+            await new Promise(res => setTimeout(res, 200));
+          }
+
           if (user) {
             await finalizeAuth(user);
             return;
@@ -300,83 +450,6 @@
 
           if (window.Clerk.session && window.Clerk.session.user) {
             await finalizeAuth(window.Clerk.session.user);
-            return;
-          }
-
-          if (!client) {
-            throw new Error('Clerk client context unavailable. Please try signing in again.');
-          }
-
-          // Case B: Existing Session in Client Sessions
-          const activeSession = client.sessions?.find(s => s.status === 'active') || client.sessions?.[0];
-          if (activeSession && activeSession.status === 'active' && activeSession.id) {
-            await window.Clerk.setActive({ session: activeSession.id });
-            await finalizeAuth(window.Clerk.user || activeSession.user);
-            return;
-          }
-
-          // Case C: SignIn resource in progress
-          if (client.signIn) {
-            const signIn = client.signIn;
-            if (signIn.status === 'complete' && signIn.createdSessionId) {
-              await window.Clerk.setActive({ session: signIn.createdSessionId });
-              await finalizeAuth(window.Clerk.user);
-              return;
-            } else if (signIn.status === 'needs_second_factor') {
-              show2FAPrompt(signIn);
-              return;
-            } else if (signIn.status === 'needs_first_factor') {
-              const fv = signIn.firstFactorVerification;
-              if (fv && fv.status === 'transferable') {
-                updateStep('Registering new member with Whiz Studio...', 65);
-                const completeSignUp = await client.signUp.create({ transfer: true });
-                if (completeSignUp.status === 'complete' && completeSignUp.createdSessionId) {
-                  await window.Clerk.setActive({ session: completeSignUp.createdSessionId });
-                  await finalizeAuth(window.Clerk.user);
-                  return;
-                } else if (completeSignUp.status === 'missing_requirements') {
-                  // Resolve missing username requirement if present
-                  if (completeSignUp.missingFields && completeSignUp.missingFields.includes('username')) {
-                    const rawEmail = completeSignUp.emailAddress || 'client';
-                    const basePart = rawEmail.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '');
-                    const candidate = `${basePart.slice(0, 16)}_${Math.random().toString(36).slice(2, 6)}`;
-                    const updated = await completeSignUp.update({ username: candidate });
-                    if (updated.status === 'complete' && updated.createdSessionId) {
-                      await window.Clerk.setActive({ session: updated.createdSessionId });
-                      await finalizeAuth(window.Clerk.user);
-                      return;
-                    }
-                  }
-                }
-              }
-            }
-          }
-
-          // Case D: Direct SignUp resource in progress
-          if (client.signUp) {
-            const signUp = client.signUp;
-            if (signUp.status === 'complete' && signUp.createdSessionId) {
-              await window.Clerk.setActive({ session: signUp.createdSessionId });
-              await finalizeAuth(window.Clerk.user);
-              return;
-            } else if (signUp.status === 'missing_requirements') {
-              if (signUp.missingFields && signUp.missingFields.includes('username')) {
-                const rawEmail = signUp.emailAddress || 'client';
-                const basePart = rawEmail.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '');
-                const candidate = `${basePart.slice(0, 16)}_${Math.random().toString(36).slice(2, 6)}`;
-                const updated = await signUp.update({ username: candidate });
-                if (updated.status === 'complete' && updated.createdSessionId) {
-                  await window.Clerk.setActive({ session: updated.createdSessionId });
-                  await finalizeAuth(window.Clerk.user);
-                  return;
-                }
-              }
-            }
-          }
-
-          // Case E: Check if session task is pending or re-check user
-          if (window.Clerk.user) {
-            await finalizeAuth(window.Clerk.user);
             return;
           }
 

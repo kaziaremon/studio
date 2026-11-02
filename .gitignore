@@ -49,3 +49,12 @@ Thumbs.db
 # Internal maintenance scripts
 scripts/
 
+
+# OAuth credentials
+.google-oauth.json
+*.oauth.json
+.tmp_patch_*
+
+# Local backups & isolated preview staging
+backups/
+preview/

@@ -238,7 +238,7 @@
           </div>
 
           <!-- Section 2: Finance & Documents -->
-          <div>
+          <div id="sidebarSectionFinance" class="role-financial-nav">
             <div class="text-[10px] font-black uppercase tracking-wider text-slate-500 px-3 mb-2">Finance & Receipts</div>
             <nav class="space-y-1">
               <button type="button" data-dash-tab="finance" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent transition-all cursor-pointer text-left">
@@ -257,10 +257,10 @@
           <div>
             <div class="text-[10px] font-black uppercase tracking-wider text-slate-500 px-3 mb-2">Governance & Security</div>
             <nav class="space-y-1">
-              <button type="button" data-dash-tab="team" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent transition-all cursor-pointer text-left">
+              <button type="button" id="sidebarNavTeam" data-dash-tab="team" class="role-team-nav w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent transition-all cursor-pointer text-left">
                 <i class="fa-solid fa-user-shield text-xs w-4"></i>
                 <span class="flex-1">User & Access Management</span>
-                <span class="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">Owner</span>
+                <span class="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">Staff</span>
               </button>
               <button type="button" data-dash-tab="support" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent transition-all cursor-pointer text-left">
                 <i class="fa-solid fa-inbox text-xs w-4"></i>
@@ -340,7 +340,7 @@
           </div>
 
           <!-- Section 2: Finance & Receipts -->
-          <div>
+          <div id="drawerSectionFinance" class="role-financial-nav">
             <div class="text-[10px] font-black uppercase tracking-wider text-slate-400 px-3 mb-1.5">Finance & Documents</div>
             <nav class="space-y-1">
               <button type="button" data-dash-tab="finance" class="w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl text-xs font-medium text-slate-600 hover:text-[#172B36] hover:bg-slate-50 active:bg-slate-100 border border-transparent transition-all text-left touch-manipulation">
@@ -359,7 +359,7 @@
           <div>
             <div class="text-[10px] font-black uppercase tracking-wider text-slate-400 px-3 mb-1.5">Governance & Security</div>
             <nav class="space-y-1">
-              <button type="button" data-dash-tab="team" class="w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl text-xs font-medium text-slate-600 hover:text-[#172B36] hover:bg-slate-50 active:bg-slate-100 border border-transparent transition-all text-left touch-manipulation">
+              <button type="button" id="drawerNavTeam" data-dash-tab="team" class="role-team-nav w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl text-xs font-medium text-slate-600 hover:text-[#172B36] hover:bg-slate-50 active:bg-slate-100 border border-transparent transition-all text-left touch-manipulation">
                 <i class="fa-solid fa-user-shield text-xs w-4"></i>
                 <span class="flex-1">User & Access Management</span>
               </button>
@@ -485,7 +485,7 @@
               </div>
 
               <!-- KPI Card 6: Confirmed Revenue -->
-              <div id="kpiCardRevenue" data-kpi-nav="finance" data-kpi-filter="confirmed" role="button" tabindex="0" aria-label="View Confirmed Revenue" class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs hover:border-[#147D64]/40 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 cursor-pointer select-none space-y-1 group relative">
+              <div id="kpiCardRevenue" data-kpi-nav="finance" data-kpi-filter="confirmed" role="button" tabindex="0" aria-label="View Confirmed Revenue" class="role-financial-only p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs hover:border-[#147D64]/40 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 cursor-pointer select-none space-y-1 group relative">
                 <div class="flex items-center justify-between">
                   <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Confirmed Revenue</span>
                   <i class="fa-solid fa-arrow-right text-[10px] text-[#147D64] opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"></i>
@@ -554,7 +554,7 @@
               </div>
 
               <!-- Chart 4: Monthly Confirmed Revenue -->
-              <div class="p-5 sm:p-6 rounded-2xl bg-white border border-[#E3E9EF] shadow-sm space-y-3">
+              <div id="chartRevenueContainer" class="role-financial-only p-5 sm:p-6 rounded-2xl bg-white border border-[#E3E9EF] shadow-sm space-y-3">
                 <div class="flex items-center justify-between pb-2 border-b border-[#E3E9EF]">
                   <div>
                     <h3 class="text-xs font-bold uppercase tracking-wider text-[#172B36]">Financial Inflow (Verified)</h3>
@@ -713,7 +713,7 @@
                 </div>
 
                 <!-- Section D: Financial Summary Card -->
-                <div class="p-6 rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl space-y-3">
+                <div id="clientFinancialSummaryCard" class="role-financial-only p-6 rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl space-y-3">
                   <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 pb-2 border-b border-[#E3E9EF]">Financial Summary</h4>
                   <div class="grid grid-cols-2 gap-3 text-xs">
                     <div class="p-3 rounded-xl bg-slate-50/60 border border-[#E3E9EF]">
@@ -728,7 +728,7 @@
                 </div>
 
                 <!-- Section E: Financial Preferences (Currency Management) -->
-                <div class="p-6 rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl space-y-3">
+                <div id="clientFinancialPreferencesCard" class="role-financial-only p-6 rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl space-y-3">
                   <div class="flex items-center justify-between pb-2 border-b border-[#E3E9EF]">
                     <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                       <i class="fa-solid fa-coins text-brand-whiz"></i>
@@ -811,7 +811,7 @@
               <div>
                 <div class="flex items-center space-x-2">
                   <h2 class="text-2xl font-black text-[#172B36] tracking-tight">Service Catalog & SOP Blueprints</h2>
-                  <span class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-50 text-[#147D64] border border-emerald-200 font-bold">12 Active Services</span>
+                  <span id="serviceCatalogCountBadge" class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-50 text-[#147D64] border border-emerald-200 font-bold">12 Active Services</span>
                 </div>
                 <p class="text-xs text-slate-500 mt-0.5">Authoritative service catalog. Edit descriptions, pricing, and inspect all 240 master SOP task blueprints.</p>
               </div>
@@ -1371,6 +1371,8 @@
                     <option value="all">All Roles</option>
                     <option value="client">Clients Only</option>
                     <option value="admin">Admins Only</option>
+                    <option value="accounts">Accounts Only</option>
+                    <option value="employee">Employees Only</option>
                     <option value="owner">Owners Only</option>
                   </select>
                 </div>
@@ -1417,18 +1419,23 @@
               </div>
             </div>
 
-            <!-- Authorize Admin Form Card -->
+            <!-- Authorize Staff Form Card -->
             <div class="p-6 rounded-3xl bg-white border border-[#E3E9EF] backdrop-blur-xl space-y-4">
               <div>
-                <h3 class="text-sm font-extrabold text-[#172B36] uppercase tracking-wider">Authorize Administrator Pre-Approval</h3>
-                <p class="text-xs text-slate-500 mt-0.5">Pre-approve email addresses in Cloudflare D1 allowlist before onboarding.</p>
+                <h3 class="text-sm font-extrabold text-[#172B36] uppercase tracking-wider" id="inviteFormHeading">Authorize Staff Pre-Approval</h3>
+                <p class="text-xs text-slate-500 mt-0.5" id="inviteFormSubheading">Pre-approve email addresses and assign RBAC roles in Cloudflare D1 before onboarding.</p>
               </div>
-              <form id="adminInviteForm" novalidate class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <input type="text" id="inviteFullName" name="fullName" placeholder="Administrator Full Name" class="px-4 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:outline-none focus:border-brand-whiz transition-all" required>
-                <input type="email" id="inviteEmail" name="email" placeholder="admin@example.com" class="px-4 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:outline-none focus:border-brand-whiz transition-all" required>
+              <form id="adminInviteForm" novalidate class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <input type="text" id="inviteFullName" name="fullName" placeholder="Staff Full Name" class="px-4 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:outline-none focus:border-brand-whiz transition-all" required>
+                <input type="email" id="inviteEmail" name="email" placeholder="staff@example.com" class="px-4 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:outline-none focus:border-brand-whiz transition-all" required>
+                <select id="inviteRole" name="role" class="px-4 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:outline-none focus:border-brand-whiz transition-all font-semibold cursor-pointer">
+                  <option value="admin">Admin (Operational Authority)</option>
+                  <option value="accounts">Accounts (Billing & Finance)</option>
+                  <option value="employee">Employee (Operational Tasks)</option>
+                </select>
                 <button type="submit" class="py-2.5 px-4 rounded-xl text-xs font-bold btn-glass-primary shadow-sm hover:shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer">
-                  <i class="fa-solid fa-user-shield text-xs"></i>
-                  <span>Authorize Administrator</span>
+                  <i class="fa-solid fa-user-plus text-xs"></i>
+                  <span>Pre-Approve Staff</span>
                 </button>
               </form>
             </div>
@@ -1750,7 +1757,9 @@
                     <i class="fa-brands fa-google text-slate-700 text-xs"></i>
                     <span>Clerk Verified</span>
                   </div>
-                  <div class="text-[11px] text-slate-400 font-mono" id="secClerkIdShort">user_...</div>
+                  <div class="text-[11px] text-emerald-700 font-semibold" id="secClerkIdShort">
+                    <i class="fa-solid fa-shield-halved text-[10px] mr-1"></i>SSO Session Verified
+                  </div>
                 </div>
               </div>
             </div>
@@ -1853,8 +1862,10 @@
                       <span id="secCurrentDevice" class="font-bold text-[#172B36] block mt-0.5">Desktop Browser</span>
                     </div>
                     <div>
-                      <span class="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">Clerk User Identifier</span>
-                      <span id="secClerkUserId" class="font-mono text-slate-600 text-[11px] break-all select-all block mt-0.5">user_...</span>
+                      <span class="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">Identity &amp; Key Binding</span>
+                      <span id="secClerkUserId" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold mt-1">
+                        <i class="fa-solid fa-shield-halved text-[#147D64]"></i> Hardware-Backed SSO Token Active
+                      </span>
                     </div>
                     <div>
                       <span class="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">Session Token Status</span>
@@ -2336,14 +2347,81 @@
           <label for="editServiceIsActive" class="text-xs text-slate-600 cursor-pointer">Service is active in public catalog</label>
         </div>
 
-        <div class="flex items-center justify-end space-x-3 pt-3 border-t border-[#E3E9EF]">
-          <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36] cursor-pointer" data-modal="modalEditService">Cancel</button>
-          <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center gap-1.5 cursor-pointer">
-            <i class="fa-solid fa-floppy-disk text-xs"></i>
-            <span>Save & Increment Version</span>
+        <div class="flex items-center justify-between pt-3 border-t border-[#E3E9EF]">
+          <button type="button" id="btnDeleteFromEditServiceModal" class="px-3.5 py-2 rounded-xl text-xs font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-transparent hover:border-rose-200 flex items-center gap-1.5 cursor-pointer transition-all">
+            <i class="fa-solid fa-trash-can text-xs"></i>
+            <span>Delete Service</span>
           </button>
+          <div class="flex items-center space-x-3">
+            <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36] cursor-pointer" data-modal="modalEditService">Cancel</button>
+            <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center gap-1.5 cursor-pointer">
+              <i class="fa-solid fa-floppy-disk text-xs"></i>
+              <span>Save & Increment Version</span>
+            </button>
+          </div>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL: CONFIRM PERMANENT DELETE SERVICE
+       ========================================================================= -->
+  <div id="modalDeleteService" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
+    <div class="bg-white border border-rose-200 rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center space-x-3 text-rose-600">
+        <div class="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center shrink-0">
+          <i class="fa-solid fa-trash-can text-lg"></i>
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-[#172B36]">Permanently Delete Service</h3>
+          <p class="text-[11px] text-rose-600/90 font-medium">Irreversible Cloudflare D1 Hard Delete</p>
+        </div>
+      </div>
+
+      <p class="text-xs text-slate-600 leading-relaxed">
+        Are you sure you want to permanently delete <strong id="deleteServiceTargetName" class="text-slate-900 font-bold">—</strong> from the service catalog?
+      </p>
+
+      <!-- Service Details Box -->
+      <div class="p-3.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-slate-700 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-slate-500 font-medium">Service Code:</span>
+          <span id="deleteServiceTargetCode" class="font-mono font-bold text-slate-900 px-2 py-0.5 bg-slate-200/60 rounded">—</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-slate-500 font-medium">Associated SOP Blueprints:</span>
+          <span id="deleteServiceBlueprintCount" class="font-bold text-[#147D64]">0 Tasks</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-slate-500 font-medium">Category:</span>
+          <span id="deleteServiceCategory" class="font-medium text-slate-700">—</span>
+        </div>
+      </div>
+
+      <!-- Dependency Check Container -->
+      <div id="deleteServiceDependencyContainer" class="space-y-2">
+        <div class="p-3 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-500 flex items-center gap-2">
+          <i class="fa-solid fa-circle-notch fa-spin text-brand-whiz"></i>
+          <span>Checking database dependencies & live client records...</span>
+        </div>
+      </div>
+
+      <!-- Confirmation Input Section (Only visible when safe) -->
+      <div id="deleteServiceConfirmSection" class="hidden space-y-2">
+        <label class="block text-xs text-slate-600">
+          To confirm permanent deletion, type <span class="font-bold font-mono text-rose-600">DELETE</span> or <span id="deleteServiceExpectedName" class="font-bold font-mono text-slate-900"></span> below:
+        </label>
+        <input type="text" id="deleteServiceConfirmInput" autocomplete="off" placeholder="Type DELETE or service name" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs font-mono text-[#172B36] focus:outline-none focus:border-rose-400">
+      </div>
+
+      <div class="pt-3 border-t border-[#E3E9EF] flex items-center justify-end space-x-3">
+        <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 cursor-pointer" data-modal="modalDeleteService">Cancel</button>
+        <button type="button" id="btnConfirmDeleteService" disabled class="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm flex items-center gap-1.5 cursor-pointer transition-all">
+          <i class="fa-solid fa-trash-can text-xs"></i>
+          <span>Permanently Delete Service</span>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -2430,14 +2508,69 @@
           </div>
         </div>
 
-        <div class="flex items-center justify-end space-x-3 pt-3 border-t border-[#E3E9EF] shrink-0">
-          <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36] cursor-pointer" data-modal="modalEditBlueprint">Cancel</button>
-          <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center gap-1.5 cursor-pointer">
-            <i class="fa-solid fa-floppy-disk text-xs"></i>
-            <span>Save Changes to D1</span>
+        <div class="flex items-center justify-between pt-3 border-t border-[#E3E9EF] shrink-0">
+          <button type="button" id="btnDeleteFromEditBlueprintModal" class="px-3.5 py-2 rounded-xl text-xs font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-transparent hover:border-rose-200 flex items-center gap-1.5 cursor-pointer transition-all">
+            <i class="fa-solid fa-trash-can text-xs"></i>
+            <span>Delete Task</span>
           </button>
+          <div class="flex items-center space-x-3">
+            <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36] cursor-pointer" data-modal="modalEditBlueprint">Cancel</button>
+            <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center gap-1.5 cursor-pointer">
+              <i class="fa-solid fa-floppy-disk text-xs"></i>
+              <span>Save Changes to D1</span>
+            </button>
+          </div>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL: CONFIRM PERMANENT DELETE TASK BLUEPRINT
+       ========================================================================= -->
+  <div id="modalDeleteBlueprint" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
+    <div class="bg-white border border-rose-200 rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center space-x-3 text-rose-600">
+        <div class="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center shrink-0">
+          <i class="fa-solid fa-trash-can text-lg"></i>
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-[#172B36]">Permanently Delete SOP Task</h3>
+          <p class="text-[11px] text-rose-600/90 font-medium">Irreversible Cloudflare D1 Hard Delete</p>
+        </div>
+      </div>
+
+      <p class="text-xs text-slate-600 leading-relaxed">
+        Are you sure you want to permanently delete this master blueprint task from the service SOP catalog?
+      </p>
+
+      <div class="p-3.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-slate-700 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-slate-500 font-medium">Task Code:</span>
+          <span id="deleteBlueprintTaskCode" class="font-mono font-bold text-slate-900 px-2 py-0.5 bg-slate-200/60 rounded">—</span>
+        </div>
+        <div class="flex items-start justify-between gap-2">
+          <span class="text-slate-500 font-medium shrink-0">Task Title:</span>
+          <span id="deleteBlueprintTaskTitle" class="font-bold text-[#172B36] text-right break-words">—</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-slate-500 font-medium">Service:</span>
+          <span id="deleteBlueprintServiceName" class="font-medium text-slate-700">—</span>
+        </div>
+      </div>
+
+      <div class="p-3 rounded-xl bg-rose-50/60 border border-rose-200 text-[11px] text-rose-800 space-y-1">
+        <p class="font-bold flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation text-rose-600"></i> Irreversible Hard Delete:</p>
+        <p>This master SOP task blueprint will be permanently purged from Cloudflare D1. It will not be archived or hidden.</p>
+      </div>
+
+      <div class="pt-3 border-t border-[#E3E9EF] flex items-center justify-end space-x-3">
+        <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 cursor-pointer" data-modal="modalDeleteBlueprint">Cancel</button>
+        <button type="button" id="btnConfirmDeleteBlueprint" class="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 shadow-sm flex items-center gap-1.5 cursor-pointer transition-all">
+          <i class="fa-solid fa-trash-can text-xs"></i>
+          <span>Permanently Delete Task</span>
+        </button>
+      </div>
     </div>
   </div>
 

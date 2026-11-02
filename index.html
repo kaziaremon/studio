@@ -1413,9 +1413,15 @@
 
       </div>
 
-      <!-- Bottom Bar: ONLY Copyright Text Kept -->
-      <div class="pt-8 border-t border-white/30 text-center text-xs text-slate-600 font-medium">
-        &copy; 2026 Whiz Studio. All rights reserved.
+      <!-- Bottom Bar: Copyright & Legal Compliance Links (Google OAuth Required) -->
+      <div class="pt-8 border-t border-white/30 text-center text-xs text-slate-600 font-medium flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4">
+        <span>&copy; 2026 Whiz Studio. All rights reserved.</span>
+        <span class="hidden sm:inline text-slate-400">&bull;</span>
+        <div class="space-x-3">
+          <a href="/privacy" class="hover:text-brand-whiz transition-colors underline-offset-4 hover:underline">Privacy Policy</a>
+          <span class="text-slate-400">&bull;</span>
+          <a href="/terms" class="hover:text-brand-whiz transition-colors underline-offset-4 hover:underline">Terms of Service</a>
+        </div>
       </div>
     </div>
   </footer>

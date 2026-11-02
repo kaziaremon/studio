@@ -502,7 +502,8 @@
       return;
     }
 
-    if (state.userRole === 'super_admin' || state.userRole === 'admin') {
+    const isStaff = ['super_admin', 'admin', 'owner', 'accounts', 'employee'].includes(state.userRole);
+    if (isStaff) {
       openAdminDashboard();
     } else {
       openClientDashboard();
@@ -516,8 +517,9 @@
   async function routeAuthenticatedUser(customSuccessMessage) {
     await syncAuthState();
     closeModal('accountPortalModal');
-    if (state.userRole === 'super_admin' || state.userRole === 'admin') {
-      toast(customSuccessMessage || 'Welcome back! Directing to Super Admin Console...', 'success');
+    const isStaff = ['super_admin', 'admin', 'owner', 'accounts', 'employee'].includes(state.userRole);
+    if (isStaff) {
+      toast(customSuccessMessage || 'Welcome back! Directing to Management Console...', 'success');
       setTimeout(() => {
         window.location.href = '/admin/dashboard';
       }, 350);
@@ -529,6 +531,13 @@
     }
   }
 
+  function detectInAppBrowser() {
+    const ua = navigator.userAgent || navigator.vendor || window.opera || '';
+    return /FBAN|FBAV|Instagram|Messenger|LinkedInApp|Line\/|TikTok|musical_ly|Snapchat|MicroMessenger/i.test(ua) ||
+      (/(iPhone|iPod|iPad).*AppleWebKit(?!.*Safari)/i.test(ua)) ||
+      (/Android.*Version\/[0-9]/i.test(ua));
+  }
+
   async function handleGoogleOAuth(e) {
     if (e && e.preventDefault) e.preventDefault();
     if (!window.Clerk) {
@@ -536,10 +545,44 @@
       return;
     }
 
+    if (detectInAppBrowser()) {
+      showPortalAlert(`
+        <div class="space-y-2 text-left">
+          <p class="font-bold flex items-center gap-1.5 text-amber-800">
+            <i class="fa-solid fa-mobile-screen"></i> Social In-App Browser Detected
+          </p>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            Google restricts logins inside in-app browsers (Facebook, Instagram, LinkedIn).
+          </p>
+          <p class="text-xs text-slate-700 font-semibold">
+            👉 Tap <strong>•••</strong> and select <strong>"Open in Chrome / Safari"</strong>, or enter your Email and Password below.
+          </p>
+          <button type="button" id="btnCopyInAppOAuthUrl" class="w-full mt-2 py-1.5 px-3 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-[#147D64] border border-emerald-200 text-xs font-bold transition-all cursor-pointer">
+            <i class="fa-solid fa-copy mr-1"></i> Copy Link to Clipboard
+          </button>
+        </div>
+      `, 'warning');
+
+      setTimeout(() => {
+        const copyBtn = document.getElementById('btnCopyInAppOAuthUrl');
+        if (copyBtn) {
+          copyBtn.onclick = () => {
+            const url = window.location.origin + '/?login=true';
+            navigator.clipboard.writeText(url).then(() => {
+              copyBtn.innerHTML = '<i class="fa-solid fa-check mr-1"></i> Copied! Paste in Chrome / Safari';
+            }).catch(() => {
+              copyBtn.textContent = 'Link: ' + url;
+            });
+          };
+        }
+      }, 50);
+      return;
+    }
+
     try {
       showPortalAlert('');
-      const redirectUrl = window.location.origin + '/sso-callback';
-      const redirectUrlComplete = window.location.origin + '/sso-callback';
+      const canonicalOrigin = window.location.origin.replace('www.', '');
+      const redirectUrl = canonicalOrigin + '/sso-callback';
 
       const isRegisterTab = state.clientSubView === 'register';
       const primaryClient = isRegisterTab ? window.Clerk.client.signUp : window.Clerk.client.signIn;
@@ -548,15 +591,13 @@
       try {
         await primaryClient.authenticateWithRedirect({
           strategy: 'oauth_google',
-          redirectUrl,
-          redirectUrlComplete
+          redirectUrl
         });
       } catch (authErr) {
         console.warn('Primary OAuth client redirect notice, attempting fallback:', authErr);
         await fallbackClient.authenticateWithRedirect({
           strategy: 'oauth_google',
-          redirectUrl,
-          redirectUrlComplete
+          redirectUrl
         });
       }
     } catch (err) {

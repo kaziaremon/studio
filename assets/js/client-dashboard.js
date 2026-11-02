@@ -1424,8 +1424,8 @@
 
       const setMail = document.getElementById('settingsEmail');
       if (setMail) setMail.textContent = email;
-      const setClerk = document.getElementById('settingsClerkId');
-      if (setClerk) setClerk.textContent = user.id;
+      const setAuth = document.getElementById('settingsAuthStatus');
+      if (setAuth) setAuth.innerHTML = '<i class="fa-solid fa-shield-check text-[#147D64]"></i> Verified (Google & Email SSO)';
 
       const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'CL';
       document.querySelectorAll('.userAvatarText').forEach(el => el.textContent = initials);
