@@ -346,6 +346,133 @@
     ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 9999px; }
     ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
   </style>
+
+    /* ==========================================================================
+       WHIZ LIQUID GLASS SELECTION MENU
+       Translucent, accessible, mobile-first dropdown component
+       ========================================================================== */
+    .glass-select-wrapper {
+      position: relative;
+      width: 100%;
+    }
+    .glass-select-trigger {
+      width: 100%;
+      height: 44px;
+      min-height: 44px;
+      padding: 0 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-radius: 14px;
+      background-color: #FFFFFF;
+      border: 1px solid #E6ECE9;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #172B36;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+      cursor: pointer;
+      user-select: none;
+      transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1);
+      outline: none;
+    }
+    .glass-select-trigger:hover {
+      border-color: rgba(8, 127, 112, 0.35);
+      background-color: #FAFCFB;
+    }
+    .glass-select-trigger:focus-visible,
+    .glass-select-trigger.active {
+      border-color: #087F70;
+      box-shadow: 0 0 0 3px rgba(8, 127, 112, 0.12), 0 2px 6px rgba(0, 0, 0, 0.04);
+    }
+    .glass-select-trigger:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      pointer-events: none;
+      background-color: #F8FAFC;
+    }
+    .glass-select-trigger .chevron-icon {
+      font-size: 11px;
+      color: #74817D;
+      transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .glass-select-trigger.active .chevron-icon {
+      transform: rotate(180deg);
+      color: #087F70;
+    }
+    .glass-select-menu {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: calc(100% + 6px);
+      z-index: 45;
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid #E6ECE9;
+      border-radius: 18px;
+      padding: 6px;
+      box-shadow: 0 16px 40px -8px rgba(8, 127, 112, 0.16), 0 6px 16px -4px rgba(23, 43, 54, 0.08);
+      max-height: 270px;
+      overflow-y: auto;
+      opacity: 0;
+      transform: scale(0.97) translateY(-4px);
+      pointer-events: none;
+      transition: opacity 150ms ease, transform 150ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .glass-select-menu.open {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+      pointer-events: auto;
+    }
+    .glass-select-menu.dropup {
+      top: auto;
+      bottom: calc(100% + 6px);
+      transform: scale(0.97) translateY(4px);
+    }
+    .glass-select-menu.dropup.open {
+      transform: scale(1) translateY(0);
+    }
+    .glass-select-option {
+      width: 100%;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-radius: 12px;
+      font-size: 12.5px;
+      font-weight: 500;
+      color: #202D2A;
+      background: transparent;
+      cursor: pointer;
+      border: none;
+      outline: none;
+      text-align: left;
+      transition: all 120ms ease;
+      user-select: none;
+    }
+    .glass-select-option:hover,
+    .glass-select-option:focus-visible {
+      background-color: #F7FAF9;
+      color: #172B36;
+    }
+    .glass-select-option.selected {
+      background-color: #EAF5F1;
+      color: #087F70;
+      font-weight: 700;
+    }
+    .glass-select-option .check-icon {
+      margin-left: auto;
+      font-size: 12px;
+      color: #087F70;
+      opacity: 0;
+      transform: scale(0.7);
+      transition: all 150ms ease;
+    }
+    .glass-select-option.selected .check-icon {
+      opacity: 1;
+      transform: scale(1);
+    }
+
 </head>
 <body class="h-full bg-[#F8FAFC] text-slate-800 flex flex-col font-sans antialiased selection:bg-[#147D64] selection:text-white">
 
@@ -1841,45 +1968,120 @@
           <!-- =================================================================
                TAB 8: TEAM & ACCESS (STAFF / ADMINS)
                ================================================================= -->
-          <div id="view_team" class="hidden space-y-6">
+          <div id="view_team" class="hidden space-y-6 pb-28 sm:pb-32">
             <div class="flex flex-col sm:flex-row sm:items-start sm:items-center justify-between gap-4 pb-2">
               <div class="min-w-0 flex-1">
                 <h2 class="text-2xl sm:text-3xl font-black text-[#172B36] tracking-tight break-words whitespace-normal">User &amp; Access Management</h2>
                 <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Manage platform accounts, administrative permissions, and security roles.</p>
               </div>
               <div class="flex items-center gap-2.5 shrink-0 self-start sm:self-auto">
-                <button type="button" id="btnRefreshUserDir" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-white hover:bg-slate-50 text-[#172B36] border border-[#E3E9EF] shadow-xs hover:border-[#147D64]/30 flex items-center gap-2 cursor-pointer transition-all" title="Refresh User Directory">
-                  <i class="fa-solid fa-arrows-rotate text-xs text-[#147D64]" id="btnRefreshUserDirIcon"></i>
+                <button type="button" id="btnRefreshUserDir" class="h-11 px-4 rounded-xl text-xs font-bold bg-white hover:bg-slate-50 text-[#172B36] border border-[#E3E9EF] shadow-xs hover:border-[#087F70]/40 flex items-center gap-2 cursor-pointer transition-all select-none" title="Refresh User Directory">
+                  <i class="fa-solid fa-arrows-rotate text-xs text-[#087F70]" id="btnRefreshUserDirIcon"></i>
                   <span>Refresh Directory</span>
                 </button>
               </div>
             </div>
 
-            <!-- Search & Filter Controls (Responsive Grid: 1 col on mobile, 2 col on tablet, 12-col on desktop) -->
-            <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs space-y-3">
+            <!-- Search & Filter Controls (Liquid Glass Selection Menus) -->
+            <div class="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white border border-[#E3E9EF] shadow-xs space-y-3.5">
               <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 min-w-0">
+                <!-- Search Input with Clear Button -->
                 <div class="sm:col-span-2 lg:col-span-6 relative min-w-0">
                   <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
                     <i class="fa-solid fa-magnifying-glass text-xs"></i>
                   </span>
-                  <input type="text" id="userDirectorySearch" placeholder="Search by name, email, or ID..." class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] placeholder-slate-400 focus:outline-none focus:border-[#147D64] focus:bg-white transition-all shadow-inner/5">
+                  <input type="text" id="userDirectorySearch" placeholder="Search by name, email, company, or role..." class="w-full h-11 pl-10 pr-10 rounded-xl bg-slate-50/70 border border-[#E3E9EF] text-xs font-medium text-[#172B36] placeholder-slate-400 focus:outline-none focus:border-[#087F70] focus:bg-white focus:ring-2 focus:ring-[#087F70]/10 transition-all shadow-inner/5">
+                  <button type="button" id="userDirectorySearchClear" class="hidden absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 transition-colors cursor-pointer" title="Clear search">
+                    <i class="fa-solid fa-circle-xmark text-xs"></i>
+                  </button>
                 </div>
+
+                <!-- Role Filter (Liquid Glass Dropdown) -->
                 <div class="sm:col-span-1 lg:col-span-3 min-w-0">
-                  <select id="userDirectoryRoleFilter" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs font-semibold text-[#172B36] focus:outline-none focus:border-[#147D64] focus:bg-white transition-all shadow-inner/5 cursor-pointer">
-                    <option value="all">All Roles</option>
-                    <option value="client">Clients Only</option>
-                    <option value="admin">Admins Only</option>
-                    <option value="accounts">Accounts Only</option>
-                    <option value="employee">Employees Only</option>
-                    <option value="owner">Owners Only</option>
-                  </select>
+                  <div class="glass-select-wrapper" data-glass-select="userDirectoryRoleFilter">
+                    <select id="userDirectoryRoleFilter" name="roleFilter" class="sr-only" tabindex="-1" aria-hidden="true">
+                      <option value="all" selected>All Roles</option>
+                      <option value="client">Clients Only</option>
+                      <option value="admin">Admins Only</option>
+                      <option value="accounts">Accounts Only</option>
+                      <option value="employee">Employees Only</option>
+                      <option value="owner">Owners / Super Admin</option>
+                    </select>
+                    <button type="button" class="glass-select-trigger" id="userDirectoryRoleTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="userDirectoryRoleMenu">
+                      <span class="flex items-center gap-2 min-w-0">
+                        <i class="fa-solid fa-layer-group text-slate-400 text-xs shrink-0 select-icon"></i>
+                        <span class="select-label truncate">All Roles</span>
+                      </span>
+                      <i class="fa-solid fa-chevron-down chevron-icon shrink-0"></i>
+                    </button>
+                    <div class="glass-select-menu" id="userDirectoryRoleMenu" role="listbox" aria-label="Filter by Role">
+                      <button type="button" class="glass-select-option selected" data-value="all" role="option" aria-selected="true">
+                        <i class="fa-solid fa-layer-group text-slate-400 text-xs shrink-0 option-icon"></i>
+                        <span class="truncate">All Roles</span>
+                        <i class="fa-solid fa-check check-icon"></i>
+                      </button>
+                      <button type="button" class="glass-select-option" data-value="client" role="option" aria-selected="false">
+                        <i class="fa-solid fa-user text-slate-500 text-xs shrink-0 option-icon"></i>
+                        <span class="truncate">Clients Only</span>
+                        <i class="fa-solid fa-check check-icon"></i>
+                      </button>
+                      <button type="button" class="glass-select-option" data-value="admin" role="option" aria-selected="false">
+                        <i class="fa-solid fa-shield-halved text-blue-600 text-xs shrink-0 option-icon"></i>
+                        <span class="truncate">Admins Only</span>
+                        <i class="fa-solid fa-check check-icon"></i>
+                      </button>
+                      <button type="button" class="glass-select-option" data-value="accounts" role="option" aria-selected="false">
+                        <i class="fa-solid fa-calculator text-purple-600 text-xs shrink-0 option-icon"></i>
+                        <span class="truncate">Accounts Only</span>
+                        <i class="fa-solid fa-check check-icon"></i>
+                      </button>
+                      <button type="button" class="glass-select-option" data-value="employee" role="option" aria-selected="false">
+                        <i class="fa-solid fa-briefcase text-teal-600 text-xs shrink-0 option-icon"></i>
+                        <span class="truncate">Employees Only</span>
+                        <i class="fa-solid fa-check check-icon"></i>
+                      </button>
+                      <button type="button" class="glass-select-option" data-value="owner" role="option" aria-selected="false">
+                        <i class="fa-solid fa-crown text-amber-500 text-xs shrink-0 option-icon"></i>
+                        <span class="truncate">Owners Only</span>
+                        <i class="fa-solid fa-check check-icon"></i>
+                      </button>
+                    </div>
+                  </div>
                 </div>
+
+                <!-- Status Filter (Liquid Glass Dropdown) -->
                 <div class="sm:col-span-1 lg:col-span-3 min-w-0">
-                  <select id="userDirectoryStatusFilter" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs font-semibold text-[#172B36] focus:outline-none focus:border-[#147D64] focus:bg-white transition-all shadow-inner/5 cursor-pointer">
-                    <option value="all">All Statuses</option>
-                    <option value="active">Active Accounts</option>
-                    <option value="suspended">Suspended Accounts</option>
-                  </select>
+                  <div class="glass-select-wrapper" data-glass-select="userDirectoryStatusFilter">
+                    <select id="userDirectoryStatusFilter" name="statusFilter" class="sr-only" tabindex="-1" aria-hidden="true">
+                      <option value="all" selected>All Statuses</option>
+                      <option value="active">Active Accounts</option>
+                      <option value="suspended">Suspended Accounts</option>
+                    </select>
+                    <button type="button" class="glass-select-trigger" id="userDirectoryStatusTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="userDirectoryStatusMenu">
+                      <span class="flex items-center gap-2 min-w-0">
+                        <i class="fa-solid fa-sliders text-slate-400 text-xs shrink-0 select-icon"></i>
+                        <span class="select-label truncate">All Statuses</span>
+                      </span>
+                      <i class="fa-solid fa-chevron-down chevron-icon shrink-0"></i>
+                    </button>
+                    <div class="glass-select-menu" id="userDirectoryStatusMenu" role="listbox" aria-label="Filter by Status">
+                      <button type="button" class="glass-select-option selected" data-value="all" role="option" aria-selected="true">
+                        <i class="fa-solid fa-sliders text-slate-400 text-xs shrink-0 option-icon"></i>
+                        <span class="truncate">All Statuses</span>
+                        <i class="fa-solid fa-check check-icon"></i>
+                      </button>
+                      <button type="button" class="glass-select-option" data-value="active" role="option" aria-selected="false">
+                        <i class="fa-solid fa-circle-check text-emerald-600 text-xs shrink-0 option-icon"></i>
+                        <span class="truncate">Active Accounts</span>
+                        <i class="fa-solid fa-check check-icon"></i>
+                      </button>
+                      <button type="button" class="glass-select-option" data-value="suspended" role="option" aria-selected="false">
+                        <i class="fa-solid fa-circle-pause text-amber-500 text-xs shrink-0 option-icon"></i>
+                        <span class="truncate">Suspended Accounts</span>
+                        <i class="fa-solid fa-check check-icon"></i>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1923,18 +2125,55 @@
                 <h3 class="text-sm font-extrabold text-[#172B36] uppercase tracking-wider" id="inviteFormHeading">Authorize Staff Pre-Approval</h3>
                 <p class="text-xs text-slate-500 mt-0.5" id="inviteFormSubheading">Pre-approve email addresses and assign RBAC roles in Cloudflare D1 before onboarding.</p>
               </div>
-              <form id="adminInviteForm" novalidate class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                <input type="text" id="inviteFullName" name="fullName" placeholder="Staff Full Name" class="px-4 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:outline-none focus:border-brand-whiz transition-all" required>
-                <input type="email" id="inviteEmail" name="email" placeholder="staff@example.com" class="px-4 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:outline-none focus:border-brand-whiz transition-all" required>
-                <select id="inviteRole" name="role" class="px-4 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:outline-none focus:border-brand-whiz transition-all font-semibold cursor-pointer">
-                  <option value="admin">Admin (Operational Authority)</option>
-                  <option value="accounts">Accounts (Billing & Finance)</option>
-                  <option value="employee">Employee (Operational Tasks)</option>
-                </select>
-                <button type="submit" class="py-2.5 px-4 rounded-xl text-xs font-bold btn-glass-primary shadow-sm hover:shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer">
-                  <i class="fa-solid fa-user-plus text-xs"></i>
-                  <span>Pre-Approve Staff</span>
-                </button>
+              <form id="adminInviteForm" novalidate class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5 min-w-0">
+                <div class="sm:col-span-1 lg:col-span-4 min-w-0">
+                  <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Staff Full Name *</label>
+                  <input type="text" id="inviteFullName" name="fullName" placeholder="e.g. Sarah Jenkins" class="w-full h-11 px-3.5 rounded-xl bg-slate-50/70 border border-[#E3E9EF] text-xs font-medium text-[#172B36] placeholder-slate-400 focus:outline-none focus:border-[#087F70] focus:bg-white focus:ring-2 focus:ring-[#087F70]/10 transition-all shadow-xs" required>
+                </div>
+                <div class="sm:col-span-1 lg:col-span-4 min-w-0">
+                  <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Gmail / Account Email *</label>
+                  <input type="email" id="inviteEmail" name="email" placeholder="staff@example.com" class="w-full h-11 px-3.5 rounded-xl bg-slate-50/70 border border-[#E3E9EF] text-xs font-medium text-[#172B36] placeholder-slate-400 focus:outline-none focus:border-[#087F70] focus:bg-white focus:ring-2 focus:ring-[#087F70]/10 transition-all shadow-xs" required>
+                </div>
+                <div class="sm:col-span-2 lg:col-span-4 min-w-0">
+                  <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Target Security Role *</label>
+                  <div class="glass-select-wrapper" data-glass-select="inviteRole">
+                    <select id="inviteRole" name="role" class="sr-only" tabindex="-1" aria-hidden="true">
+                      <option value="admin" selected>Admin (Operational Authority)</option>
+                      <option value="accounts">Accounts (Billing & Finance)</option>
+                      <option value="employee">Employee (Operational Tasks)</option>
+                    </select>
+                    <button type="button" class="glass-select-trigger" id="inviteRoleTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="inviteRoleMenu">
+                      <span class="flex items-center gap-2 min-w-0">
+                        <i class="fa-solid fa-shield-halved text-blue-600 text-xs shrink-0 select-icon"></i>
+                        <span class="select-label truncate">Admin (Operational Authority)</span>
+                      </span>
+                      <i class="fa-solid fa-chevron-down chevron-icon shrink-0"></i>
+                    </button>
+                    <div class="glass-select-menu" id="inviteRoleMenu" role="listbox" aria-label="Security Role">
+                      <button type="button" class="glass-select-option selected" data-value="admin" role="option" aria-selected="true">
+                        <i class="fa-solid fa-shield-halved text-blue-600 text-xs shrink-0 option-icon"></i>
+                        <span class="truncate">Admin (Operational Authority)</span>
+                        <i class="fa-solid fa-check check-icon"></i>
+                      </button>
+                      <button type="button" class="glass-select-option" data-value="accounts" role="option" aria-selected="false">
+                        <i class="fa-solid fa-calculator text-purple-600 text-xs shrink-0 option-icon"></i>
+                        <span class="truncate">Accounts (Billing & Finance)</span>
+                        <i class="fa-solid fa-check check-icon"></i>
+                      </button>
+                      <button type="button" class="glass-select-option" data-value="employee" role="option" aria-selected="false">
+                        <i class="fa-solid fa-briefcase text-teal-600 text-xs shrink-0 option-icon"></i>
+                        <span class="truncate">Employee (Operational Tasks)</span>
+                        <i class="fa-solid fa-check check-icon"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div class="sm:col-span-2 lg:col-span-12 flex justify-end pt-1">
+                  <button type="submit" class="w-full sm:w-auto h-11 px-6 rounded-xl text-xs font-bold btn-glass-primary shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer">
+                    <i class="fa-solid fa-user-plus text-xs"></i>
+                    <span>Pre-Approve Staff Member</span>
+                  </button>
+                </div>
               </form>
             </div>
 
@@ -3534,16 +3773,58 @@
       <p class="text-xs text-slate-600 leading-relaxed" id="modalRoleChangeDesc">
         Are you sure you want to change this account's permissions?
       </p>
-      <form id="formRoleChange" class="space-y-3.5">
+      <form id="formRoleChange" class="space-y-4">
         <input type="hidden" id="roleChangeUserId" name="userId">
         <input type="hidden" id="roleChangeTargetRole" name="targetRole">
+        
         <div>
-          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Reason for Immutable Audit Log *</label>
-          <input type="text" id="roleChangeReason" name="reason" placeholder="e.g. Promoted to administrator per executive authorization" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:outline-none focus:border-brand-whiz">
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Target Permission Role *</label>
+          <div class="glass-select-wrapper" data-glass-select="roleChangeNewRole">
+            <select id="roleChangeNewRole" name="newRole" class="sr-only" tabindex="-1" aria-hidden="true">
+              <option value="client" selected>Client (Standard Access)</option>
+              <option value="admin">Admin (Operational Authority)</option>
+              <option value="accounts">Accounts (Billing & Finance)</option>
+              <option value="employee">Employee (Operational Tasks)</option>
+            </select>
+            <button type="button" class="glass-select-trigger" id="roleChangeNewRoleTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="roleChangeNewRoleMenu">
+              <span class="flex items-center gap-2 min-w-0">
+                <i class="fa-solid fa-user text-slate-500 text-xs shrink-0 select-icon"></i>
+                <span class="select-label truncate">Client (Standard Access)</span>
+              </span>
+              <i class="fa-solid fa-chevron-down chevron-icon shrink-0"></i>
+            </button>
+            <div class="glass-select-menu" id="roleChangeNewRoleMenu" role="listbox" aria-label="Target Role">
+              <button type="button" class="glass-select-option selected" data-value="client" role="option" aria-selected="true">
+                <i class="fa-solid fa-user text-slate-500 text-xs shrink-0 option-icon"></i>
+                <span class="truncate">Client (Standard Access)</span>
+                <i class="fa-solid fa-check check-icon"></i>
+              </button>
+              <button type="button" class="glass-select-option" data-value="admin" role="option" aria-selected="false">
+                <i class="fa-solid fa-shield-halved text-blue-600 text-xs shrink-0 option-icon"></i>
+                <span class="truncate">Admin (Operational Authority)</span>
+                <i class="fa-solid fa-check check-icon"></i>
+              </button>
+              <button type="button" class="glass-select-option" data-value="accounts" role="option" aria-selected="false">
+                <i class="fa-solid fa-calculator text-purple-600 text-xs shrink-0 option-icon"></i>
+                <span class="truncate">Accounts (Billing & Finance)</span>
+                <i class="fa-solid fa-check check-icon"></i>
+              </button>
+              <button type="button" class="glass-select-option" data-value="employee" role="option" aria-selected="false">
+                <i class="fa-solid fa-briefcase text-teal-600 text-xs shrink-0 option-icon"></i>
+                <span class="truncate">Employee (Operational Tasks)</span>
+                <i class="fa-solid fa-check check-icon"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Reason for Immutable Audit Log *</label>
+          <input type="text" id="roleChangeReason" name="reason" placeholder="e.g. Promoted to administrator per executive authorization" required class="w-full h-11 px-3.5 rounded-xl bg-slate-50/70 border border-[#E3E9EF] text-xs text-[#172B36] font-medium focus:outline-none focus:border-[#087F70] focus:bg-white focus:ring-2 focus:ring-[#087F70]/10 transition-all shadow-xs">
         </div>
         <div class="flex items-center justify-end space-x-3 pt-3 border-t border-[#E3E9EF]">
-          <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36] cursor-pointer" data-modal="modalRoleChange">Cancel</button>
-          <button type="submit" id="btnSubmitRoleChange" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center gap-1.5 cursor-pointer">
+          <button type="button" class="btn-close-modal h-11 px-4 rounded-xl text-xs font-semibold text-slate-600 hover:text-[#172B36] hover:bg-slate-100 transition-colors cursor-pointer" data-modal="modalRoleChange">Cancel</button>
+          <button type="submit" id="btnSubmitRoleChange" class="h-11 px-5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center gap-1.5 cursor-pointer">
             <i class="fa-solid fa-check text-xs"></i>
             <span>Confirm & Update Role</span>
           </button>
