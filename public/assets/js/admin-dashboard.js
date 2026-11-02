@@ -69,7 +69,8 @@
     roleHistoryCache: [],
     supportCache: [],
     trustedDevicesCache: [],
-    currentBlueprints: []
+    currentBlueprints: [],
+    currentTaskStatus: 'all'
   };
 
   function isCurrentUserOwner() {
@@ -1590,100 +1591,298 @@
   }
 
   // =========================================================================
-  // 5. LIVE OPERATIONAL TASKS (Phase 11)
+  // 5. LIVE OPERATIONAL TASKS (Phase 11 - WHIZ Smart Task Workspace)
   // =========================================================================
-  async function loadTasksData(filter = 'all') {
-    const res = await apiFetch('/portal/admin/live-tasks');
+  async function loadTasksData(filterStatus = null) {
+    if (filterStatus) {
+      state.currentTaskStatus = filterStatus;
+      updateStatusFilterButtons(filterStatus);
+    } else if (!state.currentTaskStatus) {
+      state.currentTaskStatus = 'all';
+    }
+
     const list = document.getElementById('adminLiveTasksList');
     if (!list) return;
 
-    if (res.ok && res.data && res.data.data) {
-      state.tasksCache = res.data.data;
-      let tasks = state.tasksCache;
-      if (filter !== 'all') {
-        tasks = tasks.filter(t => t.status === filter);
+    // Show loading state if cache is empty
+    if (!state.tasksCache || state.tasksCache.length === 0) {
+      list.innerHTML = `
+        <div class="p-8 rounded-2xl bg-white border border-[#E6ECE9] text-center space-y-2 shadow-2xs">
+          <i class="fa-solid fa-circle-notch fa-spin text-lg text-[#087F70]"></i>
+          <p class="text-xs text-[#74817D]">Loading operational tasks...</p>
+        </div>
+      `;
+    }
+
+    const res = await apiFetch('/portal/admin/live-tasks');
+
+    if (!res.ok || !res.data || !res.data.data) {
+      const errMsg = res.data?.error || 'Unable to connect to live tasks database.';
+      list.innerHTML = `
+        <div class="p-6 sm:p-8 rounded-2xl sm:rounded-3xl bg-white border border-rose-200 text-center space-y-3 shadow-2xs">
+          <div class="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto text-lg border border-rose-200/60 shadow-2xs">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+          </div>
+          <div class="space-y-1">
+            <h4 class="text-sm sm:text-base font-bold text-[#202D2A]">Failed to Load Operational Tasks</h4>
+            <p class="text-xs text-[#74817D] max-w-sm mx-auto leading-relaxed">${escapeHtml(errMsg)}</p>
+          </div>
+          <button type="button" id="btnRetryLoadTasks" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-[#087F70] hover:bg-[#06685c] text-white shadow-2xs transition-all cursor-pointer touch-manipulation select-none">
+            <i class="fa-solid fa-rotate-right text-xs"></i>
+            <span>Retry Connection</span>
+          </button>
+        </div>
+      `;
+      document.getElementById('btnRetryLoadTasks')?.addEventListener('click', () => loadTasksData());
+      return;
+    }
+
+    state.tasksCache = res.data.data;
+    renderFilteredTasks();
+  }
+
+  function renderFilteredTasks() {
+    const list = document.getElementById('adminLiveTasksList');
+    if (!list) return;
+
+    const allTasks = state.tasksCache || [];
+    const searchInput = document.getElementById('taskSearchInput');
+    const prioritySelect = document.getElementById('taskPriorityFilter');
+    const clearSearchBtn = document.getElementById('btnClearTaskSearch');
+
+    const searchVal = (searchInput?.value || '').trim().toLowerCase();
+    const priorityVal = (prioritySelect?.value || 'all').toLowerCase();
+    const statusVal = state.currentTaskStatus || 'all';
+
+    if (clearSearchBtn) {
+      clearSearchBtn.classList.toggle('hidden', !searchVal);
+    }
+
+    // Case 1: Database has zero tasks across all projects
+    if (allTasks.length === 0) {
+      list.innerHTML = `
+        <div class="p-8 sm:p-12 rounded-2xl sm:rounded-3xl bg-white border border-[#E6ECE9] text-center space-y-3.5 shadow-2xs">
+          <div class="w-14 h-14 rounded-2xl bg-[#EAF5F1] text-[#087F70] flex items-center justify-center mx-auto text-xl border border-[#087F70]/25 shadow-2xs">
+            <i class="fa-solid fa-clipboard-check"></i>
+          </div>
+          <div class="space-y-1">
+            <h4 class="text-base sm:text-lg font-bold text-[#202D2A]">No active tasks yet</h4>
+            <p class="text-xs sm:text-sm text-[#74817D] max-w-sm mx-auto leading-relaxed">Tasks assigned to active projects will appear here.</p>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    // Filter tasks
+    const filtered = allTasks.filter(t => {
+      // Status filter: pending matches any incomplete task
+      if (statusVal === 'completed' && t.status !== 'completed') return false;
+      if (statusVal === 'pending' && t.status === 'completed') return false;
+
+      // Priority filter
+      if (priorityVal !== 'all' && (t.priority || '').toLowerCase() !== priorityVal) return false;
+
+      // Search filter
+      if (searchVal) {
+        const title = (t.title || '').toLowerCase();
+        const project = (t.project_name || '').toLowerCase();
+        const org = (t.organization_name || t.client_name || '').toLowerCase();
+        const code = (t.task_code || t.id || '').toLowerCase();
+        if (!title.includes(searchVal) && !project.includes(searchVal) && !org.includes(searchVal) && !code.includes(searchVal)) {
+          return false;
+        }
       }
 
-      if (tasks.length === 0) {
-        list.innerHTML = '<p class="text-slate-500 italic p-4 text-center">No tasks found for current filter.</p>';
-        return;
-      }
+      return true;
+    });
 
-      list.innerHTML = tasks.map(t => {
-        const isCompleted = t.status === 'completed';
-        return `
-          <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs flex items-center justify-between gap-4">
-            <div class="flex items-center space-x-3.5 min-w-0">
-              <input type="checkbox" class="task-checkbox w-4 h-4 rounded text-[#147D64] bg-white border-slate-300 cursor-pointer" data-id="${t.id}" ${isCompleted ? 'checked' : ''}>
-              <div class="min-w-0">
-                <div class="text-xs font-bold text-[#172B36] truncate ${isCompleted ? 'line-through text-slate-500' : ''}">${t.title}</div>
-                <div class="text-[11px] text-slate-400">${t.project_name} (${t.organization_name})</div>
-              </div>
+    // Update count badge if present
+    const countBadge = document.getElementById('liveTasksCountBadge');
+    if (countBadge) {
+      countBadge.textContent = `${filtered.length} of ${allTasks.length} Tasks`;
+    }
+
+    // Case 2: Filters active, but no matching tasks
+    if (filtered.length === 0) {
+      list.innerHTML = `
+        <div class="p-8 sm:p-12 rounded-2xl sm:rounded-3xl bg-white border border-[#E6ECE9] text-center space-y-3.5 shadow-2xs">
+          <div class="w-14 h-14 rounded-2xl bg-[#F7FAF9] text-[#74817D] flex items-center justify-center mx-auto text-xl border border-[#E6ECE9] shadow-2xs">
+            <i class="fa-solid fa-filter-circle-xmark"></i>
+          </div>
+          <div class="space-y-1">
+            <h4 class="text-base sm:text-lg font-bold text-[#202D2A]">No matching tasks</h4>
+            <p class="text-xs sm:text-sm text-[#74817D] max-w-sm mx-auto leading-relaxed">Try changing your search or filters.</p>
+          </div>
+          <div>
+            <button type="button" id="btnClearTaskFilters" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-[#EAF5F1] hover:bg-[#087F70] text-[#087F70] hover:text-white border border-[#087F70]/25 transition-all cursor-pointer touch-manipulation select-none shadow-2xs">
+              <i class="fa-solid fa-xmark text-xs"></i>
+              <span>Clear Filters</span>
+            </button>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('btnClearTaskFilters')?.addEventListener('click', () => {
+        if (searchInput) searchInput.value = '';
+        if (prioritySelect) prioritySelect.value = 'all';
+        state.currentTaskStatus = 'all';
+        updateStatusFilterButtons('all');
+        renderFilteredTasks();
+      });
+      return;
+    }
+
+    // Priority color mapping
+    const priorityColors = {
+      urgent: 'bg-rose-50 text-rose-700 border-rose-200',
+      high: 'bg-amber-50 text-amber-700 border-amber-200',
+      medium: 'bg-blue-50 text-blue-700 border-blue-200',
+      low: 'bg-slate-50 text-slate-600 border-slate-200'
+    };
+
+    // Render task cards
+    list.innerHTML = filtered.map(t => {
+      const isCompleted = t.status === 'completed';
+      const statusLabel = isCompleted ? 'Completed' : (t.status === 'in_progress' ? 'In Progress' : (t.status === 'review' ? 'In Review' : 'Pending'));
+      const statusClass = isCompleted 
+        ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+        : 'bg-[#EAF5F1] text-[#087F70] border-[#087F70]/25';
+
+      return `
+        <div class="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white border border-[#E6ECE9] hover:border-[#087F70]/30 shadow-2xs hover:shadow-xs transition-all space-y-3 group ${isCompleted ? 'bg-[#FDFEFE]/80' : ''}" data-task-id="${t.id}">
+          <!-- Top Row: Priority Badge + Status Badge + Progress -->
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${priorityColors[t.priority] || priorityColors.medium}">
+                ${escapeHtml(t.priority || 'medium')}
+              </span>
+              <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${statusClass}">
+                ${statusLabel}
+              </span>
             </div>
-            <div class="flex items-center space-x-3 shrink-0">
-              <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded ${isCompleted ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-600 border border-slate-200'}">${t.status}</span>
-              <span class="text-xs font-mono font-bold text-brand-whiz">${t.progress_percent}% Proj</span>
-              <button type="button" class="btn-live-task-detail px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-50 hover:bg-slate-100 text-slate-700 border border-[#E3E9EF] cursor-pointer transition-all" data-id="${t.id}">
-                Details
+            <div class="flex items-center gap-1.5 text-xs font-mono font-bold text-[#087F70]">
+              <i class="fa-solid fa-chart-pie text-[11px] text-[#087F70]/70"></i>
+              <span>${t.progress_percent || 0}% Proj</span>
+            </div>
+          </div>
+
+          <!-- Middle Row: Checkbox + Title -->
+          <div class="flex items-start gap-3">
+            <div class="pt-0.5 shrink-0">
+              <input type="checkbox" class="task-checkbox w-5 h-5 rounded-md text-[#087F70] bg-white border-[#CBD5E1] cursor-pointer focus:ring-2 focus:ring-[#087F70]/20 transition-all select-none" data-id="${t.id}" ${isCompleted ? 'checked' : ''} aria-label="Mark task complete">
+            </div>
+            <div class="min-w-0 flex-1 space-y-1">
+              <h4 class="text-sm sm:text-base font-bold text-[#202D2A] leading-snug break-words group-hover:text-[#087F70] transition-colors ${isCompleted ? 'line-through text-[#74817D]/70' : ''}">
+                ${escapeHtml(t.title)}
+              </h4>
+              ${t.description ? `<p class="text-xs text-[#74817D] line-clamp-2 leading-relaxed">${escapeHtml(t.description)}</p>` : ''}
+            </div>
+          </div>
+
+          <!-- Context Row: Project, Client, Deadline, Details Button -->
+          <div class="pt-2 border-t border-[#E6ECE9] flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div class="flex flex-wrap items-center gap-2 text-[#74817D] min-w-0">
+              <div class="inline-flex items-center gap-1.5 font-medium truncate max-w-[220px]" title="${escapeHtml(t.project_name || 'Active Project')}">
+                <i class="fa-solid fa-folder-tree text-[11px] text-[#087F70] shrink-0"></i>
+                <span class="truncate text-[#202D2A]">${escapeHtml(t.project_name || 'Active Project')}</span>
+              </div>
+              ${t.organization_name || t.client_name ? `
+                <span class="text-[#CBD5E1]">•</span>
+                <div class="inline-flex items-center gap-1 font-medium truncate max-w-[180px]" title="${escapeHtml(t.organization_name || t.client_name)}">
+                  <i class="fa-regular fa-building text-[10px] text-[#74817D] shrink-0"></i>
+                  <span class="truncate">${escapeHtml(t.organization_name || t.client_name)}</span>
+                </div>
+              ` : ''}
+              ${t.deadline ? `
+                <span class="text-[#CBD5E1]">•</span>
+                <div class="inline-flex items-center gap-1 text-[11px] font-mono text-[#74817D]">
+                  <i class="fa-regular fa-calendar text-[10px]"></i>
+                  <span>${escapeHtml(t.deadline)}</span>
+                </div>
+              ` : ''}
+            </div>
+
+            <!-- Action Button -->
+            <div class="flex items-center gap-2 shrink-0 ml-auto">
+              <button type="button" class="btn-live-task-detail px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#F7FAF9] hover:bg-[#EAF5F1] text-[#202D2A] hover:text-[#087F70] border border-[#E6ECE9] hover:border-[#087F70]/30 transition-all flex items-center gap-1.5 cursor-pointer touch-manipulation select-none" data-id="${t.id}">
+                <i class="fa-solid fa-circle-info text-[11px]"></i>
+                <span>Details</span>
               </button>
             </div>
           </div>
-        `;
-      }).join('');
+        </div>
+      `;
+    }).join('');
 
-      
-      // Wire task search and priority filters
-      const taskSearch = document.getElementById('taskSearchInput');
-      if (taskSearch && !taskSearch.dataset.bound) {
-        taskSearch.dataset.bound = 'true';
-        taskSearch.addEventListener('input', () => loadTasksData(state.currentTaskFilter || 'all'));
-      }
-      const taskPriority = document.getElementById('taskPriorityFilter');
-      if (taskPriority && !taskPriority.dataset.bound) {
-        taskPriority.dataset.bound = 'true';
-        taskPriority.addEventListener('change', () => loadTasksData(state.currentTaskFilter || 'all'));
-      }
-
-      // Wire task checkbox completion
-      list.querySelectorAll('.task-checkbox').forEach(cb => {
-        cb.addEventListener('change', async () => {
-          const taskId = cb.dataset.id;
-          const res = await apiFetch(`/projects/tasks/${taskId}/complete`, {
-            method: 'PUT',
-            body: JSON.stringify({ notes: 'Completed via Super Admin Console' })
-          });
-          if (res.ok && res.data && res.data.success) {
-            showToast(`Task updated! Project progress is now ${res.data.data.newProgressPercent}%.`, 'success');
-            loadTasksData(filter);
-            loadProjectsData();
-          } else {
-            showToast('Failed to update task status.', 'error');
-            cb.checked = !cb.checked;
+    // Wire task checkbox completion
+    list.querySelectorAll('.task-checkbox').forEach(cb => {
+      cb.addEventListener('change', async () => {
+        const taskId = cb.dataset.id;
+        const res = await apiFetch(`/projects/tasks/${taskId}/complete`, {
+          method: 'PUT',
+          body: JSON.stringify({ notes: 'Completed via Super Admin Console' })
+        });
+        if (res.ok && res.data && res.data.success) {
+          showToast(`Task updated! Project progress is now ${res.data.data.newProgressPercent}%.`, 'success');
+          const localTask = state.tasksCache.find(t => t.id === taskId);
+          if (localTask) {
+            localTask.status = cb.checked ? 'completed' : 'todo';
           }
-        });
+          renderFilteredTasks();
+          loadProjectsData();
+        } else {
+          showToast('Failed to update task status.', 'error');
+          cb.checked = !cb.checked;
+        }
       });
+    });
 
-      // Wire live task details
-      list.querySelectorAll('.btn-live-task-detail').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const task = state.tasksCache.find(t => t.id === btn.dataset.id);
-          if (!task) return;
+    // Wire live task details
+    list.querySelectorAll('.btn-live-task-detail').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const task = state.tasksCache.find(t => t.id === btn.dataset.id);
+        if (!task) return;
 
-          const modal = document.getElementById('modalLiveTaskDetail');
-          if (!modal) return;
+        const modal = document.getElementById('modalLiveTaskDetail');
+        if (!modal) return;
 
-          document.getElementById('liveTaskId').value = task.id;
-          document.getElementById('liveTaskModalTitle').innerHTML = `<i class="fa-solid fa-list-check text-brand-whiz"></i><span>${task.title}</span>`;
-          document.getElementById('liveTaskModalProject').textContent = `${task.project_name} (${task.organization_name})`;
-          document.getElementById('liveTaskModalDesc').textContent = task.description || 'Standard task execution blueprint.';
-          document.getElementById('liveTaskStatus').value = task.status || 'todo';
-          document.getElementById('liveTaskPriority').value = task.priority || 'medium';
-          document.getElementById('liveTaskNotes').value = task.internal_notes || '';
+        document.getElementById('liveTaskId').value = task.id;
+        const modalTitle = document.getElementById('liveTaskModalTitle');
+        if (modalTitle) {
+          modalTitle.innerHTML = `<i class="fa-solid fa-list-check text-[#087F70]"></i><span>${escapeHtml(task.title)}</span>`;
+        }
+        const modalProject = document.getElementById('liveTaskModalProject');
+        if (modalProject) {
+          modalProject.textContent = `${task.project_name || 'Project'} (${task.organization_name || task.client_name || 'Client'})`;
+        }
+        const modalDesc = document.getElementById('liveTaskModalDesc');
+        if (modalDesc) {
+          modalDesc.textContent = task.description || 'Standard task execution blueprint.';
+        }
+        const modalStatus = document.getElementById('liveTaskStatus');
+        if (modalStatus) modalStatus.value = task.status || 'todo';
+        const modalPriority = document.getElementById('liveTaskPriority');
+        if (modalPriority) modalPriority.value = task.priority || 'medium';
+        const modalNotes = document.getElementById('liveTaskNotes');
+        if (modalNotes) modalNotes.value = task.internal_notes || '';
 
-          modal.classList.remove('hidden');
-        });
+        modal.classList.remove('hidden');
       });
-    }
+    });
+  }
+
+  function updateStatusFilterButtons(activeFilter) {
+    document.querySelectorAll('.task-filter-btn').forEach(b => {
+      const isTarget = b.dataset.filter === activeFilter;
+      if (isTarget) {
+        b.classList.add('bg-[#EAF5F1]', 'text-[#087F70]', 'font-bold', 'border-[#087F70]/25', 'shadow-2xs');
+        b.classList.remove('text-[#74817D]', 'border-transparent', 'font-semibold');
+      } else {
+        b.classList.remove('bg-[#EAF5F1]', 'text-[#087F70]', 'font-bold', 'border-[#087F70]/25', 'shadow-2xs');
+        b.classList.add('text-[#74817D]', 'border-transparent', 'font-semibold');
+      }
+    });
   }
 
   // =========================================================================
@@ -4271,18 +4470,41 @@
       }
     });
 
-    // 6. Task Filter Buttons
+    // 6. Task Filter Buttons & Search Controls (WHIZ Smart Task Workspace)
     document.querySelectorAll('.task-filter-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.task-filter-btn').forEach(b => {
-          b.classList.remove('bg-slate-800', 'text-white', 'font-bold');
-          b.classList.add('text-slate-400', 'font-medium');
-        });
-        btn.classList.add('bg-slate-800', 'text-white', 'font-bold');
-        btn.classList.remove('text-slate-400', 'font-medium');
-        loadTasksData(btn.dataset.filter);
+        const filter = btn.dataset.filter;
+        state.currentTaskStatus = filter;
+        updateStatusFilterButtons(filter);
+        renderFilteredTasks();
       });
     });
+
+    const taskSearch = document.getElementById('taskSearchInput');
+    const taskPriority = document.getElementById('taskPriorityFilter');
+    const clearSearchBtn = document.getElementById('btnClearTaskSearch');
+
+    if (taskSearch) {
+      taskSearch.addEventListener('input', () => {
+        renderFilteredTasks();
+      });
+    }
+
+    if (clearSearchBtn) {
+      clearSearchBtn.addEventListener('click', () => {
+        if (taskSearch) {
+          taskSearch.value = '';
+          taskSearch.focus();
+        }
+        renderFilteredTasks();
+      });
+    }
+
+    if (taskPriority) {
+      taskPriority.addEventListener('change', () => {
+        renderFilteredTasks();
+      });
+    }
 
     // 7. Open Record Payment Modal
     const openRecordPayment = () => {
@@ -4917,7 +5139,7 @@
         } else if (targetTab === 'services') {
           loadServicesData();
         } else if (targetTab === 'tasks') {
-          const targetStatus = targetFilter === 'pending' ? 'in_progress' : (targetFilter || 'all');
+          const targetStatus = targetFilter || 'all';
           document.querySelectorAll('.task-filter-btn').forEach(b => {
             const matches = b.dataset.filter === targetStatus || (targetFilter === 'pending' && b.dataset.filter === 'in_progress');
             if (matches) {
@@ -4928,7 +5150,7 @@
               b.classList.add('text-slate-400', 'font-medium');
             }
           });
-          loadTasksData(targetStatus);
+          state.currentTaskStatus = targetStatus; updateStatusFilterButtons(targetStatus); loadTasksData(targetStatus);
         } else if (targetTab === 'finance') {
           loadFinanceData();
         }
