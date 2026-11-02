@@ -21,38 +21,39 @@
 import nacl from "tweetnacl";
 
 // =============================================================================
-// CONFIGURATION & CREDENTIALS
+// CONFIGURATION & ENVIRONMENT BINDINGS (ZERO HARDCODED SECRETS)
+// All secrets (BOT_TOKEN, CF_API_TOKEN, webhooks) are resolved from env bindings
 // =============================================================================
-const P1 = "MTU0OTU2NjM3NjcwMjc3MTMyMA";
-const P2 = "G6RTlJ";
-const P3 = "SAAtY6RKG_m6AOC9LBwznRcSi6mPaEdcNj3iU0";
-
-const CF_T1 = "cfat_rD1efTLnOWfI8Lyt";
-const CF_T2 = "9UA7NIRgyFRQ6IcAm0gzslKJ42a74517";
-
 export const CONFIG = {
-  DISCORD_PUBLIC_KEY: "903e82c4ba2e246220383ac64ba86e62a3da2a7b84110c2a336ee2a815450e09",
-  BOT_TOKEN: [P1, P2, P3].join("."),
-  REVIEW_CHANNEL_ID: "1557820513982742580",
-  REVIEW_WEBHOOK_URL: "https://discord.com/api/webhooks/1557836746916372614/D9tZfwn_N8cDd4qnWjeD3FJPo_c5f6PZuvPRFz4DKspOyZrnqaoHU6JjMoXvvnjdxA0J",
-  CONTACT_WEBHOOK_URL: "https://discord.com/api/webhooks/1557836745142444102/EXn8-9jj3oUjWQDwt0pti9DTlBKKpEb8O_m8ufSp56SGxvRiebmhXPVm2D73DAj0-lAA",
   ACCOUNT_ID: "c71a151e01e6c71669dd8e3fce7d5598",
   KV_NAMESPACE_ID: "26a1650d57c04ae1a5970f81909acdba",
-  CF_API_TOKEN: [CF_T1, CF_T2].join("")
+  REVIEW_CHANNEL_ID: "1557820513982742580"
 };
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Signature-Ed25519, X-Signature-Timestamp",
-  "Access-Control-Max-Age": "86400"
-};
+const ALLOWED_ORIGINS = [
+  "https://whizstudio.art",
+  "https://www.whizstudio.art",
+  "https://portal.whizstudio.art",
+  "https://admin.whizstudio.art"
+];
 
-function jsonResponse(data, status = 200, extraHeaders = {}) {
+function getCorsHeaders(request) {
+  const origin = request?.headers?.get("origin") || "";
+  const isAllowed = ALLOWED_ORIGINS.includes(origin) || origin.endsWith(".whizstudio.pages.dev") || origin.startsWith("http://localhost:");
+  return {
+    "Access-Control-Allow-Origin": isAllowed ? origin : "https://whizstudio.art",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Signature-Ed25519, X-Signature-Timestamp",
+    "Access-Control-Max-Age": "86400",
+    "Vary": "Origin"
+  };
+}
+
+function jsonResponse(data, status = 200, extraHeaders = {}, request = null) {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
-      ...CORS_HEADERS,
+      ...getCorsHeaders(request),
       "Content-Type": "application/json",
       ...extraHeaders
     }
@@ -129,8 +130,10 @@ async function kvGet(env, key) {
     return await env.REVIEWS_DB.get(key);
   }
 
+  const cfToken = env?.CF_API_TOKEN;
+  if (!cfToken) return null;
   const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CONFIG.ACCOUNT_ID}/storage/kv/namespaces/${CONFIG.KV_NAMESPACE_ID}/values/${key}`, {
-    headers: { "Authorization": `Bearer ${CONFIG.CF_API_TOKEN}` }
+    headers: { "Authorization": `Bearer ${cfToken}` }
   });
   if (res.status === 200) {
     return await res.text();
@@ -144,8 +147,10 @@ async function kvList(env, prefix = "review_") {
     return res.keys || [];
   }
 
+  const cfToken = env?.CF_API_TOKEN;
+  if (!cfToken) return [];
   const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CONFIG.ACCOUNT_ID}/storage/kv/namespaces/${CONFIG.KV_NAMESPACE_ID}/keys?prefix=${prefix}`, {
-    headers: { "Authorization": `Bearer ${CONFIG.CF_API_TOKEN}` }
+    headers: { "Authorization": `Bearer ${cfToken}` }
   });
   if (res.status === 200) {
     const json = await res.json();
@@ -185,14 +190,14 @@ export default {
     }
 
     if (request.method === "OPTIONS") {
-      return new Response(null, { status: 204, headers: CORS_HEADERS });
+      return new Response(null, { status: 204, headers: getCorsHeaders(request) });
     }
 
-    const botToken = env?.BOT_TOKEN || CONFIG.BOT_TOKEN;
+    const botToken = env?.BOT_TOKEN || "";
     const channelId = env?.REVIEW_CHANNEL_ID || CONFIG.REVIEW_CHANNEL_ID;
-    const publicKey = env?.DISCORD_PUBLIC_KEY || CONFIG.DISCORD_PUBLIC_KEY;
-    const reviewWebhook = env?.REVIEW_WEBHOOK_URL || CONFIG.REVIEW_WEBHOOK_URL;
-    const contactWebhook = env?.CONTACT_WEBHOOK_URL || CONFIG.CONTACT_WEBHOOK_URL;
+    const publicKey = env?.DISCORD_PUBLIC_KEY || "";
+    const reviewWebhook = env?.REVIEW_WEBHOOK_URL || "";
+    const contactWebhook = env?.CONTACT_WEBHOOK_URL || "";
 
     // -------------------------------------------------------------------------
     // ROUTE A: POST /api/submit-review (From Website)
@@ -738,7 +743,7 @@ export default {
         headers: {
           "Content-Type": "application/xml; charset=utf-8",
           "Cache-Control": "public, max-age=3600, must-revalidate",
-          "Access-Control-Allow-Origin": "*"
+          "Access-Control-Allow-Origin": "https://whizstudio.art"
         }
       });
     }
@@ -750,7 +755,7 @@ export default {
         headers: {
           "Content-Type": "text/plain; charset=utf-8",
           "Cache-Control": "public, max-age=3600, must-revalidate",
-          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Origin": "https://whizstudio.art",
           "X-Content-Type-Options": "nosniff"
         }
       });

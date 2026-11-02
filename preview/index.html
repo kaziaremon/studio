@@ -1,0 +1,1378 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-[#F4FAF7] text-slate-800">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Whiz Studio | Interactive Liquid Glass UI Preview</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+
+  <!-- Google Fonts: Inter & Poppins & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- FontAwesome 6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              whiz: '#147D64',
+              primary: '#147D64',
+              dark: '#172B36',
+              light: '#F8FAFC',
+              border: '#E3E9EF',
+              muted: '#64748B',
+              surface: '#FFFFFF',
+              accent: '#00A86B'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Poppins', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Chart.js for Realistic Interactive KPIs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <style>
+    :root {
+      --brand-whiz: #147D64;
+      --brand-emerald: #059669;
+      --brand-deep: #065F46;
+      --brand-dark: #172B36;
+      --text-main: #172B36;
+      --text-muted: #5F7180;
+      
+      /* Pure Liquid Glass Tokens */
+      --liquid-surface: rgba(255, 255, 255, 0.72);
+      --liquid-surface-elevated: rgba(255, 255, 255, 0.88);
+      --liquid-surface-card: rgba(255, 255, 255, 0.65);
+      --liquid-border: rgba(255, 255, 255, 0.80);
+      --liquid-border-subtle: rgba(227, 233, 239, 0.75);
+      --liquid-shadow-sm: 0 2px 10px 0 rgba(20, 125, 100, 0.04);
+      --liquid-shadow-md: 0 10px 30px -4px rgba(23, 43, 54, 0.08), 0 4px 12px -2px rgba(20, 125, 100, 0.04);
+      --liquid-shadow-lg: 0 24px 48px -8px rgba(23, 43, 54, 0.12), 0 8px 24px -4px rgba(20, 125, 100, 0.06);
+      --liquid-blur: blur(20px);
+    }
+
+    /* Ambient composite-only lighting */
+    .liquid-ambient-backdrop {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+      background: radial-gradient(circle at 15% 15%, rgba(20, 125, 100, 0.07) 0%, transparent 45%),
+                  radial-gradient(circle at 85% 85%, rgba(0, 168, 107, 0.06) 0%, transparent 50%),
+                  radial-gradient(circle at 50% 50%, rgba(244, 250, 247, 0.8) 0%, #F4FAF7 100%);
+    }
+
+    .liquid-orb-1 {
+      position: absolute;
+      top: -100px;
+      right: 10%;
+      width: 500px;
+      height: 500px;
+      border-radius: 9999px;
+      background: radial-gradient(circle, rgba(20, 125, 100, 0.12) 0%, rgba(255,255,255,0) 70%);
+      transform: translate3d(0, 0, 0);
+      animation: floatOrb 25s ease-in-out infinite alternate;
+    }
+
+    .liquid-orb-2 {
+      position: absolute;
+      bottom: -150px;
+      left: 5%;
+      width: 600px;
+      height: 600px;
+      border-radius: 9999px;
+      background: radial-gradient(circle, rgba(5, 150, 105, 0.09) 0%, rgba(255,255,255,0) 70%);
+      transform: translate3d(0, 0, 0);
+      animation: floatOrb 30s ease-in-out infinite alternate-reverse;
+    }
+
+    @keyframes floatOrb {
+      0% { transform: translate3d(0, 0, 0) scale(1); }
+      100% { transform: translate3d(30px, 40px, 0) scale(1.08); }
+    }
+
+    /* Liquid Glass Card Architecture */
+    .liquid-glass-card {
+      background: var(--liquid-surface-card);
+      backdrop-filter: var(--liquid-blur);
+      -webkit-backdrop-filter: var(--liquid-blur);
+      border: 1px solid var(--liquid-border);
+      box-shadow: var(--liquid-shadow-md),
+                  inset 0 1px 1px 0 rgba(255, 255, 255, 0.9),
+                  inset 0 -1px 1px 0 rgba(227, 233, 239, 0.4);
+      border-radius: 1.5rem;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .liquid-glass-card-hover:hover {
+      background: rgba(255, 255, 255, 0.82);
+      border-color: rgba(20, 125, 100, 0.35);
+      box-shadow: var(--liquid-shadow-lg),
+                  0 0 0 1px rgba(20, 125, 100, 0.15),
+                  inset 0 1px 2px 0 rgba(255, 255, 255, 1);
+      transform: translateY(-2px);
+    }
+
+    .liquid-glass-panel {
+      background: var(--liquid-surface);
+      backdrop-filter: var(--liquid-blur);
+      -webkit-backdrop-filter: var(--liquid-blur);
+      border: 1px solid var(--liquid-border);
+      box-shadow: var(--liquid-shadow-sm),
+                  inset 0 1px 1px 0 rgba(255, 255, 255, 0.85);
+    }
+
+    .liquid-glass-sidebar {
+      background: rgba(255, 255, 255, 0.78);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-right: 1px solid rgba(227, 233, 239, 0.85);
+      box-shadow: 4px 0 24px -4px rgba(23, 43, 54, 0.04);
+    }
+
+    .liquid-glass-header {
+      background: rgba(255, 255, 255, 0.82);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(227, 233, 239, 0.85);
+      box-shadow: 0 4px 20px -2px rgba(23, 43, 54, 0.03);
+    }
+
+    .liquid-glass-nav-active {
+      background: rgba(20, 125, 100, 0.10) !important;
+      color: #147D64 !important;
+      border: 1px solid rgba(20, 125, 100, 0.25) !important;
+      box-shadow: 0 2px 10px rgba(20, 125, 100, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.9) !important;
+      font-weight: 700 !important;
+    }
+
+    /* Primary Liquid Button */
+    .btn-liquid-primary {
+      background: linear-gradient(135deg, #147D64 0%, #0D5C49 100%);
+      color: #FFFFFF;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      box-shadow: 0 4px 14px 0 rgba(20, 125, 100, 0.30), inset 0 1px 1px 0 rgba(255, 255, 255, 0.45);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .btn-liquid-primary:hover {
+      background: linear-gradient(135deg, #189679 0%, #106D57 100%);
+      box-shadow: 0 8px 22px 0 rgba(20, 125, 100, 0.40), inset 0 1px 1px 0 rgba(255, 255, 255, 0.6);
+      transform: translateY(-1.5px);
+    }
+
+    /* Modal Backdrop Blur */
+    .liquid-modal-backdrop {
+      background: rgba(15, 23, 42, 0.35);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    /* Hardware Performance Fallback */
+    @supports not ((-webkit-backdrop-filter: blur(10px)) or (backdrop-filter: blur(10px))) {
+      .liquid-glass-card, .liquid-glass-panel, .liquid-glass-sidebar, .liquid-glass-header {
+        background: #FFFFFF !important;
+        border: 1px solid #E2E8F0 !important;
+      }
+    }
+
+    /* Simulated Viewport Frame (for testing all breakpoints) */
+    .viewport-frame-active {
+      box-shadow: 0 0 0 8px #172B36, 0 30px 80px rgba(0,0,0,0.35) !important;
+      border-radius: 2.2rem !important;
+      margin: 1.5rem auto !important;
+      overflow: hidden !important;
+      transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1), height 0.4s ease;
+    }
+  </style>
+</head>
+<body class="h-full antialiased font-sans flex flex-col overflow-x-hidden selection:bg-brand-whiz selection:text-white">
+
+  <!-- Ambient Light Reflection Canvas -->
+  <div class="liquid-ambient-backdrop">
+    <div class="liquid-orb-1"></div>
+    <div class="liquid-orb-2"></div>
+  </div>
+
+  <!-- =========================================================================
+       CONTROL TOOLBAR: ROLE & VIEWPORT INTERACTIVE SWITCHER
+       ========================================================================= -->
+  <header class="sticky top-0 z-50 bg-[#172B36] text-white border-b border-slate-700/80 shadow-lg px-4 py-2.5">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3 text-xs">
+      
+      <!-- Brand & Mode Title -->
+      <div class="flex items-center space-x-3">
+        <div class="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center font-black text-emerald-400 font-display">
+          W
+        </div>
+        <div>
+          <span class="font-bold tracking-tight text-white flex items-center gap-1.5">
+            Whiz Studio
+            <span class="px-2 py-0.5 rounded-full text-[9px] font-mono font-extrabold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Liquid Glass Preview</span>
+          </span>
+          <p class="text-[10px] text-slate-400">Interactive Multi-Role & Responsive Simulator</p>
+        </div>
+      </div>
+
+      <!-- Role Selector Controls -->
+      <div class="flex items-center bg-slate-800/90 p-1 rounded-xl border border-slate-700 space-x-1">
+        <span class="text-[10px] text-slate-400 px-2 font-semibold uppercase tracking-wider hidden sm:inline">Role:</span>
+        <button type="button" class="btn-role-switch px-2.5 py-1 rounded-lg font-bold transition-all bg-emerald-600 text-white shadow-xs cursor-pointer" data-role="super_admin">
+          👑 Super Admin
+        </button>
+        <button type="button" class="btn-role-switch px-2.5 py-1 rounded-lg font-semibold text-slate-300 hover:text-white hover:bg-slate-700 transition-all cursor-pointer" data-role="admin">
+          🛡️ Admin
+        </button>
+        <button type="button" class="btn-role-switch px-2.5 py-1 rounded-lg font-semibold text-slate-300 hover:text-white hover:bg-slate-700 transition-all cursor-pointer" data-role="accounts">
+          💳 Accounts
+        </button>
+        <button type="button" class="btn-role-switch px-2.5 py-1 rounded-lg font-semibold text-slate-300 hover:text-white hover:bg-slate-700 transition-all cursor-pointer" data-role="employee">
+          👷 Employee
+        </button>
+        <button type="button" class="btn-role-switch px-2.5 py-1 rounded-lg font-semibold text-slate-300 hover:text-white hover:bg-slate-700 transition-all cursor-pointer" data-role="client">
+          👤 Client Portal
+        </button>
+      </div>
+
+      <!-- Viewport Device Switcher -->
+      <div class="flex items-center bg-slate-800/90 p-1 rounded-xl border border-slate-700 space-x-1">
+        <span class="text-[10px] text-slate-400 px-2 font-semibold uppercase tracking-wider hidden md:inline">Device:</span>
+        <button type="button" class="btn-vp-switch p-1.5 px-2 rounded-lg font-bold bg-slate-700 text-white cursor-pointer" data-vp="fluid" title="Fluid Responsive 100%">
+          <i class="fa-solid fa-arrows-left-right-to-line"></i> <span class="hidden lg:inline text-[10px] ml-1">Fluid</span>
+        </button>
+        <button type="button" class="btn-vp-switch p-1.5 px-2 rounded-lg font-medium text-slate-400 hover:text-white hover:bg-slate-700 cursor-pointer" data-vp="desktop" title="Desktop Monitor (1920px)">
+          <i class="fa-solid fa-desktop"></i>
+        </button>
+        <button type="button" class="btn-vp-switch p-1.5 px-2 rounded-lg font-medium text-slate-400 hover:text-white hover:bg-slate-700 cursor-pointer" data-vp="laptop" title="Laptop (1280px)">
+          <i class="fa-solid fa-laptop"></i>
+        </button>
+        <button type="button" class="btn-vp-switch p-1.5 px-2 rounded-lg font-medium text-slate-400 hover:text-white hover:bg-slate-700 cursor-pointer" data-vp="tablet" title="Tablet (768px)">
+          <i class="fa-solid fa-tablet-screen-button"></i>
+        </button>
+        <button type="button" class="btn-vp-switch p-1.5 px-2 rounded-lg font-medium text-slate-400 hover:text-white hover:bg-slate-700 cursor-pointer" data-vp="mobile" title="Smartphone (390px)">
+          <i class="fa-solid fa-mobile-screen"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- =========================================================================
+       MAIN PREVIEW WORKSPACE WRAPPER (Fluid or Framed Device Simulator)
+       ========================================================================= -->
+  <div id="previewViewportWrapper" class="flex-1 w-full relative z-10 transition-all flex flex-col">
+
+    <!-- DASHBOARD CONTAINER (Admin & Client) -->
+    <div class="flex-1 flex flex-col md:flex-row min-h-screen">
+
+      <!-- =====================================================================
+           LIQUID GLASS SIDEBAR (Desktop)
+           ===================================================================== -->
+      <aside id="sidebarMain" class="hidden md:flex flex-col w-64 liquid-glass-sidebar p-5 space-y-6 shrink-0 relative z-20">
+        
+        <!-- Agency Logo & Title -->
+        <div class="flex items-center space-x-3 pb-4 border-b border-[#E3E9EF]">
+          <div class="w-10 h-10 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs flex items-center justify-center p-1.5 shrink-0">
+            <img src="/logo.png" alt="Whiz Studio" class="w-full h-full object-contain" onerror="this.src='/favicon.png'">
+          </div>
+          <div class="min-w-0">
+            <h1 class="text-sm font-black text-[#172B36] tracking-tight truncate font-display">WHIZ STUDIO</h1>
+            <p id="sidebarPortalSubtitle" class="text-[10px] text-[#5F7180] font-semibold truncate">Super Admin Console</p>
+          </div>
+        </div>
+
+        <!-- Role Badge Pill -->
+        <div class="p-3 rounded-2xl bg-white/70 border border-white shadow-xs flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span id="sidebarRolePill" class="text-xs font-bold text-[#172B36]">Super Admin</span>
+          </div>
+          <span class="text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-50 text-[#147D64] border border-emerald-200 font-bold">ACTIVE</span>
+        </div>
+
+        <!-- Navigation Menu Links (Dynamic for Role) -->
+        <nav id="sidebarNavItems" class="space-y-1.5 flex-1 overflow-y-auto pr-1">
+          <!-- Populated by JavaScript according to role -->
+        </nav>
+
+        <!-- Sidebar User Footer -->
+        <div class="pt-4 border-t border-[#E3E9EF] flex items-center justify-between">
+          <div class="flex items-center space-x-2.5 min-w-0">
+            <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-[#147D64] to-emerald-400 text-white font-bold text-xs flex items-center justify-center shrink-0">
+              KE
+            </div>
+            <div class="min-w-0">
+              <p id="sidebarUserName" class="text-xs font-bold text-[#172B36] truncate">Kazi Emon</p>
+              <p id="sidebarUserEmail" class="text-[10px] text-[#5F7180] truncate">kaziaremon@gmail.com</p>
+            </div>
+          </div>
+          <button type="button" class="text-slate-400 hover:text-rose-600 transition-colors p-1" title="Sign Out">
+            <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i>
+          </button>
+        </div>
+      </aside>
+
+      <!-- =====================================================================
+           MOBILE TOP BAR & DRAWER
+           ===================================================================== -->
+      <div class="md:hidden liquid-glass-header px-4 py-3 flex items-center justify-between z-30 sticky top-12">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-8 h-8 rounded-xl bg-white border border-[#E3E9EF] p-1 flex items-center justify-center">
+            <img src="/logo.png" alt="Whiz Studio" class="w-full h-full object-contain" onerror="this.src='/favicon.png'">
+          </div>
+          <span class="text-xs font-black text-[#172B36] font-display">WHIZ STUDIO</span>
+        </div>
+        <button type="button" id="btnToggleMobileDrawer" class="p-2 rounded-xl bg-white/80 border border-[#E3E9EF] text-slate-700 hover:text-[#147D64] cursor-pointer">
+          <i class="fa-solid fa-bars text-sm"></i>
+        </button>
+      </div>
+
+      <!-- Mobile Drawer Modal -->
+      <div id="mobileDrawerBackdrop" class="hidden fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm transition-opacity"></div>
+      <div id="mobileDrawer" class="fixed inset-y-0 left-0 z-50 w-72 bg-white/95 backdrop-blur-2xl border-r border-[#E3E9EF] p-5 flex flex-col justify-between transform -translate-x-full transition-transform duration-300 md:hidden">
+        <div class="space-y-5">
+          <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
+            <div class="flex items-center space-x-2">
+              <div class="w-7 h-7 rounded-lg bg-emerald-50 text-[#147D64] flex items-center justify-center font-bold">W</div>
+              <span class="text-xs font-black text-[#172B36]">Whiz Studio</span>
+            </div>
+            <button type="button" id="btnCloseMobileDrawer" class="p-1.5 text-slate-400 hover:text-slate-700">
+              <i class="fa-solid fa-xmark text-base"></i>
+            </button>
+          </div>
+          <nav id="mobileNavItems" class="space-y-1 overflow-y-auto max-h-[70vh]">
+            <!-- Dynamic Mobile Nav -->
+          </nav>
+        </div>
+        <div class="pt-4 border-t border-[#E3E9EF] text-center text-[10px] text-slate-400">
+          Whiz Studio Liquid Glass Experience v2.8
+        </div>
+      </div>
+
+      <!-- =====================================================================
+           MAIN VIEW CONTENT AREA
+           ===================================================================== -->
+      <main class="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 overflow-y-auto max-w-7xl mx-auto w-full">
+        
+        <!-- Dynamic View Top Bar -->
+        <div class="liquid-glass-panel rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center space-x-2">
+              <h2 id="viewHeaderTitle" class="text-xl sm:text-2xl font-black text-[#172B36] tracking-tight font-display">Executive Overview & Analytics</h2>
+              <span id="viewHeaderBadge" class="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-emerald-50 text-[#147D64] border border-emerald-200">Live Production</span>
+            </div>
+            <p id="viewHeaderSubtitle" class="text-xs text-[#5F7180] mt-0.5">Authoritative platform metrics, active client retainers, and operational health.</p>
+          </div>
+
+          <!-- Quick Action Buttons Header -->
+          <div id="viewHeaderActions" class="flex items-center gap-2">
+            <!-- Dynamic Header Actions -->
+          </div>
+        </div>
+
+        <!-- ===================================================================
+             VIEW 1: OVERVIEW & KPIS (Admin & Super Admin)
+             =================================================================== -->
+        <section id="view_overview" class="space-y-6">
+          
+          <!-- 6 Liquid Glass KPI Metric Cards -->
+          <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
+            
+            <div class="liquid-glass-card liquid-glass-card-hover p-4 space-y-2 cursor-pointer" data-kpi-jump="clients">
+              <div class="flex items-center justify-between text-[#5F7180]">
+                <span class="text-[11px] font-bold uppercase tracking-wider">Active Clients</span>
+                <i class="fa-solid fa-building text-xs text-[#147D64]"></i>
+              </div>
+              <div class="text-2xl font-black text-[#172B36] font-display">14</div>
+              <div class="text-[10px] text-emerald-700 font-semibold flex items-center gap-1">
+                <i class="fa-solid fa-arrow-trend-up"></i> +2 this month
+              </div>
+            </div>
+
+            <div class="liquid-glass-card liquid-glass-card-hover p-4 space-y-2 cursor-pointer" data-kpi-jump="services">
+              <div class="flex items-center justify-between text-[#5F7180]">
+                <span class="text-[11px] font-bold uppercase tracking-wider">Services</span>
+                <i class="fa-solid fa-cubes text-xs text-[#147D64]"></i>
+              </div>
+              <div class="text-2xl font-black text-[#172B36] font-display">12</div>
+              <div class="text-[10px] text-[#5F7180]">240 Master SOPs</div>
+            </div>
+
+            <div class="liquid-glass-card liquid-glass-card-hover p-4 space-y-2 cursor-pointer" data-kpi-jump="projects">
+              <div class="flex items-center justify-between text-[#5F7180]">
+                <span class="text-[11px] font-bold uppercase tracking-wider">Projects</span>
+                <i class="fa-solid fa-folder-tree text-xs text-[#147D64]"></i>
+              </div>
+              <div class="text-2xl font-black text-[#172B36] font-display">8</div>
+              <div class="text-[10px] text-emerald-700 font-semibold">100% on schedule</div>
+            </div>
+
+            <div class="liquid-glass-card liquid-glass-card-hover p-4 space-y-2 cursor-pointer" data-kpi-jump="tasks">
+              <div class="flex items-center justify-between text-[#5F7180]">
+                <span class="text-[11px] font-bold uppercase tracking-wider">Live Tasks</span>
+                <i class="fa-solid fa-list-check text-xs text-[#147D64]"></i>
+              </div>
+              <div class="text-2xl font-black text-[#172B36] font-display">160</div>
+              <div class="text-[10px] text-amber-700 font-semibold">32 pending QA</div>
+            </div>
+
+            <div class="liquid-glass-card liquid-glass-card-hover p-4 space-y-2 cursor-pointer" data-kpi-jump="finance">
+              <div class="flex items-center justify-between text-[#5F7180]">
+                <span class="text-[11px] font-bold uppercase tracking-wider">Invoices</span>
+                <i class="fa-solid fa-file-invoice-dollar text-xs text-[#147D64]"></i>
+              </div>
+              <div class="text-2xl font-black text-[#172B36] font-display">24</div>
+              <div class="text-[10px] text-emerald-700 font-semibold">0 overdue</div>
+            </div>
+
+            <div class="liquid-glass-card liquid-glass-card-hover p-4 space-y-2 cursor-pointer" data-kpi-jump="finance">
+              <div class="flex items-center justify-between text-[#5F7180]">
+                <span class="text-[11px] font-bold uppercase tracking-wider">Revenue</span>
+                <i class="fa-solid fa-vault text-xs text-[#147D64]"></i>
+              </div>
+              <div class="text-2xl font-black text-[#172B36] font-display">$18,450</div>
+              <div class="text-[10px] text-emerald-700 font-semibold">Verified in D1</div>
+            </div>
+          </div>
+
+          <!-- Charts Section: Revenue Trend & Service Distribution -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            <div class="lg:col-span-2 liquid-glass-card p-5 sm:p-6 space-y-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="text-sm font-bold text-[#172B36]">Confirmed Monthly Revenue ($ USD)</h3>
+                  <p class="text-xs text-[#5F7180]">Clean payment ledger transactions from Cloudflare D1</p>
+                </div>
+                <span class="text-xs font-mono font-bold text-[#147D64] bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-200">+34% YoY</span>
+              </div>
+              <div class="h-64 w-full">
+                <canvas id="chartRevenueTrend"></canvas>
+              </div>
+            </div>
+
+            <div class="liquid-glass-card p-5 sm:p-6 space-y-4">
+              <div>
+                <h3 class="text-sm font-bold text-[#172B36]">Service Retainer Distribution</h3>
+                <p class="text-xs text-[#5F7180]">Top subscribed packages</p>
+              </div>
+              <div class="h-64 w-full flex items-center justify-center">
+                <canvas id="chartServiceDist"></canvas>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===================================================================
+             VIEW 2: CLIENT DIRECTORY (Admin & Super Admin)
+             =================================================================== -->
+        <section id="view_clients" class="hidden space-y-5">
+          <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="relative w-full sm:w-72">
+              <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+              <input type="text" id="demoClientSearch" placeholder="Search clients by name, org, or email..." class="w-full pl-9 pr-4 py-2 rounded-xl bg-white/70 border border-[#E3E9EF] text-xs text-[#172B36] focus:outline-none focus:border-[#147D64]">
+            </div>
+            <button type="button" id="btnOpenDemoAddClient" class="btn-liquid-primary px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer w-full sm:w-auto justify-center">
+              <i class="fa-solid fa-plus text-xs"></i>
+              <span>Add New Client</span>
+            </button>
+          </div>
+
+          <div class="liquid-glass-card overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50/70 border-b border-[#E3E9EF] text-[11px] font-bold text-[#5F7180] uppercase tracking-wider">
+                  <tr>
+                    <th class="px-5 py-3.5">Client & Organization</th>
+                    <th class="px-5 py-3.5">Contact Email</th>
+                    <th class="px-5 py-3.5">CIF Status</th>
+                    <th class="px-5 py-3.5">Active Services</th>
+                    <th class="px-5 py-3.5 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="demoClientsTableBody" class="divide-y divide-[#E3E9EF]/60">
+                  <!-- Populated by JavaScript -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===================================================================
+             VIEW 2.1: CLIENT DETAILS DRILLDOWN
+             =================================================================== -->
+        <section id="view_client_details" class="hidden space-y-5">
+          <div class="flex items-center justify-between">
+            <button type="button" id="btnBackToClientsFromDetails" class="px-3 py-1.5 rounded-xl bg-white/80 border border-[#E3E9EF] text-xs font-bold text-[#172B36] hover:bg-slate-50 flex items-center gap-1.5 cursor-pointer">
+              <i class="fa-solid fa-arrow-left text-xs"></i>
+              <span>Back to Directory</span>
+            </button>
+            <div class="flex items-center space-x-2">
+              <span id="detailClientStatusBadge" class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">Active</span>
+              <button type="button" class="px-3 py-1.5 rounded-xl bg-rose-50 text-rose-600 border border-rose-200 text-xs font-bold hover:bg-rose-100 cursor-pointer">
+                Delete Client
+              </button>
+            </div>
+          </div>
+
+          <div class="liquid-glass-card p-6 space-y-4">
+            <div class="flex items-start justify-between">
+              <div>
+                <h3 id="detailClientOrgName" class="text-xl font-black text-[#172B36] font-display">Phenom Apex Ltd.</h3>
+                <p id="detailClientPerson" class="text-xs text-[#5F7180]">Primary Contact: MD KAZI ABDUR RAHIM EMON (kaziabdurrahimemon@gmail.com)</p>
+              </div>
+              <div class="text-right">
+                <span class="text-xs text-slate-400 block">Total Spend</span>
+                <span class="text-lg font-black font-mono text-[#172B36]">$3,800.00</span>
+              </div>
+            </div>
+
+            <!-- Client's Active Service Projects -->
+            <div class="pt-4 border-t border-[#E3E9EF] space-y-3">
+              <h4 class="text-xs font-bold uppercase tracking-wider text-[#172B36]">Active Provisioned Projects (2)</h4>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="p-4 rounded-2xl bg-white/70 border border-[#E3E9EF] space-y-2">
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-[#172B36]">WhatsApp Business CRM & Funnels</span>
+                    <span class="text-xs font-mono text-[#147D64] font-bold">85% Complete</span>
+                  </div>
+                  <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden border border-[#E3E9EF]">
+                    <div class="bg-[#147D64] h-full rounded-full" style="width: 85%"></div>
+                  </div>
+                  <span class="text-[11px] text-[#5F7180]">17 of 20 SOP Tasks Verified</span>
+                </div>
+                <div class="p-4 rounded-2xl bg-white/70 border border-[#E3E9EF] space-y-2">
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-[#172B36]">Facebook Marketing & Community</span>
+                    <span class="text-xs font-mono text-[#147D64] font-bold">60% Complete</span>
+                  </div>
+                  <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden border border-[#E3E9EF]">
+                    <div class="bg-[#147D64] h-full rounded-full" style="width: 60%"></div>
+                  </div>
+                  <span class="text-[11px] text-[#5F7180]">12 of 20 SOP Tasks Verified</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===================================================================
+             VIEW 3: SERVICE MANAGEMENT (12 SERVICES + 240 SOP BLUEPRINTS)
+             =================================================================== -->
+        <section id="view_services" class="hidden space-y-5">
+          <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div>
+              <span id="serviceCountBadge" class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-50 text-[#147D64] border border-emerald-200 font-bold">12 Active Services</span>
+              <p class="text-xs text-[#5F7180] mt-1">Authoritative D1 master catalog with permanent deletion safeguards.</p>
+            </div>
+            <button type="button" id="btnOpenDemoAddService" class="btn-liquid-primary px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer">
+              <i class="fa-solid fa-plus text-xs"></i>
+              <span>Add New Service</span>
+            </button>
+          </div>
+
+          <div id="demoServicesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <!-- 12 Services Populated Dynamically -->
+          </div>
+        </section>
+
+        <!-- ===================================================================
+             VIEW 3.1: SERVICE SOP BLUEPRINT WORKSPACE
+             =================================================================== -->
+        <section id="view_service_tasks" class="hidden space-y-6">
+          <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
+            <div class="flex items-center space-x-3">
+              <button type="button" id="btnBackToServicesFromSOP" class="p-2 rounded-xl bg-white border border-[#E3E9EF] text-slate-700 hover:bg-slate-50 cursor-pointer">
+                <i class="fa-solid fa-arrow-left text-xs"></i>
+              </button>
+              <div>
+                <h3 id="sopWorkspaceTitle" class="text-lg font-black text-[#172B36] font-display">WhatsApp Business CRM & Funnels</h3>
+                <p class="text-xs text-[#5F7180]">Master 20-Task SOP Blueprint Library (Hard Delete Verified)</p>
+              </div>
+            </div>
+            <button type="button" id="btnOpenDemoAddBlueprint" class="btn-liquid-primary px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer">
+              <i class="fa-solid fa-plus text-xs"></i>
+              <span>Add SOP Task</span>
+            </button>
+          </div>
+
+          <!-- 3 Phases: Beginning, Intermediate, Advanced -->
+          <div class="space-y-6">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <h4 class="text-xs font-bold uppercase tracking-wider text-[#147D64] flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-[#147D64]"></span> Phase 1: Foundation (Tasks 1-7)
+                </h4>
+                <span class="text-[11px] font-mono text-slate-400">7 Tasks</span>
+              </div>
+              <div id="sopPhase1Container" class="space-y-3"></div>
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <h4 class="text-xs font-bold uppercase tracking-wider text-amber-600 flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-amber-500"></span> Phase 2: Execution & Scaling (Tasks 8-14)
+                </h4>
+                <span class="text-[11px] font-mono text-slate-400">7 Tasks</span>
+              </div>
+              <div id="sopPhase2Container" class="space-y-3"></div>
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <h4 class="text-xs font-bold uppercase tracking-wider text-purple-600 flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-purple-500"></span> Phase 3: Advanced Optimization & QA (Tasks 15-20)
+                </h4>
+                <span class="text-[11px] font-mono text-slate-400">6 Tasks</span>
+              </div>
+              <div id="sopPhase3Container" class="space-y-3"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===================================================================
+             VIEW 4: FINANCIAL LEDGER & INVOICES
+             =================================================================== -->
+        <section id="view_finance" class="hidden space-y-6">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="liquid-glass-card p-4 space-y-1">
+              <span class="text-[11px] text-[#5F7180] font-bold uppercase">Total Billed</span>
+              <div class="text-2xl font-black text-[#172B36] font-mono">$24,500.00</div>
+              <span class="text-[10px] text-emerald-600 font-semibold">Authoritative ledger</span>
+            </div>
+            <div class="liquid-glass-card p-4 space-y-1">
+              <span class="text-[11px] text-[#5F7180] font-bold uppercase">Received Payments</span>
+              <div class="text-2xl font-black text-[#147D64] font-mono">$18,450.00</div>
+              <span class="text-[10px] text-emerald-600 font-semibold">100% reconciled</span>
+            </div>
+            <div class="liquid-glass-card p-4 space-y-1">
+              <span class="text-[11px] text-[#5F7180] font-bold uppercase">Outstanding Balance</span>
+              <div class="text-2xl font-black text-amber-600 font-mono">$6,050.00</div>
+              <span class="text-[10px] text-amber-600 font-semibold">2 pending settlements</span>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-[#172B36]">Payment Ledger Entries</h3>
+            <button type="button" id="btnOpenDemoRecordPayment" class="btn-liquid-primary px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer">
+              <i class="fa-solid fa-receipt text-xs"></i>
+              <span>Record Payment</span>
+            </button>
+          </div>
+
+          <div class="liquid-glass-card overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50/70 border-b border-[#E3E9EF] text-[11px] font-bold text-[#5F7180] uppercase tracking-wider">
+                  <tr>
+                    <th class="px-5 py-3">Receipt / ID</th>
+                    <th class="px-5 py-3">Organization</th>
+                    <th class="px-5 py-3">Method</th>
+                    <th class="px-5 py-3">Amount</th>
+                    <th class="px-5 py-3">Status</th>
+                    <th class="px-5 py-3 text-right">Receipt PDF</th>
+                  </tr>
+                </thead>
+                <tbody id="demoPaymentsTableBody" class="divide-y divide-[#E3E9EF]/60">
+                  <!-- Populated by JavaScript -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===================================================================
+             VIEW 5: TEAM & USER ACCESS MANAGEMENT
+             =================================================================== -->
+        <section id="view_team" class="hidden space-y-5">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-sm font-bold text-[#172B36]">Authorized Staff & Role Boundaries</h3>
+              <p class="text-xs text-[#5F7180]">Strict server-side RBAC enforcement (Owner, Admin, Accounts, Employee)</p>
+            </div>
+            <button type="button" class="btn-liquid-primary px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer">
+              <i class="fa-solid fa-user-plus text-xs"></i>
+              <span>Invite Staff</span>
+            </button>
+          </div>
+
+          <div class="liquid-glass-card overflow-hidden">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50/70 border-b border-[#E3E9EF] text-[11px] font-bold text-[#5F7180] uppercase tracking-wider">
+                <tr>
+                  <th class="px-5 py-3">Staff Member</th>
+                  <th class="px-5 py-3">Assigned Role</th>
+                  <th class="px-5 py-3">Status</th>
+                  <th class="px-5 py-3">Last Active</th>
+                  <th class="px-5 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-[#E3E9EF]/60">
+                <tr>
+                  <td class="px-5 py-3 font-bold text-[#172B36]">Kazi Emon <span class="text-[10px] text-slate-400 font-mono block">kaziaremon@gmail.com</span></td>
+                  <td class="px-5 py-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">👑 Founding Super Admin</span></td>
+                  <td class="px-5 py-3"><span class="text-emerald-600 font-bold">Active</span></td>
+                  <td class="px-5 py-3 font-mono text-[11px] text-slate-500">SSO Session Active</td>
+                  <td class="px-5 py-3 text-right"><span class="text-[11px] text-slate-400 italic">Protected</span></td>
+                </tr>
+                <tr>
+                  <td class="px-5 py-3 font-bold text-[#172B36]">Ehasan Sabbir <span class="text-[10px] text-slate-400 font-mono block">m.sa66ir@gmail.com</span></td>
+                  <td class="px-5 py-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-blue-50 text-blue-700 border border-blue-200">🛡️ Admin</span></td>
+                  <td class="px-5 py-3"><span class="text-emerald-600 font-bold">Active</span></td>
+                  <td class="px-5 py-3 font-mono text-[11px] text-slate-500">Today, 18:22</td>
+                  <td class="px-5 py-3 text-right"><button class="text-xs text-[#147D64] font-bold hover:underline">Change Role</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ===================================================================
+             VIEW 6: CLIENT PORTAL SPECIFIC (My Services, Deliverables, CIF)
+             =================================================================== -->
+        <section id="view_client_portal" class="hidden space-y-6">
+          <div class="liquid-glass-card p-6 space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <span class="text-xs font-mono font-bold text-[#147D64] uppercase tracking-wider">Client Workspace</span>
+                <h3 class="text-xl font-black text-[#172B36] font-display">Phenom Apex Executive Overview</h3>
+                <p class="text-xs text-[#5F7180]">Welcome back! Here is your live project status and deliverables.</p>
+              </div>
+              <button type="button" id="btnOpenDemoCifModal" class="px-3.5 py-2 rounded-xl bg-emerald-50 text-[#147D64] border border-emerald-200 text-xs font-bold hover:bg-emerald-100 cursor-pointer flex items-center gap-1.5">
+                <i class="fa-solid fa-file-pen text-xs"></i>
+                <span>Update CIF Details (85%)</span>
+              </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-[#E3E9EF]">
+              <div class="p-4 rounded-2xl bg-white/60 border border-[#E3E9EF] space-y-1">
+                <span class="text-[11px] text-[#5F7180] font-bold uppercase">Subscribed Services</span>
+                <div class="text-2xl font-black text-[#172B36]">2 Active</div>
+                <span class="text-[10px] text-emerald-600">Enterprise Growth Tier</span>
+              </div>
+              <div class="p-4 rounded-2xl bg-white/60 border border-[#E3E9EF] space-y-1">
+                <span class="text-[11px] text-[#5F7180] font-bold uppercase">Completed Milestones</span>
+                <div class="text-2xl font-black text-[#147D64]">29 of 40</div>
+                <span class="text-[10px] text-emerald-600">72.5% Total SOP Progress</span>
+              </div>
+              <div class="p-4 rounded-2xl bg-white/60 border border-[#E3E9EF] space-y-1">
+                <span class="text-[11px] text-[#5F7180] font-bold uppercase">Paid Retainer</span>
+                <div class="text-2xl font-black text-[#172B36] font-mono">$3,800.00</div>
+                <span class="text-[10px] text-emerald-600">All invoices settled</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       INTERACTIVE DEMO MODALS (LIQUID GLASS STYLING)
+       ========================================================================= -->
+
+  <!-- MODAL: PERMANENTLY DELETE SERVICE -->
+  <div id="modalDeleteService" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 liquid-modal-backdrop">
+    <div class="liquid-glass-card max-w-lg w-full p-6 space-y-4 border border-rose-200 shadow-2xl bg-white/95">
+      <div class="flex items-center space-x-3 text-rose-600">
+        <div class="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center shrink-0">
+          <i class="fa-solid fa-trash-can text-lg"></i>
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-[#172B36]">Permanently Delete Service</h3>
+          <p class="text-[11px] text-rose-600/90 font-medium">Irreversible Cloudflare D1 Hard Delete</p>
+        </div>
+      </div>
+
+      <p class="text-xs text-[#5F7180] leading-relaxed">
+        Are you sure you want to permanently delete <strong id="deleteServiceTargetName" class="text-[#172B36] font-bold">Service</strong> from the catalog?
+      </p>
+
+      <div class="p-3.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-slate-700 space-y-1.5">
+        <div class="flex items-center justify-between">
+          <span class="text-slate-500 font-medium">Service Code:</span>
+          <span id="deleteServiceTargetCode" class="font-mono font-bold text-slate-900 px-2 py-0.5 bg-slate-200/60 rounded">CODE</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-slate-500 font-medium">Associated SOP Blueprints:</span>
+          <span id="deleteServiceBlueprintCount" class="font-bold text-[#147D64]">20 Tasks</span>
+        </div>
+      </div>
+
+      <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 space-y-1">
+        <p class="font-bold flex items-center gap-1.5"><i class="fa-solid fa-shield-check text-emerald-600"></i> 0 Live Dependencies — Safe to Purge</p>
+        <p class="text-[11px] text-emerald-700">No active client contracts or billing ledgers reference this service.</p>
+      </div>
+
+      <div class="space-y-1.5">
+        <label class="block text-xs text-slate-600">
+          To confirm permanent deletion, type <span class="font-bold font-mono text-rose-600">DELETE</span> below:
+        </label>
+        <input type="text" id="demoDeleteServiceInput" placeholder="Type DELETE to confirm" class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#E3E9EF] text-xs font-mono text-[#172B36]">
+      </div>
+
+      <div class="pt-3 border-t border-[#E3E9EF] flex items-center justify-end space-x-3">
+        <button type="button" class="btn-close-demo-modal px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 cursor-pointer">Cancel</button>
+        <button type="button" id="btnConfirmDeleteServiceDemo" disabled class="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm flex items-center gap-1.5 cursor-pointer">
+          <i class="fa-solid fa-trash-can text-xs"></i>
+          <span>Permanently Delete Service</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: PERMANENTLY DELETE SOP BLUEPRINT -->
+  <div id="modalDeleteBlueprint" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 liquid-modal-backdrop">
+    <div class="liquid-glass-card max-w-lg w-full p-6 space-y-4 border border-rose-200 shadow-2xl bg-white/95">
+      <div class="flex items-center space-x-3 text-rose-600">
+        <div class="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center shrink-0">
+          <i class="fa-solid fa-trash-can text-lg"></i>
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-[#172B36]">Permanently Delete SOP Task</h3>
+          <p class="text-[11px] text-rose-600/90 font-medium">Irreversible Cloudflare D1 Hard Delete</p>
+        </div>
+      </div>
+
+      <div class="p-3.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-slate-700 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-slate-500 font-medium">Task Code:</span>
+          <span id="demoDeleteTaskCode" class="font-mono font-bold text-slate-900 px-2 py-0.5 bg-slate-200/60 rounded">WA_01</span>
+        </div>
+        <div class="flex items-start justify-between gap-2">
+          <span class="text-slate-500 font-medium shrink-0">Task Title:</span>
+          <span id="demoDeleteTaskTitle" class="font-bold text-[#172B36] text-right">API Gateway Initialization</span>
+        </div>
+      </div>
+
+      <div class="p-3 rounded-xl bg-rose-50/60 border border-rose-200 text-[11px] text-rose-800">
+        <p class="font-bold flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation text-rose-600"></i> Irreversible Action:</p>
+        <p>This master SOP blueprint will be permanently removed from Cloudflare D1. It will not be hidden or soft-deleted.</p>
+      </div>
+
+      <div class="pt-3 border-t border-[#E3E9EF] flex items-center justify-end space-x-3">
+        <button type="button" class="btn-close-demo-modal px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 cursor-pointer">Cancel</button>
+        <button type="button" id="btnConfirmDeleteBlueprintDemo" class="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 shadow-sm flex items-center gap-1.5 cursor-pointer">
+          <i class="fa-solid fa-trash-can text-xs"></i>
+          <span>Permanently Delete Task</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification System -->
+  <div id="previewToastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+  <!-- =========================================================================
+       PREVIEW CONTROLLER SCRIPT (FULL INTERACTIVITY & MOCK STATE)
+       ========================================================================= -->
+  <script>
+    // Mock State for 12 services and 20 blueprints
+    const state = {
+      currentRole: 'super_admin',
+      activeTab: 'overview',
+      viewport: 'fluid',
+      services: [
+        { id: 'srv_wa_crm', code: 'WA_CRM', name: 'WhatsApp Business CRM & Sales Funnels', category: 'Conversational Commerce', price: 1200, count: 20 },
+        { id: 'srv_li_b2b', code: 'LI_B2B', name: 'LinkedIn B2B Lead Generation', category: 'Enterprise Growth', price: 1500, count: 20 },
+        { id: 'srv_fb_mkt', code: 'FB_MKT', name: 'Facebook Marketing & Community Building', category: 'Paid & Organic Social Media', price: 1000, count: 20 },
+        { id: 'srv_ig_scl', code: 'IG_SCL', name: 'Instagram Marketing & Reels Scaling', category: 'Paid & Organic Social Media', price: 1100, count: 20 },
+        { id: 'srv_fb_ads', code: 'FB_ADS', name: 'Facebook Ads Management', category: 'Paid Advertising', price: 1400, count: 20 },
+        { id: 'srv_gg_ads', code: 'GG_ADS', name: 'Google Ads & Performance Max', category: 'Paid Advertising', price: 1600, count: 20 },
+        { id: 'srv_yt_gro', code: 'YT_GRO', name: 'YouTube Channel Growth & Video SEO', category: 'Video Media', price: 1300, count: 20 },
+        { id: 'srv_tt_ads', code: 'TT_ADS', name: 'TikTok Ads & Creative Strategy', category: 'Paid Advertising', price: 1200, count: 20 },
+        { id: 'srv_seo_rk', code: 'SEO_RK', name: 'Search Engine Optimization (SEO)', category: 'Visual Search & SEO', price: 1500, count: 20 },
+        { id: 'srv_br_des', code: 'BR_DES', name: 'Brand Identity & Visual Design Systems', category: 'Professional Branding', price: 2000, count: 20 },
+        { id: 'srv_em_fun', code: 'EM_FUN', name: 'Email Marketing & Retention Automations', category: 'Enterprise Growth', price: 1100, count: 20 },
+        { id: 'srv_an_trk', code: 'AN_TRK', name: 'Full-Funnel Analytics & Tracking Engineering', category: 'Performance Media Engineering', price: 1400, count: 20 }
+      ],
+      blueprints: [
+        { code: 'WA_01', title: 'WhatsApp Business Cloud API Architecture & Setup', phase: 'Beginning', est: 60, prio: 'urgent' },
+        { code: 'WA_02', title: 'Webhook Verification & Endpoint Handshake', phase: 'Beginning', est: 45, prio: 'high' },
+        { code: 'WA_03', title: 'Interactive Message Template Submission & Compliance', phase: 'Beginning', est: 40, prio: 'high' },
+        { code: 'WA_04', title: 'Automated Welcome Sequence & Routing Bot Logic', phase: 'Beginning', est: 90, prio: 'medium' },
+        { code: 'WA_05', title: 'Catalog Integration & Direct WhatsApp Checkout Flow', phase: 'Beginning', est: 75, prio: 'medium' },
+        { code: 'WA_06', title: 'Team Multi-Agent Inbox Configuration & Roles', phase: 'Beginning', est: 60, prio: 'medium' },
+        { code: 'WA_07', title: 'Pre-Launch Testing & Phone Number Verification', phase: 'Beginning', est: 30, prio: 'urgent' },
+        { code: 'WA_08', title: 'Customer Segmentation & Tagging System Schema', phase: 'Intermediate', est: 60, prio: 'medium' },
+        { code: 'WA_09', title: 'Automated Cart Abandonment & Follow-Up Funnel', phase: 'Intermediate', est: 90, prio: 'high' },
+        { code: 'WA_10', title: 'Broadcast Campaign Scheduler & Quality Rating Monitor', phase: 'Intermediate', est: 45, prio: 'medium' },
+        { code: 'WA_11', title: 'Lead Scoring & Priority Routing Rules Engine', phase: 'Intermediate', est: 60, prio: 'medium' },
+        { code: 'WA_12', title: 'CRM Two-Way Synchronization Integration', phase: 'Intermediate', est: 120, prio: 'high' },
+        { code: 'WA_13', title: 'Conversational Survey & CSAT Collection Workflow', phase: 'Intermediate', est: 45, prio: 'low' },
+        { code: 'WA_14', title: 'Multi-Language Auto-Response Routing Implementation', phase: 'Intermediate', est: 60, prio: 'medium' },
+        { code: 'WA_15', title: 'High-Volume Concurrency Stress Testing & Rate Limits', phase: 'Advanced', est: 90, prio: 'urgent' },
+        { code: 'WA_16', title: 'Advanced Conversion Pixel & Ad Attribution Handshake', phase: 'Advanced', est: 90, prio: 'high' },
+        { code: 'WA_17', title: 'AI Copilot Suggested Response Integration', phase: 'Advanced', est: 120, prio: 'medium' },
+        { code: 'WA_18', title: 'Weekly Engagement Analytics & Drop-off Diagnostics', phase: 'Advanced', est: 60, prio: 'medium' },
+        { code: 'WA_19', title: 'Security & Access Auditing for Customer Data Isolation', phase: 'Advanced', est: 60, prio: 'urgent' },
+        { code: 'WA_20', title: 'Executive Monthly Retention & ROI Audit Deliverable', phase: 'Advanced', est: 90, prio: 'high' }
+      ]
+    };
+
+    function showToast(message, type = 'success') {
+      const c = document.getElementById('previewToastContainer');
+      const t = document.createElement('div');
+      const isErr = type === 'error';
+      t.className = `p-3.5 rounded-2xl shadow-xl text-xs font-bold flex items-center gap-2 border pointer-events-auto transition-all transform translate-y-2 opacity-0 ${
+        isErr ? 'bg-rose-600 text-white border-rose-500' : 'bg-[#172B36] text-white border-emerald-500/40'
+      }`;
+      t.innerHTML = `<i class="fa-solid ${isErr ? 'fa-triangle-exclamation' : 'fa-circle-check text-emerald-400'}"></i> <span>${message}</span>`;
+      c.appendChild(t);
+      setTimeout(() => t.classList.remove('translate-y-2', 'opacity-0'), 10);
+      setTimeout(() => {
+        t.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => t.remove(), 300);
+      }, 3500);
+    }
+
+    // Role-specific navigation definitions
+    const roleNavs = {
+      super_admin: [
+        { tab: 'overview', icon: 'fa-chart-pie', label: 'Overview & KPIs' },
+        { tab: 'clients', icon: 'fa-building', label: 'Client Directory' },
+        { tab: 'services', icon: 'fa-cubes', label: 'Service Management' },
+        { tab: 'projects', icon: 'fa-folder-tree', label: 'Service Projects' },
+        { tab: 'tasks', icon: 'fa-list-check', label: 'Operational Tasks' },
+        { tab: 'finance', icon: 'fa-file-invoice-dollar', label: 'Finance & Ledger' },
+        { tab: 'team', icon: 'fa-user-shield', label: 'User & Access Mgmt' }
+      ],
+      admin: [
+        { tab: 'overview', icon: 'fa-chart-pie', label: 'Executive Overview' },
+        { tab: 'clients', icon: 'fa-building', label: 'Client Directory' },
+        { tab: 'services', icon: 'fa-cubes', label: 'Service Catalog' },
+        { tab: 'projects', icon: 'fa-folder-tree', label: 'Projects Queue' },
+        { tab: 'tasks', icon: 'fa-list-check', label: 'Live Operational Tasks' },
+        { tab: 'team', icon: 'fa-users', label: 'Staff Directory' }
+      ],
+      accounts: [
+        { tab: 'overview', icon: 'fa-chart-pie', label: 'Financial Overview' },
+        { tab: 'finance', icon: 'fa-file-invoice-dollar', label: 'Accounting Ledger' },
+        { tab: 'clients', icon: 'fa-building', label: 'Client Billing Records' }
+      ],
+      employee: [
+        { tab: 'overview', icon: 'fa-chart-pie', label: 'Work Queue' },
+        { tab: 'projects', icon: 'fa-folder-tree', label: 'Assigned Projects' },
+        { tab: 'tasks', icon: 'fa-list-check', label: 'My SOP Tasks' }
+      ],
+      client: [
+        { tab: 'client_portal', icon: 'fa-gauge-high', label: 'Client Overview' },
+        { tab: 'services', icon: 'fa-cubes', label: 'Subscribed Services' },
+        { tab: 'finance', icon: 'fa-receipt', label: 'Invoices & Receipts' }
+      ]
+    };
+
+    function renderNav() {
+      const navContainer = document.getElementById('sidebarNavItems');
+      const mobileNav = document.getElementById('mobileNavItems');
+      const items = roleNavs[state.currentRole] || roleNavs.super_admin;
+
+      const html = items.map(item => `
+        <button type="button" class="btn-nav-item w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#5F7180] hover:text-[#172B36] hover:bg-white/60 transition-all cursor-pointer text-left ${state.activeTab === item.tab ? 'liquid-glass-nav-active' : ''}" data-tab="${item.tab}">
+          <i class="fa-solid ${item.icon} text-xs w-4"></i>
+          <span class="flex-1 truncate">${item.label}</span>
+        </button>
+      `).join('');
+
+      if (navContainer) navContainer.innerHTML = html;
+      if (mobileNav) mobileNav.innerHTML = html;
+
+      // Wire navigation
+      document.querySelectorAll('.btn-nav-item').forEach(btn => {
+        btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+      });
+    }
+
+    function switchTab(tab) {
+      state.activeTab = tab;
+      
+      // Hide all sections
+      document.querySelectorAll('main > section').forEach(sec => sec.classList.add('hidden'));
+
+      // Show targeted section
+      const targetSec = document.getElementById(`view_${tab}`);
+      if (targetSec) targetSec.classList.remove('hidden');
+
+      // Update header titles
+      const titles = {
+        overview: { title: 'Executive Overview & Analytics', desc: 'Authoritative platform metrics, active client retainers, and operational health.' },
+        clients: { title: 'Client Directory & Organizations', desc: 'Active corporate clients, KYC CIF status, and assigned service packages.' },
+        client_details: { title: 'Client Account Workspace', desc: 'Active projects, deliverable completion, and financial ledger breakdown.' },
+        services: { title: 'Service Catalog & Master Blueprints', desc: '12 active services with permanent deletion safeguards and 240 SOP tasks.' },
+        service_tasks: { title: 'Master SOP Blueprint Workspace', desc: 'Phase-by-phase standard operational procedure blueprints.' },
+        projects: { title: 'Service Projects Progress Tracker', desc: 'Live execution status and milestone tracking across corporate clients.' },
+        tasks: { title: 'Live Operational Task Queue', desc: 'Review, complete, and log quality assurance criteria for ongoing tasks.' },
+        finance: { title: 'Financial Ledger & Invoices', desc: 'Reconciled payment records, invoice history, and receipt PDF downloads.' },
+        team: { title: 'User & Access Management', desc: 'Multi-role RBAC permissions for Super Admin, Admin, Accounts, and Employee.' },
+        client_portal: { title: 'Client Management Workspace', desc: 'Track your project execution, milestones, and invoice receipts in real-time.' }
+      };
+
+      const meta = titles[tab] || titles.overview;
+      document.getElementById('viewHeaderTitle').textContent = meta.title;
+      document.getElementById('viewHeaderSubtitle').textContent = meta.desc;
+
+      // Close mobile drawer if open
+      closeMobileDrawer();
+
+      renderNav();
+    }
+
+    function renderServicesGrid() {
+      const grid = document.getElementById('demoServicesGrid');
+      if (!grid) return;
+
+      grid.innerHTML = state.services.map(s => `
+        <div class="liquid-glass-card liquid-glass-card-hover p-5 flex flex-col justify-between space-y-4 group">
+          <div class="space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-black uppercase tracking-wider text-[#147D64] bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">${s.code}</span>
+              <span class="text-xs font-mono font-bold text-[#172B36]">$${s.price}/mo</span>
+            </div>
+            <h3 class="text-sm font-extrabold text-[#172B36] group-hover:text-[#147D64] transition-colors leading-snug">${s.name}</h3>
+            <p class="text-[11px] text-[#5F7180] line-clamp-2">${s.category} • Full operational deployment package.</p>
+          </div>
+
+          <div class="pt-3 border-t border-[#E3E9EF] flex items-center justify-between gap-2">
+            <span class="text-[11px] text-[#5F7180] flex items-center gap-1.5 font-semibold">
+              <i class="fa-solid fa-list-check text-[#147D64] text-xs"></i>
+              <span>${s.count} SOP Tasks</span>
+            </span>
+            <div class="flex items-center gap-1.5">
+              <button type="button" class="btn-demo-delete-service p-1.5 rounded-xl bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 border border-[#E3E9EF] hover:border-rose-200 cursor-pointer transition-all" data-id="${s.id}" title="Permanently Delete Service">
+                <i class="fa-solid fa-trash-can text-xs"></i>
+              </button>
+              <button type="button" class="btn-demo-view-tasks px-3 py-1.5 rounded-xl text-xs font-bold btn-liquid-primary cursor-pointer transition-all" data-id="${s.id}">
+                View Tasks
+              </button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      // Wire View Tasks
+      grid.querySelectorAll('.btn-demo-view-tasks').forEach(b => {
+        b.addEventListener('click', () => {
+          const s = state.services.find(x => x.id === b.dataset.id);
+          if (s) document.getElementById('sopWorkspaceTitle').textContent = s.name;
+          switchTab('service_tasks');
+        });
+      });
+
+      // Wire Delete Service
+      grid.querySelectorAll('.btn-demo-delete-service').forEach(b => {
+        b.addEventListener('click', () => {
+          const s = state.services.find(x => x.id === b.dataset.id);
+          if (!s) return;
+          state.targetDeleteService = s;
+          document.getElementById('deleteServiceTargetName').textContent = s.name;
+          document.getElementById('deleteServiceTargetCode').textContent = s.code;
+          document.getElementById('deleteServiceBlueprintCount').textContent = `${s.count} Tasks`;
+          document.getElementById('demoDeleteServiceInput').value = '';
+          document.getElementById('btnConfirmDeleteServiceDemo').disabled = true;
+          document.getElementById('modalDeleteService').classList.remove('hidden');
+        });
+      });
+    }
+
+    function renderSopTasks() {
+      const p1 = document.getElementById('sopPhase1Container');
+      const p2 = document.getElementById('sopPhase2Container');
+      const p3 = document.getElementById('sopPhase3Container');
+
+      const renderList = (list) => list.map(bp => `
+        <div class="p-3.5 rounded-2xl bg-white/70 border border-[#E3E9EF] flex items-center justify-between gap-3 hover:border-[#147D64]/40 transition-all">
+          <div class="flex items-center space-x-2.5 min-w-0">
+            <span class="text-xs font-mono font-bold text-[#147D64] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 shrink-0">${bp.code}</span>
+            <span class="text-xs font-bold text-[#172B36] truncate">${bp.title}</span>
+          </div>
+          <div class="flex items-center space-x-2 shrink-0">
+            <span class="text-[10px] font-mono text-slate-400 hidden sm:inline">${bp.est}m</span>
+            <button type="button" class="btn-demo-delete-bp p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 cursor-pointer transition-all" data-code="${bp.code}" title="Permanently Delete Task">
+              <i class="fa-solid fa-trash-can text-xs"></i>
+            </button>
+          </div>
+        </div>
+      `).join('');
+
+      if (p1) p1.innerHTML = renderList(state.blueprints.filter(b => b.phase === 'Beginning'));
+      if (p2) p2.innerHTML = renderList(state.blueprints.filter(b => b.phase === 'Intermediate'));
+      if (p3) p3.innerHTML = renderList(state.blueprints.filter(b => b.phase === 'Advanced'));
+
+      document.querySelectorAll('.btn-demo-delete-bp').forEach(b => {
+        b.addEventListener('click', () => {
+          const bp = state.blueprints.find(x => x.code === b.dataset.code);
+          if (!bp) return;
+          state.targetDeleteBp = bp;
+          document.getElementById('demoDeleteTaskCode').textContent = bp.code;
+          document.getElementById('demoDeleteTaskTitle').textContent = bp.title;
+          document.getElementById('modalDeleteBlueprint').classList.remove('hidden');
+        });
+      });
+    }
+
+    function renderClientsTable() {
+      const tbody = document.getElementById('demoClientsTableBody');
+      if (!tbody) return;
+
+      const clients = [
+        { name: 'MD KAZI ABDUR RAHIM EMON', org: 'Phenom Apex Ltd.', email: 'kaziabdurrahimemon@gmail.com', cif: '100% Completed', services: 2 },
+        { name: 'Sarah Jenkins', org: 'Jenkins Global Media', email: 'sarah@jenkinsglobal.com', cif: '100% Completed', services: 3 },
+        { name: 'Tariq Rahman', org: 'Zenith Logistics Hub', email: 'tariq@zenithhub.co', cif: '85% In Review', services: 1 },
+        { name: 'Elena Rostova', org: 'Aura Skin Clinic', email: 'elena@auraclinic.ae', cif: '100% Completed', services: 2 }
+      ];
+
+      tbody.innerHTML = clients.map(c => `
+        <tr class="hover:bg-white/80 transition-colors">
+          <td class="px-5 py-3 font-bold text-[#172B36]">${c.org} <span class="text-[11px] text-[#5F7180] font-normal block">${c.name}</span></td>
+          <td class="px-5 py-3 font-mono text-[11px] text-slate-600">${c.email}</td>
+          <td class="px-5 py-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-[#147D64] border border-emerald-200">${c.cif}</span></td>
+          <td class="px-5 py-3 font-semibold text-[#172B36]">${c.services} Active Retainers</td>
+          <td class="px-5 py-3 text-right">
+            <button type="button" class="btn-demo-view-client-details px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-50 hover:bg-emerald-50 text-[#172B36] hover:text-[#147D64] border border-[#E3E9EF] cursor-pointer" data-org="${c.org}">
+              View Workspace
+            </button>
+          </td>
+        </tr>
+      `).join('');
+
+      tbody.querySelectorAll('.btn-demo-view-client-details').forEach(b => {
+        b.addEventListener('click', () => {
+          document.getElementById('detailClientOrgName').textContent = b.dataset.org;
+          switchTab('client_details');
+        });
+      });
+    }
+
+    function renderPaymentsTable() {
+      const tbody = document.getElementById('demoPaymentsTableBody');
+      if (!tbody) return;
+
+      const payments = [
+        { id: 'RCP-2026-0042', org: 'Phenom Apex Ltd.', method: 'Bank Wire / TT', amount: '$1,900.00', status: 'Confirmed' },
+        { id: 'RCP-2026-0041', org: 'Phenom Apex Ltd.', method: 'Stripe Card', amount: '$1,900.00', status: 'Confirmed' },
+        { id: 'RCP-2026-0040', org: 'Jenkins Global Media', method: 'Bank Wire / TT', amount: '$3,500.00', status: 'Confirmed' },
+        { id: 'RCP-2026-0039', org: 'Aura Skin Clinic', method: 'Stripe Card', amount: '$2,200.00', status: 'Confirmed' }
+      ];
+
+      tbody.innerHTML = payments.map(p => `
+        <tr class="hover:bg-white/80 transition-colors">
+          <td class="px-5 py-3 font-mono font-bold text-[#147D64]">${p.id}</td>
+          <td class="px-5 py-3 font-bold text-[#172B36]">${p.org}</td>
+          <td class="px-5 py-3 text-[#5F7180]">${p.method}</td>
+          <td class="px-5 py-3 font-mono font-bold text-[#172B36]">${p.amount}</td>
+          <td class="px-5 py-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">${p.status}</span></td>
+          <td class="px-5 py-3 text-right">
+            <button type="button" class="px-2.5 py-1 rounded-lg text-xs font-semibold text-[#147D64] bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 cursor-pointer">
+              <i class="fa-solid fa-download text-[10px] mr-1"></i> PDF
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function initCharts() {
+      const revCtx = document.getElementById('chartRevenueTrend');
+      if (revCtx) {
+        new Chart(revCtx, {
+          type: 'line',
+          data: {
+            labels: ['May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
+            datasets: [{
+              label: 'Confirmed Revenue ($ USD)',
+              data: [9800, 11400, 13200, 14900, 16800, 18450],
+              borderColor: '#147D64',
+              backgroundColor: 'rgba(20, 125, 100, 0.08)',
+              fill: true,
+              tension: 0.35,
+              pointBackgroundColor: '#147D64',
+              pointRadius: 4
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: { grid: { color: 'rgba(227, 233, 239, 0.6)' } },
+              x: { grid: { display: false } }
+            }
+          }
+        });
+      }
+
+      const distCtx = document.getElementById('chartServiceDist');
+      if (distCtx) {
+        new Chart(distCtx, {
+          type: 'doughnut',
+          data: {
+            labels: ['WhatsApp CRM', 'LinkedIn B2B', 'Meta Marketing', 'Google Ads', 'Others'],
+            datasets: [{
+              data: [35, 25, 20, 15, 5],
+              backgroundColor: ['#147D64', '#059669', '#10B981', '#34D399', '#A7F3D0'],
+              borderWidth: 2,
+              borderColor: '#FFFFFF'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } }
+          }
+        });
+      }
+    }
+
+    function closeMobileDrawer() {
+      const d = document.getElementById('mobileDrawer');
+      const b = document.getElementById('mobileDrawerBackdrop');
+      if (d) d.classList.add('-translate-x-full');
+      if (b) b.classList.add('hidden');
+    }
+
+    function init() {
+      // Role Switchers
+      document.querySelectorAll('.btn-role-switch').forEach(b => {
+        b.addEventListener('click', () => {
+          document.querySelectorAll('.btn-role-switch').forEach(x => {
+            x.classList.remove('bg-emerald-600', 'text-white');
+            x.classList.add('text-slate-300');
+          });
+          b.classList.add('bg-emerald-600', 'text-white');
+          b.classList.remove('text-slate-300');
+
+          state.currentRole = b.dataset.role;
+          const roleLabels = {
+            super_admin: 'Super Admin',
+            admin: 'Administrator',
+            accounts: 'Accounts Specialist',
+            employee: 'Operations Staff',
+            client: 'Client Portal'
+          };
+
+          document.getElementById('sidebarRolePill').textContent = roleLabels[state.currentRole] || 'Staff';
+          document.getElementById('sidebarPortalSubtitle').textContent = state.currentRole === 'client' ? 'Client Management Portal' : 'Staff Administrative Console';
+
+          // Reset to default tab for role
+          const defaultTab = state.currentRole === 'client' ? 'client_portal' : 'overview';
+          switchTab(defaultTab);
+          showToast(`Switched preview context to ${roleLabels[state.currentRole]}.`, 'info');
+        });
+      });
+
+      // Viewport Switchers
+      document.querySelectorAll('.btn-vp-switch').forEach(b => {
+        b.addEventListener('click', () => {
+          document.querySelectorAll('.btn-vp-switch').forEach(x => {
+            x.classList.remove('bg-slate-700', 'text-white');
+            x.classList.add('text-slate-400');
+          });
+          b.classList.add('bg-slate-700', 'text-white');
+          b.classList.remove('text-slate-400');
+
+          const vp = b.dataset.vp;
+          const wrapper = document.getElementById('previewViewportWrapper');
+          wrapper.className = 'flex-1 w-full relative z-10 transition-all flex flex-col';
+
+          if (vp === 'fluid') {
+            wrapper.style.maxWidth = '100%';
+            wrapper.classList.remove('viewport-frame-active');
+          } else if (vp === 'desktop') {
+            wrapper.style.maxWidth = '1920px';
+            wrapper.classList.add('viewport-frame-active');
+          } else if (vp === 'laptop') {
+            wrapper.style.maxWidth = '1280px';
+            wrapper.classList.add('viewport-frame-active');
+          } else if (vp === 'tablet') {
+            wrapper.style.maxWidth = '768px';
+            wrapper.classList.add('viewport-frame-active');
+          } else if (vp === 'mobile') {
+            wrapper.style.maxWidth = '390px';
+            wrapper.classList.add('viewport-frame-active');
+          }
+        });
+      });
+
+      // Mobile Drawer toggles
+      document.getElementById('btnToggleMobileDrawer')?.addEventListener('click', () => {
+        document.getElementById('mobileDrawer')?.classList.remove('-translate-x-full');
+        document.getElementById('mobileDrawerBackdrop')?.classList.remove('hidden');
+      });
+      document.getElementById('btnCloseMobileDrawer')?.addEventListener('click', closeMobileDrawer);
+      document.getElementById('mobileDrawerBackdrop')?.addEventListener('click', closeMobileDrawer);
+
+      // KPI jump navigation
+      document.querySelectorAll('[data-kpi-jump]').forEach(card => {
+        card.addEventListener('click', () => switchTab(card.dataset.kpiJump));
+      });
+
+      // Back buttons
+      document.getElementById('btnBackToClientsFromDetails')?.addEventListener('click', () => switchTab('clients'));
+      document.getElementById('btnBackToServicesFromSOP')?.addEventListener('click', () => switchTab('services'));
+
+      // Close modals
+      document.querySelectorAll('.btn-close-demo-modal').forEach(b => {
+        b.addEventListener('click', () => {
+          document.getElementById('modalDeleteService').classList.add('hidden');
+          document.getElementById('modalDeleteBlueprint').classList.add('hidden');
+        });
+      });
+
+      // Delete service text matching
+      document.getElementById('demoDeleteServiceInput')?.addEventListener('input', (e) => {
+        const val = e.target.value.trim().toUpperCase();
+        document.getElementById('btnConfirmDeleteServiceDemo').disabled = val !== 'DELETE';
+      });
+
+      // Confirm Delete Service
+      document.getElementById('btnConfirmDeleteServiceDemo')?.addEventListener('click', () => {
+        if (!state.targetDeleteService) return;
+        state.services = state.services.filter(s => s.id !== state.targetDeleteService.id);
+        document.getElementById('serviceCountBadge').textContent = `${state.services.length} Active Services`;
+        renderServicesGrid();
+        document.getElementById('modalDeleteService').classList.add('hidden');
+        showToast(`Service "${state.targetDeleteService.name}" permanently purged from D1.`);
+      });
+
+      // Confirm Delete Blueprint
+      document.getElementById('btnConfirmDeleteBlueprintDemo')?.addEventListener('click', () => {
+        if (!state.targetDeleteBp) return;
+        state.blueprints = state.blueprints.filter(b => b.code !== state.targetDeleteBp.code);
+        renderSopTasks();
+        document.getElementById('modalDeleteBlueprint').classList.add('hidden');
+        showToast(`SOP Task [${state.targetDeleteBp.code}] permanently deleted from Cloudflare D1.`);
+      });
+
+      // Initial render
+      renderNav();
+      renderServicesGrid();
+      renderSopTasks();
+      renderClientsTable();
+      renderPaymentsTable();
+      initCharts();
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  </script>
+</body>
+</html>
+

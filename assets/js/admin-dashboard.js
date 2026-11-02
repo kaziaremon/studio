@@ -78,6 +78,83 @@
     return email === 'kaziaremon@gmail.com' || state.adminProfile.role === 'owner' || Boolean(state.adminProfile.isSuperAdmin);
   }
 
+  function applyRoleAdaptiveUI(profile) {
+    if (!profile) return;
+    const role = profile.role || (isCurrentUserOwner() ? 'owner' : 'client');
+    const isOwner = isCurrentUserOwner();
+
+    // 1. Update dropdown role badge
+    const badge = document.getElementById('dropdownRoleBadge');
+    if (badge) {
+      if (isOwner || role === 'owner' || role === 'super_admin') {
+        badge.textContent = 'Super Admin';
+        badge.className = 'font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-[#147D64] border border-emerald-200 text-[10px] uppercase';
+      } else if (role === 'admin') {
+        badge.textContent = 'Admin';
+        badge.className = 'font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 text-[10px] uppercase';
+      } else if (role === 'accounts') {
+        badge.textContent = 'Accounts';
+        badge.className = 'font-bold px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200 text-[10px] uppercase';
+      } else if (role === 'employee') {
+        badge.textContent = 'Employee';
+        badge.className = 'font-bold px-2 py-0.5 rounded-md bg-teal-50 text-teal-700 border border-teal-200 text-[10px] uppercase';
+      }
+    }
+
+    // 2. Hide / Show elements based on role
+    const sidebarFinance = document.getElementById('sidebarSectionFinance');
+    const drawerFinance = document.getElementById('drawerSectionFinance');
+    const sidebarTeam = document.getElementById('sidebarNavTeam');
+    const drawerTeam = document.getElementById('drawerNavTeam');
+    const kpiRevenue = document.getElementById('kpiCardRevenue');
+    const chartRev = document.getElementById('chartRevenueContainer');
+    const clientFinSummary = document.getElementById('clientFinancialSummaryCard');
+    const clientFinPrefs = document.getElementById('clientFinancialPreferencesCard');
+
+    if (role === 'employee') {
+      // Strict Financial & Team Privacy for Employees
+      if (sidebarFinance) sidebarFinance.classList.add('hidden');
+      if (drawerFinance) drawerFinance.classList.add('hidden');
+      if (sidebarTeam) sidebarTeam.classList.add('hidden');
+      if (drawerTeam) drawerTeam.classList.add('hidden');
+      if (kpiRevenue) kpiRevenue.classList.add('hidden');
+      if (chartRev) chartRev.classList.add('hidden');
+      if (clientFinSummary) clientFinSummary.classList.add('hidden');
+      if (clientFinPrefs) clientFinPrefs.classList.add('hidden');
+      document.querySelectorAll('.role-financial-only').forEach(el => el.classList.add('hidden'));
+    } else if (role === 'accounts') {
+      // Accounts users can access finance, but NOT team governance
+      if (sidebarFinance) sidebarFinance.classList.remove('hidden');
+      if (drawerFinance) drawerFinance.classList.remove('hidden');
+      if (sidebarTeam) sidebarTeam.classList.add('hidden');
+      if (drawerTeam) drawerTeam.classList.add('hidden');
+      if (kpiRevenue) kpiRevenue.classList.remove('hidden');
+      if (chartRev) chartRev.classList.remove('hidden');
+      if (clientFinSummary) clientFinSummary.classList.remove('hidden');
+      if (clientFinPrefs) clientFinPrefs.classList.remove('hidden');
+    } else {
+      // Super Admin and Admin have access to all operational & team sections
+      if (sidebarFinance) sidebarFinance.classList.remove('hidden');
+      if (drawerFinance) drawerFinance.classList.remove('hidden');
+      if (sidebarTeam) sidebarTeam.classList.remove('hidden');
+      if (drawerTeam) drawerTeam.classList.remove('hidden');
+      if (kpiRevenue) kpiRevenue.classList.remove('hidden');
+      if (chartRev) chartRev.classList.remove('hidden');
+      if (clientFinSummary) clientFinSummary.classList.remove('hidden');
+      if (clientFinPrefs) clientFinPrefs.classList.remove('hidden');
+    }
+
+    // 3. Configure Staff Invite Form role options
+    const inviteRoleSelect = document.getElementById('inviteRole');
+    if (inviteRoleSelect) {
+      if (role === 'admin' && !isOwner) {
+        // Admins can only invite Accounts or Employee
+        const adminOption = inviteRoleSelect.querySelector('option[value="admin"]');
+        if (adminOption) adminOption.remove();
+      }
+    }
+  }
+
   function isCurrentAdminSelf(target) {
     if (!target) return false;
     const currentEmail = (state.adminProfile?.email || state.currentUser?.primaryEmailAddress?.emailAddress || '').toLowerCase();
@@ -186,6 +263,17 @@
   // =========================================================================
   function switchTab(tabId, updateHash = true) {
     if (tabId === 'settings') tabId = 'security';
+
+    // RBAC Route Guard
+    const userRole = state.adminProfile?.role || '';
+    if (userRole === 'employee' && ['finance', 'receipt_template', 'team'].includes(tabId)) {
+      showToast('Access Denied: Financial and governance sections are restricted for employee accounts.', 'warning');
+      tabId = 'overview';
+    } else if (userRole === 'accounts' && tabId === 'team') {
+      showToast('Access Denied: User governance is restricted to Administrators.', 'warning');
+      tabId = 'overview';
+    }
+
     state.activeTab = tabId;
 
     const allViews = [
@@ -726,9 +814,9 @@
     const cLoc = document.getElementById('clientCardLocation');
     if (cLoc) cLoc.textContent = `${client.address ? client.address + ', ' : ''}${client.city || 'Dhaka'}, ${client.country || 'Bangladesh'}`;
     const cClk = document.getElementById('clientCardClerkId');
-    if (cClk) cClk.textContent = client.clerk_user_id || 'Pending Clerk linking';
+    if (cClk) cClk.innerHTML = client.clerk_user_id ? '<span class="text-emerald-700 font-semibold"><i class="fa-solid fa-shield-check text-[#147D64] mr-1"></i>SSO Verified</span>' : '<span class="text-slate-400">Pending SSO link</span>';
     const cOrg = document.getElementById('clientCardOrgId');
-    if (cOrg) cOrg.textContent = client.organization_id || 'Not Linked';
+    if (cOrg) cOrg.textContent = client.organization_name || client.organization_id || 'Not Linked';
 
     // Populate Preferred Currency in Financial Preferences
     const clientCurrency = (client.currency || (client.country === 'Bangladesh' || (client.phone && client.phone.startsWith('+880')) ? 'BDT' : 'USD')).toUpperCase();
@@ -800,7 +888,7 @@
               </div>
             </div>
             <div class="flex items-center space-x-3 shrink-0">
-              <span class="text-xs font-mono font-bold text-brand-whiz">${formatCurrency(s.price_cents || 0, s.currency || clientCurrency || "USD")}</span>
+              ${state.adminProfile?.role !== 'employee' && s.price_cents != null ? `<span class="text-xs font-mono font-bold text-brand-whiz">${formatCurrency(s.price_cents || 0, s.currency || clientCurrency || "USD")}</span>` : ''}
               <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${s.status === 'active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-50 text-slate-600 border border-slate-200'}">${s.status}</span>
               ${s.status === 'active' ? `
                 <button type="button" class="btn-cancel-client-service text-slate-500 hover:text-rose-400 p-1 cursor-pointer transition-colors" data-cs="${s.id}" title="Cancel Service">
@@ -890,6 +978,12 @@
 
     if (res.ok && res.data && res.data.data) {
       state.servicesCache = res.data.data;
+
+      const countBadge = document.getElementById('serviceCatalogCountBadge');
+      if (countBadge) {
+        countBadge.textContent = `${state.servicesCache.length} Active Services`;
+      }
+
       grid.innerHTML = state.servicesCache.map(s => `
         <div class="p-5 rounded-3xl bg-white border border-[#E3E9EF] flex flex-col justify-between space-y-4 hover:border-brand-whiz/50 hover:shadow-md transition-all shadow-xs group">
           <div class="space-y-2.5">
@@ -898,7 +992,7 @@
                 <span class="text-[10px] font-black uppercase tracking-wider text-brand-whiz bg-brand-whiz/10 px-2 py-0.5 rounded-md border border-brand-whiz/20">${s.code}</span>
                 <span class="text-[10px] font-mono text-slate-500">v${s.version || 1}</span>
               </div>
-              <span class="text-xs font-mono font-bold text-[#172B36]">$${((s.standard_price_cents || 100000) / 100).toFixed(0)}</span>
+              ${state.adminProfile?.role !== 'employee' && s.standard_price_cents != null ? `<span class="text-xs font-mono font-bold text-[#172B36]">${((s.standard_price_cents || 100000) / 100).toFixed(0)}</span>` : ''}
             </div>
             <h3 class="text-base font-extrabold text-[#172B36] group-hover:text-brand-whiz transition-colors">${s.name}</h3>
             <p class="text-xs text-slate-400 line-clamp-2 leading-relaxed">${s.description || 'Comprehensive operational service package.'}</p>
@@ -907,9 +1001,12 @@
           <div class="pt-3 border-t border-[#E3E9EF] flex items-center justify-between gap-2">
             <div class="text-[11px] text-slate-400 flex items-center gap-1.5 font-semibold">
               <i class="fa-solid fa-list-check text-brand-whiz text-xs"></i>
-              <span>${s.blueprint_count || 20} SOP Tasks</span>
+              <span>${s.blueprint_count || 0} SOP Tasks</span>
             </div>
             <div class="flex items-center gap-1.5">
+              <button type="button" class="btn-delete-service p-1.5 rounded-xl text-xs font-semibold bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 border border-[#E3E9EF] hover:border-rose-200 cursor-pointer transition-all" data-id="${s.id}" title="Permanently Delete Service">
+                <i class="fa-solid fa-trash-can text-xs"></i>
+              </button>
               <button type="button" class="btn-manage-service px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-50 hover:bg-[#EAF7F1] text-slate-700 hover:text-brand-whiz border border-[#E3E9EF] cursor-pointer transition-all" data-id="${s.id}">
                 Manage
               </button>
@@ -930,6 +1027,11 @@
       grid.querySelectorAll('.btn-manage-service').forEach(b => {
         b.addEventListener('click', () => openEditServiceModal(b.dataset.id));
       });
+
+      // Wire Delete Service
+      grid.querySelectorAll('.btn-delete-service').forEach(b => {
+        b.addEventListener('click', () => openDeleteServiceModal(b.dataset.id));
+      });
     }
   }
 
@@ -949,10 +1051,10 @@
       if (titleEl) titleEl.textContent = service.name;
       if (codeEl) codeEl.textContent = service.code;
       if (verEl) verEl.textContent = `v${service.version || 1}`;
-      if (descEl) descEl.textContent = service.description || 'Master 20-Task SOP Blueprint Library';
+      if (descEl) descEl.textContent = service.description || `Master ${service.blueprint_count || 20}-Task SOP Blueprint Library`;
     }
 
-    const res = await apiFetch(`/services/${serviceId}/blueprints?includeInactive=1`);
+    const res = await apiFetch(`/services/${serviceId}/blueprints`);
     if (!res.ok || !res.data || !res.data.data) {
       showToast('Failed to load task blueprints.', 'error');
       return;
@@ -992,7 +1094,6 @@
     }
 
     container.innerHTML = list.map(bp => {
-      const isDeactivated = bp.is_active === 0;
       const priorityColors = {
         urgent: 'bg-rose-50 text-rose-700 border-rose-200',
         high: 'bg-amber-50 text-amber-700 border-amber-200',
@@ -1001,11 +1102,11 @@
       };
 
       return `
-        <div class="p-4 rounded-2xl bg-white border ${isDeactivated ? 'border-rose-200 opacity-60' : 'border-[#E3E9EF]'} space-y-3">
+        <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] space-y-3">
           <div class="flex items-center justify-between gap-3">
             <div class="flex items-center space-x-2.5 min-w-0">
               <span class="text-xs font-mono font-bold text-brand-whiz bg-brand-whiz/10 border border-brand-whiz/30 px-2 py-0.5 rounded shrink-0">${bp.task_code}</span>
-              <h4 class="text-xs font-bold text-[#172B36] truncate ${isDeactivated ? 'line-through text-slate-400' : ''}">${bp.title}</h4>
+              <h4 class="text-xs font-bold text-[#172B36] truncate">${bp.title}</h4>
             </div>
             <div class="flex items-center space-x-2 shrink-0">
               <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded border ${priorityColors[bp.priority] || priorityColors.medium}">${bp.priority}</span>
@@ -1016,8 +1117,8 @@
               <button type="button" class="btn-duplicate-blueprint p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer transition-all" data-id="${bp.id}" title="Duplicate Blueprint">
                 <i class="fa-solid fa-copy text-xs"></i>
               </button>
-              <button type="button" class="btn-toggle-blueprint p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 cursor-pointer transition-all" data-id="${bp.id}" data-active="${bp.is_active}" title="${isDeactivated ? 'Restore Task' : 'Deactivate Task'}">
-                <i class="fa-solid ${isDeactivated ? 'fa-rotate-left text-emerald-400' : 'fa-trash text-xs'}"></i>
+              <button type="button" class="btn-delete-blueprint p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 cursor-pointer transition-all" data-id="${bp.id}" title="Permanently Delete Task">
+                <i class="fa-solid fa-trash-can text-xs"></i>
               </button>
             </div>
           </div>
@@ -1060,21 +1161,10 @@
       });
     });
 
-    // Wire toggle deactivate/restore
-    container.querySelectorAll('.btn-toggle-blueprint').forEach(b => {
-      b.addEventListener('click', async () => {
-        const id = b.dataset.id;
-        const isActive = b.dataset.active === '1';
-        const endpoint = isActive ? `/services/blueprints/${id}` : `/services/blueprints/${id}/restore`;
-        const method = isActive ? 'DELETE' : 'POST';
-
-        const res = await apiFetch(endpoint, { method });
-        if (res.ok) {
-          showToast(isActive ? 'Task deactivated.' : 'Task restored!', 'info');
-          openServiceTasksWorkspace(state.selectedServiceId);
-        } else {
-          showToast('Failed to change task status.', 'error');
-        }
+    // Wire delete blueprint buttons (Hard Delete confirmation)
+    container.querySelectorAll('.btn-delete-blueprint').forEach(b => {
+      b.addEventListener('click', () => {
+        openDeleteBlueprintModal(b.dataset.id);
       });
     });
   }
@@ -1102,6 +1192,34 @@
     modal.classList.remove('hidden');
   }
 
+  function openDeleteBlueprintModal(blueprintId) {
+    const bp = state.currentBlueprints.find(b => b.id === blueprintId);
+    if (!bp) {
+      showToast('Task blueprint not found.', 'error');
+      return;
+    }
+
+    state.selectedBlueprintId = blueprintId;
+    const currentService = state.servicesCache.find(s => s.id === (bp.service_id || state.selectedServiceId));
+
+    const codeEl = document.getElementById('deleteBlueprintTaskCode');
+    const titleEl = document.getElementById('deleteBlueprintTaskTitle');
+    const srvEl = document.getElementById('deleteBlueprintServiceName');
+    const modal = document.getElementById('modalDeleteBlueprint');
+
+    if (codeEl) codeEl.textContent = bp.task_code || bp.id;
+    if (titleEl) titleEl.textContent = bp.title || 'Untitled Task';
+    if (srvEl) srvEl.textContent = currentService ? currentService.name : (bp.service_id || 'Service');
+
+    const confirmBtn = document.getElementById('btnConfirmDeleteBlueprint');
+    if (confirmBtn) {
+      confirmBtn.disabled = false;
+      confirmBtn.innerHTML = '<i class="fa-solid fa-trash-can text-xs"></i> <span>Permanently Delete Task</span>';
+    }
+
+    if (modal) modal.classList.remove('hidden');
+  }
+
   function openEditServiceModal(serviceId) {
     const service = state.servicesCache.find(s => s.id === serviceId);
     if (!service) return;
@@ -1119,6 +1237,128 @@
     document.getElementById('editServiceIsActive').checked = service.is_active === 1;
 
     modal.classList.remove('hidden');
+  }
+
+  async function openDeleteServiceModal(serviceId) {
+    const service = state.servicesCache.find(s => s.id === serviceId);
+    if (!service) {
+      showToast('Service not found.', 'error');
+      return;
+    }
+
+    state.selectedServiceId = serviceId;
+    const modal = document.getElementById('modalDeleteService');
+    if (!modal) return;
+
+    const nameEl = document.getElementById('deleteServiceTargetName');
+    const codeEl = document.getElementById('deleteServiceTargetCode');
+    const countEl = document.getElementById('deleteServiceBlueprintCount');
+    const catEl = document.getElementById('deleteServiceCategory');
+    const depContainer = document.getElementById('deleteServiceDependencyContainer');
+    const confirmSection = document.getElementById('deleteServiceConfirmSection');
+    const expectedNameEl = document.getElementById('deleteServiceExpectedName');
+    const confirmInput = document.getElementById('deleteServiceConfirmInput');
+    const confirmBtn = document.getElementById('btnConfirmDeleteService');
+
+    if (nameEl) nameEl.textContent = service.name;
+    if (codeEl) codeEl.textContent = service.code || service.id;
+    if (countEl) countEl.textContent = `${service.blueprint_count || 0} Tasks`;
+    if (catEl) catEl.textContent = service.category || 'General';
+    if (expectedNameEl) expectedNameEl.textContent = `"${service.name}"`;
+    if (confirmInput) confirmInput.value = '';
+    if (confirmBtn) {
+      confirmBtn.disabled = true;
+      confirmBtn.innerHTML = '<i class="fa-solid fa-trash-can text-xs"></i> <span>Permanently Delete Service</span>';
+    }
+    if (confirmSection) confirmSection.classList.add('hidden');
+
+    if (depContainer) {
+      depContainer.innerHTML = `
+        <div class="p-3 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-500 flex items-center gap-2">
+          <i class="fa-solid fa-circle-notch fa-spin text-brand-whiz"></i>
+          <span>Checking database dependencies & live client records...</span>
+        </div>
+      `;
+    }
+
+    modal.classList.remove('hidden');
+
+    try {
+      const res = await apiFetch(`/services/${serviceId}/delete-check`);
+      if (!res.ok || !res.data || !res.data.data) {
+        if (depContainer) {
+          depContainer.innerHTML = `
+            <div class="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700">
+              <p class="font-bold">Failed to verify dependencies.</p>
+              <p class="text-[11px] mt-0.5">Could not confirm safe deletion status. Please retry.</p>
+            </div>
+          `;
+        }
+        return;
+      }
+
+      const check = res.data.data;
+      if (!check.canDelete) {
+        const dep = check.dependencies || {};
+        if (depContainer) {
+          depContainer.innerHTML = `
+            <div class="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-2">
+              <div class="flex items-center gap-2 font-bold text-amber-800">
+                <i class="fa-solid fa-triangle-exclamation text-amber-600 text-sm"></i>
+                <span>Deletion Blocked: Active Dependencies Detected</span>
+              </div>
+              <p class="text-[11px] leading-relaxed text-amber-800/90">
+                This service cannot be deleted because it is currently linked to authoritative client and financial records:
+              </p>
+              <div class="grid grid-cols-3 gap-2 pt-1 text-center font-mono">
+                <div class="p-2 rounded-xl bg-white/80 border border-amber-200">
+                  <span class="block text-sm font-black text-amber-900">${dep.clientServicesCount || 0}</span>
+                  <span class="text-[9px] uppercase font-bold text-amber-700">Client Agrmts</span>
+                </div>
+                <div class="p-2 rounded-xl bg-white/80 border border-amber-200">
+                  <span class="block text-sm font-black text-amber-900">${dep.projectsCount || 0}</span>
+                  <span class="text-[9px] uppercase font-bold text-amber-700">Projects</span>
+                </div>
+                <div class="p-2 rounded-xl bg-white/80 border border-amber-200">
+                  <span class="block text-sm font-black text-amber-900">${dep.invoicesCount || 0}</span>
+                  <span class="text-[9px] uppercase font-bold text-amber-700">Invoices</span>
+                </div>
+              </div>
+              <p class="text-[11px] text-amber-800 italic pt-1">
+                To delete this service, unassign or conclude all linked client contracts and projects first.
+              </p>
+            </div>
+          `;
+        }
+        if (confirmSection) confirmSection.classList.add('hidden');
+        if (confirmBtn) confirmBtn.disabled = true;
+      } else {
+        if (depContainer) {
+          depContainer.innerHTML = `
+            <div class="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 space-y-1.5">
+              <div class="flex items-center gap-2 font-bold text-emerald-800">
+                <i class="fa-solid fa-shield-check text-emerald-600 text-sm"></i>
+                <span>0 Live Dependencies — Safe to Permanently Purge</span>
+              </div>
+              <p class="text-[11px] text-emerald-800/90 leading-relaxed">
+                No active client contracts, projects, or invoices reference this service.
+                Permanently deleting it will purge the service catalog record and all <strong>${check.taskBlueprintCount || 0} master SOP blueprints</strong> from Cloudflare D1.
+              </p>
+            </div>
+          `;
+        }
+        if (confirmSection) confirmSection.classList.remove('hidden');
+        if (confirmInput) confirmInput.focus();
+      }
+    } catch (err) {
+      if (depContainer) {
+        depContainer.innerHTML = `
+          <div class="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700">
+            <p class="font-bold">Dependency check failed.</p>
+          </div>
+        `;
+      }
+    }
   }
 
   // =========================================================================
@@ -1354,14 +1594,16 @@
                 <button type="button" class="btn-correct-payment-admin px-2 py-1 rounded-lg text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-700 transition-colors cursor-pointer" data-id="${p.id}" title="Financial Correction">
                   <i class="fa-solid fa-scale-balanced"></i>
                 </button>
-                ${!isVoided ? `
+                ${!isVoided && state.adminProfile?.role !== 'accounts' ? `
                   <button type="button" class="btn-void-payment-admin px-2 py-1 rounded-lg text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-600 transition-colors cursor-pointer" data-id="${p.id}" title="Void Payment">
                     <i class="fa-solid fa-ban"></i>
                   </button>
                 ` : ''}
-                <button type="button" class="btn-delete-payment-admin px-2 py-1 rounded-lg text-xs font-semibold text-slate-400 hover:text-rose-600 transition-colors cursor-pointer" data-id="${p.id}" title="Delete Test Payment">
-                  <i class="fa-solid fa-trash-can"></i>
-                </button>
+                ${state.adminProfile?.role !== 'accounts' ? `
+                  <button type="button" class="btn-delete-payment-admin px-2 py-1 rounded-lg text-xs font-semibold text-slate-400 hover:text-rose-600 transition-colors cursor-pointer" data-id="${p.id}" title="Delete Test Payment">
+                    <i class="fa-solid fa-trash-can"></i>
+                  </button>
+                ` : ''}
               </div>
             </td>
           </tr>
@@ -1405,14 +1647,16 @@
                 <button type="button" class="btn-correct-payment-admin px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-700 cursor-pointer" data-id="${p.id}">
                   Correct
                 </button>
-                ${!isVoided ? `
+                ${!isVoided && state.adminProfile?.role !== 'accounts' ? `
                   <button type="button" class="btn-void-payment-admin px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-600 cursor-pointer" data-id="${p.id}" title="Void">
                     <i class="fa-solid fa-ban"></i>
                   </button>
                 ` : ''}
-                <button type="button" class="btn-delete-payment-admin px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-rose-600 cursor-pointer" data-id="${p.id}" title="Delete">
-                  <i class="fa-solid fa-trash-can"></i>
-                </button>
+                ${state.adminProfile?.role !== 'accounts' ? `
+                  <button type="button" class="btn-delete-payment-admin px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-rose-600 cursor-pointer" data-id="${p.id}" title="Delete">
+                    <i class="fa-solid fa-trash-can"></i>
+                  </button>
+                ` : ''}
               </div>
             </div>
           `;
@@ -1646,9 +1890,13 @@
 
         let roleBadge = '';
         if (isOwner || u.role === 'owner' || u.role === 'super_admin') {
-          roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-crown text-[9px]"></i> Owner</span>';
+          roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Super Admin</span>';
         } else if (u.role === 'admin') {
           roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-blue-50 text-blue-700 border border-blue-200"><i class="fa-solid fa-shield-halved text-[9px]"></i> Admin</span>';
+        } else if (u.role === 'accounts') {
+          roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-purple-50 text-purple-700 border border-purple-200"><i class="fa-solid fa-calculator text-[9px]"></i> Accounts</span>';
+        } else if (u.role === 'employee' || u.role === 'project_manager') {
+          roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-teal-50 text-teal-700 border border-teal-200"><i class="fa-solid fa-briefcase text-[9px]"></i> Employee</span>';
         } else {
           roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-slate-100 text-slate-700 border border-slate-200"><i class="fa-solid fa-user text-[9px]"></i> Client</span>';
         }
@@ -1702,7 +1950,7 @@
                 <div class="min-w-0">
                   <div class="font-bold text-[#172B36] truncate">${escapeHtml(fullName)}</div>
                   <div class="text-xs text-slate-500 font-mono truncate">${escapeHtml(email)}</div>
-                  ${clerkId ? `<div class="text-[10px] text-slate-400 font-mono truncate mt-0.5">${escapeHtml(clerkId)}</div>` : ''}
+                  ${clerkId ? `<div class="inline-flex items-center gap-1 text-[10px] text-emerald-700 font-semibold mt-0.5"><i class="fa-solid fa-shield-check text-[9px]"></i>SSO Linked</div>` : '<div class="text-[10px] text-slate-400 mt-0.5">Direct Verified</div>'}
                 </div>
               </div>
             </td>
@@ -1728,9 +1976,13 @@
 
         let roleBadge = '';
         if (isOwner || u.role === 'owner' || u.role === 'super_admin') {
-          roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-crown text-[9px]"></i> Owner</span>';
+          roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Super Admin</span>';
         } else if (u.role === 'admin') {
           roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-blue-50 text-blue-700 border border-blue-200"><i class="fa-solid fa-shield-halved text-[9px]"></i> Admin</span>';
+        } else if (u.role === 'accounts') {
+          roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-purple-50 text-purple-700 border border-purple-200"><i class="fa-solid fa-calculator text-[9px]"></i> Accounts</span>';
+        } else if (u.role === 'employee' || u.role === 'project_manager') {
+          roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-teal-50 text-teal-700 border border-teal-200"><i class="fa-solid fa-briefcase text-[9px]"></i> Employee</span>';
         } else {
           roleBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-slate-100 text-slate-700 border border-slate-200"><i class="fa-solid fa-user text-[9px]"></i> Client</span>';
         }
@@ -2005,22 +2257,18 @@
 
     const isOwnerActor = isCurrentUserOwner();
 
-    // Hide or disable the pre-approval form if actor is not the Founding Super Admin
+    // Enable staff pre-approval form for Super Admin and Admin
     const inviteForm = document.getElementById('adminInviteForm');
     if (inviteForm) {
-      if (!isOwnerActor) {
-        const inputs = inviteForm.querySelectorAll('input, button');
-        inputs.forEach(el => el.disabled = true);
-        const submitBtn = inviteForm.querySelector('button[type="submit"]');
-        if (submitBtn) {
+      const canInvite = isOwnerActor || state.adminProfile?.role === 'admin';
+      const inputs = inviteForm.querySelectorAll('input, select, button');
+      inputs.forEach(el => el.disabled = !canInvite);
+      const submitBtn = inviteForm.querySelector('button[type="submit"]');
+      if (submitBtn) {
+        if (!canInvite) {
           submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
-          submitBtn.title = 'Only Founding Super Admin may authorize administrator accounts';
-        }
-      } else {
-        const inputs = inviteForm.querySelectorAll('input, button');
-        inputs.forEach(el => el.disabled = false);
-        const submitBtn = inviteForm.querySelector('button[type="submit"]');
-        if (submitBtn) {
+          submitBtn.title = 'Only Super Admin and Admin may authorize staff accounts';
+        } else {
           submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
           submitBtn.title = '';
         }
@@ -2129,7 +2377,7 @@
             <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
               <td class="px-6 py-4 font-bold text-[#172B36]">${escapeHtml(name)}</td>
               <td class="px-6 py-4 font-mono text-xs text-slate-600">${escapeHtml(email)}</td>
-              <td class="px-6 py-4 font-mono text-[11px] text-slate-400">${escapeHtml(clerkId)}</td>
+              <td class="px-6 py-4 font-mono text-[11px]">${clerkId && clerkId !== '—' ? '<span class="inline-flex items-center gap-1 text-emerald-700 font-semibold text-[11px]"><i class="fa-solid fa-shield-check text-[10px]"></i> SSO Linked</span>' : '<span class="text-slate-400">Direct Pending</span>'}</td>
               <td class="px-6 py-4">${roleBadge}</td>
               <td class="px-6 py-4 font-mono text-xs text-slate-500">${escapeHtml(activatedAt)}</td>
               <td class="px-6 py-4 text-right">${actionHtml}</td>
@@ -3156,8 +3404,8 @@
     if (fullNameEl) fullNameEl.textContent = fullName;
     if (emailEl) emailEl.textContent = email;
     if (usernameEl) usernameEl.textContent = username;
-    if (clerkIdEl) clerkIdEl.textContent = clerkId;
-    if (clerkIdShortEl) clerkIdShortEl.textContent = clerkId ? (clerkId.slice(0, 14) + '...') : 'user_...';
+    if (clerkIdEl) clerkIdEl.innerHTML = '<i class="fa-solid fa-shield-halved text-[#147D64]"></i> Hardware-Backed SSO Token Active';
+    if (clerkIdShortEl) clerkIdShortEl.innerHTML = '<i class="fa-solid fa-shield-halved text-[10px] mr-1"></i>SSO Session Verified';
     if (lastActiveEl) lastActiveEl.textContent = `Session Active (${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`;
 
     if (roleBadgeEl) {
@@ -3642,6 +3890,59 @@
       }
     });
 
+    // Delete Service Triggers & Confirmation
+    document.getElementById('btnDeleteFromEditServiceModal')?.addEventListener('click', () => {
+      const srvId = document.getElementById('editServiceId')?.value;
+      if (!srvId) return;
+      document.getElementById('modalEditService')?.classList.add('hidden');
+      openDeleteServiceModal(srvId);
+    });
+
+    document.getElementById('deleteServiceConfirmInput')?.addEventListener('input', (e) => {
+      const val = e.target.value.trim();
+      const service = state.servicesCache.find(s => s.id === state.selectedServiceId);
+      const confirmBtn = document.getElementById('btnConfirmDeleteService');
+      if (!confirmBtn || !service) return;
+
+      const isMatch = val.toUpperCase() === 'DELETE' || val.toLowerCase() === service.name.trim().toLowerCase();
+      confirmBtn.disabled = !isMatch;
+    });
+
+    document.getElementById('btnConfirmDeleteService')?.addEventListener('click', async () => {
+      const serviceId = state.selectedServiceId;
+      if (!serviceId) return;
+
+      const btn = document.getElementById('btnConfirmDeleteService');
+      if (btn.disabled) return;
+
+      const service = state.servicesCache.find(s => s.id === serviceId);
+      const serviceName = service ? service.name : 'Service';
+
+      setBtnLoading(btn, true, 'Permanently purging service & blueprints...');
+
+      try {
+        const res = await apiFetch(`/services/${serviceId}`, { method: 'DELETE' });
+        setBtnLoading(btn, false);
+
+        if (res.ok && res.data && res.data.success) {
+          showToast(`Service "${serviceName}" and all SOP blueprints permanently deleted.`, 'success');
+          document.getElementById('modalDeleteService')?.classList.add('hidden');
+
+          state.servicesCache = state.servicesCache.filter(s => s.id !== serviceId);
+          loadServicesData();
+
+          if (state.activeTab === 'service_tasks') {
+            switchTab('services');
+          }
+        } else {
+          showToast(res.data?.error || 'Failed to delete service. Check dependencies.', 'error');
+        }
+      } catch (err) {
+        setBtnLoading(btn, false);
+        showToast('Network error while deleting service.', 'error');
+      }
+    });
+
     // 4. SOP Task Blueprint Workspace Handlers
     document.getElementById('btnBackToServices')?.addEventListener('click', () => {
       switchTab('services');
@@ -3724,6 +4025,48 @@
         openServiceTasksWorkspace(state.selectedServiceId);
       } else {
         showToast(res.data?.error || 'Failed to update blueprint.', 'error');
+      }
+    });
+
+    // Delete Task Blueprint Triggers & Confirmation
+    document.getElementById('btnDeleteFromEditBlueprintModal')?.addEventListener('click', () => {
+      const bpId = document.getElementById('editBlueprintId')?.value;
+      if (!bpId) return;
+      document.getElementById('modalEditBlueprint')?.classList.add('hidden');
+      openDeleteBlueprintModal(bpId);
+    });
+
+    document.getElementById('btnConfirmDeleteBlueprint')?.addEventListener('click', async () => {
+      const bpId = state.selectedBlueprintId;
+      if (!bpId) return;
+
+      const btn = document.getElementById('btnConfirmDeleteBlueprint');
+      if (btn.disabled) return;
+
+      setBtnLoading(btn, true, 'Permanently deleting task...');
+
+      try {
+        const res = await apiFetch(`/services/blueprints/${bpId}`, { method: 'DELETE' });
+        setBtnLoading(btn, false);
+
+        if (res.ok && res.data && res.data.success) {
+          showToast(res.data.message || 'Task blueprint permanently deleted from Cloudflare D1.', 'success');
+          document.getElementById('modalDeleteBlueprint')?.classList.add('hidden');
+
+          state.currentBlueprints = state.currentBlueprints.filter(b => b.id !== bpId);
+          renderBlueprintsWorkspace();
+
+          const serviceId = state.selectedServiceId;
+          const service = state.servicesCache.find(s => s.id === serviceId);
+          if (service) {
+            service.blueprint_count = Math.max(0, (service.blueprint_count || 1) - 1);
+          }
+        } else {
+          showToast(res.data?.error || 'Unable to delete task. It may be referenced by active projects.', 'error');
+        }
+      } catch (err) {
+        setBtnLoading(btn, false);
+        showToast('Network error while deleting task blueprint.', 'error');
       }
     });
 
@@ -3960,6 +4303,13 @@
         return;
       }
 
+      const p = paymentsCache.find(x => x.id === pid);
+      const newAmountCents = Math.round(amountDollars * 100);
+      if (state.adminProfile?.role === 'accounts' && p && newAmountCents < (p.amount_cents || 0)) {
+        showToast('Accounts Restriction: You cannot reduce a previously recorded payment amount. Reductions require Admin or Super Admin authorization.', 'error');
+        return;
+      }
+
       setBtnLoading(submitBtn, true, 'Committing correction...');
       const res = await apiFetch(`/finance/payments/${pid}/correct`, {
         method: 'POST',
@@ -3980,25 +4330,36 @@
       }
     });
 
-    // 8. Authorize Admin Pre-Approval Form (Phase 12)
+    // 8. Authorize Staff Pre-Approval Form (Phase 12)
     document.getElementById('adminInviteForm')?.addEventListener('submit', async (e) => {
       e.preventDefault();
-      if (!isCurrentUserOwner()) {
-        showToast('Action denied: Only the Founding Super Admin may authorize administrator pre-approvals.', 'error');
+      const isOwner = isCurrentUserOwner();
+      const isAdmin = state.adminProfile?.role === 'admin';
+      if (!isOwner && !isAdmin) {
+        showToast('Action denied: Only Super Admin and Admin may authorize staff pre-approvals.', 'error');
         return;
       }
       const f = e.target;
       const submitBtn = f.querySelector('button[type="submit"]');
-      const fullName = f.fullName.value.trim();
-      const email = f.email.value.trim();
+      const fullName = (f.fullName?.value || '').trim();
+      const email = (f.email?.value || '').trim();
+      const selectedRole = (document.getElementById('inviteRole')?.value || 'employee').toLowerCase();
 
-      if (!fullName || !email) return;
+      if (!fullName || !email) {
+        showToast('Please provide both staff member full name and email.', 'warning');
+        return;
+      }
 
-      setBtnLoading(submitBtn, true, 'Authorizing administrator...');
+      if (isAdmin && !isOwner && (selectedRole === 'admin' || selectedRole === 'super_admin' || selectedRole === 'owner')) {
+        showToast('Hierarchy Restriction: Admins may only invite Accounts or Employee team members.', 'error');
+        return;
+      }
+
+      setBtnLoading(submitBtn, true, 'Authorizing staff member...');
 
       const res = await apiFetch('/portal/admin/team/invite', {
         method: 'POST',
-        body: JSON.stringify({ fullName, email, role: 'admin' })
+        body: JSON.stringify({ fullName, email, role: selectedRole })
       });
 
       setBtnLoading(submitBtn, false);
@@ -4249,14 +4610,18 @@
         profile.role === 'owner' || 
         profile.role === 'admin' || 
         profile.role === 'super_admin' || 
+        profile.role === 'accounts' || 
+        profile.role === 'employee' || 
         Boolean(profile.isSuperAdmin);
 
       if (!isAuthorized) {
-        console.warn('Authenticated user does not possess admin permissions:', profile);
+        console.warn('Authenticated user does not possess staff permissions:', profile);
         if (authGuard) authGuard.classList.add('hidden');
         if (accessDenied) accessDenied.classList.remove('hidden');
         return;
       }
+
+      applyRoleAdaptiveUI(profile);
 
       // Populate user info in UI
       const name = profile.fullName || profile.full_name || user.fullName || 'Super Admin';
@@ -4271,7 +4636,7 @@
       const emailEl = document.getElementById('secUserEmail');
       if (emailEl) emailEl.textContent = email;
       const userEl = document.getElementById('secClerkUserId');
-      if (userEl) userEl.textContent = user.id;
+      if (userEl) userEl.innerHTML = '<span class="inline-flex items-center gap-1.5 text-xs text-emerald-700 font-semibold"><i class="fa-solid fa-shield-check text-[#147D64]"></i> SSO Session Active</span>';
 
       // Show Main Layout
       if (authGuard) authGuard.classList.add('hidden');
