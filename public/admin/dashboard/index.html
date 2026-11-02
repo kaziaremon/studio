@@ -2275,99 +2275,154 @@
           <!-- =================================================================
                TAB 9: SUPPORT REQUESTS (CLIENT SUPPORT DESK)
                ================================================================= -->
-          <div id="view_support" class="hidden space-y-6">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
-              <div>
-                <div class="flex items-center space-x-2.5">
-                  <h2 class="text-2xl font-black text-[#172B36] tracking-tight">Client Support Desk</h2>
-                  <span class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-50 text-[#147D64] border border-emerald-200 font-bold" id="supportDeskBadge">Active Desk</span>
+          <div id="view_support" class="hidden space-y-5 sm:space-y-6 pb-28 sm:pb-32">
+            <!-- 1. Header (WHIZ Premium Support Command Center) -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 pb-1">
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-2.5">
+                  <h2 class="text-xl sm:text-2xl lg:text-3xl font-black text-[#172B36] tracking-tight">Client Support Desk</h2>
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-[#087F70] border border-emerald-200/80 text-[10px] font-extrabold uppercase tracking-wider shrink-0" id="supportDeskBadge">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>Live Desk</span>
+                  </span>
                 </div>
-                <p class="text-xs text-slate-500 mt-1">Review, manage, and resolve client inquiries submitted through the portal.</p>
+                <p class="text-xs text-slate-500 mt-1 max-w-xl">Review, manage, and resolve client inquiries submitted through the client portal.</p>
               </div>
-              <div class="flex items-center gap-2">
-                <button type="button" id="btnRefreshSupport" class="px-4 py-2 rounded-xl text-xs font-bold bg-white text-slate-700 hover:bg-slate-50 border border-[#E3E9EF] transition-all flex items-center gap-2 shadow-xs cursor-pointer">
-                  <i class="fa-solid fa-arrows-rotate text-xs"></i>
+              <div class="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+                <button type="button" id="btnRefreshSupport" class="h-11 px-4 rounded-xl text-xs font-bold bg-white text-slate-700 hover:bg-slate-50 hover:text-[#172B36] border border-[#E3E9EF] hover:border-[#087F70]/40 transition-all flex items-center gap-2 shadow-xs cursor-pointer select-none" title="Refresh Requests">
+                  <i class="fa-solid fa-arrows-rotate text-xs text-[#087F70]"></i>
                   <span>Refresh Requests</span>
                 </button>
               </div>
             </div>
 
-            <!-- 4 KPI Summary Cards -->
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-              <div class="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white border border-[#E3E9EF] shadow-xs space-y-1">
-                <div class="flex items-center justify-between text-slate-500 text-xs font-semibold">
-                  <span>Total Tickets</span>
-                  <div class="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600">
+            <!-- 2. Compact Statistics Cards (2-Column on Mobile, 4-Column on Desktop) -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
+              <!-- Card 1: Total Inquiries (Neutral Charcoal/Slate) -->
+              <div class="p-3.5 sm:p-4 rounded-2xl bg-white border border-[#E6ECE9] shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
+                <div class="flex items-center justify-between gap-1">
+                  <span class="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider truncate">Total Inquiries</span>
+                  <div class="w-7 h-7 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 shrink-0">
                     <i class="fa-solid fa-inbox text-xs"></i>
                   </div>
                 </div>
-                <div class="text-2xl sm:text-3xl font-black text-[#172B36]" id="supportTotalCount">0</div>
-                <div class="text-[11px] text-slate-400 font-medium">All logged requests</div>
+                <div class="mt-2 flex items-baseline justify-between">
+                  <div class="text-2xl sm:text-3xl font-black text-[#172B36] tracking-tight leading-none" id="supportTotalCount">0</div>
+                  <span class="text-[10px] text-slate-400 font-medium hidden sm:inline">All logged</span>
+                </div>
               </div>
 
-              <div class="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white border border-[#E3E9EF] shadow-xs space-y-1">
-                <div class="flex items-center justify-between text-blue-600 text-xs font-semibold">
-                  <span>Open Tickets</span>
-                  <div class="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
+              <!-- Card 2: Open Tickets (Professional Blue) -->
+              <div class="p-3.5 sm:p-4 rounded-2xl bg-white border border-[#E6ECE9] shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
+                <div class="flex items-center justify-between gap-1">
+                  <span class="text-[10px] sm:text-[11px] font-bold text-blue-600 uppercase tracking-wider truncate">Open Tickets</span>
+                  <div class="w-7 h-7 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shrink-0">
                     <i class="fa-solid fa-envelope-open text-xs"></i>
                   </div>
                 </div>
-                <div class="text-2xl sm:text-3xl font-black text-blue-600" id="supportOpenCount">0</div>
-                <div class="text-[11px] text-slate-400 font-medium">Awaiting initial action</div>
+                <div class="mt-2 flex items-baseline justify-between">
+                  <div class="text-2xl sm:text-3xl font-black text-blue-600 tracking-tight leading-none" id="supportOpenCount">0</div>
+                  <span class="text-[10px] text-blue-500/80 font-medium hidden sm:inline">Needs action</span>
+                </div>
               </div>
 
-              <div class="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white border border-[#E3E9EF] shadow-xs space-y-1">
-                <div class="flex items-center justify-between text-amber-600 text-xs font-semibold">
-                  <span>In Progress</span>
-                  <div class="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600">
-                    <i class="fa-solid fa-spinner text-xs"></i>
+              <!-- Card 3: In Progress (Warm Amber) -->
+              <div class="p-3.5 sm:p-4 rounded-2xl bg-white border border-[#E6ECE9] shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
+                <div class="flex items-center justify-between gap-1">
+                  <span class="text-[10px] sm:text-[11px] font-bold text-amber-600 uppercase tracking-wider truncate">In Progress</span>
+                  <div class="w-7 h-7 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+                    <i class="fa-solid fa-clock-rotate-left text-xs"></i>
                   </div>
                 </div>
-                <div class="text-2xl sm:text-3xl font-black text-amber-600" id="supportInProgressCount">0</div>
-                <div class="text-[11px] text-slate-400 font-medium">Being investigated</div>
+                <div class="mt-2 flex items-baseline justify-between">
+                  <div class="text-2xl sm:text-3xl font-black text-amber-600 tracking-tight leading-none" id="supportInProgressCount">0</div>
+                  <span class="text-[10px] text-amber-500/80 font-medium hidden sm:inline">Investigating</span>
+                </div>
               </div>
 
-              <div class="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white border border-[#E3E9EF] shadow-xs space-y-1">
-                <div class="flex items-center justify-between text-emerald-600 text-xs font-semibold">
-                  <span>Resolved</span>
-                  <div class="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+              <!-- Card 4: Resolved (Emerald Green) -->
+              <div class="p-3.5 sm:p-4 rounded-2xl bg-white border border-[#E6ECE9] shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
+                <div class="flex items-center justify-between gap-1">
+                  <span class="text-[10px] sm:text-[11px] font-bold text-[#087F70] uppercase tracking-wider truncate">Resolved</span>
+                  <div class="w-7 h-7 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-[#087F70] shrink-0">
                     <i class="fa-solid fa-circle-check text-xs"></i>
                   </div>
                 </div>
-                <div class="text-2xl sm:text-3xl font-black text-emerald-600" id="supportResolvedCount">0</div>
-                <div class="text-[11px] text-slate-400 font-medium">Completed inquiries</div>
+                <div class="mt-2 flex items-baseline justify-between">
+                  <div class="text-2xl sm:text-3xl font-black text-[#087F70] tracking-tight leading-none" id="supportResolvedCount">0</div>
+                  <span class="text-[10px] text-emerald-600/80 font-medium hidden sm:inline">Completed</span>
+                </div>
               </div>
             </div>
 
-            <!-- Search & Filter Controls -->
-            <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-              <div class="relative flex-1">
-                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                <input type="text" id="supportSearchInput" placeholder="Search requests by client, organization, subject, or message..." class="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] placeholder-slate-400 focus:outline-none focus:border-[#147D64] transition-all">
+            <!-- 3. Smart Search & Filter Toolbar -->
+            <div class="p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl bg-white border border-[#E3E9EF] shadow-xs space-y-3 sm:space-y-0 sm:flex sm:items-center sm:gap-3">
+              <!-- Search Input with Clear Button -->
+              <div class="relative flex-1 min-w-0">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                  <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                </span>
+                <input type="text" id="supportSearchInput" placeholder="Search support requests..." class="w-full h-11 pl-10 pr-10 rounded-xl bg-slate-50/70 border border-[#E3E9EF] text-xs font-medium text-[#172B36] placeholder-slate-400 focus:outline-none focus:border-[#087F70] focus:bg-white focus:ring-2 focus:ring-[#087F70]/10 transition-all shadow-inner/5">
+                <button type="button" id="supportSearchClear" class="hidden absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 transition-colors cursor-pointer" title="Clear search">
+                  <i class="fa-solid fa-circle-xmark text-xs"></i>
+                </button>
               </div>
-              <div class="flex items-center gap-2">
-                <select id="supportStatusFilter" class="px-3 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-medium focus:outline-none focus:border-[#147D64] transition-all cursor-pointer">
-                  <option value="all">All Statuses</option>
-                  <option value="open">Open Only</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="resolved">Resolved</option>
-                </select>
+
+              <!-- Status Filter (Custom Liquid Glass Dropdown) -->
+              <div class="sm:w-56 shrink-0 min-w-0">
+                <div class="glass-select-wrapper" data-glass-select="supportStatusFilter">
+                  <select id="supportStatusFilter" name="statusFilter" class="sr-only" tabindex="-1" aria-hidden="true">
+                    <option value="all" selected>All Statuses</option>
+                    <option value="open">Open Only</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="resolved">Resolved</option>
+                  </select>
+                  <button type="button" class="glass-select-trigger" id="supportStatusTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="supportStatusMenu">
+                    <span class="flex items-center gap-2 min-w-0">
+                      <i class="fa-solid fa-layer-group text-slate-400 text-xs shrink-0 select-icon"></i>
+                      <span class="select-label truncate">All Statuses</span>
+                    </span>
+                    <i class="fa-solid fa-chevron-down chevron-icon shrink-0"></i>
+                  </button>
+                  <div class="glass-select-menu" id="supportStatusMenu" role="listbox" aria-label="Filter Support Status">
+                    <button type="button" class="glass-select-option selected" data-value="all" role="option" aria-selected="true">
+                      <i class="fa-solid fa-layer-group text-slate-400 text-xs shrink-0 option-icon"></i>
+                      <span class="truncate">All Statuses</span>
+                      <i class="fa-solid fa-check check-icon"></i>
+                    </button>
+                    <button type="button" class="glass-select-option" data-value="open" role="option" aria-selected="false">
+                      <i class="fa-solid fa-envelope-open text-blue-600 text-xs shrink-0 option-icon"></i>
+                      <span class="truncate">Open Only</span>
+                      <i class="fa-solid fa-check check-icon"></i>
+                    </button>
+                    <button type="button" class="glass-select-option" data-value="in_progress" role="option" aria-selected="false">
+                      <i class="fa-solid fa-clock-rotate-left text-amber-500 text-xs shrink-0 option-icon"></i>
+                      <span class="truncate">In Progress</span>
+                      <i class="fa-solid fa-check check-icon"></i>
+                    </button>
+                    <button type="button" class="glass-select-option" data-value="resolved" role="option" aria-selected="false">
+                      <i class="fa-solid fa-circle-check text-emerald-600 text-xs shrink-0 option-icon"></i>
+                      <span class="truncate">Resolved</span>
+                      <i class="fa-solid fa-check check-icon"></i>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <!-- Empty State Container (Displayed when no tickets exist) -->
-            <div id="supportEmptyState" class="hidden p-12 rounded-3xl bg-white border border-[#E3E9EF] shadow-xs text-center space-y-3">
-              <div class="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-100 mx-auto flex items-center justify-center text-[#147D64] text-xl">
+            <!-- 4. Empty State Container (Displayed when no tickets exist in DB) -->
+            <div id="supportEmptyState" class="hidden p-8 sm:p-10 rounded-2xl sm:rounded-3xl bg-white border border-[#E3E9EF] shadow-xs text-center space-y-3">
+              <div class="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100/80 mx-auto flex items-center justify-center text-[#087F70] text-lg shadow-xs">
                 <i class="fa-solid fa-headset"></i>
               </div>
-              <h3 class="text-base font-extrabold text-[#172B36]">No Support Requests Yet</h3>
-              <p class="text-xs text-slate-500 max-w-sm mx-auto">No client inquiries have been submitted. New support requests will appear here automatically.</p>
+              <h3 class="text-sm sm:text-base font-extrabold text-[#172B36]">No Support Requests Yet</h3>
+              <p class="text-xs text-slate-500 max-w-xs mx-auto">New client support requests will appear here automatically.</p>
             </div>
 
-            <!-- Support Mobile Cards Container (md:hidden) -->
-            <div id="adminSupportCardsContainer" class="md:hidden space-y-3"></div>
+            <!-- 5. Support Mobile Cards Container (md:hidden) -->
+            <div id="adminSupportCardsContainer" class="md:hidden space-y-3.5"></div>
 
-            <!-- Support Desktop Table Card (hidden md:block) -->
+            <!-- 6. Support Desktop Table Card (hidden md:block) -->
             <div id="adminSupportTableCard" class="hidden md:block rounded-3xl bg-white border border-[#E3E9EF] overflow-hidden shadow-xs">
               <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs text-slate-600 min-w-[760px]">
@@ -3887,25 +3942,52 @@
       <form id="formUpdateSupportStatus" class="space-y-4 pt-2 border-t border-[#E3E9EF]">
         <input type="hidden" id="modalSupportHiddenId">
         <div>
-          <label for="modalSupportNewStatus" class="block text-xs font-semibold text-slate-700 mb-1">Update Status</label>
-          <select id="modalSupportNewStatus" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-medium focus:outline-none focus:border-[#147D64]">
-            <option value="open">Open</option>
-            <option value="in_progress">In Progress</option>
-            <option value="resolved">Resolved</option>
-          </select>
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Update Ticket Status *</label>
+          <div class="glass-select-wrapper" data-glass-select="modalSupportNewStatus">
+            <select id="modalSupportNewStatus" name="newStatus" class="sr-only" tabindex="-1" aria-hidden="true">
+              <option value="open" selected>Open</option>
+              <option value="in_progress">In Progress</option>
+              <option value="resolved">Resolved</option>
+            </select>
+            <button type="button" class="glass-select-trigger" id="modalSupportNewStatusTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="modalSupportNewStatusMenu">
+              <span class="flex items-center gap-2 min-w-0">
+                <i class="fa-solid fa-envelope-open text-blue-600 text-xs shrink-0 select-icon"></i>
+                <span class="select-label truncate">Open</span>
+              </span>
+              <i class="fa-solid fa-chevron-down chevron-icon shrink-0"></i>
+            </button>
+            <div class="glass-select-menu" id="modalSupportNewStatusMenu" role="listbox" aria-label="Update Ticket Status">
+              <button type="button" class="glass-select-option selected" data-value="open" role="option" aria-selected="true">
+                <i class="fa-solid fa-envelope-open text-blue-600 text-xs shrink-0 option-icon"></i>
+                <span class="truncate">Open</span>
+                <i class="fa-solid fa-check check-icon"></i>
+              </button>
+              <button type="button" class="glass-select-option" data-value="in_progress" role="option" aria-selected="false">
+                <i class="fa-solid fa-clock-rotate-left text-amber-500 text-xs shrink-0 option-icon"></i>
+                <span class="truncate">In Progress</span>
+                <i class="fa-solid fa-check check-icon"></i>
+              </button>
+              <button type="button" class="glass-select-option" data-value="resolved" role="option" aria-selected="false">
+                <i class="fa-solid fa-circle-check text-emerald-600 text-xs shrink-0 option-icon"></i>
+                <span class="truncate">Resolved</span>
+                <i class="fa-solid fa-check check-icon"></i>
+              </button>
+            </div>
+          </div>
         </div>
 
         <div>
-          <label for="modalSupportAdminNotes" class="block text-xs font-semibold text-slate-700 mb-1">Internal Admin Notes (Optional)</label>
-          <textarea id="modalSupportAdminNotes" rows="2" placeholder="Record investigation details or resolution notes..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:outline-none focus:border-[#147D64] resize-none"></textarea>
+          <label for="modalSupportAdminNotes" class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Internal Admin Notes (Optional)</label>
+          <textarea id="modalSupportAdminNotes" rows="2" placeholder="Record investigation details or resolution notes..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50/70 border border-[#E3E9EF] text-xs text-[#172B36] focus:outline-none focus:border-[#087F70] focus:bg-white focus:ring-2 focus:ring-[#087F70]/10 transition-all shadow-xs resize-none"></textarea>
         </div>
 
         <div class="flex items-center justify-end gap-2.5 pt-2">
-          <button type="button" id="btnCancelSupportModal" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer">
+          <button type="button" id="btnCancelSupportModal" class="h-11 px-4 rounded-xl text-xs font-semibold text-slate-600 hover:text-[#172B36] hover:bg-slate-100 transition-colors cursor-pointer">
             Cancel
           </button>
-          <button type="submit" id="btnSubmitSupportStatus" class="px-5 py-2 rounded-xl text-xs font-bold bg-[#147D64] text-white hover:bg-[#12694f] shadow-sm hover:shadow transition-all cursor-pointer">
-            Save Status
+          <button type="submit" id="btnSubmitSupportStatus" class="h-11 px-5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm hover:shadow-md transition-all flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-check text-xs"></i>
+            <span>Save Status</span>
           </button>
         </div>
       </form>

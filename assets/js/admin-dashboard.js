@@ -3853,11 +3853,20 @@
     const tbody = document.getElementById('adminSupportTableBody');
     const cards = document.getElementById('adminSupportCardsContainer');
     const emptyState = document.getElementById('supportEmptyState');
+    const tableCard = document.getElementById('adminSupportTableCard');
     const refreshBtn = document.getElementById('btnRefreshSupport');
 
     if (refreshBtn) {
       const icon = refreshBtn.querySelector('i');
       if (icon) icon.classList.add('fa-spin');
+    }
+
+    // Loading State
+    if (tbody) {
+      tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic"><i class="fa-solid fa-circle-notch fa-spin mr-2 text-[#087F70]"></i>Loading support tickets...</td></tr>';
+    }
+    if (cards) {
+      cards.innerHTML = '<div class="p-8 rounded-2xl bg-white border border-[#E3E9EF] text-center shadow-xs space-y-2"><i class="fa-solid fa-circle-notch fa-spin text-[#087F70] text-lg"></i><p class="text-xs text-slate-500 font-medium">Loading support requests...</p></div>';
     }
 
     try {
@@ -3869,13 +3878,27 @@
 
       if (res.ok && res.data) {
         state.supportCache = Array.isArray(res.data.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
+        initGlassSelects();
         renderSupport();
         if (showNotification) showToast('Support tickets synchronized.', 'success');
       } else {
         const err = res.data?.error || 'Failed to retrieve support requests.';
         console.error('Support Fetch Error:', err);
-        if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-6 text-center text-rose-500 font-medium">${err}</td></tr>`;
-        if (cards) cards.innerHTML = `<div class="p-6 rounded-2xl bg-white border border-rose-200 text-center text-xs text-rose-500 font-medium shadow-xs">${err}</div>`;
+        const errorCard = `
+          <div class="p-6 rounded-2xl sm:rounded-3xl bg-white border border-rose-200 text-center space-y-3 shadow-xs">
+            <div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto text-base">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h4 class="text-xs font-bold text-rose-600">${escapeHtml(err)}</h4>
+            <p class="text-xs text-slate-500 max-w-xs mx-auto">Unable to retrieve support tickets from the backend. Please check connection and retry.</p>
+            <button type="button" class="btn-retry-support h-10 px-4 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-all inline-flex items-center gap-2 cursor-pointer shadow-xs">
+              <i class="fa-solid fa-arrows-rotate text-xs text-[#087F70]"></i>
+              <span>Retry Connection</span>
+            </button>
+          </div>
+        `;
+        if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-6 text-center text-rose-500 font-medium">${escapeHtml(err)} <button type="button" class="btn-retry-support ml-2 px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold cursor-pointer"><i class="fa-solid fa-arrows-rotate mr-1"></i>Retry</button></td></tr>`;
+        if (cards) cards.innerHTML = errorCard;
         if (showNotification) showToast(err, 'error');
       }
     } catch (e) {
@@ -3885,8 +3908,21 @@
         if (icon) icon.classList.remove('fa-spin');
       }
       const failMsg = 'Network error fetching support tickets. Please retry.';
-      if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-6 text-center text-rose-500 font-medium">${failMsg}</td></tr>`;
-      if (cards) cards.innerHTML = `<div class="p-6 rounded-2xl bg-white border border-rose-200 text-center text-xs text-rose-500 font-medium shadow-xs">${failMsg}</div>`;
+      const errorCard = `
+        <div class="p-6 rounded-2xl sm:rounded-3xl bg-white border border-rose-200 text-center space-y-3 shadow-xs">
+          <div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto text-base">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+          </div>
+          <h4 class="text-xs font-bold text-rose-600">${failMsg}</h4>
+          <p class="text-xs text-slate-500 max-w-xs mx-auto">Unable to reach the support service. Please check connection and retry.</p>
+          <button type="button" class="btn-retry-support h-10 px-4 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-all inline-flex items-center gap-2 cursor-pointer shadow-xs">
+            <i class="fa-solid fa-arrows-rotate text-xs text-[#087F70]"></i>
+            <span>Retry Connection</span>
+          </button>
+        </div>
+      `;
+      if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-6 text-center text-rose-500 font-medium">${failMsg} <button type="button" class="btn-retry-support ml-2 px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold cursor-pointer"><i class="fa-solid fa-arrows-rotate mr-1"></i>Retry</button></td></tr>`;
+      if (cards) cards.innerHTML = errorCard;
       if (showNotification) showToast(failMsg, 'error');
     }
   }
@@ -3914,6 +3950,7 @@
     if (inProgEl) inProgEl.textContent = inProgCount;
     if (resolvedEl) resolvedEl.textContent = resolvedCount;
 
+    // Empty state when 0 tickets exist in DB
     if (totalCount === 0) {
       if (emptyState) emptyState.classList.remove('hidden');
       if (tableCard) tableCard.classList.add('hidden');
@@ -3927,13 +3964,20 @@
     const query = (document.getElementById('supportSearchInput')?.value || '').toLowerCase().trim();
     const statusFilter = document.getElementById('supportStatusFilter')?.value || 'all';
 
+    // Toggle search clear button
+    const searchClearBtn = document.getElementById('supportSearchClear');
+    if (searchClearBtn) {
+      searchClearBtn.classList.toggle('hidden', !query);
+    }
+
     const filtered = tickets.filter(t => {
       const matchQuery = !query ||
         (t.full_name || '').toLowerCase().includes(query) ||
         (t.email || '').toLowerCase().includes(query) ||
         (t.organization_name || '').toLowerCase().includes(query) ||
         (t.subject || '').toLowerCase().includes(query) ||
-        (t.message || '').toLowerCase().includes(query);
+        (t.message || '').toLowerCase().includes(query) ||
+        (t.id || '').toLowerCase().includes(query);
 
       const matchStatus = statusFilter === 'all' || t.status === statusFilter;
       return matchQuery && matchStatus;
@@ -3942,17 +3986,32 @@
     if (filtered.length === 0) {
       const noMatchMsg = '<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">No support requests match your search criteria.</td></tr>';
       if (tbody) tbody.innerHTML = noMatchMsg;
-      if (cards) cards.innerHTML = '<div class="p-6 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 italic shadow-xs">No support requests match your search criteria.</div>';
+      if (cards) {
+        cards.innerHTML = `
+          <div class="p-8 rounded-2xl sm:rounded-3xl bg-white border border-[#E3E9EF] text-center shadow-xs space-y-3">
+            <div class="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-center mx-auto text-slate-400">
+              <i class="fa-solid fa-filter-circle-xmark text-lg"></i>
+            </div>
+            <h4 class="text-sm font-bold text-[#172B36]">No Matching Requests</h4>
+            <p class="text-xs text-slate-500 max-w-xs mx-auto">Try changing your search query or status filter.</p>
+            <button type="button" id="btnClearSupportFilters" class="h-10 px-4 rounded-xl text-xs font-bold text-[#087F70] bg-[#EAF5F1] hover:bg-[#D5EDE5] border border-[#087F70]/20 transition-all inline-flex items-center gap-1.5 cursor-pointer">
+              <i class="fa-solid fa-arrows-rotate text-xs"></i>
+              <span>Reset All Filters</span>
+            </button>
+          </div>
+        `;
+      }
       return;
     }
 
     const STATUS_BADGES = {
-      open: '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-blue-50 text-blue-700 border border-blue-200">Open</span>',
-      in_progress: '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-200">In Progress</span>',
-      resolved: '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">Resolved</span>',
-      closed: '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-slate-100 text-slate-600 border border-slate-200">Closed</span>'
+      open: '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200 shadow-xs"><span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Open</span>',
+      in_progress: '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200 shadow-xs"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> In Progress</span>',
+      resolved: '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-xs"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Resolved</span>',
+      closed: '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200 shadow-xs"><span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Closed</span>'
     };
 
+    // Desktop Table View
     if (tbody) {
       tbody.innerHTML = filtered.map(t => {
         const dateStr = t.created_at ? new Date(t.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
@@ -3974,8 +4033,9 @@
             <td class="px-6 py-4 font-mono text-xs text-slate-500">${escapeHtml(dateStr)}</td>
             <td class="px-6 py-4">${badge}</td>
             <td class="px-6 py-4 text-right">
-              <button type="button" class="btn-view-support-ticket px-3 py-1.5 rounded-xl text-xs font-bold bg-[#147D64]/10 text-[#147D64] hover:bg-[#147D64]/20 border border-[#147D64]/20 transition-all cursor-pointer" data-id="${t.id}">
-                <i class="fa-solid fa-eye mr-1 text-[10px]"></i>View Request
+              <button type="button" class="btn-view-support-ticket h-9 px-3 rounded-xl text-xs font-bold bg-[#087F70]/10 text-[#087F70] hover:bg-[#087F70]/20 border border-[#087F70]/20 transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-xs" data-id="${t.id}">
+                <i class="fa-solid fa-eye text-[10px]"></i>
+                <span>View Request</span>
               </button>
             </td>
           </tr>
@@ -3983,28 +4043,62 @@
       }).join('');
     }
 
+    // Mobile Cards View (Task 5: WHIZ Premium Support Command Center)
     if (cards) {
       cards.innerHTML = filtered.map(t => {
         const dateStr = t.created_at ? new Date(t.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
-        const excerpt = (t.message || '').length > 90 ? (t.message.slice(0, 90) + '...') : t.message;
+        const excerpt = (t.message || '').length > 120 ? (t.message.slice(0, 120) + '...') : t.message;
         const badge = STATUS_BADGES[t.status] || STATUS_BADGES.open;
+        const rawId = t.id || '';
+        const ticketRef = rawId.length > 10 ? ('#' + rawId.slice(0, 8).toUpperCase()) : ('#' + rawId);
+        const name = t.full_name || 'Client';
+        const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'CL';
 
         return `
-          <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs space-y-2.5">
-            <div class="flex items-center justify-between">
-              <div class="font-bold text-[#172B36] text-sm">${escapeHtml(t.full_name || 'Client')}</div>
-              ${badge}
+          <div class="support-ticket-card p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white border border-[#E6ECE9] shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_24px_rgba(20,125,100,0.08)] transition-all space-y-3.5">
+            <!-- Header: Reference ID + Organization Tag + Status Badge -->
+            <div class="flex items-center justify-between gap-2 pb-2.5 border-b border-slate-100">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 font-mono text-[11px] font-bold shrink-0">
+                  ${escapeHtml(ticketRef)}
+                </span>
+                ${t.organization_name ? `
+                  <span class="text-[11px] font-semibold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200/60 truncate" title="${escapeHtml(t.organization_name)}">
+                    ${escapeHtml(t.organization_name)}
+                  </span>
+                ` : ''}
+              </div>
+              <div class="shrink-0 flex items-center gap-2">
+                ${badge}
+              </div>
             </div>
-            <div class="text-xs font-mono text-slate-500">${escapeHtml(t.email)}</div>
-            ${t.organization_name ? `<div class="text-[11px] text-slate-400">Org: <strong class="text-slate-600">${escapeHtml(t.organization_name)}</strong></div>` : ''}
-            <div class="pt-2 border-t border-slate-100">
-              <div class="text-xs font-bold text-[#172B36] mb-1">${escapeHtml(t.subject)}</div>
-              <p class="text-xs text-slate-600 line-clamp-2">${escapeHtml(excerpt)}</p>
+
+            <!-- Client Identity & Submission Date -->
+            <div class="flex items-start gap-3">
+              <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#EAF5F1] to-[#D5EDE5] border border-[#087F70]/20 flex items-center justify-center font-black text-xs text-[#087F70] uppercase shrink-0 shadow-xs">
+                ${escapeHtml(initials)}
+              </div>
+              <div class="min-w-0 flex-1">
+                <h4 class="text-sm font-black text-[#172B36] truncate leading-tight">${escapeHtml(name)}</h4>
+                <p class="text-xs font-mono text-slate-500 truncate mt-0.5">${escapeHtml(t.email)}</p>
+                <div class="flex items-center gap-1.5 text-[10px] text-slate-400 font-mono mt-1">
+                  <i class="fa-regular fa-clock text-[9px]"></i>
+                  <span>${escapeHtml(dateStr)}</span>
+                </div>
+              </div>
             </div>
-            <div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs text-slate-400">
-              <span class="font-mono text-[11px]">${escapeHtml(dateStr)}</span>
-              <button type="button" class="btn-view-support-ticket px-3 py-1.5 rounded-xl text-xs font-bold bg-[#147D64]/10 text-[#147D64] hover:bg-[#147D64]/20 border border-[#147D64]/20 transition-all cursor-pointer" data-id="${t.id}">
-                View &amp; Resolve
+
+            <!-- Ticket Subject & Message Content Excerpt -->
+            <div class="p-3 rounded-xl bg-slate-50/70 border border-slate-100/80 space-y-1">
+              <div class="text-xs font-bold text-[#172B36] break-words line-clamp-1">${escapeHtml(t.subject)}</div>
+              <p class="text-xs text-slate-600 line-clamp-2 leading-relaxed">${escapeHtml(excerpt)}</p>
+            </div>
+
+            <!-- Action Area (44px touch target) -->
+            <div class="pt-1 flex items-center justify-end">
+              <button type="button" class="btn-view-support-ticket w-full sm:w-auto h-11 px-5 rounded-xl text-xs font-bold btn-glass-primary shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer" data-id="${t.id}">
+                <i class="fa-solid fa-eye text-xs"></i>
+                <span>View &amp; Resolve Ticket</span>
               </button>
             </div>
           </div>
@@ -4012,6 +4106,7 @@
       }).join('');
     }
 
+    // Bind View Detail Buttons
     document.querySelectorAll('.btn-view-support-ticket').forEach(btn => {
       btn.addEventListener('click', () => {
         openSupportDetailModal(btn.dataset.id);
@@ -4045,7 +4140,10 @@
     if (dateEl) dateEl.textContent = ticket.created_at ? new Date(ticket.created_at).toLocaleString() : 'N/A';
     if (subjEl) subjEl.textContent = ticket.subject;
     if (msgEl) msgEl.textContent = ticket.message;
-    if (statusSelect) statusSelect.value = ticket.status || 'open';
+    if (statusSelect) {
+      statusSelect.value = ticket.status || 'open';
+      statusSelect.dispatchEvent(new Event('change'));
+    }
     if (notesEl) notesEl.value = ticket.admin_notes || '';
     if (hiddenId) hiddenId.value = ticket.id;
 
@@ -5717,6 +5815,32 @@
     document.getElementById('btnRefreshSupport')?.addEventListener('click', () => loadSupportData(true));
     document.getElementById('supportSearchInput')?.addEventListener('input', () => renderSupport());
     document.getElementById('supportStatusFilter')?.addEventListener('change', () => renderSupport());
+
+    // Support Search Clear Button
+    document.getElementById('supportSearchClear')?.addEventListener('click', () => {
+      const input = document.getElementById('supportSearchInput');
+      if (input) {
+        input.value = '';
+        renderSupport();
+        input.focus();
+      }
+    });
+
+    // Delegated Reset Support Filters
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('#btnClearSupportFilters')) {
+        const input = document.getElementById('supportSearchInput');
+        if (input) input.value = '';
+        const filter = document.getElementById('supportStatusFilter');
+        if (filter) {
+          filter.value = 'all';
+          filter.dispatchEvent(new Event('change'));
+        }
+        renderSupport();
+      } else if (e.target.closest('.btn-retry-support')) {
+        loadSupportData(true);
+      }
+    });
 
     // Support Modal Close Listeners
     const closeSupportModal = () => {
