@@ -274,6 +274,7 @@
   // TAB NAVIGATION & ROUTING
   // =========================================================================
   function switchTab(tabId, updateHash = true) {
+    if (typeof closeActiveGlassMenu === "function") closeActiveGlassMenu();
     if (tabId === 'settings') tabId = 'security';
 
     // RBAC Route Guard
@@ -2122,18 +2123,137 @@
   // =========================================================================
   
   // =========================================================================
-  // WHIZ LIQUID GLASS SELECTION MENU CONTROLLER
+  // WHIZ LIQUID GLASS SELECTION MENU CONTROLLER (PORTAL POPOVER ARCHITECTURE)
+  // Renders dropdown popovers into an elevated body portal to prevent clipping
+  // and stacking-context collision from parent cards or sibling containers.
   // =========================================================================
+  let _activeGlassMenu = null;
+  let _activeGlassTrigger = null;
+  let _activeGlassWrapper = null;
+  let _glassPortalElement = null;
+
+  function getGlassPortal() {
+    if (!_glassPortalElement || !document.body.contains(_glassPortalElement)) {
+      _glassPortalElement = document.getElementById('whizGlassSelectPortal');
+      if (!_glassPortalElement) {
+        _glassPortalElement = document.createElement('div');
+        _glassPortalElement.id = 'whizGlassSelectPortal';
+        _glassPortalElement.className = 'whiz-glass-portal-root';
+        _glassPortalElement.setAttribute('aria-hidden', 'false');
+        _glassPortalElement.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:0;overflow:visible;pointer-events:none;z-index:95;';
+        document.body.appendChild(_glassPortalElement);
+      }
+    }
+    return _glassPortalElement;
+  }
+
+  function positionGlassMenu(triggerBtn, menuEl) {
+    if (!triggerBtn || !menuEl) return;
+    const rect = triggerBtn.getBoundingClientRect();
+
+    // If trigger scrolled off screen, close gracefully
+    if (rect.bottom < -30 || rect.top > window.innerHeight + 30) {
+      closeActiveGlassMenu();
+      return;
+    }
+
+    const vh = window.innerHeight;
+    const vw = window.innerWidth;
+    const isMobile = vw < 768;
+    const bottomNavReserve = isMobile ? 68 : 16;
+    const topMargin = 12;
+
+    // Estimate or measure menu height
+    const menuHeight = menuEl.offsetHeight || menuEl.scrollHeight || 155;
+    const spaceBelow = vh - rect.bottom - bottomNavReserve;
+    const spaceAbove = rect.top - topMargin;
+
+    let isDropup = false;
+    let top = 0;
+    let maxHeight = 270;
+
+    // Viewport collision: if space below is less than required (or < 155) and space above is greater
+    if (spaceBelow < Math.min(menuHeight, 155) && spaceAbove > spaceBelow) {
+      isDropup = true;
+      maxHeight = Math.max(110, Math.min(270, spaceAbove - 10));
+      top = Math.max(topMargin, rect.top - Math.min(menuHeight, maxHeight) - 6);
+    } else {
+      isDropup = false;
+      maxHeight = Math.max(110, Math.min(270, spaceBelow - 10));
+      top = rect.bottom + 6;
+    }
+
+    let left = rect.left;
+    let width = rect.width;
+
+    // Clamping for narrow mobile viewports (320px - 430px)
+    const maxAllowedWidth = vw - 16;
+    if (width > maxAllowedWidth) {
+      width = maxAllowedWidth;
+      left = 8;
+    } else if (left + width > vw - 8) {
+      left = Math.max(8, vw - width - 8);
+    } else if (left < 8) {
+      left = 8;
+    }
+
+    // Modal awareness: if dropdown is located inside an active modal dialog (z-50)
+    const isInModal = triggerBtn.closest('.fixed.z-50') || triggerBtn.closest('[class*="z-50"]');
+    const zIndex = isInModal ? 9999 : 95;
+
+    menuEl.classList.toggle('dropup', isDropup);
+    menuEl.style.position = 'fixed';
+    menuEl.style.top = Math.round(top) + 'px';
+    menuEl.style.left = Math.round(left) + 'px';
+    menuEl.style.width = Math.round(width) + 'px';
+    menuEl.style.maxHeight = Math.round(maxHeight) + 'px';
+    menuEl.style.zIndex = zIndex.toString();
+    menuEl.style.pointerEvents = 'auto';
+  }
+
+  function closeActiveGlassMenu() {
+    if (!_activeGlassMenu) return;
+    const menuEl = _activeGlassMenu;
+    const triggerBtn = _activeGlassTrigger;
+    const wrapper = _activeGlassWrapper;
+
+    menuEl.classList.remove('open', 'dropup');
+    triggerBtn?.classList.remove('active');
+    triggerBtn?.setAttribute('aria-expanded', 'false');
+
+    // Return menu to wrapper
+    if (wrapper && menuEl.parentNode !== wrapper) {
+      wrapper.appendChild(menuEl);
+    }
+
+    menuEl.style.position = '';
+    menuEl.style.top = '';
+    menuEl.style.left = '';
+    menuEl.style.width = '';
+    menuEl.style.maxHeight = '';
+    menuEl.style.zIndex = '';
+    menuEl.style.pointerEvents = '';
+
+    _activeGlassMenu = null;
+    _activeGlassTrigger = null;
+    _activeGlassWrapper = null;
+  }
+
   function initGlassSelects() {
     const wrappers = document.querySelectorAll('[data-glass-select]');
     wrappers.forEach(wrapper => {
+      const selectEl = wrapper.querySelector('select');
+      const triggerBtn = wrapper.querySelector('.glass-select-trigger');
+      const menuEl = wrapper.querySelector('.glass-select-menu') || 
+                     (document.getElementById('whizGlassSelectPortal')?.querySelector('[id="' + wrapper.dataset.glassSelect + 'Menu"]'));
+      const labelSpan = triggerBtn?.querySelector('.select-label');
+      const iconEl = triggerBtn?.querySelector('.select-icon');
+
+      if (!triggerBtn || !menuEl) return;
+
       if (wrapper.dataset.glassInitialized === 'true') {
-        // Sync if already initialized
-        const selectEl = wrapper.querySelector('select');
-        const triggerBtn = wrapper.querySelector('.glass-select-trigger');
-        const labelSpan = triggerBtn?.querySelector('.select-label');
-        const iconEl = triggerBtn?.querySelector('.select-icon');
-        const currentOpt = wrapper.querySelector(`.glass-select-option[data-value="${selectEl?.value}"]`);
+        // Sync trigger display with current select value
+        const currentOpt = menuEl.querySelector('.glass-select-option[data-value="' + (selectEl?.value || '') + '"]');
         if (currentOpt && labelSpan) {
           const optText = currentOpt.querySelector('span')?.textContent || currentOpt.textContent.trim();
           labelSpan.textContent = optText;
@@ -2146,14 +2266,7 @@
       }
       wrapper.dataset.glassInitialized = 'true';
 
-      const selectEl = wrapper.querySelector('select');
-      const triggerBtn = wrapper.querySelector('.glass-select-trigger');
-      const menuEl = wrapper.querySelector('.glass-select-menu');
-      const labelSpan = triggerBtn?.querySelector('.select-label');
-      const iconEl = triggerBtn?.querySelector('.select-icon');
-      const options = wrapper.querySelectorAll('.glass-select-option');
-
-      if (!triggerBtn || !menuEl) return;
+      const options = menuEl.querySelectorAll('.glass-select-option');
 
       function setSelected(val, triggerChangeEvent = true) {
         if (selectEl) {
@@ -2182,36 +2295,33 @@
       }
 
       function toggleMenu(force) {
-        const willOpen = typeof force === 'boolean' ? force : !menuEl.classList.contains('open');
+        const willOpen = typeof force === 'boolean' ? force : (menuEl !== _activeGlassMenu || !menuEl.classList.contains('open'));
         if (willOpen) {
-          // Close other open glass menus
-          document.querySelectorAll('.glass-select-menu.open').forEach(otherMenu => {
-            if (otherMenu !== menuEl) {
-              otherMenu.classList.remove('open');
-              const otherTrigger = otherMenu.closest('.glass-select-wrapper')?.querySelector('.glass-select-trigger');
-              otherTrigger?.classList.remove('active');
-              otherTrigger?.setAttribute('aria-expanded', 'false');
-            }
-          });
-
-          // Viewport collision check: check if close to bottom
-          const rect = triggerBtn.getBoundingClientRect();
-          const spaceBelow = window.innerHeight - rect.bottom;
-          if (spaceBelow < 250 && rect.top > 250) {
-            menuEl.classList.add('dropup');
-          } else {
-            menuEl.classList.remove('dropup');
+          if (_activeGlassMenu && _activeGlassMenu !== menuEl) {
+            closeActiveGlassMenu();
           }
 
-          menuEl.classList.add('open');
-          triggerBtn.classList.add('active');
-          triggerBtn.setAttribute('aria-expanded', 'true');
-          const currentSelected = menuEl.querySelector('.glass-select-option.selected') || menuEl.querySelector('.glass-select-option');
-          currentSelected?.focus();
+          _activeGlassMenu = menuEl;
+          _activeGlassTrigger = triggerBtn;
+          _activeGlassWrapper = wrapper;
+
+          // Teleport to portal on body
+          const portal = getGlassPortal();
+          portal.appendChild(menuEl);
+
+          // Position anchored to trigger
+          positionGlassMenu(triggerBtn, menuEl);
+
+          requestAnimationFrame(() => {
+            menuEl.classList.add('open');
+            triggerBtn.classList.add('active');
+            triggerBtn.setAttribute('aria-expanded', 'true');
+            positionGlassMenu(triggerBtn, menuEl);
+            const currentSelected = menuEl.querySelector('.glass-select-option.selected') || options[0];
+            currentSelected?.focus();
+          });
         } else {
-          menuEl.classList.remove('open');
-          triggerBtn.classList.remove('active');
-          triggerBtn.setAttribute('aria-expanded', 'false');
+          closeActiveGlassMenu();
         }
       }
 
@@ -2235,7 +2345,7 @@
           e.preventDefault();
           e.stopPropagation();
           setSelected(opt.dataset.value, true);
-          toggleMenu(false);
+          closeActiveGlassMenu();
           triggerBtn.focus();
         });
 
@@ -2243,7 +2353,7 @@
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             setSelected(opt.dataset.value, true);
-            toggleMenu(false);
+            closeActiveGlassMenu();
             triggerBtn.focus();
           } else if (e.key === 'ArrowDown') {
             e.preventDefault();
@@ -2255,10 +2365,10 @@
             prev?.focus();
           } else if (e.key === 'Escape') {
             e.preventDefault();
-            toggleMenu(false);
+            closeActiveGlassMenu();
             triggerBtn.focus();
           } else if (e.key === 'Tab') {
-            toggleMenu(false);
+            closeActiveGlassMenu();
           }
         });
       });
@@ -2283,33 +2393,36 @@
     });
   }
 
-  // Global Outside Click and Escape listener
+  // Global Outside Click, Escape, and Reposition listeners
   if (typeof window !== 'undefined' && !window._glassSelectGlobalBound) {
     window._glassSelectGlobalBound = true;
+
+    // Reposition on scroll or resize
+    const handleGlassReposition = () => {
+      if (_activeGlassMenu && _activeGlassTrigger) {
+        positionGlassMenu(_activeGlassTrigger, _activeGlassMenu);
+      }
+    };
+    window.addEventListener('scroll', handleGlassReposition, { passive: true, capture: true });
+    window.addEventListener('resize', handleGlassReposition, { passive: true });
+
     document.addEventListener('click', (e) => {
-      if (!e.target.closest('.glass-select-wrapper')) {
-        document.querySelectorAll('.glass-select-menu.open').forEach(menu => {
-          menu.classList.remove('open');
-          const trigger = menu.closest('.glass-select-wrapper')?.querySelector('.glass-select-trigger');
-          trigger?.classList.remove('active');
-          trigger?.setAttribute('aria-expanded', 'false');
-        });
+      if (!_activeGlassMenu) return;
+      const clickedTrigger = _activeGlassTrigger && (_activeGlassTrigger === e.target || _activeGlassTrigger.contains(e.target));
+      const clickedMenu = _activeGlassMenu && (_activeGlassMenu === e.target || _activeGlassMenu.contains(e.target));
+      if (!clickedTrigger && !clickedMenu) {
+        closeActiveGlassMenu();
       }
     });
 
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        document.querySelectorAll('.glass-select-menu.open').forEach(menu => {
-          menu.classList.remove('open');
-          const trigger = menu.closest('.glass-select-wrapper')?.querySelector('.glass-select-trigger');
-          trigger?.classList.remove('active');
-          trigger?.setAttribute('aria-expanded', 'false');
-          trigger?.focus();
-        });
+      if (e.key === 'Escape' && _activeGlassMenu) {
+        const trigger = _activeGlassTrigger;
+        closeActiveGlassMenu();
+        trigger?.focus();
       }
     });
   }
-
 
   // Standardized Role & Status Badge Builders
   function getUserRoleBadge(u, isOwner) {

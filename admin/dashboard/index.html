@@ -473,6 +473,31 @@
       opacity: 1;
       transform: scale(1);
     }
+
+/* ==========================================================================
+   WHIZ LIQUID GLASS PORTAL POPOVER SYSTEM
+   ========================================================================== */
+.whiz-glass-portal-root {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 0;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 95;
+}
+.whiz-glass-portal-root .glass-select-menu {
+  position: fixed !important;
+  right: auto !important;
+  bottom: auto !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+}
+.whiz-glass-portal-root .glass-select-menu.dropup {
+  bottom: auto !important;
+}
+
   </style>
 </head>
 <body class="h-full bg-[#F8FAFC] text-slate-800 flex flex-col font-sans antialiased selection:bg-[#147D64] selection:text-white">
@@ -4060,6 +4085,9 @@
       </form>
     </div>
   </div>
+
+  <!-- Reusable Liquid Glass Popover Portal Root -->
+  <div id="whizGlassSelectPortal" class="whiz-glass-portal-root" aria-hidden="true" style="position:fixed;top:0;left:0;width:100%;height:0;overflow:visible;pointer-events:none;z-index:95;"></div>
 
 </body>
 </html>
