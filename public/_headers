@@ -1,100 +1,91 @@
 /*
   X-Content-Type-Options: nosniff
-  X-Frame-Options: DENY
+  X-Frame-Options: SAMEORIGIN
   X-XSS-Protection: 1; mode=block
   Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
   Referrer-Policy: strict-origin-when-cross-origin
-  Access-Control-Allow-Origin: *
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+  Access-Control-Allow-Origin: https://whizstudio.art
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://poetic-liger-4355.clerk.accounts.dev https://*.clerk.accounts.dev https://*.clerk.com https://cdn.protect.clerk.com https://clerk.whizstudio.art https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https: blob:; connect-src 'self' https://poetic-liger-4355.clerk.accounts.dev https://*.clerk.accounts.dev https://*.clerk.com https://clerk.whizstudio.art https://whiz-api.kaziaremon.workers.dev https://api.whizstudio.art https://api.cloudflare.com https://discord.com https://*.workers.dev https://cloudflareinsights.com; frame-src 'self' https://poetic-liger-4355.clerk.accounts.dev https://*.clerk.accounts.dev https://*.clerk.com https://clerk.whizstudio.art; worker-src 'self' blob: https://*.clerk.accounts.dev https://*.clerk.com; frame-ancestors 'self';
 
 /favicon.ico
-  Access-Control-Allow-Origin: *
   Content-Type: image/x-icon
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800, must-revalidate
 
 /favicon.png
-  Access-Control-Allow-Origin: *
   Content-Type: image/png
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800, must-revalidate
 
 /favicon-32x32.png
-  Access-Control-Allow-Origin: *
   Content-Type: image/png
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800, must-revalidate
 
 /favicon-16x16.png
-  Access-Control-Allow-Origin: *
   Content-Type: image/png
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800, must-revalidate
 
 /favicon-48x48.png
-  Access-Control-Allow-Origin: *
   Content-Type: image/png
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800, must-revalidate
 
 /favicon-96x96.png
-  Access-Control-Allow-Origin: *
   Content-Type: image/png
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800, must-revalidate
 
 /favicon-144x144.png
-  Access-Control-Allow-Origin: *
   Content-Type: image/png
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800, must-revalidate
 
 /brand-logo-square.png
-  Access-Control-Allow-Origin: *
   Content-Type: image/png
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800, must-revalidate
 
 /brand-symbol-raw.png
-  Access-Control-Allow-Origin: *
   Content-Type: image/png
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800, must-revalidate
 
 /apple-touch-icon.png
-  Access-Control-Allow-Origin: *
   Content-Type: image/png
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800, must-revalidate
 
 /android-chrome-192x192.png
-  Access-Control-Allow-Origin: *
   Content-Type: image/png
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800, must-revalidate
 
 /android-chrome-512x512.png
-  Access-Control-Allow-Origin: *
   Content-Type: image/png
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800, must-revalidate
 
 /site.webmanifest
-  Access-Control-Allow-Origin: *
   Content-Type: application/manifest+json; charset=utf-8
   Cache-Control: public, max-age=86400, must-revalidate
 
 /brand-logo.png
-  Access-Control-Allow-Origin: *
+  Content-Type: image/png
   Cache-Control: public, max-age=86400, must-revalidate
 
 /social-preview.png
-  Access-Control-Allow-Origin: *
+  Content-Type: image/png
   Cache-Control: public, max-age=86400, must-revalidate
 
 /social-preview.jpg
-  Access-Control-Allow-Origin: *
+  Content-Type: image/png
   Cache-Control: public, max-age=86400, must-revalidate
 
 /robots.txt
-  Access-Control-Allow-Origin: *
   Content-Type: text/plain; charset=utf-8
   Cache-Control: public, max-age=3600, must-revalidate
 
 /sitemap.xml
-  Access-Control-Allow-Origin: *
   Content-Type: application/xml; charset=utf-8
   Cache-Control: public, max-age=3600, must-revalidate
 
 /assets/js/*
-  Access-Control-Allow-Origin: *
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
+/sso-callback*
   Cache-Control: no-cache, no-store, must-revalidate
   Pragma: no-cache
   Expires: 0
