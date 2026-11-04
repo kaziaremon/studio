@@ -705,7 +705,7 @@
           <td class="px-6 py-4">
             <div class="font-bold text-[#172B36] text-sm">${escapeHtml(c.full_name || 'Client')}</div>
             ${companyDisplay}
-            <div class="text-[10px] text-slate-500 font-mono mt-0.5">${escapeHtml(c.id)}</div>
+            
           </td>
           <td class="px-6 py-4 font-mono text-[#5F7180]">
             <div>${escapeHtml(c.email)}</div>
@@ -765,10 +765,6 @@
               <div class="flex items-center space-x-2 truncate">
                 <i class="fa-solid fa-location-dot text-slate-400 text-xs w-3.5"></i>
                 <span class="text-[11px]">${escapeHtml(c.city || 'Dhaka')}, ${escapeHtml(c.country || 'Bangladesh')}</span>
-              </div>
-              <div class="flex items-center space-x-2 truncate">
-                <i class="fa-solid fa-id-badge text-slate-400 text-xs w-3.5"></i>
-                <span class="font-mono text-[10px] text-slate-400 truncate">${escapeHtml(c.id)}</span>
               </div>
             </div>
 

@@ -85,6 +85,16 @@
   Pragma: no-cache
   Expires: 0
 
+/admin/*
+  Cache-Control: no-cache, no-store, private, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
+/client/*
+  Cache-Control: no-cache, no-store, private, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
 /sso-callback*
   Cache-Control: no-cache, no-store, must-revalidate
   Pragma: no-cache
