@@ -13,7 +13,7 @@
 (function () {
   'use strict';
 
-  const CLERK_PUBLISHABLE_KEY = 'pk_test_cG9ldGljLWxpZ2VyLTQzNTUuY2xlcmsuYWNjb3VudHMuZGV2JA';
+  const CLERK_PUBLISHABLE_KEY = 'pk_live_Y2xlcmsud2hpenN0dWRpby5hcnQk';
   const API_BASE = 'https://whiz-api.kaziaremon.workers.dev/api/v1/portal';
 
   // Global State Machine
@@ -461,20 +461,27 @@
     }
 
     // Authenticated in Clerk -> Verify backend profile & role from trusted API
-    const res = await apiFetch('/me');
-    if (res.ok && res.data && res.data.data && res.data.data.user) {
-      state.backendProfile = res.data.data.user;
-      const role = state.backendProfile.role;
-      if (role === 'owner' || state.backendProfile.isSuperAdmin) {
-        state.userRole = 'super_admin';
-      } else if (role === 'admin') {
-        state.userRole = 'admin';
+    try {
+      const res = await apiFetch('/me');
+      if (res.ok && res.data && res.data.data && res.data.data.user) {
+        state.backendProfile = res.data.data.user;
+        const role = state.backendProfile.role;
+        if (role === 'super_admin' || role === 'owner' || state.backendProfile.isSuperAdmin) {
+          state.userRole = 'super_admin';
+        } else if (role === 'admin') {
+          state.userRole = 'admin';
+        } else if (role === 'client') {
+          state.userRole = 'client';
+        } else {
+          state.userRole = role || 'client';
+        }
       } else {
-        state.userRole = 'client';
+        // Critical Rule: Never fallback to client when request is pending or fails!
+        state.userRole = 'unresolved';
       }
-    } else {
-      // Fallback role resolution
-      state.userRole = 'client';
+    } catch (e) {
+      console.warn('[Auth] Role sync exception:', e);
+      state.userRole = 'unresolved';
     }
 
     // Update Nav buttons to show Name & Role
@@ -502,7 +509,8 @@
       return;
     }
 
-    if (state.userRole === 'super_admin' || state.userRole === 'admin') {
+    const isStaff = ['super_admin', 'admin', 'owner', 'accounts', 'employee'].includes(state.userRole);
+    if (isStaff) {
       openAdminDashboard();
     } else {
       openClientDashboard();
@@ -515,18 +523,35 @@
 
   async function routeAuthenticatedUser(customSuccessMessage) {
     await syncAuthState();
+    if (state.userRole === 'unresolved') {
+      toast('Resolving workspace permissions...', 'info');
+      await new Promise(r => setTimeout(r, 600));
+      await syncAuthState();
+    }
+    if (state.userRole === 'unresolved') {
+      toast('Could not verify account permissions. Please retry or contact support.', 'error');
+      return;
+    }
     closeModal('accountPortalModal');
-    if (state.userRole === 'super_admin' || state.userRole === 'admin') {
-      toast(customSuccessMessage || 'Welcome back! Directing to Super Admin Console...', 'success');
+    const isStaff = ['super_admin', 'admin', 'owner', 'accounts', 'employee'].includes(state.userRole);
+    if (isStaff) {
+      toast(customSuccessMessage || 'Welcome back! Directing to Management Console...', 'success');
       setTimeout(() => {
-        window.location.href = '/admin/dashboard';
+        window.location.replace('/admin/dashboard/');
       }, 350);
     } else {
       toast(customSuccessMessage || 'Signed in successfully! Loading your workspace...', 'success');
       setTimeout(() => {
-        window.location.href = '/client/dashboard';
+        window.location.replace('/client/dashboard/');
       }, 350);
     }
+  }
+
+  function detectInAppBrowser() {
+    const ua = navigator.userAgent || navigator.vendor || window.opera || '';
+    return /FBAN|FBAV|Instagram|Messenger|LinkedInApp|Line\/|TikTok|musical_ly|Snapchat|MicroMessenger/i.test(ua) ||
+      (/(iPhone|iPod|iPad).*AppleWebKit(?!.*Safari)/i.test(ua)) ||
+      (/Android.*Version\/[0-9]/i.test(ua));
   }
 
   async function handleGoogleOAuth(e) {
@@ -536,10 +561,51 @@
       return;
     }
 
+    if (detectInAppBrowser()) {
+      showPortalAlert(`
+        <div class="space-y-2 text-left">
+          <p class="font-bold flex items-center gap-1.5 text-amber-800">
+            <i class="fa-solid fa-mobile-screen"></i> Social In-App Browser Detected
+          </p>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            Google restricts logins inside in-app browsers (Facebook, Instagram, LinkedIn).
+          </p>
+          <p class="text-xs text-slate-700 font-semibold">
+            👉 Tap <strong>•••</strong> and select <strong>"Open in Chrome / Safari"</strong>, or enter your Email and Password below.
+          </p>
+          <button type="button" id="btnCopyInAppOAuthUrl" class="w-full mt-2 py-1.5 px-3 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-[#147D64] border border-emerald-200 text-xs font-bold transition-all cursor-pointer">
+            <i class="fa-solid fa-copy mr-1"></i> Copy Link to Clipboard
+          </button>
+        </div>
+      `, 'warning');
+
+      setTimeout(() => {
+        const copyBtn = document.getElementById('btnCopyInAppOAuthUrl');
+        if (copyBtn) {
+          copyBtn.onclick = () => {
+            const url = window.location.origin + '/?login=true';
+            navigator.clipboard.writeText(url).then(() => {
+              copyBtn.innerHTML = '<i class="fa-solid fa-check mr-1"></i> Copied! Paste in Chrome / Safari';
+            }).catch(() => {
+              copyBtn.textContent = 'Link: ' + url;
+            });
+          };
+        }
+      }, 50);
+      return;
+    }
+
     try {
       showPortalAlert('');
-      const redirectUrl = window.location.origin + '/sso-callback';
-      const redirectUrlComplete = window.location.origin + '/sso-callback';
+      if (!window.Clerk || !window.Clerk.client) {
+        showPortalAlert('Authentication system is initializing. Please try again in a moment.', 'warning');
+        return;
+      }
+
+      // Canonical origin with explicit trailing slash prevents 308 redirects from Cloudflare Pages
+      const canonicalOrigin = window.location.origin.replace('www.', '');
+      const redirectUrl = canonicalOrigin + '/sso-callback/';
+      const redirectUrlComplete = canonicalOrigin + '/sso-callback/';
 
       const isRegisterTab = state.clientSubView === 'register';
       const primaryClient = isRegisterTab ? window.Clerk.client.signUp : window.Clerk.client.signIn;
@@ -549,16 +615,18 @@
         await primaryClient.authenticateWithRedirect({
           strategy: 'oauth_google',
           redirectUrl,
-          redirectUrlComplete
+          redirectUrlComplete,
+          continueSignUp: true
         });
       } catch (authErr) {
         console.warn('Primary OAuth client redirect notice, attempting fallback:', authErr);
         await fallbackClient.authenticateWithRedirect({
           strategy: 'oauth_google',
           redirectUrl,
-          redirectUrlComplete
+          redirectUrlComplete,
+          continueSignUp: true
         });
-      }
+            }
     } catch (err) {
       console.error('Google OAuth Error:', err);
       const parsed = parseClerkError(err);
@@ -2290,9 +2358,15 @@
   }
 
   async function handleSignOut() {
-    if (!window.Clerk) return;
     try {
-      await window.Clerk.signOut();
+      document.cookie = 'whiz_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax; Secure';
+      try {
+        localStorage.removeItem('whiz_last_role');
+        sessionStorage.clear();
+      } catch (e) {}
+      if (window.Clerk) {
+        await window.Clerk.signOut();
+      }
       closeAllModals();
       await syncAuthState();
       toast('You have been signed out.', 'info');

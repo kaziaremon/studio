@@ -7,7 +7,7 @@
 (function () {
   'use strict';
 
-  const CLERK_PUBLISHABLE_KEY = 'pk_test_cG9ldGljLWxpZ2VyLTQzNTUuY2xlcmsuYWNjb3VudHMuZGV2JA';
+  const CLERK_PUBLISHABLE_KEY = 'pk_live_Y2xlcmsud2hpenN0dWRpby5hcnQk';
   const API_BASE = 'https://whiz-api.kaziaremon.workers.dev/api/v1';
 
   // Global State
@@ -832,30 +832,38 @@
       }
     }
     // Profile Card
-    const initials = (client.full_name || 'CL').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+    const cif = client.cif || {};
+    const effectiveFullName = cif.fullName || client.full_name || 'Valued Client';
+    const effectiveCompanyName = cif.companyName || client.company_name;
+    const effectivePhone = cif.phone || client.phone || 'None provided';
+    const effectiveAddress = cif.address || client.address;
+    const effectiveCity = cif.city || client.city || 'Dhaka';
+    const effectiveCountry = cif.country || client.country || 'Bangladesh';
+
+    const initials = effectiveFullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
     const avInit = document.getElementById('clientAvatarInitials');
     if (avInit) avInit.textContent = initials;
     const cfn = document.getElementById('clientCardFullName');
-    if (cfn) cfn.textContent = client.full_name || 'Valued Client';
+    if (cfn) cfn.textContent = effectiveFullName;
     const ccn = document.getElementById('clientCardCompanyName');
     if (ccn) {
-      ccn.innerHTML = client.company_name
-        ? escapeHtml(client.company_name)
+      ccn.innerHTML = effectiveCompanyName
+        ? escapeHtml(effectiveCompanyName)
         : `<span class="inline-flex items-center gap-1 text-amber-600 font-semibold"><i class="fa-solid fa-triangle-exclamation text-[10px]"></i> Unassigned (No Linked Organization)</span>`;
     }
     const cEm = document.getElementById('clientCardEmail');
     if (cEm) cEm.textContent = client.email;
     const cPh = document.getElementById('clientCardPhone');
-    if (cPh) cPh.textContent = client.phone || 'None provided';
+    if (cPh) cPh.textContent = effectivePhone;
     const cLoc = document.getElementById('clientCardLocation');
-    if (cLoc) cLoc.textContent = `${client.address ? client.address + ', ' : ''}${client.city || 'Dhaka'}, ${client.country || 'Bangladesh'}`;
+    if (cLoc) cLoc.textContent = `${effectiveAddress ? effectiveAddress + ', ' : ''}${effectiveCity}, ${effectiveCountry}`;
     const cClk = document.getElementById('clientCardClerkId');
     if (cClk) cClk.innerHTML = client.clerk_user_id ? '<span class="text-emerald-700 font-semibold"><i class="fa-solid fa-shield-check text-[#147D64] mr-1"></i>SSO Verified</span>' : '<span class="text-slate-400">Pending SSO link</span>';
     const cOrg = document.getElementById('clientCardOrgId');
     if (cOrg) cOrg.textContent = client.organization_name || client.organization_id || 'Not Linked';
 
     // Populate Preferred Currency in Financial Preferences
-    const clientCurrency = (client.currency || (client.country === 'Bangladesh' || (client.phone && client.phone.startsWith('+880')) ? 'BDT' : 'USD')).toUpperCase();
+    const clientCurrency = (cif.currency || client.currency || (effectiveCountry === 'Bangladesh' || (effectivePhone && effectivePhone.startsWith('+880')) ? 'BDT' : 'USD')).toUpperCase();
     const currSelect = document.getElementById('clientPreferredCurrencySelect');
     if (currSelect) currSelect.value = clientCurrency;
     const currBadge = document.getElementById('clientPreferredCurrencyBadge');
@@ -4500,7 +4508,7 @@
       loadClientsData();
     });
 
-    // Edit Client Profile Modal
+    // Edit Client Profile & Authoritative CIF Modal
     document.getElementById('btnOpenEditClientModal')?.addEventListener('click', async () => {
       const clientId = state.selectedClientId;
       if (!clientId) return;
@@ -4509,15 +4517,57 @@
       if (!res.ok || !res.data || !res.data.data?.client) return;
 
       const c = res.data.data.client;
+      const cif = c.cif || {};
+
       document.getElementById('editClientId').value = c.id;
-      document.getElementById('editClientFullName').value = c.full_name || '';
-      document.getElementById('editClientCompanyName').value = c.company_name || '';
+      document.getElementById('editClientFullName').value = cif.fullName || c.full_name || '';
+      document.getElementById('editClientBillingName').value = cif.billingName || cif.fullName || c.full_name || '';
+      document.getElementById('editClientCompanyName').value = cif.companyName || c.company_name || '';
       document.getElementById('editClientEmail').value = c.email || '';
-      document.getElementById('editClientPhone').value = c.phone || '';
-      document.getElementById('editClientCity').value = c.city || 'Dhaka';
-      document.getElementById('editClientCountry').value = c.country || 'Bangladesh';
-      document.getElementById('editClientAddress').value = c.address || '';
+      document.getElementById('editClientPhone').value = cif.phone || c.phone || '';
+      document.getElementById('editClientAddress').value = cif.address || c.address || '';
+      document.getElementById('editClientCity').value = cif.city || c.city || 'Dhaka';
+      document.getElementById('editClientPostalCode').value = cif.postalCode || '';
+      document.getElementById('editClientCountry').value = cif.country || c.country || 'Bangladesh';
+      document.getElementById('editClientCurrency').value = cif.currency || c.currency || 'USD';
+      document.getElementById('editClientTaxId').value = cif.taxId || '';
+
+      const lockSelect = document.getElementById('editClientIsLocked');
+      if (lockSelect) {
+        lockSelect.value = cif.isLocked ? '1' : '0';
+      }
+
       document.getElementById('editClientStatus').value = c.status || 'active';
+
+      // Completion badge
+      const badge = document.getElementById('editClientCompletionBadge');
+      if (badge) {
+        const pct = cif.completionPercentage !== undefined ? cif.completionPercentage : (c.cif_completion_percentage || 0);
+        const locked = Boolean(cif.isLocked);
+        if (pct === 100 && locked) {
+          badge.className = 'text-xs px-2.5 py-1 rounded-full font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/60';
+          badge.textContent = '100% (Verified & Locked)';
+        } else if (pct === 100) {
+          badge.className = 'text-xs px-2.5 py-1 rounded-full font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800/60';
+          badge.textContent = '100% (Unlocked Draft)';
+        } else {
+          badge.className = 'text-xs px-2.5 py-1 rounded-full font-bold bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800/60';
+          badge.textContent = `${pct}% (Incomplete)`;
+        }
+      }
+
+      // Audit trail note
+      const auditText = document.getElementById('editClientAuditText');
+      if (auditText) {
+        const parts = [];
+        if (cif.lastModifiedBy) {
+          parts.push(`Last modified by ${cif.lastModifiedBy} (${cif.lastModifiedAt ? new Date(cif.lastModifiedAt).toLocaleDateString() : 'N/A'})`);
+        }
+        if (cif.lockedAt) {
+          parts.push(`Locked by ${cif.lockedBy || 'System'} on ${new Date(cif.lockedAt).toLocaleDateString()}`);
+        }
+        auditText.textContent = parts.length > 0 ? parts.join(' • ') : 'No modifications recorded yet.';
+      }
 
       document.getElementById('modalEditClient')?.classList.remove('hidden');
     });
@@ -4531,13 +4581,17 @@
       setBtnLoading(submitBtn, true, 'Saving changes...');
 
       const payload = {
-        fullName: f.fullName.value,
-        companyName: f.companyName.value,
-        email: f.email.value,
-        phone: f.phone.value,
-        city: f.city.value,
-        country: f.country.value,
-        address: f.address.value,
+        fullName: f.fullName.value.trim(),
+        billingName: f.billingName.value.trim(),
+        companyName: f.companyName.value.trim(),
+        phone: f.phone.value.trim(),
+        address: f.address.value.trim(),
+        city: f.city.value.trim(),
+        postalCode: f.postalCode.value.trim(),
+        country: f.country.value.trim(),
+        currency: f.currency.value,
+        taxId: f.taxId.value.trim(),
+        isLocked: f.isLocked.value === '1',
         status: f.status.value
       };
 
@@ -4549,7 +4603,7 @@
       setBtnLoading(submitBtn, false);
 
       if (res.ok && res.data && res.data.success) {
-        showToast('Client profile updated successfully!', 'success');
+        showToast('Client profile and CIF updated successfully!', 'success');
         document.getElementById('modalEditClient')?.classList.add('hidden');
         openClientDetails(clientId);
         loadClientsData();

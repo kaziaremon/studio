@@ -9,7 +9,7 @@
   <link rel="icon" type="image/png" href="/favicon.png">
 
   <!-- Clerk JavaScript SDK -->
-  <script async crossorigin="anonymous" data-clerk-publishable-key="pk_test_cG9ldGljLWxpZ2VyLTQzNTUuY2xlcmsuYWNjb3VudHMuZGV2JA" src="https://poetic-liger-4355.clerk.accounts.dev/npm/@clerk/clerk-js@5/dist/clerk.browser.js" type="text/javascript"></script>
+  <script async crossorigin="anonymous" data-clerk-publishable-key="pk_live_Y2xlcmsud2hpenN0dWRpby5hcnQk" src="https://poetic-liger-4355.clerk.accounts.dev/npm/@clerk/clerk-js@5/dist/clerk.browser.js" type="text/javascript"></script>
 
   <!-- Google Fonts: Inter, Poppins, JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -53,9 +53,11 @@
 
   <!-- pdf-lib for in-browser PDF receipt generation -->
   <script src="/assets/js/pdf-lib.min.js"></script>
+  <!-- Vector PDF Document Generator -->
+  <script src="/assets/js/whiz-document-pdf.js"></script>
 
   <!-- Liquid Glass Theme -->
-  <link rel="stylesheet" href="/assets/css/liquid-glass.css?v=2.7">
+  <link rel="stylesheet" href="/assets/css/liquid-glass.css?v=4.0">
 
   <style>
     ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -87,67 +89,81 @@
   <div id="clientMobileBackdrop" class="hidden fixed inset-0 z-40 bg-slate-900/20 backdrop-blur-sm lg:hidden transition-opacity"></div>
 
   <!-- =========================================================================
-       3. MOBILE OFF-CANVAS DRAWER (navigation only — NO visualization blocks)
+       3. MOBILE OFF-CANVAS DRAWER (Advanced Admin-Matching Navigation)
        ========================================================================= -->
-  <aside id="clientMobileDrawer" class="fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-[#E3E9EF] transform -translate-x-full transition-transform duration-300 ease-in-out lg:hidden flex flex-col shadow-2xl">
-    <!-- Drawer Header: Logo + Close -->
-    <div class="flex items-center justify-between px-5 py-4 border-b border-[#E3E9EF] shrink-0">
-      <a href="/" class="flex flex-col space-y-1">
-        <img src="/assets/images/logo.png" alt="Whiz Studio" class="h-7 w-auto object-contain self-start">
-        <span class="text-[10px] text-[#5F7180] font-bold tracking-wider uppercase pl-1">Client Portal</span>
+  <aside id="clientMobileDrawer" class="fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-[#E6ECE9] transform -translate-x-full transition-transform duration-300 ease-in-out lg:hidden flex flex-col shadow-2xl select-none">
+    <!-- Drawer Header: Clean Whiz Studio Logo + Close (No "CLIENT PORTAL" text label) -->
+    <div class="h-16 flex items-center justify-between px-5 border-b border-[#E6ECE9] shrink-0 bg-white">
+      <a href="/" class="flex items-center py-1 group" title="Whiz Studio Home">
+        <img src="/assets/images/logo.png" alt="Whiz Studio" class="h-7 w-auto object-contain self-start transition-opacity group-hover:opacity-90">
       </a>
-      <button type="button" id="clientMobileCloseBtn" class="w-8 h-8 rounded-xl bg-slate-50 border border-[#E3E9EF] flex items-center justify-center text-[#5F7180] hover:text-[#172B36] cursor-pointer transition-colors">
+      <button type="button" id="clientMobileCloseBtn" class="w-9 h-9 rounded-xl bg-[#F7FAF9] hover:bg-[#EAF5F1] active:bg-[#E6ECE9] border border-[#E6ECE9] flex items-center justify-center text-[#74817D] hover:text-[#202D2A] cursor-pointer touch-manipulation transition-colors select-none" aria-label="Close Navigation">
         <i class="fa-solid fa-xmark text-xs"></i>
       </button>
     </div>
 
-    <!-- Drawer Navigation -->
-    <nav class="flex-1 overflow-y-auto px-4 py-4 space-y-1">
-      <button type="button" data-client-tab="overview" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#5F7180] hover:text-[#172B36] hover:bg-slate-50 border border-transparent transition-all text-left">
-        <i class="fa-solid fa-gauge-high text-xs w-4 text-[#147D64]"></i>
-        <span>Overview</span>
-      </button>
-      <button type="button" data-client-tab="services" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#5F7180] hover:text-[#172B36] hover:bg-slate-50 border border-transparent transition-all text-left">
-        <i class="fa-solid fa-layer-group text-xs w-4"></i>
-        <span>My Active Services</span>
-      </button>
-      <button type="button" data-client-tab="tasks" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#5F7180] hover:text-[#172B36] hover:bg-slate-50 border border-transparent transition-all text-left">
-        <i class="fa-solid fa-list-check text-xs w-4"></i>
-        <span>Deliverables &amp; Tasks</span>
-      </button>
-      <button type="button" data-client-tab="finance" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#5F7180] hover:text-[#172B36] hover:bg-slate-50 border border-transparent transition-all text-left">
-        <i class="fa-solid fa-file-invoice-dollar text-xs w-4"></i>
-        <span>Invoices &amp; Receipts</span>
-      </button>
-      <button type="button" data-client-tab="support" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#5F7180] hover:text-[#172B36] hover:bg-slate-50 border border-transparent transition-all text-left">
-        <i class="fa-solid fa-headset text-xs w-4"></i>
-        <span>Support &amp; Requests</span>
-      </button>
-      <button type="button" data-client-tab="settings" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#5F7180] hover:text-[#172B36] hover:bg-slate-50 border border-transparent transition-all text-left">
-        <i class="fa-solid fa-gear text-xs w-4"></i>
-        <span>Account Settings</span>
-      </button>
+    <!-- Drawer Navigation (Structured Sections) -->
+    <nav class="flex-1 overflow-y-auto px-3.5 py-4 space-y-4">
+      <!-- Section 1: Workspace -->
+      <div>
+        <div class="text-[10px] font-bold uppercase tracking-wider text-[#74817D] px-2.5 mb-2 select-none">
+          Workspace
+        </div>
+        <div class="space-y-1">
+          <button type="button" data-client-tab="overview" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#74817D] hover:text-[#202D2A] hover:bg-[#F7FAF9] border border-transparent transition-all text-left cursor-pointer group">
+            <i class="fa-solid fa-gauge-high text-xs w-4 text-center shrink-0 text-[#74817D] group-hover:text-[#202D2A] transition-colors"></i>
+            <span class="flex-1">Overview</span>
+          </button>
+          <button type="button" data-client-tab="services" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#74817D] hover:text-[#202D2A] hover:bg-[#F7FAF9] border border-transparent transition-all text-left cursor-pointer group">
+            <i class="fa-solid fa-layer-group text-xs w-4 text-center shrink-0 text-[#74817D] group-hover:text-[#202D2A] transition-colors"></i>
+            <span class="flex-1">My Active Services</span>
+          </button>
+          <button type="button" data-client-tab="tasks" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#74817D] hover:text-[#202D2A] hover:bg-[#F7FAF9] border border-transparent transition-all text-left cursor-pointer group">
+            <i class="fa-solid fa-list-check text-xs w-4 text-center shrink-0 text-[#74817D] group-hover:text-[#202D2A] transition-colors"></i>
+            <span class="flex-1">Deliverables &amp; Tasks</span>
+          </button>
+          <button type="button" data-client-tab="finance" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#74817D] hover:text-[#202D2A] hover:bg-[#F7FAF9] border border-transparent transition-all text-left cursor-pointer group">
+            <i class="fa-solid fa-file-invoice text-xs w-4 text-center shrink-0 text-[#74817D] group-hover:text-[#202D2A] transition-colors"></i>
+            <span class="flex-1">Invoices</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Section 2: Account & Preferences -->
+      <div>
+        <div class="text-[10px] font-bold uppercase tracking-wider text-[#74817D] px-2.5 mb-2 select-none">
+          Account &amp; Preferences
+        </div>
+        <div class="space-y-1">
+          <button type="button" data-client-tab="profile" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#74817D] hover:text-[#202D2A] hover:bg-[#F7FAF9] border border-transparent transition-all text-left cursor-pointer group">
+            <i class="fa-solid fa-user-circle text-xs w-4 text-center shrink-0 text-[#74817D] group-hover:text-[#202D2A] transition-colors"></i>
+            <span class="flex-1">My Profile</span>
+          </button>
+          <button type="button" data-client-tab="support" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#74817D] hover:text-[#202D2A] hover:bg-[#F7FAF9] border border-transparent transition-all text-left cursor-pointer group">
+            <i class="fa-solid fa-headset text-xs w-4 text-center shrink-0 text-[#74817D] group-hover:text-[#202D2A] transition-colors"></i>
+            <span class="flex-1">Support &amp; Requests</span>
+          </button>
+          <button type="button" data-client-tab="settings" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#74817D] hover:text-[#202D2A] hover:bg-[#F7FAF9] border border-transparent transition-all text-left cursor-pointer group">
+            <i class="fa-solid fa-gear text-xs w-4 text-center shrink-0 text-[#74817D] group-hover:text-[#202D2A] transition-colors"></i>
+            <span class="flex-1">Account Settings</span>
+          </button>
+        </div>
+      </div>
 
       <!-- Admin portal switch (hidden unless admin role) -->
-      <div id="mobileAdminPortalLinkContainer" class="hidden pt-2 border-t border-[#E3E9EF] mt-2">
-        <a href="/admin/dashboard/" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-[#147D64] bg-emerald-50 border border-emerald-200 transition-all">
-          <i class="fa-solid fa-shield-halved text-xs w-4"></i>
-          <span>Switch to Admin Console</span>
+      <div id="mobileAdminPortalLinkContainer" class="hidden pt-3 border-t border-[#E6ECE9]">
+        <a href="/admin/dashboard/" class="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-bold text-[#087F70] bg-[#EAF5F1] border border-[#087F70]/20 hover:bg-[#d8ece4] transition-all">
+          <i class="fa-solid fa-shield-halved text-xs w-4 text-center"></i>
+          <span class="flex-1">Switch to Admin Console</span>
+          <i class="fa-solid fa-arrow-right text-[10px]"></i>
         </a>
       </div>
     </nav>
 
-    <!-- Drawer Footer: User Profile -->
-    <div class="border-t border-[#E3E9EF] px-4 py-4 shrink-0">
-      <div class="flex items-center space-x-3 mb-3">
-        <div class="w-9 h-9 rounded-xl bg-[#147D64]/10 border border-[#147D64]/30 flex items-center justify-center font-bold text-sm text-[#147D64] uppercase userAvatarText shrink-0">CL</div>
-        <div class="min-w-0 flex-1">
-          <p class="text-xs font-bold text-[#172B36] truncate clientDisplayName">Client</p>
-          <p class="text-[11px] text-[#5F7180] font-mono truncate clientDisplayEmail">email@example.com</p>
-        </div>
-      </div>
-      <button type="button" class="btn-client-signout w-full py-2 px-3 rounded-xl text-[11px] font-bold text-[#5F7180] hover:text-rose-600 hover:bg-rose-50 border border-[#E3E9EF] transition-all flex items-center justify-center space-x-1.5 cursor-pointer">
-        <i class="fa-solid fa-arrow-right-from-bracket text-[10px]"></i>
+    <!-- Drawer Footer (Premium Compact Profile matching Admin Dock) -->
+    <div class="p-3 border-t border-[#E6ECE9] shrink-0 bg-white safe-bottom">
+      <button type="button" class="btn-client-signout w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-semibold text-[#74817D] hover:text-rose-600 hover:bg-rose-50/80 active:bg-rose-100/60 border border-[#E6ECE9] hover:border-rose-200 transition-all cursor-pointer touch-manipulation select-none" title="Sign Out of Portal" aria-label="Sign Out">
+        <i class="fa-solid fa-arrow-right-from-bracket text-xs shrink-0"></i>
         <span>Sign Out</span>
       </button>
     </div>
@@ -158,69 +174,79 @@
        ========================================================================= -->
   <div id="clientMainLayout" class="hidden h-full flex overflow-hidden">
 
-    <!-- DESKTOP SIDEBAR (navigation only — NO visualization blocks) -->
-    <aside class="hidden lg:flex flex-col w-64 bg-white border-r border-[#E3E9EF] shrink-0">
-      <!-- Brand Logo -->
-      <div class="px-5 py-4 border-b border-[#E3E9EF] shrink-0">
-        <a href="/" class="flex flex-col space-y-1 group">
-          <img src="/assets/images/logo.png" alt="Whiz Studio" class="h-8 w-auto object-contain self-start transition-opacity group-hover:opacity-90">
-          <span class="text-[10px] text-[#5F7180] font-bold tracking-wider uppercase pl-1">Client Portal</span>
+    <!-- DESKTOP SIDEBAR (Advanced Admin-Matching Navigation Dock) -->
+    <aside class="hidden lg:flex flex-col w-64 bg-white border-r border-[#E6ECE9] shrink-0 select-none">
+      <!-- Brand Logo Header (No "CLIENT PORTAL" text label - Task 1) -->
+      <div class="h-16 px-5 border-b border-[#E6ECE9] flex items-center shrink-0 bg-white">
+        <a href="/" class="flex items-center group py-1" title="Whiz Studio Home">
+          <img src="/assets/images/logo.png" alt="Whiz Studio" class="h-8 w-auto object-contain transition-opacity group-hover:opacity-90">
         </a>
       </div>
 
-      <!-- Navigation Links -->
-      <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-        <div class="text-[10px] font-black uppercase tracking-wider text-[#5F7180] px-3 mb-2">Workspace</div>
-        <button type="button" data-client-tab="overview" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#5F7180] hover:text-[#172B36] hover:bg-slate-50 border border-transparent transition-all text-left">
-          <i class="fa-solid fa-gauge-high text-xs w-4"></i>
-          <span class="flex-1">Overview</span>
-        </button>
-        <button type="button" data-client-tab="services" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#5F7180] hover:text-[#172B36] hover:bg-slate-50 border border-transparent transition-all text-left">
-          <i class="fa-solid fa-layer-group text-xs w-4"></i>
-          <span class="flex-1">My Active Services</span>
-        </button>
-        <button type="button" data-client-tab="tasks" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#5F7180] hover:text-[#172B36] hover:bg-slate-50 border border-transparent transition-all text-left">
-          <i class="fa-solid fa-list-check text-xs w-4"></i>
-          <span class="flex-1">Deliverables &amp; Tasks</span>
-        </button>
-        <button type="button" data-client-tab="finance" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#5F7180] hover:text-[#172B36] hover:bg-slate-50 border border-transparent transition-all text-left">
-          <i class="fa-solid fa-file-invoice-dollar text-xs w-4"></i>
-          <span class="flex-1">Invoices &amp; Receipts</span>
-        </button>
-        <button type="button" data-client-tab="support" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#5F7180] hover:text-[#172B36] hover:bg-slate-50 border border-transparent transition-all text-left">
-          <i class="fa-solid fa-headset text-xs w-4"></i>
-          <span class="flex-1">Support &amp; Requests</span>
-        </button>
-        <button type="button" data-client-tab="settings" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#5F7180] hover:text-[#172B36] hover:bg-slate-50 border border-transparent transition-all text-left">
-          <i class="fa-solid fa-gear text-xs w-4"></i>
-          <span class="flex-1">Account Settings</span>
-        </button>
+      <!-- Navigation Links (Structured Sections - Task 4) -->
+      <nav class="flex-1 overflow-y-auto px-3.5 py-4 space-y-4">
+        <!-- Section 1: Workspace -->
+        <div>
+          <div class="text-[10px] font-bold uppercase tracking-wider text-[#74817D] px-2.5 mb-2 select-none">
+            Workspace
+          </div>
+          <div class="space-y-1">
+            <button type="button" data-client-tab="overview" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#74817D] hover:text-[#202D2A] hover:bg-[#F7FAF9] border border-transparent transition-all duration-150 text-left cursor-pointer group">
+              <i class="fa-solid fa-gauge-high text-xs w-4 text-center shrink-0 text-[#74817D] group-hover:text-[#202D2A] transition-colors"></i>
+              <span class="flex-1">Overview</span>
+            </button>
+            <button type="button" data-client-tab="services" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#74817D] hover:text-[#202D2A] hover:bg-[#F7FAF9] border border-transparent transition-all duration-150 text-left cursor-pointer group">
+              <i class="fa-solid fa-layer-group text-xs w-4 text-center shrink-0 text-[#74817D] group-hover:text-[#202D2A] transition-colors"></i>
+              <span class="flex-1">My Active Services</span>
+            </button>
+            <button type="button" data-client-tab="tasks" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#74817D] hover:text-[#202D2A] hover:bg-[#F7FAF9] border border-transparent transition-all duration-150 text-left cursor-pointer group">
+              <i class="fa-solid fa-list-check text-xs w-4 text-center shrink-0 text-[#74817D] group-hover:text-[#202D2A] transition-colors"></i>
+              <span class="flex-1">Deliverables &amp; Tasks</span>
+            </button>
+            <button type="button" data-client-tab="finance" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#74817D] hover:text-[#202D2A] hover:bg-[#F7FAF9] border border-transparent transition-all duration-150 text-left cursor-pointer group">
+              <i class="fa-solid fa-file-invoice text-xs w-4 text-center shrink-0 text-[#74817D] group-hover:text-[#202D2A] transition-colors"></i>
+              <span class="flex-1">Invoices</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Section 2: Account & Preferences -->
+        <div>
+          <div class="text-[10px] font-bold uppercase tracking-wider text-[#74817D] px-2.5 mb-2 select-none">
+            Account &amp; Preferences
+          </div>
+          <div class="space-y-1">
+            <button type="button" data-client-tab="profile" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#74817D] hover:text-[#202D2A] hover:bg-[#F7FAF9] border border-transparent transition-all duration-150 text-left cursor-pointer group">
+              <i class="fa-solid fa-user-circle text-xs w-4 text-center shrink-0 text-[#74817D] group-hover:text-[#202D2A] transition-colors"></i>
+              <span class="flex-1">My Profile</span>
+            </button>
+            <button type="button" data-client-tab="support" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#74817D] hover:text-[#202D2A] hover:bg-[#F7FAF9] border border-transparent transition-all duration-150 text-left cursor-pointer group">
+              <i class="fa-solid fa-headset text-xs w-4 text-center shrink-0 text-[#74817D] group-hover:text-[#202D2A] transition-colors"></i>
+              <span class="flex-1">Support &amp; Requests</span>
+            </button>
+            <button type="button" data-client-tab="settings" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#74817D] hover:text-[#202D2A] hover:bg-[#F7FAF9] border border-transparent transition-all duration-150 text-left cursor-pointer group">
+              <i class="fa-solid fa-gear text-xs w-4 text-center shrink-0 text-[#74817D] group-hover:text-[#202D2A] transition-colors"></i>
+              <span class="flex-1">Account Settings</span>
+            </button>
+          </div>
+        </div>
 
         <!-- Admin portal switch link (hidden by default) -->
-        <div id="adminPortalLinkContainer" class="hidden pt-3 mt-3 border-t border-[#E3E9EF]">
-          <a href="/admin/dashboard/" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-[#147D64] bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition-all">
-            <i class="fa-solid fa-shield-halved text-xs w-4"></i>
-            <span>Admin Console</span>
-            <i class="fa-solid fa-arrow-right text-[10px] ml-auto"></i>
+        <div id="adminPortalLinkContainer" class="hidden pt-3 border-t border-[#E6ECE9]">
+          <a href="/admin/dashboard/" class="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-bold text-[#087F70] bg-[#EAF5F1] border border-[#087F70]/20 hover:bg-[#d8ece4] transition-all">
+            <i class="fa-solid fa-shield-halved text-xs w-4 text-center"></i>
+            <span class="flex-1">Admin Console</span>
+            <i class="fa-solid fa-arrow-right text-[10px]"></i>
           </a>
         </div>
       </nav>
 
-      <!-- Sidebar Footer: User Profile Card -->
-      <div class="border-t border-[#E3E9EF] p-4 shrink-0">
-        <div class="p-3 rounded-2xl bg-slate-50 border border-[#E3E9EF] space-y-2.5">
-          <div class="flex items-center space-x-2.5">
-            <div class="w-8 h-8 rounded-xl bg-[#147D64]/10 border border-[#147D64]/30 flex items-center justify-center font-bold text-xs text-[#147D64] uppercase userAvatarText shrink-0">CL</div>
-            <div class="min-w-0 flex-1">
-              <p class="text-xs font-bold text-[#172B36] truncate clientDisplayName">Client</p>
-              <p class="text-[11px] text-[#5F7180] font-mono truncate clientDisplayEmail">email@example.com</p>
-            </div>
-          </div>
-          <button type="button" class="btn-client-signout w-full py-1.5 px-3 rounded-xl text-[11px] font-bold text-[#5F7180] hover:text-rose-600 hover:bg-rose-50 border border-[#E3E9EF] transition-all flex items-center justify-center space-x-1.5 cursor-pointer">
-            <i class="fa-solid fa-arrow-right-from-bracket text-[10px]"></i>
-            <span>Sign Out</span>
-          </button>
-        </div>
+      <!-- Sidebar Footer: Premium Compact Profile (Task 4) -->
+      <div class="border-t border-[#E6ECE9] p-3 shrink-0 bg-white">
+        <button type="button" class="btn-client-signout w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-semibold text-[#74817D] hover:text-rose-600 hover:bg-rose-50/80 active:bg-rose-100/60 border border-[#E6ECE9] hover:border-rose-200 transition-all cursor-pointer touch-manipulation select-none" title="Sign Out of Portal" aria-label="Sign Out">
+          <i class="fa-solid fa-arrow-right-from-bracket text-xs shrink-0"></i>
+          <span>Sign Out</span>
+        </button>
       </div>
     </aside>
 
@@ -263,11 +289,11 @@
           
           <span id="clientSubheaderTitle" class="hidden"></span>
           
-          <!-- Verified badge -->
-          <div class="hidden md:flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-semibold text-[#147D64]">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>Verified</span>
-          </div>
+          <!-- Dynamic Header Verification Badge -->
+          <button type="button" id="clientHeaderVerificationBadge" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-full border text-[11px] font-semibold transition-all cursor-pointer shadow-2xs select-none bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100" title="Click to view profile verification status">
+            <span id="clientHeaderVerificationDot" class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+            <span id="clientHeaderVerificationText">Unverified</span>
+          </button>
 
           <!-- Interactive Client Account Trigger + Dropdown Menu -->
           <div class="relative">
@@ -293,7 +319,7 @@
                 </div>
                 <div class="mt-2.5 pt-2 border-t border-slate-200/70 flex items-center justify-between text-[11px]">
                   <span class="text-slate-500 font-medium">Account Access</span>
-                  <span class="font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-[#147D64] border border-emerald-200 text-[10px] uppercase">Client Portal</span>
+                  <span class="font-bold px-2 py-0.5 rounded-md bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/25 text-[10px] uppercase">Client Workspace</span>
                 </div>
               </div>
 
@@ -303,7 +329,7 @@
                   <i class="fa-solid fa-user-circle w-4 text-[#147D64] text-sm"></i>
                   <div class="flex-1">
                     <p class="font-semibold text-[#172B36]">My Profile</p>
-                    <p class="text-[10px] text-[#5F7180]">View identity &amp; account info</p>
+                    <p class="text-[10px] text-[#5F7180]">Manage identity &amp; billing info</p>
                   </div>
                 </button>
                 <button type="button" class="client-dropdown-account-link w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 hover:text-[#172B36] active:bg-slate-100 transition-colors text-left cursor-pointer" data-client-action="settings">
@@ -334,14 +360,14 @@
         </div>
       </header>
 
-      <!-- SCROLLABLE CONTENT AREA -->
-      <div class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+      <!-- SCROLLABLE CONTENT AREA (Safe bottom padding for floating glass nav - Task 2) -->
+      <div class="flex-1 overflow-y-auto px-3.5 pt-4 pb-28 sm:px-6 sm:pt-6 sm:pb-32 lg:p-8">
         <div class="max-w-7xl mx-auto space-y-6">
 
           <!-- =================================================================
                VIEW: OVERVIEW (id="view_overview")
                ================================================================= -->
-          <div id="view_overview" class="space-y-6">
+          <div id="view_overview" class="space-y-6 pb-6">
             <!-- Welcome Banner -->
             <div class="p-6 sm:p-8 rounded-3xl bg-white border border-[#E3E9EF] shadow-sm relative overflow-hidden">
               <div class="absolute -right-10 -bottom-10 w-52 h-52 rounded-full bg-[#147D64]/8 blur-3xl pointer-events-none"></div>
@@ -369,9 +395,9 @@
                 <p class="text-[11px] text-[#5F7180] font-medium">Delivered Checkpoints</p>
               </div>
               <div class="p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-sm space-y-1.5">
-                <span class="text-[10px] font-bold uppercase tracking-wider text-[#5F7180]">Receipts Issued</span>
+                <span class="text-[10px] font-bold uppercase tracking-wider text-[#5F7180]">Invoices Issued</span>
                 <div class="text-3xl font-black text-[#172B36]" id="statInvoicesCount">0</div>
-                <p class="text-[11px] text-[#5F7180] font-medium">Payment Records</p>
+                <p class="text-[11px] text-[#5F7180] font-medium">Billing Records</p>
               </div>
             </div>
 
@@ -438,14 +464,17 @@
               </div>
             </div>
 
-            <!-- Recent Services Preview -->
-            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E3E9EF] shadow-sm space-y-4">
-              <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
-                <div>
-                  <h3 class="text-xs font-bold text-[#172B36]">Active Service Engagements</h3>
-                  <p class="text-[11px] text-[#5F7180] mt-0.5">Your provisioned marketing services at a glance</p>
+            <!-- Recent Services Preview (Active Service Engagements - Task 2) -->
+            <div class="p-4 sm:p-6 rounded-3xl bg-white border border-[#E6ECE9] shadow-sm space-y-4 overflow-hidden">
+              <div class="flex items-start sm:items-center justify-between gap-3 pb-3 border-b border-[#E6ECE9]">
+                <div class="min-w-0 flex-1">
+                  <h3 class="text-xs sm:text-sm font-bold text-[#202D2A] flex items-center gap-2">
+                    <i class="fa-solid fa-layer-group text-[#087F70]"></i>
+                    <span>Active Service Engagements</span>
+                  </h3>
+                  <p class="text-[11px] text-[#74817D] mt-0.5 truncate">Your provisioned marketing services at a glance</p>
                 </div>
-                <button type="button" data-client-tab="services" class="text-[11px] font-bold text-[#147D64] hover:underline">View All</button>
+                <button type="button" data-client-tab="services" class="text-[11px] font-bold text-[#087F70] hover:text-[#066559] hover:underline shrink-0 cursor-pointer pt-0.5 sm:pt-0">View All</button>
               </div>
               <div id="overviewServicesList" class="space-y-3">
                 <p class="text-xs text-[#5F7180] italic">Loading services...</p>
@@ -482,18 +511,226 @@
           </div>
 
           <!-- =================================================================
-               VIEW: FINANCE (id="view_finance")
-               ================================================================= -->
+       VIEW: FINANCE / INVOICES (id="view_finance")
+       ================================================================= -->
           <div id="view_finance" class="hidden space-y-6">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h2 class="text-2xl font-black text-[#172B36] tracking-tight">Invoices &amp; Receipts</h2>
-                <p class="text-xs text-[#5F7180] mt-0.5" id="financeReceiptsCount">Loading...</p>
+                <h2 class="text-2xl font-black text-[#172B36] tracking-tight">Invoices</h2>
+                <p class="text-xs text-[#5F7180] mt-0.5" id="financeReceiptsCount">Official billing records and authenticated PDF documents</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <span id="quotaBadgePill" class="px-3 py-1.5 rounded-full text-xs font-bold bg-[#147D64]/10 text-[#147D64] border border-[#147D64]/20 flex items-center gap-1.5 shadow-xs">
+                  <i class="fa-solid fa-file-pdf"></i>
+                  <span id="quotaRemainingText">Daily PDF Allowance: 2/2 remaining</span>
+                </span>
               </div>
             </div>
+
             <div id="financeFullList">
-              <p class="text-xs text-[#5F7180] italic">Loading financial records...</p>
+              <p class="text-xs text-[#5F7180] italic">Loading invoices...</p>
             </div>
+          </div>
+
+          <!-- =================================================================
+               VIEW: MY PROFILE (id="view_profile")
+               ================================================================= -->
+          <div id="view_profile" class="hidden space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 class="text-2xl font-black text-[#172B36] tracking-tight">My Profile</h2>
+                <p class="text-xs text-[#5F7180] mt-0.5">Manage your personal identity, contact details, and billing information for official invoices.</p>
+              </div>
+            </div>
+
+            <!-- Profile Completion Progress Status Card -->
+            <div id="profileStatusBanner" class="p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs space-y-3">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                  <div id="profileStatusBannerIcon" class="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold text-sm shrink-0">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                  </div>
+                  <div>
+                    <h4 class="text-xs font-bold text-[#172B36]" id="profileStatusBannerTitle">Profile Incomplete</h4>
+                    <p class="text-[11px] text-[#5F7180]" id="profileStatusBannerDesc">Complete all 8 mandatory fields to enable official invoice PDF downloads.</p>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span id="profileStatusPercentBadge" class="text-xs font-extrabold text-[#172B36] font-mono px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200">0% Complete</span>
+                </div>
+              </div>
+              <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div id="profileStatusProgressBar" class="h-full bg-amber-500 transition-all duration-300" style="width: 0%"></div>
+              </div>
+              <div id="profileMissingFieldsAlert" class="hidden text-[11px] text-amber-800 bg-amber-50/70 p-3 rounded-xl border border-amber-200/60">
+                <span class="font-bold">Missing mandatory fields for invoice generation:</span>
+                <span id="profileMissingFieldsList" class="ml-1"></span>
+              </div>
+            </div>
+
+            <!-- Unified Client Profile Form -->
+            <!-- Profile Locked Notice Banner (Requirement 4) -->
+            <div id="profileLockedNoticeBanner" class="hidden p-5 rounded-2xl bg-emerald-50/80 border border-emerald-200/80 shadow-xs space-y-2">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                  <div class="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-700 flex items-center justify-center font-bold text-sm shrink-0">
+                    <i class="fa-solid fa-shield-halved"></i>
+                  </div>
+                  <div>
+                    <h4 class="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+                      <span>Profile Verified & Locked</span>
+                      <span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-emerald-100 text-emerald-800 border border-emerald-300">Read-Only</span>
+                    </h4>
+                    <p class="text-[11px] text-emerald-800/90 mt-0.5">Your profile is verified and locked. Contact Whiz Studio Support to request changes.</p>
+                  </div>
+                </div>
+                <button type="button" id="btnRequestProfileUpdate" class="px-3.5 py-2 rounded-xl bg-white hover:bg-emerald-100/60 border border-emerald-200 text-emerald-800 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs self-start sm:self-auto shrink-0">
+                  <i class="fa-solid fa-headset text-xs"></i>
+                  <span>Request Profile Update</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Unified Client Profile Form -->
+            <form id="formClientProfile" action="javascript:void(0);" method="POST" onsubmit="return false;" class="space-y-6">
+              <!-- Section 1: Personal Information -->
+              <div class="p-6 rounded-3xl bg-white border border-[#E3E9EF] shadow-xs space-y-5">
+                <div class="pb-3 border-b border-[#E3E9EF] flex items-center justify-between">
+                  <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-xl bg-[#147D64]/10 text-[#147D64] flex items-center justify-center font-bold text-sm">
+                      <i class="fa-solid fa-user"></i>
+                    </div>
+                    <div>
+                      <h3 class="text-sm font-bold text-[#172B36]">Personal Information</h3>
+                      <p class="text-[11px] text-[#5F7180]">Primary contact and account holder identity</p>
+                    </div>
+                  </div>
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Section 1 of 2</span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5" for="profileFullName">
+                      Full Legal Name <span class="text-rose-500 font-bold">*</span>
+                    </label>
+                    <input type="text" id="profileFullName" name="fullName" required placeholder="e.g. John Doe" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-medium focus:border-[#147D64] focus:bg-white focus:outline-none transition-all">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5" for="profileEmail">
+                      Verified Email Address <span class="text-emerald-600 font-bold text-[10px] uppercase ml-1"><i class="fa-solid fa-lock text-[9px] mr-1"></i>Verified via SSO</span>
+                    </label>
+                    <input type="email" id="profileEmail" name="email" readonly disabled class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100/90 border border-slate-200 text-xs text-slate-600 font-mono cursor-not-allowed select-none">
+                    <p class="text-[10px] text-slate-400 mt-1">Bound to your authenticated Clerk identity. Managed in Account Security.</p>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5" for="profilePhone">
+                      Phone Number (with Country Code) <span class="text-rose-500 font-bold">*</span>
+                    </label>
+                    <input type="text" id="profilePhone" name="phone" required placeholder="+880 1624644435" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-mono focus:border-[#147D64] focus:bg-white focus:outline-none transition-all">
+                    <p class="text-[10px] text-slate-400 mt-1">Used on official invoices and critical project notifications.</p>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5" for="profileCompanyName">
+                      Company / Organization Name <span class="text-slate-400 font-normal">(Optional)</span>
+                    </label>
+                    <input type="text" id="profileCompanyName" name="companyName" placeholder="e.g. Acme Corp or Brand Name" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:border-[#147D64] focus:bg-white focus:outline-none transition-all">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Section 2: Billing & Invoicing Information -->
+              <div class="p-6 rounded-3xl bg-white border border-[#E3E9EF] shadow-xs space-y-5">
+                <div class="pb-3 border-b border-[#E3E9EF] flex items-center justify-between">
+                  <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-xl bg-[#147D64]/10 text-[#147D64] flex items-center justify-center font-bold text-sm">
+                      <i class="fa-solid fa-file-invoice-dollar"></i>
+                    </div>
+                    <div>
+                      <h3 class="text-sm font-bold text-[#172B36]">Billing &amp; Invoicing Details</h3>
+                      <p class="text-[11px] text-[#5F7180]">These details appear directly on all generated PDF invoices</p>
+                    </div>
+                  </div>
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Section 2 of 2</span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5" for="profileBillingName">
+                      Billing / Invoicing Entity Name <span class="text-rose-500 font-bold">*</span>
+                    </label>
+                    <input type="text" id="profileBillingName" name="billingName" required placeholder="Individual or Company billing name" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:border-[#147D64] focus:bg-white focus:outline-none transition-all">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5" for="profileCurrency">
+                      Preferred Billing Currency <span class="text-rose-500 font-bold">*</span>
+                    </label>
+                    <select id="profileCurrency" name="billingCurrency" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-bold focus:border-[#147D64] focus:bg-white focus:outline-none transition-all">
+                      <option value="USD">USD ($) - US Dollar</option>
+                      <option value="BDT">BDT (৳) - Bangladeshi Taka</option>
+                      <option value="EUR">EUR (€) - Euro</option>
+                      <option value="GBP">GBP (£) - British Pound</option>
+                      <option value="AED">AED (د.إ) - UAE Dirham</option>
+                      <option value="SAR">SAR (﷼) - Saudi Riyal</option>
+                      <option value="CAD">CAD ($) - Canadian Dollar</option>
+                      <option value="AUD">AUD ($) - Australian Dollar</option>
+                      <option value="SGD">SGD ($) - Singapore Dollar</option>
+                      <option value="INR">INR (₹) - Indian Rupee</option>
+                      <option value="MYR">MYR (RM) - Malaysian Ringgit</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1.5" for="profileAddress">
+                    Full Billing Street Address <span class="text-rose-500 font-bold">*</span>
+                  </label>
+                  <textarea id="profileAddress" name="billingAddress" rows="2" required placeholder="Street address, building, suite, road, area..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:border-[#147D64] focus:bg-white focus:outline-none transition-all resize-none"></textarea>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5" for="profileCity">
+                      City <span class="text-rose-500 font-bold">*</span>
+                    </label>
+                    <input type="text" id="profileCity" name="city" required placeholder="e.g. Dhaka or New York" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:border-[#147D64] focus:bg-white focus:outline-none transition-all">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5" for="profileCountry">
+                      Country <span class="text-rose-500 font-bold">*</span>
+                    </label>
+                    <input type="text" id="profileCountry" name="country" required placeholder="e.g. Bangladesh or United States" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:border-[#147D64] focus:bg-white focus:outline-none transition-all">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5" for="profilePostalCode">
+                      Postal Code <span class="text-slate-400 font-normal">(Optional)</span>
+                    </label>
+                    <input type="text" id="profilePostalCode" name="postalCode" placeholder="e.g. 1710" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-mono focus:border-[#147D64] focus:bg-white focus:outline-none transition-all">
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1.5" for="profileTaxId">
+                    Tax Identification Number / VAT <span class="text-slate-400 font-normal">(Optional)</span>
+                  </label>
+                  <input type="text" id="profileTaxId" name="taxId" placeholder="e.g. TIN-98472948 or VAT12345678" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-mono focus:border-[#147D64] focus:bg-white focus:outline-none transition-all">
+                </div>
+              </div>
+
+              <!-- Form Action Bar -->
+              <div class="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs">
+                <div class="flex items-center gap-2 text-xs text-slate-500">
+                  <i class="fa-solid fa-shield-halved text-[#147D64]"></i>
+                  <span>Stored securely in Cloudflare D1. Permanent across devices.</span>
+                </div>
+                <button type="submit" id="btnSaveClientProfile" class="w-full sm:w-auto px-6 py-2.5 rounded-xl text-xs font-bold bg-[#147D64] hover:bg-[#12694f] active:bg-[#0f5742] text-white transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer">
+                  <i class="fa-solid fa-floppy-disk"></i>
+                  <span>Save Changes</span>
+                </button>
+              </div>
+            </form>
           </div>
 
           <!-- =================================================================
@@ -548,67 +785,262 @@
                ================================================================= -->
           <div id="view_settings" class="hidden space-y-6">
             <div>
-              <h2 class="text-2xl font-black text-[#172B36] tracking-tight">Account Settings</h2>
-              <p class="text-xs text-[#5F7180] mt-0.5">Your profile and authentication details.</p>
+              <h2 class="text-2xl font-black text-[#172B36] tracking-tight">Account &amp; Security Settings</h2>
+              <p class="text-xs text-[#5F7180] mt-0.5">Manage your authenticated credentials, account security, and session preferences.</p>
             </div>
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+              <!-- Account Identity Card -->
               <div class="p-6 rounded-3xl bg-white border border-[#E3E9EF] shadow-sm space-y-4">
-                <h3 class="text-sm font-bold text-[#172B36] pb-2 border-b border-[#E3E9EF]">Profile Information</h3>
-                <div class="space-y-3 text-xs">
+                <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
+                  <h3 class="text-xs font-bold uppercase tracking-wider text-[#172B36] flex items-center gap-2">
+                    <i class="fa-solid fa-id-badge text-[#147D64]"></i>
+                    <span>Account Identity</span>
+                  </h3>
+                  <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">Active</span>
+                </div>
+                <div class="space-y-3.5 text-xs">
                   <div>
-                    <span class="text-[10px] uppercase font-bold text-[#5F7180] block mb-0.5">Email Address</span>
-                    <span class="text-[#172B36] font-mono" id="settingsEmail">—</span>
+                    <span class="text-[10px] uppercase font-bold text-[#5F7180] block mb-1">Verified Email Address</span>
+                    <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-[#E3E9EF]">
+                      <span class="text-[#172B36] font-mono font-semibold" id="settingsEmail">—</span>
+                      <span class="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        <i class="fa-solid fa-circle-check"></i> Verified
+                      </span>
+                    </div>
                   </div>
+
                   <div>
-                    <span class="text-[10px] uppercase font-bold text-[#5F7180] block mb-0.5">Clerk User ID</span>
-                    <span class="text-[#172B36] font-mono text-[10px]" id="settingsClerkId">—</span>
+                    <span class="text-[10px] uppercase font-bold text-[#5F7180] block mb-1">Authentication Provider</span>
+                    <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-[#E3E9EF]">
+                      <div class="flex items-center gap-2">
+                        <i class="fa-brands fa-google text-slate-700 text-sm"></i>
+                        <span class="font-medium text-[#172B36]" id="settingsAuthProvider">Google Single Sign-On</span>
+                      </div>
+                      <span class="text-[10px] font-mono text-slate-400">OAuth 2.0 / Clerk</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <span class="text-[10px] uppercase font-bold text-[#5F7180] block mb-1">Clerk Security Identity</span>
+                    <div class="p-3 rounded-xl bg-slate-50 border border-[#E3E9EF] text-[11px] font-mono text-slate-600 truncate" id="settingsClerkUserId">
+                      user_...
+                    </div>
                   </div>
                 </div>
               </div>
+
+              <!-- Password & Security Card (Requirement 8) -->
               <div class="p-6 rounded-3xl bg-white border border-[#E3E9EF] shadow-sm space-y-4">
-                <h3 class="text-sm font-bold text-[#172B36] pb-2 border-b border-[#E3E9EF]">Session Management</h3>
-                <p class="text-xs text-[#5F7180]">To update your password or email, visit your Clerk account settings.</p>
-                <button type="button" class="btn-client-signout px-4 py-2.5 rounded-xl text-xs font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 transition-all flex items-center space-x-2 cursor-pointer">
-                  <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i>
-                  <span>Sign Out of Workspace</span>
-                </button>
+                <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
+                  <h3 class="text-xs font-bold uppercase tracking-wider text-[#172B36] flex items-center gap-2">
+                    <i class="fa-solid fa-lock text-[#147D64]"></i>
+                    <span>Password &amp; Access Controls</span>
+                  </h3>
+                  <span id="settingsPasswordStatusBadge" class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-slate-100 text-slate-600 border border-slate-200">Checking...</span>
+                </div>
+
+                <div class="space-y-4 text-xs">
+                  <p class="text-slate-600 leading-relaxed" id="settingsPasswordHelpText">
+                    You can set an optional password for direct email/password sign-in in addition to Google authentication.
+                  </p>
+
+                  <div class="pt-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                    <button type="button" id="btnOpenPasswordModal" class="px-4 py-2.5 rounded-xl text-xs font-bold bg-[#147D64] hover:bg-[#12694f] text-white transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer">
+                      <i class="fa-solid fa-key text-xs"></i>
+                      <span id="btnOpenPasswordModalText">Set Password</span>
+                    </button>
+                    <button type="button" id="btnOpenClerkSecurityProfile" class="px-4 py-2.5 rounded-xl text-xs font-bold bg-white text-slate-700 hover:bg-slate-50 border border-[#E3E9EF] transition-all flex items-center justify-center gap-2 cursor-pointer">
+                      <i class="fa-solid fa-user-shield text-xs text-[#147D64]"></i>
+                      <span>Manage Security in Clerk</span>
+                    </button>
+                  </div>
+
+                  <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E3E9EF] text-[11px] text-slate-500 space-y-1">
+                    <div class="font-bold text-slate-700 flex items-center gap-1.5">
+                      <i class="fa-solid fa-shield-halved text-[#147D64]"></i>
+                      <span>Enterprise Authentication Standards</span>
+                    </div>
+                    <p>Credentials are cryptographically secured directly by Clerk. Passwords are never sent to or stored in Whiz Studio databases.</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Session Management & Sign Out -->
+              <div class="lg:col-span-2 p-6 rounded-3xl bg-white border border-[#E3E9EF] shadow-sm space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
+                  <h3 class="text-xs font-bold uppercase tracking-wider text-[#172B36] flex items-center gap-2">
+                    <i class="fa-solid fa-right-from-bracket text-rose-500"></i>
+                    <span>Session Management</span>
+                  </h3>
+                </div>
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div class="space-y-1">
+                    <p class="text-xs font-bold text-[#172B36]">Sign Out of Workspace</p>
+                    <p class="text-[11px] text-[#5F7180]">Terminate active session and return to secure sign-in portal.</p>
+                  </div>
+                  <button type="button" class="btn-client-signout px-5 py-2.5 rounded-xl text-xs font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 active:bg-rose-200 border border-rose-200 transition-all flex items-center justify-center gap-2 cursor-pointer">
+                    <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i>
+                    <span>Sign Out of Portal</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-
         </div>
       </div>
-
-      <!-- MOBILE BOTTOM NAVIGATION BAR -->
-      <nav class="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-[#E3E9EF] pb-safe flex items-center justify-around px-2 pt-2 shadow-lg">
-        <button type="button" data-client-tab="overview" class="flex flex-col items-center gap-0.5 p-2 text-[#147D64] transition-colors min-w-0">
-          <i class="fa-solid fa-gauge-high text-sm"></i>
-          <span class="text-[9px] font-bold uppercase tracking-wide">Home</span>
+<!-- MOBILE FLOATING GLASS NAVIGATION BAR (Task 3) -->
+      <nav class="lg:hidden fixed bottom-3 inset-x-3 sm:inset-x-6 max-w-md mx-auto z-40 bg-white/85 backdrop-blur-xl border border-white/60 shadow-[0_10px_30px_rgba(20,125,100,0.12),0_2px_10px_rgba(0,0,0,0.05)] p-1.5 rounded-2xl flex items-center justify-around gap-1 safe-bottom select-none">
+        <button type="button" data-client-tab="overview" class="flex-1 min-w-0 py-1.5 px-2 rounded-xl flex flex-col items-center justify-center gap-1 transition-all duration-200 select-none touch-manipulation cursor-pointer group bg-[#EAF5F1] text-[#087F70] font-bold border border-[#087F70]/25 shadow-2xs">
+          <i class="fa-solid fa-gauge-high text-sm transition-transform duration-200 group-hover:scale-105"></i>
+          <span class="text-[10px] font-bold tracking-tight truncate leading-none">Home</span>
         </button>
-        <button type="button" data-client-tab="services" class="flex flex-col items-center gap-0.5 p-2 text-slate-500 transition-colors min-w-0">
-          <i class="fa-solid fa-layer-group text-sm"></i>
-          <span class="text-[9px] font-bold uppercase tracking-wide">Services</span>
+        <button type="button" data-client-tab="services" class="flex-1 min-w-0 py-1.5 px-2 rounded-xl flex flex-col items-center justify-center gap-1 transition-all duration-200 select-none touch-manipulation cursor-pointer group text-[#74817D] hover:text-[#202D2A] border border-transparent font-semibold">
+          <i class="fa-solid fa-layer-group text-sm transition-transform duration-200 group-hover:scale-105"></i>
+          <span class="text-[10px] font-semibold tracking-tight truncate leading-none">Services</span>
         </button>
-        <button type="button" data-client-tab="tasks" class="flex flex-col items-center gap-0.5 p-2 text-slate-500 transition-colors min-w-0">
-          <i class="fa-solid fa-list-check text-sm"></i>
-          <span class="text-[9px] font-bold uppercase tracking-wide">Tasks</span>
+        <button type="button" data-client-tab="tasks" class="flex-1 min-w-0 py-1.5 px-2 rounded-xl flex flex-col items-center justify-center gap-1 transition-all duration-200 select-none touch-manipulation cursor-pointer group text-[#74817D] hover:text-[#202D2A] border border-transparent font-semibold">
+          <i class="fa-solid fa-list-check text-sm transition-transform duration-200 group-hover:scale-105"></i>
+          <span class="text-[10px] font-semibold tracking-tight truncate leading-none">Tasks</span>
         </button>
-        <button type="button" data-client-tab="finance" class="flex flex-col items-center gap-0.5 p-2 text-slate-500 transition-colors min-w-0">
-          <i class="fa-solid fa-file-invoice-dollar text-sm"></i>
-          <span class="text-[9px] font-bold uppercase tracking-wide">Finance</span>
+        <button type="button" data-client-tab="finance" class="flex-1 min-w-0 py-1.5 px-2 rounded-xl flex flex-col items-center justify-center gap-1 transition-all duration-200 select-none touch-manipulation cursor-pointer group text-[#74817D] hover:text-[#202D2A] border border-transparent font-semibold">
+          <i class="fa-solid fa-file-invoice text-sm transition-transform duration-200 group-hover:scale-105"></i>
+          <span class="text-[10px] font-semibold tracking-tight truncate leading-none">Invoices</span>
         </button>
-        <button type="button" data-client-tab="settings" class="flex flex-col items-center gap-0.5 p-2 text-slate-500 transition-colors min-w-0">
-          <i class="fa-solid fa-gear text-sm"></i>
-          <span class="text-[9px] font-bold uppercase tracking-wide">Settings</span>
+        <button type="button" data-client-tab="profile" class="flex-1 min-w-0 py-1.5 px-2 rounded-xl flex flex-col items-center justify-center gap-1 transition-all duration-200 select-none touch-manipulation cursor-pointer group text-[#74817D] hover:text-[#202D2A] border border-transparent font-semibold">
+          <i class="fa-solid fa-user-circle text-sm transition-transform duration-200 group-hover:scale-105"></i>
+          <span class="text-[10px] font-semibold tracking-tight truncate leading-none">Profile</span>
         </button>
       </nav>
     </main>
+  </div>
+
+  
+  <!-- MODAL: PROFILE REQUIRED FOR INVOICE DOWNLOAD GUARD -->
+  <div id="modalProfileRequired" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+    <div class="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-[#E3E9EF] p-6 sm:p-7 space-y-5 animate-in fade-in zoom-in-95 duration-150">
+      <div class="flex items-start justify-between">
+        <div class="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 flex items-center justify-center font-bold text-xl shrink-0">
+          <i class="fa-solid fa-address-card"></i>
+        </div>
+        <button type="button" id="btnCloseProfileRequiredModal" class="text-slate-400 hover:text-slate-700 text-lg cursor-pointer p-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="space-y-2">
+        <h3 class="text-base font-black text-[#172B36]">Profile Incomplete</h3>
+        <p class="text-xs text-[#5F7180] leading-relaxed">
+          Please complete your My Profile information before downloading invoices.
+        </p>
+        <p class="text-[11px] text-slate-400 leading-normal">
+          Official tax invoices require your legal billing name, full address, city, country, and phone number to be embedded into the PDF.
+        </p>
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-3 border-t border-[#E3E9EF]">
+        <button type="button" id="btnCancelProfileRequiredModal" class="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-800 cursor-pointer">
+          Cancel
+        </button>
+        <button type="button" id="btnGoToProfileFromInvoice" class="px-5 py-2.5 rounded-xl text-xs font-bold bg-[#147D64] hover:bg-[#12694f] text-white transition-all shadow-sm flex items-center gap-2 cursor-pointer">
+          <i class="fa-solid fa-user-circle"></i>
+          <span>Complete My Profile</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: DOCUMENT PREVIEW MODAL -->
+  <div id="modalDocumentPreview" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
+    <div class="relative w-full max-w-3xl bg-white rounded-3xl shadow-2xl border border-[#E3E9EF] p-5 sm:p-6 space-y-4 my-6 flex flex-col max-h-[92vh]">
+      <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-xl bg-[#147D64]/10 text-[#147D64] flex items-center justify-center font-bold text-sm">
+            <i class="fa-solid fa-eye"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-black text-[#172B36]" id="previewDocTitle">Document Preview</h3>
+            <p class="text-[11px] text-[#5F7180]">Free preview mode does not count toward your daily 2-PDF generation limit.</p>
+          </div>
+        </div>
+        <button type="button" id="btnClosePreviewModal" class="text-slate-400 hover:text-slate-700 text-lg cursor-pointer p-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Preview iframe or content -->
+      <div class="flex-1 w-full bg-slate-100 rounded-2xl overflow-hidden min-h-[480px] border border-[#E3E9EF] flex items-center justify-center relative">
+        <iframe id="previewDocIframe" class="w-full h-full min-h-[480px] border-0" title="PDF Preview"></iframe>
+        <div id="previewLoadingSpinner" class="absolute inset-0 bg-white/90 flex flex-col items-center justify-center gap-2 text-xs font-bold text-[#147D64]">
+          <i class="fa-solid fa-circle-notch fa-spin text-2xl"></i>
+          <span>Compiling Document Preview...</span>
+        </div>
+      </div>
+
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-[#E3E9EF]">
+        <span class="text-[11px] text-[#5F7180] font-medium" id="previewAllowanceNotice">Daily Allowance: 2/2 remaining today</span>
+        <div class="flex items-center gap-2">
+          <button type="button" id="btnClosePreviewModalBottom" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-800 cursor-pointer">
+            Close Preview
+          </button>
+          <button type="button" id="btnDownloadFromPreview" class="px-5 py-2 rounded-xl text-xs font-bold bg-[#147D64] text-white hover:bg-[#12694f] transition-all shadow-sm flex items-center gap-2 cursor-pointer">
+            <i class="fa-solid fa-download"></i>
+            <span>Download Official PDF</span>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Toast Container -->
   <div id="toastContainer" class="fixed bottom-20 lg:bottom-6 right-4 sm:right-6 z-[200] pointer-events-none flex flex-col gap-3 max-w-xs w-full"></div>
 
   <!-- Client Dashboard JS -->
+  <script src="/assets/js/client-mock-data.js?v=4.0"></script>
   <script src="/assets/js/client-dashboard.js?v=20261031_sync_tracking"></script>
+
+  <!-- MODAL: SET / CHANGE PASSWORD (CLERK POWERED) -->
+  <div id="modalClientPassword" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm overflow-y-auto">
+    <div class="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-[#E3E9EF] p-6 sm:p-7 space-y-5 animate-in fade-in zoom-in-95 duration-150 my-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
+        <h3 class="text-base font-black text-[#172B36] flex items-center gap-2">
+          <i class="fa-solid fa-key text-[#147D64]"></i>
+          <span id="modalClientPasswordTitle">Set Account Password</span>
+        </h3>
+        <button type="button" id="btnClosePasswordModal" class="text-slate-400 hover:text-slate-700 text-lg cursor-pointer p-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="formClientPassword" class="space-y-4">
+        <!-- Current Password (only visible if user already has a password) -->
+        <div id="containerCurrentPassword" class="hidden">
+          <label class="block text-xs font-semibold text-slate-700 mb-1.5" for="inputCurrentPassword">Current Password *</label>
+          <input type="password" id="inputCurrentPassword" autocomplete="current-password" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:border-[#147D64] focus:bg-white focus:outline-none transition-all">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1.5" for="inputNewPassword">New Password *</label>
+          <input type="password" id="inputNewPassword" required autocomplete="new-password" minlength="8" placeholder="At least 8 characters" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:border-[#147D64] focus:bg-white focus:outline-none transition-all">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1.5" for="inputConfirmPassword">Confirm New Password *</label>
+          <input type="password" id="inputConfirmPassword" required autocomplete="new-password" minlength="8" placeholder="Re-enter new password" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:border-[#147D64] focus:bg-white focus:outline-none transition-all">
+        </div>
+
+        <div id="passwordErrorMsg" class="hidden text-[11px] text-rose-600 bg-rose-50 p-2.5 rounded-xl border border-rose-200"></div>
+
+        <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-[#E3E9EF]">
+          <button type="button" id="btnCancelPasswordModal" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-all cursor-pointer">Cancel</button>
+          <button type="submit" id="btnSubmitPassword" class="px-5 py-2 rounded-xl text-xs font-bold bg-[#147D64] hover:bg-[#12694f] text-white transition-all shadow-sm flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-check"></i>
+            <span id="btnSubmitPasswordText">Save Password</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
 </body>
 </html>

@@ -1,15 +1,15 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-[#F4FAF7] text-[#172B36]">
+<html lang="en" class="h-full bg-[#0F172A] text-slate-100">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Whiz Studio | Liquid Glass Dashboard Interactive Preview</title>
-  <link rel="icon" type="image/png" href="/favicon.png">
+  <title>Whiz Studio | Dashboard & Portal Interactive Device Simulator</title>
+  <link rel="icon" type="image/png" href="../favicon.png">
 
   <!-- Google Fonts: Inter, Poppins & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
   <!-- FontAwesome 6.5 -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
@@ -40,1921 +40,652 @@
           }
         }
       }
-    }
+    };
   </script>
 
-  <!-- Chart.js for High-Fidelity Interactive Analytics -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-
   <style>
-    :root {
-      --brand-whiz: #147D64;
-      --brand-emerald: #059669;
-      --brand-dark: #172B36;
-      --brand-accent: #00A86B;
-      --text-main: #172B36;
-      --text-muted: #5F7180;
-      
-      /* Liquid Glass Tokens */
-      --liquid-surface: rgba(255, 255, 255, 0.75);
-      --liquid-surface-elevated: rgba(255, 255, 255, 0.90);
-      --liquid-surface-card: rgba(255, 255, 255, 0.70);
-      --liquid-border: rgba(255, 255, 255, 0.85);
-      --liquid-border-subtle: rgba(227, 233, 239, 0.80);
-      --liquid-shadow-sm: 0 2px 10px 0 rgba(20, 125, 100, 0.04);
-      --liquid-shadow-md: 0 10px 30px -4px rgba(23, 43, 54, 0.07), 0 4px 12px -2px rgba(20, 125, 100, 0.03);
-      --liquid-shadow-lg: 0 20px 45px -8px rgba(23, 43, 54, 0.12), 0 8px 20px -4px rgba(20, 125, 100, 0.05);
-      --liquid-blur: blur(20px);
+    /* Custom Ambient Lighting */
+    .simulator-ambient {
+      background: radial-gradient(circle at 10% 15%, rgba(20, 125, 100, 0.15) 0%, transparent 45%),
+                  radial-gradient(circle at 90% 85%, rgba(0, 168, 107, 0.12) 0%, transparent 50%),
+                  #0F172A;
     }
 
-    /* Ambient composite-only lighting */
-    .liquid-ambient-backdrop {
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      z-index: 0;
-      overflow: hidden;
-      background: radial-gradient(circle at 12% 15%, rgba(20, 125, 100, 0.08) 0%, transparent 45%),
-                  radial-gradient(circle at 88% 85%, rgba(0, 168, 107, 0.07) 0%, transparent 50%),
-                  radial-gradient(circle at 50% 50%, rgba(244, 250, 247, 0.85) 0%, #F4FAF7 100%);
-    }
-
-    .liquid-orb-1 {
-      position: absolute;
-      top: -120px;
-      right: 12%;
-      width: 520px;
-      height: 520px;
-      border-radius: 9999px;
-      background: radial-gradient(circle, rgba(20, 125, 100, 0.12) 0%, rgba(255,255,255,0) 70%);
-      transform: translate3d(0, 0, 0);
-      animation: floatOrb 26s ease-in-out infinite alternate;
-    }
-
-    .liquid-orb-2 {
-      position: absolute;
-      bottom: -160px;
-      left: 6%;
-      width: 620px;
-      height: 620px;
-      border-radius: 9999px;
-      background: radial-gradient(circle, rgba(5, 150, 105, 0.10) 0%, rgba(255,255,255,0) 70%);
-      transform: translate3d(0, 0, 0);
-      animation: floatOrb 32s ease-in-out infinite alternate-reverse;
-    }
-
-    @keyframes floatOrb {
-      0% { transform: translate3d(0, 0, 0) scale(1); }
-      100% { transform: translate3d(35px, 45px, 0) scale(1.06); }
-    }
-
-    /* Liquid Glass Card Architecture */
-    .liquid-glass-card {
-      background: var(--liquid-surface-card);
-      backdrop-filter: var(--liquid-blur);
-      -webkit-backdrop-filter: var(--liquid-blur);
-      border: 1px solid var(--liquid-border);
-      box-shadow: var(--liquid-shadow-md),
-                  inset 0 1px 1px 0 rgba(255, 255, 255, 0.95),
-                  inset 0 -1px 1px 0 rgba(227, 233, 239, 0.4);
-      border-radius: 1.25rem;
-      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    @media (min-width: 640px) {
-      .liquid-glass-card {
-        border-radius: 1.5rem;
-      }
-    }
-
-    .liquid-glass-card-hover:hover {
-      background: rgba(255, 255, 255, 0.88);
-      border-color: rgba(20, 125, 100, 0.35);
-      box-shadow: var(--liquid-shadow-lg),
-                  0 0 0 1px rgba(20, 125, 100, 0.15),
-                  inset 0 1px 2px 0 rgba(255, 255, 255, 1);
-      transform: translateY(-2px);
-    }
-
-    .liquid-glass-panel {
-      background: var(--liquid-surface);
-      backdrop-filter: var(--liquid-blur);
-      -webkit-backdrop-filter: var(--liquid-blur);
-      border: 1px solid var(--liquid-border);
-      box-shadow: var(--liquid-shadow-sm),
-                  inset 0 1px 1px 0 rgba(255, 255, 255, 0.95);
-      border-radius: 1.25rem;
-    }
-
-    .liquid-glass-sidebar {
-      background: rgba(255, 255, 255, 0.82);
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
-      border-right: 1px solid rgba(227, 233, 239, 0.85);
-      box-shadow: 4px 0 24px -4px rgba(23, 43, 54, 0.04);
-    }
-
-    .liquid-glass-header {
-      background: rgba(255, 255, 255, 0.85);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-bottom: 1px solid rgba(227, 233, 239, 0.85);
-      box-shadow: 0 4px 20px -2px rgba(23, 43, 54, 0.03);
-    }
-
-    .liquid-glass-bottom-bar {
-      background: rgba(255, 255, 255, 0.92);
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
-      border-top: 1px solid rgba(227, 233, 239, 0.85);
-      box-shadow: 0 -4px 20px -2px rgba(23, 43, 54, 0.05);
-    }
-
-    .liquid-glass-nav-active {
-      background: rgba(20, 125, 100, 0.12) !important;
-      color: #147D64 !important;
-      border: 1px solid rgba(20, 125, 100, 0.25) !important;
-      box-shadow: 0 2px 10px rgba(20, 125, 100, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.95) !important;
-      font-weight: 700 !important;
-    }
-
-    /* Primary Liquid Button */
-    .btn-liquid-primary {
-      background: linear-gradient(135deg, #147D64 0%, #0D5C49 100%);
-      color: #FFFFFF;
-      border: 1px solid rgba(255, 255, 255, 0.35);
-      box-shadow: 0 4px 14px 0 rgba(20, 125, 100, 0.28), inset 0 1px 1px 0 rgba(255, 255, 255, 0.45);
-      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    .btn-liquid-primary:hover {
-      background: linear-gradient(135deg, #189679 0%, #106D57 100%);
-      box-shadow: 0 8px 22px 0 rgba(20, 125, 100, 0.38), inset 0 1px 1px 0 rgba(255, 255, 255, 0.6);
-      transform: translateY(-1px);
-    }
-
-    .btn-liquid-secondary {
-      background: rgba(255, 255, 255, 0.75);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      color: #172B36;
-      border: 1px solid rgba(227, 233, 239, 0.9);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-      transition: all 0.2s ease;
-    }
-
-    .btn-liquid-secondary:hover {
-      background: rgba(255, 255, 255, 0.95);
-      border-color: rgba(20, 125, 100, 0.35);
-      color: #147D64;
-      transform: translateY(-1px);
-    }
-
-    /* Modal Backdrop Blur */
-    .liquid-modal-backdrop {
-      background: rgba(15, 23, 42, 0.45);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-    }
-
-    /* Realistic Hardware Emulation Chassis */
+    /* Device Hardware Chassis */
     .phone-chassis {
-      border: 12px solid #1C252E;
-      border-radius: 46px;
-      box-shadow: 0 30px 90px rgba(0, 0, 0, 0.38), 0 0 0 1px rgba(255, 255, 255, 0.15);
-      overflow: hidden !important;
+      border: 12px solid #1E293B;
+      border-radius: 48px;
+      box-shadow: 0 25px 75px -10px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.12);
+      background: #FFFFFF;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
       position: relative;
-      transition: max-width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-      margin: 1.5rem auto !important;
-      background: #F4FAF7;
+    }
+
+    .tablet-chassis {
+      border: 14px solid #1E293B;
+      border-radius: 32px;
+      box-shadow: 0 30px 80px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.1);
+      background: #FFFFFF;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
     }
 
     .laptop-chassis {
-      border: 10px solid #1E293B;
+      border: 12px solid #1E293B;
       border-radius: 20px;
-      box-shadow: 0 35px 100px rgba(0, 0, 0, 0.42), 0 0 0 1px rgba(255, 255, 255, 0.12);
-      overflow: hidden !important;
+      box-shadow: 0 35px 90px -15px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.1);
+      background: #FFFFFF;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
       position: relative;
-      transition: max-width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-      margin: 1.5rem auto !important;
-      background: #F4FAF7;
+    }
+
+    /* Notch & Camera Pill */
+    .phone-island {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100px;
+      height: 24px;
+      background: #000000;
+      border-radius: 9999px;
+      z-index: 50;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 8px;
+    }
+
+    .phone-island .camera {
+      width: 10px;
+      height: 10px;
+      border-radius: 9999px;
+      background: #111827;
+      border: 1px solid #1f2937;
+    }
+
+    .phone-island .sensor {
+      width: 8px;
+      height: 8px;
+      border-radius: 9999px;
+      background: #064e3b;
+      opacity: 0.8;
     }
 
     .laptop-notch {
-      position: sticky;
+      position: absolute;
       top: 0;
       left: 50%;
       transform: translateX(-50%);
-      width: 70px;
+      width: 80px;
       height: 12px;
       background: #1E293B;
       border-bottom-left-radius: 8px;
       border-bottom-right-radius: 8px;
       z-index: 50;
+      pointer-events: none;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: -12px;
     }
 
-    /* Scrollbar styling */
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    ::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: rgba(20, 125, 100, 0.2);
+    .laptop-notch .camera {
+      width: 5px;
+      height: 5px;
       border-radius: 9999px;
+      background: #059669;
     }
-    ::-webkit-scrollbar-thumb:hover {
-      background: rgba(20, 125, 100, 0.4);
+
+    /* Custom Toolbar Select Styling */
+    .ctrl-select {
+      background: rgba(30, 41, 59, 0.9);
+      color: #F8FAFC;
+      border: 1px solid rgba(71, 85, 105, 0.6);
+      border-radius: 0.625rem;
+      padding: 0.35rem 0.65rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      outline: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .ctrl-select:hover, .ctrl-select:focus {
+      border-color: #147D64;
+      background: rgba(30, 41, 59, 1);
+    }
+
+    .btn-quick {
+      padding: 0.4rem 0.75rem;
+      border-radius: 0.625rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      transition: all 0.2s;
+      cursor: pointer;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    /* Smooth scaling container */
+    #deviceChassisContainer {
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     }
   </style>
 </head>
-<body class="h-full antialiased font-sans flex flex-col overflow-x-hidden selection:bg-brand-whiz selection:text-white bg-[#F4FAF7]">
-
-  <!-- Ambient Light Reflection Canvas -->
-  <div class="liquid-ambient-backdrop">
-    <div class="liquid-orb-1"></div>
-    <div class="liquid-orb-2"></div>
-  </div>
+<body class="h-full simulator-ambient flex flex-col overflow-hidden font-sans antialiased select-none">
 
   <!-- =========================================================================
-       CONTROL TOOLBAR: 4-VIEW QUICK SWITCHER & SIMULATOR CONTROLS
+       1. TOP CONTROL TOOLBAR: HARDWARE SIMULATOR CONTROLS
        ========================================================================= -->
-  <header class="sticky top-0 z-50 bg-[#172B36] text-white border-b border-slate-700/80 shadow-md px-3 sm:px-4 py-2">
-    <div class="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-2.5 text-xs">
+  <header class="bg-[#172B36]/95 backdrop-blur-xl border-b border-slate-700/80 px-3 sm:px-4 py-2 shrink-0 z-50 shadow-lg">
+    <div class="max-w-[1920px] mx-auto flex flex-col xl:flex-row items-center justify-between gap-2.5 text-xs">
       
       <!-- Brand & Mode Title -->
-      <div class="flex items-center space-x-3 w-full lg:w-auto justify-between lg:justify-start">
+      <div class="flex items-center space-x-3 w-full xl:w-auto justify-between xl:justify-start">
         <div class="flex items-center space-x-2.5">
-          <div class="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center font-black text-emerald-400 font-display text-sm">
+          <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-500 to-[#147D64] flex items-center justify-center font-black text-white font-display text-sm shadow-md shrink-0">
             W
           </div>
           <div>
             <div class="flex items-center gap-2">
-              <span class="font-bold tracking-tight text-white font-display">Whiz Studio</span>
-              <span class="px-2 py-0.5 rounded-full text-[9px] font-mono font-black uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Liquid Glass v3.0</span>
+              <span class="font-extrabold tracking-tight text-white font-display text-sm">Whiz Studio</span>
+              <span class="px-2 py-0.5 rounded-full text-[9px] font-mono font-black uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">Hardware Simulator v5.0</span>
             </div>
-            <p class="text-[10px] text-slate-400">Interactive Visual Perfection Preview</p>
+            <p class="text-[10px] text-slate-400 font-medium">True Device Viewports • Real D1 Caches • Zero Visual Distortion</p>
           </div>
         </div>
 
-        <!-- Frame On/Off Toggle -->
-        <button type="button" id="btnToggleFrame" class="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-[11px] font-semibold cursor-pointer flex items-center gap-1.5" title="Toggle Hardware Frame">
-          <i class="fa-solid fa-mobile-screen"></i>
-          <span id="frameToggleLabel">Frame: ON</span>
+        <!-- Frame & Direct Links (Visible on right on mobile headers) -->
+        <div class="flex items-center space-x-1.5 xl:hidden">
+          <button type="button" id="btnToggleFrameMobile" class="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-xs">
+            <i class="fa-solid fa-mobile-screen"></i>
+          </button>
+          <button type="button" id="btnOpenDirectMobile" class="p-1.5 rounded-lg bg-emerald-600 text-white text-xs" title="Open View in New Tab">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- 5-VIEW QUICK SWITCHER BUTTONS (Primary Navigation) -->
+      <div class="flex items-center bg-slate-900/90 p-1 rounded-xl border border-slate-700/80 space-x-1 overflow-x-auto max-w-full">
+        <button type="button" class="btn-quick bg-emerald-600 text-white shadow-sm" data-view="super-admin-desktop">
+          <span>👑 Expanded Dock (260px)</span>
+        </button>
+        <button type="button" class="btn-quick text-slate-300 hover:text-white hover:bg-slate-800" data-view="super-admin-collapsed">
+          <span>🗜️ Collapsed Dock (72px)</span>
+        </button>
+        <button type="button" class="btn-quick text-slate-300 hover:text-white hover:bg-slate-800" data-view="super-admin-mobile">
+          <span>📱 Mobile Overview</span>
+        </button>
+        <button type="button" class="btn-quick text-slate-300 hover:text-white hover:bg-slate-800" data-view="super-admin-drawer">
+          <span>📑 Mobile Drawer</span>
+        </button>
+        <button type="button" class="btn-quick text-slate-300 hover:text-white hover:bg-slate-800" data-view="client-desktop">
+          <span>👤 Client Desktop</span>
+        </button>
+        <button type="button" class="btn-quick text-slate-300 hover:text-white hover:bg-slate-800 hidden sm:inline-flex" data-view="tablet">
+          <span>📟 Tablet</span>
         </button>
       </div>
 
-      <!-- HIGHEST PRIORITY: 4-VIEW ONE-CLICK SWITCHER -->
-      <div class="flex items-center bg-slate-900/90 p-1 rounded-xl border border-slate-700 space-x-1 overflow-x-auto max-w-full">
-        <span class="text-[10px] text-slate-400 px-1.5 font-bold uppercase tracking-wider hidden sm:inline">Views:</span>
-        <button type="button" class="btn-quick-view px-2.5 py-1 rounded-lg font-bold text-white bg-emerald-600 shadow-sm cursor-pointer whitespace-nowrap transition-all" data-target="admin-desktop">
-          👑 Admin Desktop
-        </button>
-        <button type="button" class="btn-quick-view px-2.5 py-1 rounded-lg font-semibold text-slate-300 hover:text-white hover:bg-slate-800 cursor-pointer whitespace-nowrap transition-all" data-target="admin-mobile">
-          📱 Admin Mobile
-        </button>
-        <button type="button" class="btn-quick-view px-2.5 py-1 rounded-lg font-semibold text-slate-300 hover:text-white hover:bg-slate-800 cursor-pointer whitespace-nowrap transition-all" data-target="client-desktop">
-          👤 Client Desktop
-        </button>
-        <button type="button" class="btn-quick-view px-2.5 py-1 rounded-lg font-semibold text-slate-300 hover:text-white hover:bg-slate-800 cursor-pointer whitespace-nowrap transition-all" data-target="client-mobile">
-          📱 Client Mobile
-        </button>
-      </div>
-
-      <!-- Granular Controls: Role & Device Dropdown -->
-      <div class="flex items-center space-x-2 w-full lg:w-auto justify-end">
+      <!-- GRANULAR SIMULATOR CONTROLS: Role, Device Dimension, Page Jumper, Zoom -->
+      <div class="flex items-center space-x-2 w-full xl:w-auto justify-between xl:justify-end overflow-x-auto pb-1 xl:pb-0">
+        
         <!-- Role Dropdown -->
-        <div class="flex items-center bg-slate-800/90 px-2 py-1 rounded-xl border border-slate-700 space-x-1 text-[11px]">
-          <span class="text-slate-400 font-semibold text-[10px]">Role:</span>
-          <select id="selectRole" class="bg-transparent text-white font-bold focus:outline-none cursor-pointer">
-            <option value="super_admin" class="bg-slate-800 text-white">👑 Super Admin</option>
-            <option value="admin" class="bg-slate-800 text-white">🛡️ Admin</option>
-            <option value="accounts" class="bg-slate-800 text-white">💳 Accounts</option>
-            <option value="employee" class="bg-slate-800 text-white">👷 Employee</option>
-            <option value="client" class="bg-slate-800 text-white">👤 Client Portal</option>
+        <div class="flex items-center space-x-1">
+          <span class="text-slate-400 text-[10px] uppercase font-bold hidden sm:inline">Role:</span>
+          <select id="selectRole" class="ctrl-select">
+            <option value="super_admin">👑 Super Admin</option>
+            <option value="admin">🛡️ Admin</option>
+            <option value="accounts">💳 Accounts</option>
+            <option value="employee">👷 Employee</option>
+            <option value="client">👤 Client</option>
           </select>
         </div>
 
-        <!-- Viewport Width Presets Dropdown -->
-        <div class="flex items-center bg-slate-800/90 px-2 py-1 rounded-xl border border-slate-700 space-x-1 text-[11px]">
-          <span class="text-slate-400 font-semibold text-[10px]">Device:</span>
-          <select id="selectDeviceWidth" class="bg-transparent text-white font-bold focus:outline-none cursor-pointer">
-            <option value="fluid" class="bg-slate-800 text-white">Fluid (100%)</option>
-            <option value="1920" class="bg-slate-800 text-white">1920px (Desktop L)</option>
-            <option value="1440" class="bg-slate-800 text-white">1440px (Laptop L)</option>
-            <option value="1280" class="bg-slate-800 text-white" selected>1280px (Laptop)</option>
-            <option value="1024" class="bg-slate-800 text-white">1024px (Tablet L)</option>
-            <option value="768" class="bg-slate-800 text-white">768px (Tablet)</option>
-            <option value="430" class="bg-slate-800 text-white">430px (iPhone Pro Max)</option>
-            <option value="390" class="bg-slate-800 text-white">390px (iPhone 15/16)</option>
-            <option value="375" class="bg-slate-800 text-white">375px (iPhone Mini)</option>
-            <option value="360" class="bg-slate-800 text-white">360px (Android S)</option>
-            <option value="320" class="bg-slate-800 text-white">320px (Compact Mobile)</option>
+        <!-- Page / Tab Direct Linker -->
+        <div class="flex items-center space-x-1">
+          <span class="text-slate-400 text-[10px] uppercase font-bold hidden sm:inline">Page:</span>
+          <select id="selectTab" class="ctrl-select">
+            <!-- Dynamically populated per Portal mode -->
           </select>
         </div>
+
+        <!-- Exact Device Dimension Dropdown -->
+        <div class="flex items-center space-x-1">
+          <span class="text-slate-400 text-[10px] uppercase font-bold hidden sm:inline">Device:</span>
+          <select id="selectDevice" class="ctrl-select">
+            <option value="320x640">320 × 640 (Compact / SE1)</option>
+            <option value="360x740">360 × 740 (Galaxy S)</option>
+            <option value="375x667">375 × 667 (iPhone SE3)</option>
+            <option value="390x844" selected>390 × 844 (iPhone 15)</option>
+            <option value="393x852">393 × 852 (iPhone 16 Pro)</option>
+            <option value="414x896">414 × 896 (iPhone XR)</option>
+            <option value="428x926">428 × 926 (iPhone Plus)</option>
+            <option value="430x932">430 × 932 (iPhone Pro Max)</option>
+            <option value="768x1024">768 × 1024 (iPad Portrait)</option>
+            <option value="1024x768">1024 × 768 (iPad Landscape)</option>
+            <option value="1280x800">1280 × 800 (MacBook Air 13")</option>
+            <option value="1366x768">1366 × 768 (Standard Laptop)</option>
+            <option value="1440x900">1440 × 900 (MacBook Pro 15")</option>
+            <option value="1920x1080">1920 × 1080 (Desktop FHD)</option>
+            <option value="fluid">Fluid (100% Window)</option>
+          </select>
+        </div>
+
+        <!-- Zoom / Auto-Fit Dropdown -->
+        <div class="flex items-center space-x-1">
+          <select id="selectZoom" class="ctrl-select">
+            <option value="fit" selected>Auto-Fit</option>
+            <option value="1.0">100% (1:1)</option>
+            <option value="0.85">85%</option>
+            <option value="0.75">75%</option>
+            <option value="0.5">50%</option>
+          </select>
+        </div>
+
+        <!-- Rotate Device Orientation Button -->
+        <button type="button" id="btnRotateOrientation" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors cursor-pointer" title="Rotate Device Orientation">
+          <i class="fa-solid fa-rotate text-xs"></i>
+        </button>
+
+        <!-- Hardware Frame Toggle (Desktop) -->
+        <button type="button" id="btnToggleFrame" class="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors text-xs font-semibold cursor-pointer">
+          <i class="fa-solid fa-mobile-screen"></i>
+          <span id="labelFrameToggle">Frame: ON</span>
+        </button>
+
+        <!-- Direct Open in New Tab -->
+        <button type="button" id="btnOpenDirect" class="hidden xl:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-all text-xs cursor-pointer shadow-sm" title="Open Clean View in New Tab">
+          <i class="fa-solid fa-arrow-up-right-from-square text-[11px]"></i>
+          <span>Direct View</span>
+        </button>
       </div>
     </div>
   </header>
 
   <!-- =========================================================================
-       MAIN PREVIEW WORKSPACE WRAPPER (Fluid or Framed Device Simulator)
+       2. WORKSPACE CANVAS: VIEWPORT CENTER WITH PROPORTIONAL SCALING
        ========================================================================= -->
-  <div id="previewViewportWrapper" class="flex-1 w-full relative z-10 transition-all flex flex-col justify-start items-center p-0">
-
-    <!-- SIMULATED HARDWARE CHASSIS CONTAINER -->
-    <div id="hardwareChassis" class="w-full transition-all flex flex-col min-h-screen relative">
+  <main id="previewWorkspace" class="flex-1 w-full overflow-auto flex items-center justify-center p-4 relative">
+    
+    <!-- Proportional Scaler Wrapper -->
+    <div id="deviceChassisContainer" class="flex items-center justify-center relative">
       
-      <!-- Real iOS Status Bar with Dynamic Island (Visible when Phone Chassis is active) -->
-      <div id="phoneStatusBar" class="hidden w-full px-7 pt-3.5 pb-2.5 flex items-center justify-between text-[11px] font-bold text-slate-800 z-50 select-none bg-white/70 backdrop-blur-md border-b border-[#E3E9EF]/60">
-        <span>9:41</span>
-        <div class="w-24 h-5 bg-black rounded-full flex items-center justify-between px-2 shadow-xs">
-          <span class="w-2 h-2 rounded-full bg-slate-800"></span>
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-        </div>
-        <div class="flex items-center space-x-1.5 text-xs text-slate-700">
-          <i class="fa-solid fa-signal text-[10px]"></i>
-          <i class="fa-solid fa-wifi text-[10px]"></i>
-          <i class="fa-solid fa-battery-full text-xs text-emerald-600"></i>
-        </div>
-      </div>
-
-      <!-- Laptop Notch for Laptop Emulation -->
-      <div id="laptopNotch" class="laptop-notch hidden">
-        <span class="w-1.5 h-1.5 rounded-full bg-slate-950 border border-slate-700"></span>
-      </div>
-
-      <!-- DASHBOARD INNER FRAME -->
-      <div class="flex-1 flex flex-col md:flex-row min-h-screen w-full relative">
-
-        <!-- =====================================================================
-             LIQUID GLASS SIDEBAR (Desktop)
-             ===================================================================== -->
-        <aside id="sidebarMain" class="hidden md:flex flex-col w-64 liquid-glass-sidebar p-5 space-y-5 shrink-0 relative z-20">
-          
-          <!-- Agency Logo & Portal Title -->
-          <div class="flex items-center space-x-3 pb-4 border-b border-[#E3E9EF]">
-            <div class="w-10 h-10 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs flex items-center justify-center p-1.5 shrink-0">
-              <img src="/logo.png" alt="Whiz Studio" class="w-full h-full object-contain" onerror="this.src='/favicon.png'">
-            </div>
-            <div class="min-w-0">
-              <h1 class="text-sm font-black text-[#172B36] tracking-tight truncate font-display">WHIZ STUDIO</h1>
-              <p id="sidebarPortalSubtitle" class="text-[10px] text-[#5F7180] font-semibold truncate">Executive Management</p>
-            </div>
-          </div>
-
-          <!-- Role Badge Pill -->
-          <div class="p-2.5 rounded-2xl bg-white/75 border border-white shadow-xs flex items-center justify-between">
-            <div class="flex items-center space-x-2">
-              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span id="sidebarRolePill" class="text-xs font-bold text-[#172B36]">Super Admin</span>
-            </div>
-            <span class="text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-50 text-[#147D64] border border-emerald-200 font-extrabold">D1 ACTIVE</span>
-          </div>
-
-          <!-- Dynamic Role Navigation Menu -->
-          <nav id="sidebarNavItems" class="space-y-1.5 flex-1 overflow-y-auto pr-1">
-            <!-- Populated Dynamically by JavaScript -->
-          </nav>
-
-          <!-- Sidebar User Profile Footer -->
-          <div class="pt-4 border-t border-[#E3E9EF] flex items-center justify-between">
-            <div class="flex items-center space-x-2.5 min-w-0">
-              <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-[#147D64] to-emerald-400 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
-                KE
-              </div>
-              <div class="min-w-0">
-                <p id="sidebarUserName" class="text-xs font-bold text-[#172B36] truncate">Kazi Emon</p>
-                <p id="sidebarUserEmail" class="text-[10px] text-[#5F7180] truncate font-mono">kaziaremon@gmail.com</p>
-              </div>
-            </div>
-            <button type="button" class="text-slate-400 hover:text-rose-600 transition-colors p-1 cursor-pointer" title="Sign Out">
-              <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i>
-            </button>
-          </div>
-        </aside>
-
-        <!-- =====================================================================
-             MOBILE TOP BAR & DRAWER
-             ===================================================================== -->
-        <div class="md:hidden liquid-glass-header px-4 py-3 flex items-center justify-between z-30 sticky top-0">
-          <div class="flex items-center space-x-2.5">
-            <div class="w-8 h-8 rounded-xl bg-white border border-[#E3E9EF] p-1 flex items-center justify-center shadow-xs">
-              <img src="/logo.png" alt="Whiz Studio" class="w-full h-full object-contain" onerror="this.src='/favicon.png'">
-            </div>
-            <div>
-              <span class="text-xs font-black text-[#172B36] font-display block leading-tight">WHIZ STUDIO</span>
-              <span id="mobileHeaderRoleBadge" class="text-[9px] font-bold text-[#147D64] uppercase font-mono">Super Admin</span>
-            </div>
-          </div>
-          <button type="button" id="btnToggleMobileDrawer" class="p-2 rounded-xl bg-white/80 border border-[#E3E9EF] text-slate-700 hover:text-[#147D64] cursor-pointer shadow-xs">
-            <i class="fa-solid fa-bars text-sm"></i>
-          </button>
+      <!-- Device Hardware Chassis Frame -->
+      <div id="deviceChassis" class="phone-chassis relative transition-all shadow-2xl">
+        
+        <!-- iPhone Dynamic Island (Shown on mobile smartphones) -->
+        <div id="phoneIsland" class="phone-island">
+          <div class="camera"></div>
+          <div class="sensor"></div>
         </div>
 
-        <!-- Mobile Slide-Over Drawer -->
-        <div id="mobileDrawerBackdrop" class="hidden fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm transition-opacity"></div>
-        <div id="mobileDrawer" class="fixed inset-y-0 left-0 z-50 w-72 bg-white/95 backdrop-blur-2xl border-r border-[#E3E9EF] p-5 flex flex-col justify-between transform -translate-x-full transition-transform duration-300 md:hidden shadow-2xl">
-          <div class="space-y-5">
-            <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
-              <div class="flex items-center space-x-2">
-                <div class="w-7 h-7 rounded-lg bg-emerald-50 text-[#147D64] flex items-center justify-center font-bold">W</div>
-                <span class="text-xs font-black text-[#172B36] font-display">Whiz Studio</span>
-              </div>
-              <button type="button" id="btnCloseMobileDrawer" class="p-1.5 text-slate-400 hover:text-slate-700 cursor-pointer">
-                <i class="fa-solid fa-xmark text-base"></i>
-              </button>
-            </div>
-            <nav id="mobileNavItems" class="space-y-1.5 overflow-y-auto max-h-[65vh]">
-              <!-- Dynamic Mobile Nav Links -->
-            </nav>
-          </div>
-          <div class="pt-4 border-t border-[#E3E9EF] flex items-center justify-between">
-            <div class="flex items-center space-x-2">
-              <div class="w-7 h-7 rounded-full bg-emerald-600 text-white font-bold text-[10px] flex items-center justify-center">KE</div>
-              <span class="text-xs font-bold text-[#172B36]">Kazi Emon</span>
-            </div>
-            <span class="text-[10px] text-slate-400 font-mono">v3.0</span>
-          </div>
+        <!-- MacBook Camera Notch (Shown on laptops) -->
+        <div id="laptopNotch" class="laptop-notch hidden">
+          <div class="camera"></div>
         </div>
 
-        <!-- =====================================================================
-             MAIN VIEW CONTENT AREA
-             ===================================================================== -->
-        <main class="flex-1 p-3.5 sm:p-6 lg:p-8 space-y-5 sm:space-y-6 overflow-y-auto max-w-7xl mx-auto w-full pb-20 md:pb-8">
-          
-          <!-- Dynamic View Header Banner -->
-          <div class="liquid-glass-panel rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
-            <div>
-              <div class="flex items-center space-x-2">
-                <h2 id="viewHeaderTitle" class="text-lg sm:text-2xl font-black text-[#172B36] tracking-tight font-display">Executive Overview & Analytics</h2>
-                <span id="viewHeaderBadge" class="text-[9px] sm:text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-emerald-50 text-[#147D64] border border-emerald-200">Live D1</span>
-              </div>
-              <p id="viewHeaderSubtitle" class="text-xs text-[#5F7180] mt-0.5">Authoritative platform metrics, active client retainers, and operational health.</p>
-            </div>
-
-            <!-- Dynamic Header Actions -->
-            <div id="viewHeaderActions" class="flex items-center gap-2">
-              <!-- Populated dynamically based on role -->
-            </div>
-          </div>
-
-          <!-- ===================================================================
-               VIEW 1: OVERVIEW & KPIS (Admin & Super Admin)
-               =================================================================== -->
-          <section id="view_overview" class="space-y-5 sm:space-y-6">
-            
-            <!-- 6 Liquid Glass KPI Metric Cards -->
-            <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
-              
-              <div class="liquid-glass-card liquid-glass-card-hover p-3.5 sm:p-4 space-y-1.5 cursor-pointer" data-kpi-jump="clients">
-                <div class="flex items-center justify-between text-[#5F7180]">
-                  <span class="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">Active Clients</span>
-                  <div class="w-6 h-6 rounded-lg bg-emerald-50 flex items-center justify-center text-[#147D64]">
-                    <i class="fa-solid fa-building text-[11px]"></i>
-                  </div>
-                </div>
-                <div class="text-xl sm:text-2xl font-black text-[#172B36] font-display">14</div>
-                <div class="text-[10px] text-emerald-700 font-semibold flex items-center gap-1 truncate">
-                  <i class="fa-solid fa-arrow-trend-up text-[9px]"></i> +2 this month
-                </div>
-              </div>
-
-              <div class="liquid-glass-card liquid-glass-card-hover p-3.5 sm:p-4 space-y-1.5 cursor-pointer" data-kpi-jump="services">
-                <div class="flex items-center justify-between text-[#5F7180]">
-                  <span class="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">Services</span>
-                  <div class="w-6 h-6 rounded-lg bg-emerald-50 flex items-center justify-center text-[#147D64]">
-                    <i class="fa-solid fa-cubes text-[11px]"></i>
-                  </div>
-                </div>
-                <div class="text-xl sm:text-2xl font-black text-[#172B36] font-display">12</div>
-                <div class="text-[10px] text-[#5F7180] truncate">240 Master SOPs</div>
-              </div>
-
-              <div class="liquid-glass-card liquid-glass-card-hover p-3.5 sm:p-4 space-y-1.5 cursor-pointer" data-kpi-jump="projects">
-                <div class="flex items-center justify-between text-[#5F7180]">
-                  <span class="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">Projects</span>
-                  <div class="w-6 h-6 rounded-lg bg-emerald-50 flex items-center justify-center text-[#147D64]">
-                    <i class="fa-solid fa-folder-tree text-[11px]"></i>
-                  </div>
-                </div>
-                <div class="text-xl sm:text-2xl font-black text-[#172B36] font-display">8</div>
-                <div class="text-[10px] text-emerald-700 font-semibold truncate">100% on schedule</div>
-              </div>
-
-              <div class="liquid-glass-card liquid-glass-card-hover p-3.5 sm:p-4 space-y-1.5 cursor-pointer" data-kpi-jump="tasks">
-                <div class="flex items-center justify-between text-[#5F7180]">
-                  <span class="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">Live Tasks</span>
-                  <div class="w-6 h-6 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600">
-                    <i class="fa-solid fa-list-check text-[11px]"></i>
-                  </div>
-                </div>
-                <div class="text-xl sm:text-2xl font-black text-[#172B36] font-display">160</div>
-                <div class="text-[10px] text-amber-700 font-semibold truncate">32 pending QA</div>
-              </div>
-
-              <div class="liquid-glass-card liquid-glass-card-hover p-3.5 sm:p-4 space-y-1.5 cursor-pointer" data-kpi-jump="finance">
-                <div class="flex items-center justify-between text-[#5F7180]">
-                  <span class="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">Invoices</span>
-                  <div class="w-6 h-6 rounded-lg bg-emerald-50 flex items-center justify-center text-[#147D64]">
-                    <i class="fa-solid fa-file-invoice-dollar text-[11px]"></i>
-                  </div>
-                </div>
-                <div class="text-xl sm:text-2xl font-black text-[#172B36] font-display">24</div>
-                <div class="text-[10px] text-emerald-700 font-semibold truncate">0 overdue</div>
-              </div>
-
-              <div class="liquid-glass-card liquid-glass-card-hover p-3.5 sm:p-4 space-y-1.5 cursor-pointer" data-kpi-jump="finance">
-                <div class="flex items-center justify-between text-[#5F7180]">
-                  <span class="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">Revenue</span>
-                  <div class="w-6 h-6 rounded-lg bg-emerald-50 flex items-center justify-center text-[#147D64]">
-                    <i class="fa-solid fa-vault text-[11px]"></i>
-                  </div>
-                </div>
-                <div class="text-xl sm:text-2xl font-black text-[#172B36] font-display font-mono">$18,450</div>
-                <div class="text-[10px] text-emerald-700 font-semibold truncate">Verified in D1</div>
-              </div>
-            </div>
-
-            <!-- Charts Section: Revenue Trend & Service Distribution -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
-              <div class="lg:col-span-2 liquid-glass-card p-4 sm:p-6 space-y-3 sm:space-y-4">
-                <div class="flex items-center justify-between">
-                  <div>
-                    <h3 class="text-xs sm:text-sm font-bold text-[#172B36]">Confirmed Monthly Revenue ($ USD)</h3>
-                    <p class="text-[10px] sm:text-xs text-[#5F7180]">Clean payment ledger transactions from Cloudflare D1</p>
-                  </div>
-                  <span class="text-[10px] sm:text-xs font-mono font-bold text-[#147D64] bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-200">+34% YoY</span>
-                </div>
-                <div class="h-56 sm:h-64 w-full">
-                  <canvas id="chartRevenueTrend"></canvas>
-                </div>
-              </div>
-
-              <div class="liquid-glass-card p-4 sm:p-6 space-y-3 sm:space-y-4">
-                <div>
-                  <h3 class="text-xs sm:text-sm font-bold text-[#172B36]">Service Retainer Distribution</h3>
-                  <p class="text-[10px] sm:text-xs text-[#5F7180]">Top subscribed packages</p>
-                </div>
-                <div class="h-56 sm:h-64 w-full flex items-center justify-center">
-                  <canvas id="chartServiceDist"></canvas>
-                </div>
-              </div>
-            </div>
-
-            <!-- Recent Operations Stream -->
-            <div class="liquid-glass-card p-4 sm:p-5 space-y-3">
-              <div class="flex items-center justify-between">
-                <h3 class="text-xs sm:text-sm font-bold text-[#172B36]">Live Operational Feed</h3>
-                <span class="text-[10px] font-mono text-[#147D64] font-bold">Real-time D1 Sync</span>
-              </div>
-              <div class="space-y-2 text-xs">
-                <div class="p-2.5 rounded-xl bg-white/60 border border-[#E3E9EF] flex items-center justify-between gap-2">
-                  <div class="flex items-center space-x-2.5 min-w-0">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
-                    <span class="font-bold text-[#172B36] truncate">Payment confirmed: $1,900.00 from Phenom Apex Ltd.</span>
-                  </div>
-                  <span class="text-[10px] font-mono text-slate-400 shrink-0">12m ago</span>
-                </div>
-                <div class="p-2.5 rounded-xl bg-white/60 border border-[#E3E9EF] flex items-center justify-between gap-2">
-                  <div class="flex items-center space-x-2.5 min-w-0">
-                    <span class="w-2 h-2 rounded-full bg-blue-500 shrink-0"></span>
-                    <span class="font-bold text-[#172B36] truncate">SOP Task [WA_06] completed for Jenkins Global Media</span>
-                  </div>
-                  <span class="text-[10px] font-mono text-slate-400 shrink-0">34m ago</span>
-                </div>
-                <div class="p-2.5 rounded-xl bg-white/60 border border-[#E3E9EF] flex items-center justify-between gap-2">
-                  <div class="flex items-center space-x-2.5 min-w-0">
-                    <span class="w-2 h-2 rounded-full bg-purple-500 shrink-0"></span>
-                    <span class="font-bold text-[#172B36] truncate">CIF Verification completed (100%) by Elena Rostova</span>
-                  </div>
-                  <span class="text-[10px] font-mono text-slate-400 shrink-0">1h ago</span>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <!-- ===================================================================
-               VIEW 2: CLIENT DIRECTORY (Admin & Super Admin)
-               =================================================================== -->
-          <section id="view_clients" class="hidden space-y-4 sm:space-y-5">
-            <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div class="relative w-full sm:w-72">
-                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-xs"></i>
-                <input type="text" id="demoClientSearch" placeholder="Search clients by org, person, email..." class="w-full pl-9 pr-4 py-2 rounded-xl bg-white/75 border border-[#E3E9EF] text-xs text-[#172B36] focus:outline-none focus:border-[#147D64] shadow-xs">
-              </div>
-              <button type="button" id="btnOpenDemoAddClient" class="btn-liquid-primary px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer w-full sm:w-auto justify-center">
-                <i class="fa-solid fa-plus text-xs"></i>
-                <span>Add New Client</span>
-              </button>
-            </div>
-
-            <!-- Responsive Table Wrapper -->
-            <div class="liquid-glass-card overflow-hidden">
-              <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs min-w-[600px]">
-                  <thead class="bg-slate-50/80 border-b border-[#E3E9EF] text-[10px] sm:text-[11px] font-bold text-[#5F7180] uppercase tracking-wider">
-                    <tr>
-                      <th class="px-4 sm:px-5 py-3">Client & Organization</th>
-                      <th class="px-4 sm:px-5 py-3">Contact Email</th>
-                      <th class="px-4 sm:px-5 py-3">CIF Status</th>
-                      <th class="px-4 sm:px-5 py-3">Active Services</th>
-                      <th class="px-4 sm:px-5 py-3 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody id="demoClientsTableBody" class="divide-y divide-[#E3E9EF]/60">
-                    <!-- Populated dynamically -->
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </section>
-
-          <!-- ===================================================================
-               VIEW 2.1: CLIENT DETAILS DRILLDOWN
-               =================================================================== -->
-          <section id="view_client_details" class="hidden space-y-5">
-            <div class="flex items-center justify-between">
-              <button type="button" id="btnBackToClientsFromDetails" class="px-3 py-1.5 rounded-xl bg-white/80 border border-[#E3E9EF] text-xs font-bold text-[#172B36] hover:bg-slate-50 flex items-center gap-1.5 cursor-pointer shadow-xs">
-                <i class="fa-solid fa-arrow-left text-xs"></i>
-                <span>Back to Directory</span>
-              </button>
-              <div class="flex items-center space-x-2">
-                <span id="detailClientStatusBadge" class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">Active Retainer</span>
-                <button type="button" class="px-3 py-1.5 rounded-xl bg-rose-50 text-rose-600 border border-rose-200 text-xs font-bold hover:bg-rose-100 cursor-pointer">
-                  Delete Client
-                </button>
-              </div>
-            </div>
-
-            <div class="liquid-glass-card p-4 sm:p-6 space-y-4">
-              <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                <div>
-                  <h3 id="detailClientOrgName" class="text-xl font-black text-[#172B36] font-display">Phenom Apex Ltd.</h3>
-                  <p id="detailClientPerson" class="text-xs text-[#5F7180] mt-0.5">Primary Contact: MD KAZI ABDUR RAHIM EMON (kaziabdurrahimemon@gmail.com)</p>
-                </div>
-                <div class="sm:text-right">
-                  <span class="text-[10px] text-slate-400 uppercase tracking-wider block font-bold">Total Spend</span>
-                  <span class="text-lg font-black font-mono text-[#172B36]">$3,800.00 USD</span>
-                </div>
-              </div>
-
-              <!-- Client's Active Service Projects -->
-              <div class="pt-4 border-t border-[#E3E9EF] space-y-3">
-                <h4 class="text-xs font-bold uppercase tracking-wider text-[#172B36]">Active Provisioned Projects (2)</h4>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                  <div class="p-4 rounded-2xl bg-white/70 border border-[#E3E9EF] space-y-2 shadow-xs">
-                    <div class="flex items-center justify-between">
-                      <span class="text-xs font-bold text-[#172B36]">WhatsApp Business CRM & Funnels</span>
-                      <span class="text-xs font-mono text-[#147D64] font-bold">85% Complete</span>
-                    </div>
-                    <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden border border-[#E3E9EF]">
-                      <div class="bg-[#147D64] h-full rounded-full transition-all" style="width: 85%"></div>
-                    </div>
-                    <span class="text-[11px] text-[#5F7180]">17 of 20 SOP Tasks Verified</span>
-                  </div>
-                  <div class="p-4 rounded-2xl bg-white/70 border border-[#E3E9EF] space-y-2 shadow-xs">
-                    <div class="flex items-center justify-between">
-                      <span class="text-xs font-bold text-[#172B36]">Facebook Marketing & Community</span>
-                      <span class="text-xs font-mono text-[#147D64] font-bold">60% Complete</span>
-                    </div>
-                    <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden border border-[#E3E9EF]">
-                      <div class="bg-[#147D64] h-full rounded-full transition-all" style="width: 60%"></div>
-                    </div>
-                    <span class="text-[11px] text-[#5F7180]">12 of 20 SOP Tasks Verified</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <!-- ===================================================================
-               VIEW 3: SERVICE MANAGEMENT (12 SERVICES + MASTER SOP BLUEPRINTS)
-               =================================================================== -->
-          <section id="view_services" class="hidden space-y-4 sm:space-y-5">
-            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div>
-                <span id="serviceCountBadge" class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-50 text-[#147D64] border border-emerald-200 font-bold">12 Active Services</span>
-                <p class="text-xs text-[#5F7180] mt-1">Authoritative D1 master catalog with permanent hard-delete safeguards.</p>
-              </div>
-              <button type="button" id="btnOpenDemoAddService" class="btn-liquid-primary px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer">
-                <i class="fa-solid fa-plus text-xs"></i>
-                <span>Add New Service</span>
-              </button>
-            </div>
-
-            <!-- 12 Services Grid -->
-            <div id="demoServicesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-              <!-- Populated Dynamically by JavaScript -->
-            </div>
-          </section>
-
-          <!-- ===================================================================
-               VIEW 3.1: SERVICE SOP BLUEPRINT WORKSPACE
-               =================================================================== -->
-          <section id="view_service_tasks" class="hidden space-y-5 sm:space-y-6">
-            <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
-              <div class="flex items-center space-x-3 min-w-0">
-                <button type="button" id="btnBackToServicesFromSOP" class="p-2 rounded-xl bg-white border border-[#E3E9EF] text-slate-700 hover:bg-slate-50 cursor-pointer shadow-xs shrink-0">
-                  <i class="fa-solid fa-arrow-left text-xs"></i>
-                </button>
-                <div class="min-w-0">
-                  <h3 id="sopWorkspaceTitle" class="text-base sm:text-lg font-black text-[#172B36] font-display truncate">WhatsApp Business CRM & Funnels</h3>
-                  <p class="text-xs text-[#5F7180] truncate">Master 20-Task SOP Blueprint Library (D1 Hard Delete Active)</p>
-                </div>
-              </div>
-              <button type="button" id="btnOpenDemoAddBlueprint" class="btn-liquid-primary px-3 sm:px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shrink-0">
-                <i class="fa-solid fa-plus text-xs"></i>
-                <span class="hidden sm:inline">Add SOP Task</span>
-              </button>
-            </div>
-
-            <!-- 3 Phases: Beginning, Intermediate, Advanced -->
-            <div class="space-y-5">
-              <div>
-                <div class="flex items-center justify-between mb-2">
-                  <h4 class="text-xs font-bold uppercase tracking-wider text-[#147D64] flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-[#147D64]"></span> Phase 1: Foundation (Tasks 1-7)
-                  </h4>
-                  <span class="text-[11px] font-mono text-slate-400 font-semibold">7 Tasks</span>
-                </div>
-                <div id="sopPhase1Container" class="space-y-2.5"></div>
-              </div>
-
-              <div>
-                <div class="flex items-center justify-between mb-2">
-                  <h4 class="text-xs font-bold uppercase tracking-wider text-amber-600 flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-amber-500"></span> Phase 2: Execution & Scaling (Tasks 8-14)
-                  </h4>
-                  <span class="text-[11px] font-mono text-slate-400 font-semibold">7 Tasks</span>
-                </div>
-                <div id="sopPhase2Container" class="space-y-2.5"></div>
-              </div>
-
-              <div>
-                <div class="flex items-center justify-between mb-2">
-                  <h4 class="text-xs font-bold uppercase tracking-wider text-purple-600 flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-purple-500"></span> Phase 3: Advanced Optimization & QA (Tasks 15-20)
-                  </h4>
-                  <span class="text-[11px] font-mono text-slate-400 font-semibold">6 Tasks</span>
-                </div>
-                <div id="sopPhase3Container" class="space-y-2.5"></div>
-              </div>
-            </div>
-          </section>
-
-          <!-- ===================================================================
-               VIEW 4: SERVICE PROJECTS QUEUE
-               =================================================================== -->
-          <section id="view_projects" class="hidden space-y-4 sm:space-y-5">
-            <div class="flex items-center justify-between">
-              <div>
-                <h3 class="text-sm font-bold text-[#172B36]">Active Service Projects</h3>
-                <p class="text-xs text-[#5F7180]">Real-time milestone tracking for active client engagements</p>
-              </div>
-              <span class="text-xs font-mono font-bold text-[#147D64] bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-200">8 Active Engagements</span>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div class="liquid-glass-card p-4 sm:p-5 space-y-3">
-                <div class="flex items-start justify-between">
-                  <div>
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-[#147D64]">Phenom Apex Ltd.</span>
-                    <h4 class="text-sm font-bold text-[#172B36]">WhatsApp Business CRM & Sales Funnels</h4>
-                  </div>
-                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">In Progress</span>
-                </div>
-                <div class="space-y-1">
-                  <div class="flex items-center justify-between text-xs">
-                    <span class="text-[#5F7180]">Milestones: 17 of 20 SOP Tasks</span>
-                    <span class="font-mono font-bold text-[#147D64]">85%</span>
-                  </div>
-                  <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden border border-[#E3E9EF]">
-                    <div class="bg-[#147D64] h-full rounded-full" style="width: 85%"></div>
-                  </div>
-                </div>
-                <div class="pt-2 border-t border-[#E3E9EF] flex items-center justify-between text-xs text-[#5F7180]">
-                  <span>Lead: Kazi Emon</span>
-                  <span>Target: Nov 15, 2026</span>
-                </div>
-              </div>
-
-              <div class="liquid-glass-card p-4 sm:p-5 space-y-3">
-                <div class="flex items-start justify-between">
-                  <div>
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-[#147D64]">Jenkins Global Media</span>
-                    <h4 class="text-sm font-bold text-[#172B36]">LinkedIn B2B Lead Generation</h4>
-                  </div>
-                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-blue-50 text-blue-700 border border-blue-200">QA Review</span>
-                </div>
-                <div class="space-y-1">
-                  <div class="flex items-center justify-between text-xs">
-                    <span class="text-[#5F7180]">Milestones: 19 of 20 SOP Tasks</span>
-                    <span class="font-mono font-bold text-blue-600">95%</span>
-                  </div>
-                  <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden border border-[#E3E9EF]">
-                    <div class="bg-blue-600 h-full rounded-full" style="width: 95%"></div>
-                  </div>
-                </div>
-                <div class="pt-2 border-t border-[#E3E9EF] flex items-center justify-between text-xs text-[#5F7180]">
-                  <span>Lead: Ehasan Sabbir</span>
-                  <span>Target: Nov 08, 2026</span>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <!-- ===================================================================
-               VIEW 5: LIVE OPERATIONAL TASK QUEUE
-               =================================================================== -->
-          <section id="view_tasks" class="hidden space-y-4 sm:space-y-5">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <h3 class="text-sm font-bold text-[#172B36]">Live Operational Tasks</h3>
-                <p class="text-xs text-[#5F7180]">Standard operating procedures assigned across active client retainers</p>
-              </div>
-              <div class="flex items-center space-x-2">
-                <span class="text-xs font-mono font-bold px-2.5 py-1 rounded-xl bg-amber-50 text-amber-700 border border-amber-200">32 Pending QA</span>
-              </div>
-            </div>
-
-            <div class="space-y-2.5">
-              <div class="liquid-glass-card p-3.5 sm:p-4 flex items-center justify-between gap-3">
-                <div class="flex items-center space-x-3 min-w-0">
-                  <input type="checkbox" class="w-4 h-4 rounded text-[#147D64] focus:ring-[#147D64] cursor-pointer">
-                  <div class="min-w-0">
-                    <div class="flex items-center space-x-2">
-                      <span class="text-xs font-mono font-bold text-[#147D64]">WA_18</span>
-                      <span class="text-xs font-bold text-[#172B36] truncate">Weekly Engagement Analytics & Drop-off Diagnostics</span>
-                      <span class="text-[9px] font-bold uppercase px-2 py-0.5 rounded bg-rose-50 text-rose-600 border border-rose-200">Urgent</span>
-                    </div>
-                    <p class="text-[11px] text-[#5F7180] truncate">Client: Phenom Apex Ltd. • Est: 60m</p>
-                  </div>
-                </div>
-                <button type="button" class="btn-liquid-secondary px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer shrink-0">
-                  Log QA
-                </button>
-              </div>
-
-              <div class="liquid-glass-card p-3.5 sm:p-4 flex items-center justify-between gap-3">
-                <div class="flex items-center space-x-3 min-w-0">
-                  <input type="checkbox" class="w-4 h-4 rounded text-[#147D64] focus:ring-[#147D64] cursor-pointer">
-                  <div class="min-w-0">
-                    <div class="flex items-center space-x-2">
-                      <span class="text-xs font-mono font-bold text-[#147D64]">LI_14</span>
-                      <span class="text-xs font-bold text-[#172B36] truncate">Executive Decision-Maker Outreach Script Optimization</span>
-                      <span class="text-[9px] font-bold uppercase px-2 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-200">High</span>
-                    </div>
-                    <p class="text-[11px] text-[#5F7180] truncate">Client: Jenkins Global Media • Est: 90m</p>
-                  </div>
-                </div>
-                <button type="button" class="btn-liquid-secondary px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer shrink-0">
-                  Log QA
-                </button>
-              </div>
-            </div>
-          </section>
-
-          <!-- ===================================================================
-               VIEW 6: FINANCIAL LEDGER & INVOICES
-               =================================================================== -->
-          <section id="view_finance" class="hidden space-y-4 sm:space-y-6">
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-              <div class="liquid-glass-card p-4 space-y-1">
-                <span class="text-[10px] sm:text-[11px] text-[#5F7180] font-bold uppercase">Total Billed</span>
-                <div class="text-xl sm:text-2xl font-black text-[#172B36] font-mono">$24,500.00</div>
-                <span class="text-[10px] text-emerald-600 font-semibold">Authoritative ledger</span>
-              </div>
-              <div class="liquid-glass-card p-4 space-y-1">
-                <span class="text-[10px] sm:text-[11px] text-[#5F7180] font-bold uppercase">Received Payments</span>
-                <div class="text-xl sm:text-2xl font-black text-[#147D64] font-mono">$18,450.00</div>
-                <span class="text-[10px] text-emerald-600 font-semibold">100% reconciled in D1</span>
-              </div>
-              <div class="liquid-glass-card p-4 space-y-1">
-                <span class="text-[10px] sm:text-[11px] text-[#5F7180] font-bold uppercase">Outstanding Balance</span>
-                <div class="text-xl sm:text-2xl font-black text-amber-600 font-mono">$6,050.00</div>
-                <span class="text-[10px] text-amber-600 font-semibold">2 pending settlements</span>
-              </div>
-            </div>
-
-            <div class="flex items-center justify-between">
-              <h3 class="text-xs sm:text-sm font-bold text-[#172B36]">Payment Ledger Entries</h3>
-              <button type="button" id="btnOpenDemoRecordPayment" class="btn-liquid-primary px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer">
-                <i class="fa-solid fa-receipt text-xs"></i>
-                <span>Record Payment</span>
-              </button>
-            </div>
-
-            <!-- Responsive Table Wrapper -->
-            <div class="liquid-glass-card overflow-hidden">
-              <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs min-w-[600px]">
-                  <thead class="bg-slate-50/80 border-b border-[#E3E9EF] text-[10px] sm:text-[11px] font-bold text-[#5F7180] uppercase tracking-wider">
-                    <tr>
-                      <th class="px-4 sm:px-5 py-3">Receipt / ID</th>
-                      <th class="px-4 sm:px-5 py-3">Organization</th>
-                      <th class="px-4 sm:px-5 py-3">Method</th>
-                      <th class="px-4 sm:px-5 py-3">Amount</th>
-                      <th class="px-4 sm:px-5 py-3">Status</th>
-                      <th class="px-4 sm:px-5 py-3 text-right">Receipt PDF</th>
-                    </tr>
-                  </thead>
-                  <tbody id="demoPaymentsTableBody" class="divide-y divide-[#E3E9EF]/60">
-                    <!-- Populated dynamically -->
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </section>
-
-          <!-- ===================================================================
-               VIEW 7: TEAM & USER ACCESS MANAGEMENT
-               =================================================================== -->
-          <section id="view_team" class="hidden space-y-4 sm:space-y-5">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <h3 class="text-sm font-bold text-[#172B36]">Authorized Staff & Role Boundaries</h3>
-                <p class="text-xs text-[#5F7180]">Strict server-side RBAC enforcement (Owner, Admin, Accounts, Employee)</p>
-              </div>
-              <button type="button" class="btn-liquid-primary px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer">
-                <i class="fa-solid fa-user-plus text-xs"></i>
-                <span>Invite Staff</span>
-              </button>
-            </div>
-
-            <div class="liquid-glass-card overflow-hidden">
-              <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs min-w-[600px]">
-                  <thead class="bg-slate-50/80 border-b border-[#E3E9EF] text-[10px] sm:text-[11px] font-bold text-[#5F7180] uppercase tracking-wider">
-                    <tr>
-                      <th class="px-4 sm:px-5 py-3">Staff Member</th>
-                      <th class="px-4 sm:px-5 py-3">Assigned Role</th>
-                      <th class="px-4 sm:px-5 py-3">Status</th>
-                      <th class="px-4 sm:px-5 py-3">Last Active</th>
-                      <th class="px-4 sm:px-5 py-3 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-[#E3E9EF]/60">
-                    <tr>
-                      <td class="px-4 sm:px-5 py-3 font-bold text-[#172B36]">Kazi Emon <span class="text-[10px] text-slate-400 font-mono block">kaziaremon@gmail.com</span></td>
-                      <td class="px-4 sm:px-5 py-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">👑 Founding Super Admin</span></td>
-                      <td class="px-4 sm:px-5 py-3"><span class="text-emerald-600 font-bold">Active</span></td>
-                      <td class="px-4 sm:px-5 py-3 font-mono text-[11px] text-slate-500">SSO Session Active</td>
-                      <td class="px-4 sm:px-5 py-3 text-right"><span class="text-[11px] text-slate-400 italic">Protected</span></td>
-                    </tr>
-                    <tr>
-                      <td class="px-4 sm:px-5 py-3 font-bold text-[#172B36]">Ehasan Sabbir <span class="text-[10px] text-slate-400 font-mono block">m.sa66ir@gmail.com</span></td>
-                      <td class="px-4 sm:px-5 py-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-blue-50 text-blue-700 border border-blue-200">🛡️ Admin</span></td>
-                      <td class="px-4 sm:px-5 py-3"><span class="text-emerald-600 font-bold">Active</span></td>
-                      <td class="px-4 sm:px-5 py-3 font-mono text-[11px] text-slate-500">Today, 18:22</td>
-                      <td class="px-4 sm:px-5 py-3 text-right"><button class="text-xs text-[#147D64] font-bold hover:underline cursor-pointer">Change Role</button></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </section>
-
-          <!-- ===================================================================
-               VIEW 8: CLIENT PORTAL SPECIFIC (My Services, Deliverables, CIF)
-               =================================================================== -->
-          <section id="view_client_portal" class="hidden space-y-5 sm:space-y-6">
-            <!-- Client Welcome & Summary -->
-            <div class="liquid-glass-card p-4 sm:p-6 space-y-4">
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <span class="text-xs font-mono font-bold text-[#147D64] uppercase tracking-wider">Client Workspace</span>
-                  <h3 class="text-lg sm:text-xl font-black text-[#172B36] font-display">Phenom Apex Executive Overview</h3>
-                  <p class="text-xs text-[#5F7180]">Welcome back! Here is your live project status and deliverables.</p>
-                </div>
-                <button type="button" id="btnOpenDemoCifModal" class="px-3.5 py-2 rounded-xl bg-emerald-50 text-[#147D64] border border-emerald-200 text-xs font-bold hover:bg-emerald-100 cursor-pointer flex items-center gap-1.5 self-start sm:self-auto shadow-xs">
-                  <i class="fa-solid fa-file-pen text-xs"></i>
-                  <span>Update CIF Details (85%)</span>
-                </button>
-              </div>
-
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 pt-4 border-t border-[#E3E9EF]">
-                <div class="p-3.5 sm:p-4 rounded-2xl bg-white/70 border border-[#E3E9EF] space-y-1 shadow-xs">
-                  <span class="text-[10px] sm:text-[11px] text-[#5F7180] font-bold uppercase">Subscribed Services</span>
-                  <div class="text-xl sm:text-2xl font-black text-[#172B36]">2 Active</div>
-                  <span class="text-[10px] text-emerald-600 font-semibold">Enterprise Growth Tier</span>
-                </div>
-                <div class="p-3.5 sm:p-4 rounded-2xl bg-white/70 border border-[#E3E9EF] space-y-1 shadow-xs">
-                  <span class="text-[10px] sm:text-[11px] text-[#5F7180] font-bold uppercase">Completed Milestones</span>
-                  <div class="text-xl sm:text-2xl font-black text-[#147D64]">29 of 40</div>
-                  <span class="text-[10px] text-emerald-600 font-semibold">72.5% Total SOP Progress</span>
-                </div>
-                <div class="p-3.5 sm:p-4 rounded-2xl bg-white/70 border border-[#E3E9EF] space-y-1 shadow-xs">
-                  <span class="text-[10px] sm:text-[11px] text-[#5F7180] font-bold uppercase">Paid Retainer</span>
-                  <div class="text-xl sm:text-2xl font-black text-[#172B36] font-mono">$3,800.00</div>
-                  <span class="text-[10px] text-emerald-600 font-semibold">All invoices settled</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Client's Active Deliverables -->
-            <div class="liquid-glass-card p-4 sm:p-6 space-y-4">
-              <h4 class="text-xs font-bold uppercase tracking-wider text-[#172B36]">Active Subscribed Packages & Deliverables</h4>
-              
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="p-4 rounded-2xl bg-white/70 border border-[#E3E9EF] space-y-3 shadow-xs">
-                  <div class="flex items-center justify-between">
-                    <h5 class="text-xs font-bold text-[#172B36]">WhatsApp Business CRM & Sales Funnels</h5>
-                    <span class="text-xs font-mono font-bold text-[#147D64]">85%</span>
-                  </div>
-                  <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden border border-[#E3E9EF]">
-                    <div class="bg-[#147D64] h-full rounded-full transition-all" style="width: 85%"></div>
-                  </div>
-                  <p class="text-[11px] text-[#5F7180]">17 of 20 SOP Tasks completed. Next milestone: High-Volume Rate Limit Testing.</p>
-                  <div class="pt-2 border-t border-[#E3E9EF] flex items-center justify-between">
-                    <span class="text-[11px] font-semibold text-[#147D64]">Verified API Gateway Active</span>
-                    <button type="button" class="text-xs text-slate-600 hover:text-[#147D64] font-bold cursor-pointer">View Deliverable</button>
-                  </div>
-                </div>
-
-                <div class="p-4 rounded-2xl bg-white/70 border border-[#E3E9EF] space-y-3 shadow-xs">
-                  <div class="flex items-center justify-between">
-                    <h5 class="text-xs font-bold text-[#172B36]">Facebook Marketing & Community Building</h5>
-                    <span class="text-xs font-mono font-bold text-[#147D64]">60%</span>
-                  </div>
-                  <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden border border-[#E3E9EF]">
-                    <div class="bg-[#147D64] h-full rounded-full transition-all" style="width: 60%"></div>
-                  </div>
-                  <p class="text-[11px] text-[#5F7180]">12 of 20 SOP Tasks completed. Next milestone: Engagement Ad Campaign Launch.</p>
-                  <div class="pt-2 border-t border-[#E3E9EF] flex items-center justify-between">
-                    <span class="text-[11px] font-semibold text-[#147D64]">Community Group Setup Done</span>
-                    <button type="button" class="text-xs text-slate-600 hover:text-[#147D64] font-bold cursor-pointer">View Deliverable</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-        </main>
-
-        <!-- =====================================================================
-             MOBILE BOTTOM NAVIGATION BAR (Thumb-friendly iOS/Android app style)
-             ===================================================================== -->
-        <nav id="mobileBottomBar" class="md:hidden sticky bottom-0 inset-x-0 z-30 liquid-glass-bottom-bar px-3 pt-2 pb-1.5 flex flex-col items-center">
-          <div class="w-full flex items-center justify-around text-slate-600">
-            <button type="button" class="btn-bottom-nav flex flex-col items-center justify-center p-1.5 rounded-xl text-[#147D64] font-bold cursor-pointer" data-tab="overview">
-              <i class="fa-solid fa-chart-pie text-base"></i>
-              <span class="text-[10px] mt-0.5">Overview</span>
-            </button>
-            <button type="button" class="btn-bottom-nav flex flex-col items-center justify-center p-1.5 rounded-xl text-slate-500 hover:text-[#147D64] cursor-pointer" data-tab="services">
-              <i class="fa-solid fa-cubes text-base"></i>
-              <span class="text-[10px] mt-0.5">Services</span>
-            </button>
-            <button type="button" class="btn-bottom-nav flex flex-col items-center justify-center p-1.5 rounded-xl text-slate-500 hover:text-[#147D64] cursor-pointer" data-tab="projects">
-              <i class="fa-solid fa-folder-tree text-base"></i>
-              <span class="text-[10px] mt-0.5">Projects</span>
-            </button>
-            <button type="button" class="btn-bottom-nav flex flex-col items-center justify-center p-1.5 rounded-xl text-slate-500 hover:text-[#147D64] cursor-pointer" data-tab="finance">
-              <i class="fa-solid fa-file-invoice-dollar text-base"></i>
-              <span class="text-[10px] mt-0.5">Finance</span>
-            </button>
-            <button type="button" id="btnBottomMore" class="btn-bottom-nav flex flex-col items-center justify-center p-1.5 rounded-xl text-slate-500 hover:text-[#147D64] cursor-pointer">
-              <i class="fa-solid fa-bars-staggered text-base"></i>
-              <span class="text-[10px] mt-0.5">More</span>
-            </button>
-          </div>
-          <!-- iPhone Home Indicator Line -->
-          <div class="w-28 h-1 bg-slate-400/60 rounded-full mt-1.5 mb-0.5"></div>
-        </nav>
+        <!-- The Isolated True Viewport Iframe -->
+        <iframe id="previewIframe"
+                src="/admin/dashboard/?preview=1&role=super_admin#overview"
+                class="w-full h-full border-0 bg-white"
+                allow="clipboard-write; notifications"
+                title="Whiz Studio Dashboard Workspace">
+        </iframe>
 
       </div>
     </div>
-  </div>
+
+  </main>
 
   <!-- =========================================================================
-       INTERACTIVE DEMO MODALS (LIQUID GLASS STYLING)
-       ========================================================================= -->
-
-  <!-- MODAL 1: PERMANENTLY DELETE SERVICE -->
-  <div id="modalDeleteService" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 liquid-modal-backdrop">
-    <div class="liquid-glass-card max-w-lg w-full p-5 sm:p-6 space-y-4 border border-rose-200 shadow-2xl bg-white/95 rounded-t-3xl sm:rounded-2xl max-h-[90vh] overflow-y-auto">
-      <div class="flex items-center space-x-3 text-rose-600">
-        <div class="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center shrink-0">
-          <i class="fa-solid fa-trash-can text-lg"></i>
-        </div>
-        <div>
-          <h3 class="text-base font-bold text-[#172B36]">Permanently Delete Service</h3>
-          <p class="text-[11px] text-rose-600 font-semibold">Irreversible Cloudflare D1 Hard Delete</p>
-        </div>
-      </div>
-
-      <p class="text-xs text-[#5F7180] leading-relaxed">
-        Are you sure you want to permanently delete <strong id="deleteServiceTargetName" class="text-[#172B36] font-bold">Service</strong> from the catalog?
-      </p>
-
-      <div class="p-3.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-slate-700 space-y-1.5">
-        <div class="flex items-center justify-between">
-          <span class="text-slate-500 font-medium">Service Code:</span>
-          <span id="deleteServiceTargetCode" class="font-mono font-bold text-slate-900 px-2 py-0.5 bg-slate-200/60 rounded">CODE</span>
-        </div>
-        <div class="flex items-center justify-between">
-          <span class="text-slate-500 font-medium">Associated Master SOP Tasks:</span>
-          <span id="deleteServiceBlueprintCount" class="font-bold text-[#147D64]">20 Tasks</span>
-        </div>
-      </div>
-
-      <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 space-y-1">
-        <p class="font-bold flex items-center gap-1.5"><i class="fa-solid fa-shield-check text-emerald-600"></i> 0 Live Dependencies — Safe to Purge</p>
-        <p class="text-[11px] text-emerald-700">No active client contracts or billing ledgers reference this service.</p>
-      </div>
-
-      <div class="space-y-1.5">
-        <label class="block text-xs text-slate-600">
-          To confirm permanent deletion, type <span class="font-bold font-mono text-rose-600">DELETE</span> below:
-        </label>
-        <input type="text" id="demoDeleteServiceInput" placeholder="Type DELETE to confirm" class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#E3E9EF] text-xs font-mono text-[#172B36] focus:outline-none focus:border-rose-500">
-      </div>
-
-      <div class="pt-3 border-t border-[#E3E9EF] flex items-center justify-end space-x-3">
-        <button type="button" class="btn-close-demo-modal px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 cursor-pointer">Cancel</button>
-        <button type="button" id="btnConfirmDeleteServiceDemo" disabled class="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm flex items-center gap-1.5 cursor-pointer">
-          <i class="fa-solid fa-trash-can text-xs"></i>
-          <span>Permanently Delete Service</span>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL 2: PERMANENTLY DELETE SOP BLUEPRINT -->
-  <div id="modalDeleteBlueprint" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 liquid-modal-backdrop">
-    <div class="liquid-glass-card max-w-lg w-full p-5 sm:p-6 space-y-4 border border-rose-200 shadow-2xl bg-white/95 rounded-t-3xl sm:rounded-2xl max-h-[90vh] overflow-y-auto">
-      <div class="flex items-center space-x-3 text-rose-600">
-        <div class="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center shrink-0">
-          <i class="fa-solid fa-trash-can text-lg"></i>
-        </div>
-        <div>
-          <h3 class="text-base font-bold text-[#172B36]">Permanently Delete SOP Task</h3>
-          <p class="text-[11px] text-rose-600 font-semibold">Irreversible Cloudflare D1 Hard Delete</p>
-        </div>
-      </div>
-
-      <div class="p-3.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-slate-700 space-y-2">
-        <div class="flex items-center justify-between">
-          <span class="text-slate-500 font-medium">Task Code:</span>
-          <span id="demoDeleteTaskCode" class="font-mono font-bold text-slate-900 px-2 py-0.5 bg-slate-200/60 rounded">WA_01</span>
-        </div>
-        <div class="flex items-start justify-between gap-2">
-          <span class="text-slate-500 font-medium shrink-0">Task Title:</span>
-          <span id="demoDeleteTaskTitle" class="font-bold text-[#172B36] text-right">API Gateway Initialization</span>
-        </div>
-      </div>
-
-      <div class="p-3 rounded-xl bg-rose-50/70 border border-rose-200 text-[11px] text-rose-800">
-        <p class="font-bold flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation text-rose-600"></i> Irreversible Action:</p>
-        <p>This master SOP blueprint will be permanently purged from Cloudflare D1. It will not be hidden or soft-deleted.</p>
-      </div>
-
-      <div class="pt-3 border-t border-[#E3E9EF] flex items-center justify-end space-x-3">
-        <button type="button" class="btn-close-demo-modal px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 cursor-pointer">Cancel</button>
-        <button type="button" id="btnConfirmDeleteBlueprintDemo" class="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 shadow-sm flex items-center gap-1.5 cursor-pointer">
-          <i class="fa-solid fa-trash-can text-xs"></i>
-          <span>Permanently Delete Task</span>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL 3: A4 PRINTABLE RECEIPT / TAX INVOICE PREVIEW -->
-  <div id="modalReceiptPreview" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 liquid-modal-backdrop">
-    <div class="liquid-glass-card max-w-2xl w-full p-5 sm:p-7 space-y-4 border border-[#E3E9EF] shadow-2xl bg-white max-h-[92vh] overflow-y-auto">
-      <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
-        <div class="flex items-center space-x-2">
-          <div class="w-8 h-8 rounded-lg bg-emerald-50 text-[#147D64] flex items-center justify-center font-bold">W</div>
-          <div>
-            <h3 class="text-sm font-bold text-[#172B36]">Official Transaction Receipt</h3>
-            <span class="text-[10px] font-mono text-emerald-600 font-bold">Cloudflare D1 Verified Document</span>
-          </div>
-        </div>
-        <button type="button" class="btn-close-demo-modal text-slate-400 hover:text-slate-700 p-1 cursor-pointer">
-          <i class="fa-solid fa-xmark text-lg"></i>
-        </button>
-      </div>
-
-      <!-- Printable Sheet Body -->
-      <div class="p-5 rounded-2xl bg-slate-50 border border-[#E3E9EF] space-y-4 text-xs font-sans">
-        <div class="flex justify-between items-start">
-          <div>
-            <h4 class="font-black text-[#172B36] font-display text-base">WHIZ STUDIO</h4>
-            <p class="text-[11px] text-slate-500">Dhaka, Bangladesh • whizstudio.art</p>
-            <p class="text-[11px] text-slate-500">Official Billing & Invoicing Engine</p>
-          </div>
-          <div class="text-right">
-            <span class="text-[10px] uppercase font-bold text-slate-400 block">Receipt No.</span>
-            <span id="previewReceiptId" class="font-mono font-bold text-sm text-[#147D64]">RCP-2026-0042</span>
-            <span class="text-[10px] text-slate-500 block">Date: Nov 01, 2026</span>
-          </div>
-        </div>
-
-        <div class="pt-3 border-t border-slate-200 grid grid-cols-2 gap-4">
-          <div>
-            <span class="text-[10px] uppercase font-bold text-slate-400 block">Billed To</span>
-            <p id="previewReceiptClient" class="font-bold text-[#172B36]">Phenom Apex Ltd.</p>
-            <p class="text-[11px] text-slate-600">Primary: MD KAZI ABDUR RAHIM EMON</p>
-          </div>
-          <div class="text-right">
-            <span class="text-[10px] uppercase font-bold text-slate-400 block">Payment Method</span>
-            <p id="previewReceiptMethod" class="font-bold text-[#172B36]">Bank Wire / TT</p>
-            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">PAID & SETTLED</span>
-          </div>
-        </div>
-
-        <div class="pt-3 border-t border-slate-200">
-          <table class="w-full text-left text-xs">
-            <thead>
-              <tr class="text-slate-400 uppercase text-[10px] font-bold border-b border-slate-200">
-                <th class="py-1">Description</th>
-                <th class="py-1 text-right">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td class="py-2 font-medium text-[#172B36]">Monthly Retainer: WhatsApp Business CRM & Sales Funnels</td>
-                <td class="py-2 text-right font-mono font-bold text-[#172B36]">$1,900.00</td>
-              </tr>
-            </tbody>
-            <tfoot>
-              <tr class="border-t border-slate-300 font-bold text-[#172B36]">
-                <td class="pt-2">Total Amount Received</td>
-                <td class="pt-2 text-right font-mono text-sm text-[#147D64]">$1,900.00 USD</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      </div>
-
-      <div class="flex items-center justify-end space-x-3 pt-2">
-        <button type="button" class="btn-close-demo-modal px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 cursor-pointer">Close</button>
-        <button type="button" onclick="window.print()" class="btn-liquid-primary px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer">
-          <i class="fa-solid fa-print text-xs"></i>
-          <span>Print / Save PDF</span>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Toast Notification System -->
-  <div id="previewToastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
-
-  <!-- =========================================================================
-       PREVIEW CONTROLLER SCRIPT (FULL INTERACTIVITY & MOCK STATE)
+       3. SIMULATOR CONTROLLER SCRIPT
        ========================================================================= -->
   <script>
-    // Authoritative Mock State (12 Services + 20 Master SOPs + Live Clients)
-    const state = {
-      currentRole: 'super_admin',
-      activeTab: 'overview',
-      deviceWidth: '1280',
-      frameActive: true,
-      services: [
-        { id: 'srv_wa_crm', code: 'WA_CRM', name: 'WhatsApp Business CRM & Sales Funnels', category: 'Conversational Commerce', price: 1200, count: 20 },
-        { id: 'srv_li_b2b', code: 'LI_B2B', name: 'LinkedIn B2B Lead Generation', category: 'Enterprise Growth', price: 1500, count: 20 },
-        { id: 'srv_fb_mkt', code: 'FB_MKT', name: 'Facebook Marketing & Community Building', category: 'Paid & Organic Social Media', price: 1000, count: 20 },
-        { id: 'srv_ig_scl', code: 'IG_SCL', name: 'Instagram Marketing & Reels Scaling', category: 'Paid & Organic Social Media', price: 1100, count: 20 },
-        { id: 'srv_fb_ads', code: 'FB_ADS', name: 'Facebook Ads Management', category: 'Paid Advertising', price: 1400, count: 20 },
-        { id: 'srv_gg_ads', code: 'GG_ADS', name: 'Google Ads & Performance Max', category: 'Paid Advertising', price: 1600, count: 20 },
-        { id: 'srv_yt_gro', code: 'YT_GRO', name: 'YouTube Channel Growth & Video SEO', category: 'Video Media', price: 1300, count: 20 },
-        { id: 'srv_tt_ads', code: 'TT_ADS', name: 'TikTok Ads & Creative Strategy', category: 'Paid Advertising', price: 1200, count: 20 },
-        { id: 'srv_seo_rk', code: 'SEO_RK', name: 'Search Engine Optimization (SEO)', category: 'Visual Search & SEO', price: 1500, count: 20 },
-        { id: 'srv_br_des', code: 'BR_DES', name: 'Brand Identity & Visual Design Systems', category: 'Professional Branding', price: 2000, count: 20 },
-        { id: 'srv_em_fun', code: 'EM_FUN', name: 'Email Marketing & Retention Automations', category: 'Enterprise Growth', price: 1100, count: 20 },
-        { id: 'srv_an_trk', code: 'AN_TRK', name: 'Full-Funnel Analytics & Tracking Engineering', category: 'Performance Media Engineering', price: 1400, count: 20 }
-      ],
-      blueprints: [
-        { code: 'WA_01', title: 'WhatsApp Business Cloud API Architecture & Setup', phase: 'Beginning', est: 60, prio: 'urgent' },
-        { code: 'WA_02', title: 'Webhook Verification & Endpoint Handshake', phase: 'Beginning', est: 45, prio: 'high' },
-        { code: 'WA_03', title: 'Interactive Message Template Submission & Compliance', phase: 'Beginning', est: 40, prio: 'high' },
-        { code: 'WA_04', title: 'Automated Welcome Sequence & Routing Bot Logic', phase: 'Beginning', est: 90, prio: 'medium' },
-        { code: 'WA_05', title: 'Catalog Integration & Direct WhatsApp Checkout Flow', phase: 'Beginning', est: 75, prio: 'medium' },
-        { code: 'WA_06', title: 'Team Multi-Agent Inbox Configuration & Roles', phase: 'Beginning', est: 60, prio: 'medium' },
-        { code: 'WA_07', title: 'Pre-Launch Testing & Phone Number Verification', phase: 'Beginning', est: 30, prio: 'urgent' },
-        { code: 'WA_08', title: 'Customer Segmentation & Tagging System Schema', phase: 'Intermediate', est: 60, prio: 'medium' },
-        { code: 'WA_09', title: 'Automated Cart Abandonment & Follow-Up Funnel', phase: 'Intermediate', est: 90, prio: 'high' },
-        { code: 'WA_10', title: 'Broadcast Campaign Scheduler & Quality Rating Monitor', phase: 'Intermediate', est: 45, prio: 'medium' },
-        { code: 'WA_11', title: 'Lead Scoring & Priority Routing Rules Engine', phase: 'Intermediate', est: 60, prio: 'medium' },
-        { code: 'WA_12', title: 'CRM Two-Way Synchronization Integration', phase: 'Intermediate', est: 120, prio: 'high' },
-        { code: 'WA_13', title: 'Conversational Survey & CSAT Collection Workflow', phase: 'Intermediate', est: 45, prio: 'low' },
-        { code: 'WA_14', title: 'Multi-Language Auto-Response Routing Implementation', phase: 'Intermediate', est: 60, prio: 'medium' },
-        { code: 'WA_15', title: 'High-Volume Concurrency Stress Testing & Rate Limits', phase: 'Advanced', est: 90, prio: 'urgent' },
-        { code: 'WA_16', title: 'Advanced Conversion Pixel & Ad Attribution Handshake', phase: 'Advanced', est: 90, prio: 'high' },
-        { code: 'WA_17', title: 'AI Copilot Suggested Response Integration', phase: 'Advanced', est: 120, prio: 'medium' },
-        { code: 'WA_18', title: 'Weekly Engagement Analytics & Drop-off Diagnostics', phase: 'Advanced', est: 60, prio: 'medium' },
-        { code: 'WA_19', title: 'Security & Access Auditing for Customer Data Isolation', phase: 'Advanced', est: 60, prio: 'urgent' },
-        { code: 'WA_20', title: 'Executive Monthly Retention & ROI Audit Deliverable', phase: 'Advanced', est: 90, prio: 'high' }
-      ]
-    };
+    (function () {
+      'use strict';
 
-    function showToast(message, type = 'success') {
-      const c = document.getElementById('previewToastContainer');
-      const t = document.createElement('div');
-      const isErr = type === 'error';
-      t.className = `p-3.5 rounded-2xl shadow-xl text-xs font-bold flex items-center gap-2 border pointer-events-auto transition-all transform translate-y-2 opacity-0 ${
-        isErr ? 'bg-rose-600 text-white border-rose-500' : 'bg-[#172B36] text-white border-emerald-500/40'
-      }`;
-      t.innerHTML = `<i class="fa-solid ${isErr ? 'fa-triangle-exclamation' : 'fa-circle-check text-emerald-400'}"></i> <span>${message}</span>`;
-      c.appendChild(t);
-      setTimeout(() => t.classList.remove('translate-y-2', 'opacity-0'), 10);
-      setTimeout(() => {
-        t.classList.add('opacity-0', 'translate-y-2');
-        setTimeout(() => t.remove(), 300);
-      }, 3500);
-    }
-
-    // Role-specific Navigation Schemes
-    const roleNavs = {
-      super_admin: [
-        { tab: 'overview', icon: 'fa-chart-pie', label: 'Overview & KPIs' },
-        { tab: 'clients', icon: 'fa-building', label: 'Client Directory' },
-        { tab: 'services', icon: 'fa-cubes', label: 'Service Management' },
-        { tab: 'projects', icon: 'fa-folder-tree', label: 'Service Projects' },
-        { tab: 'tasks', icon: 'fa-list-check', label: 'Operational Tasks' },
-        { tab: 'finance', icon: 'fa-file-invoice-dollar', label: 'Finance & Ledger' },
-        { tab: 'team', icon: 'fa-user-shield', label: 'User & Access Mgmt' }
-      ],
-      admin: [
-        { tab: 'overview', icon: 'fa-chart-pie', label: 'Executive Overview' },
-        { tab: 'clients', icon: 'fa-building', label: 'Client Directory' },
-        { tab: 'services', icon: 'fa-cubes', label: 'Service Catalog' },
-        { tab: 'projects', icon: 'fa-folder-tree', label: 'Projects Queue' },
-        { tab: 'tasks', icon: 'fa-list-check', label: 'Live Tasks' },
-        { tab: 'team', icon: 'fa-users', label: 'Staff Directory' }
-      ],
-      accounts: [
-        { tab: 'overview', icon: 'fa-chart-pie', label: 'Financial Overview' },
-        { tab: 'finance', icon: 'fa-file-invoice-dollar', label: 'Accounting Ledger' },
-        { tab: 'clients', icon: 'fa-building', label: 'Client Invoices' }
-      ],
-      employee: [
-        { tab: 'overview', icon: 'fa-chart-pie', label: 'Work Queue' },
-        { tab: 'projects', icon: 'fa-folder-tree', label: 'Assigned Projects' },
-        { tab: 'tasks', icon: 'fa-list-check', label: 'My SOP Tasks' }
-      ],
-      client: [
-        { tab: 'client_portal', icon: 'fa-gauge-high', label: 'Client Overview' },
-        { tab: 'services', icon: 'fa-cubes', label: 'Subscribed Services' },
-        { tab: 'projects', icon: 'fa-folder-tree', label: 'My Deliverables' },
-        { tab: 'finance', icon: 'fa-receipt', label: 'Invoices & Receipts' }
-      ]
-    };
-
-    function renderNav() {
-      const navContainer = document.getElementById('sidebarNavItems');
-      const mobileNav = document.getElementById('mobileNavItems');
-      const items = roleNavs[state.currentRole] || roleNavs.super_admin;
-
-      const html = items.map(item => `
-        <button type="button" class="btn-nav-item w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#5F7180] hover:text-[#172B36] hover:bg-white/60 transition-all cursor-pointer text-left ${state.activeTab === item.tab ? 'liquid-glass-nav-active' : ''}" data-tab="${item.tab}">
-          <i class="fa-solid ${item.icon} text-xs w-4"></i>
-          <span class="flex-1 truncate">${item.label}</span>
-        </button>
-      `).join('');
-
-      if (navContainer) navContainer.innerHTML = html;
-      if (mobileNav) mobileNav.innerHTML = html;
-
-      // Update mobile bottom bar active indicator
-      document.querySelectorAll('.btn-bottom-nav').forEach(btn => {
-        if (btn.dataset.tab === state.activeTab) {
-          btn.classList.add('text-[#147D64]', 'font-bold');
-          btn.classList.remove('text-slate-500');
-        } else {
-          btn.classList.remove('text-[#147D64]', 'font-bold');
-          btn.classList.add('text-slate-500');
-        }
-      });
-
-      // Wire navigation events
-      document.querySelectorAll('.btn-nav-item').forEach(btn => {
-        btn.addEventListener('click', () => switchTab(btn.dataset.tab));
-      });
-    }
-
-    function renderHeaderActions() {
-      const container = document.getElementById('viewHeaderActions');
-      if (!container) return;
-
-      if (state.currentRole === 'client') {
-        container.innerHTML = `
-          <button type="button" class="btn-liquid-primary px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs">
-            <i class="fa-solid fa-plus text-xs"></i>
-            <span class="hidden sm:inline">Request Service</span>
-          </button>
-          <button type="button" class="btn-liquid-secondary px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs">
-            <i class="fa-solid fa-headset text-xs text-[#147D64]"></i>
-            <span class="hidden sm:inline">Support Desk</span>
-          </button>
-        `;
-      } else {
-        container.innerHTML = `
-          <button type="button" id="btnQuickAddService" class="btn-liquid-primary px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs">
-            <i class="fa-solid fa-plus text-xs"></i>
-            <span class="hidden sm:inline">Add Service</span>
-          </button>
-          <button type="button" id="btnQuickRecordPayment" class="btn-liquid-secondary px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs">
-            <i class="fa-solid fa-receipt text-xs text-[#147D64]"></i>
-            <span class="hidden sm:inline">Record Payment</span>
-          </button>
-        `;
-        document.getElementById('btnQuickAddService')?.addEventListener('click', () => switchTab('services'));
-        document.getElementById('btnQuickRecordPayment')?.addEventListener('click', () => switchTab('finance'));
-      }
-    }
-
-    function switchTab(tab) {
-      state.activeTab = tab;
-      
-      // Hide all content sections
-      document.querySelectorAll('main > section').forEach(sec => sec.classList.add('hidden'));
-
-      // Show target section
-      const targetSec = document.getElementById(`view_${tab}`);
-      if (targetSec) targetSec.classList.remove('hidden');
-
-      // Update header titles and subtitles
-      const titles = {
-        overview: { title: 'Executive Overview & Analytics', desc: 'Authoritative platform metrics, active client retainers, and operational health.' },
-        clients: { title: 'Client Directory & Organizations', desc: 'Active corporate clients, KYC CIF status, and assigned service packages.' },
-        client_details: { title: 'Client Account Workspace', desc: 'Active projects, deliverable completion, and financial ledger breakdown.' },
-        services: { title: 'Service Catalog & Master Blueprints', desc: '12 active services with permanent deletion safeguards and 240 SOP tasks.' },
-        service_tasks: { title: 'Master SOP Blueprint Workspace', desc: 'Phase-by-phase standard operational procedure blueprints.' },
-        projects: { title: 'Service Projects Progress Tracker', desc: 'Live execution status and milestone tracking across corporate clients.' },
-        tasks: { title: 'Live Operational Task Queue', desc: 'Review, complete, and log quality assurance criteria for ongoing tasks.' },
-        finance: { title: 'Financial Ledger & Invoices', desc: 'Reconciled payment records, invoice history, and receipt PDF downloads.' },
-        team: { title: 'User & Access Management', desc: 'Multi-role RBAC permissions for Super Admin, Admin, Accounts, and Employee.' },
-        client_portal: { title: 'Client Management Workspace', desc: 'Track your project execution, milestones, and invoice receipts in real-time.' }
+      // Simulator State
+      const state = {
+        portalType: 'admin', // 'admin' | 'client'
+        role: 'super_admin',
+        activeTab: 'overview',
+        deviceWidth: 390,
+        deviceHeight: 844,
+        isFluid: false,
+        zoomMode: 'fit',
+        frameActive: true,
+        orientation: 'portrait'
       };
 
-      const meta = titles[tab] || titles.overview;
-      document.getElementById('viewHeaderTitle').textContent = meta.title;
-      document.getElementById('viewHeaderSubtitle').textContent = meta.desc;
-
-      closeMobileDrawer();
-      renderNav();
-      renderHeaderActions();
-    }
-
-    function renderServicesGrid() {
-      const grid = document.getElementById('demoServicesGrid');
-      if (!grid) return;
-
-      grid.innerHTML = state.services.map(s => `
-        <div class="liquid-glass-card liquid-glass-card-hover p-4 sm:p-5 flex flex-col justify-between space-y-3.5 group">
-          <div class="space-y-2">
-            <div class="flex items-center justify-between">
-              <span class="text-[10px] font-black uppercase tracking-wider text-[#147D64] bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">${s.code}</span>
-              <span class="text-xs font-mono font-bold text-[#172B36]">$${s.price}/mo</span>
-            </div>
-            <h4 class="text-xs sm:text-sm font-extrabold text-[#172B36] group-hover:text-[#147D64] transition-colors leading-snug">${s.name}</h4>
-            <p class="text-[11px] text-[#5F7180] line-clamp-2">${s.category} • Complete operational agency deployment.</p>
-          </div>
-
-          <div class="pt-3 border-t border-[#E3E9EF] flex items-center justify-between gap-2">
-            <span class="text-[11px] text-[#5F7180] flex items-center gap-1.5 font-semibold">
-              <i class="fa-solid fa-list-check text-[#147D64] text-xs"></i>
-              <span>${s.count} SOP Tasks</span>
-            </span>
-            <div class="flex items-center gap-1.5">
-              <button type="button" class="btn-demo-delete-service p-1.5 rounded-xl bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 border border-[#E3E9EF] hover:border-rose-200 cursor-pointer transition-all" data-id="${s.id}" title="Permanently Delete Service">
-                <i class="fa-solid fa-trash-can text-xs"></i>
-              </button>
-              <button type="button" class="btn-demo-view-tasks px-3 py-1.5 rounded-xl text-xs font-bold btn-liquid-primary cursor-pointer transition-all" data-id="${s.id}">
-                View Tasks
-              </button>
-            </div>
-          </div>
-        </div>
-      `).join('');
-
-      // Wire View Tasks
-      grid.querySelectorAll('.btn-demo-view-tasks').forEach(b => {
-        b.addEventListener('click', () => {
-          const s = state.services.find(x => x.id === b.dataset.id);
-          if (s) document.getElementById('sopWorkspaceTitle').textContent = s.name;
-          switchTab('service_tasks');
-        });
-      });
-
-      // Wire Delete Service
-      grid.querySelectorAll('.btn-demo-delete-service').forEach(b => {
-        b.addEventListener('click', () => {
-          const s = state.services.find(x => x.id === b.dataset.id);
-          if (!s) return;
-          state.targetDeleteService = s;
-          document.getElementById('deleteServiceTargetName').textContent = s.name;
-          document.getElementById('deleteServiceTargetCode').textContent = s.code;
-          document.getElementById('deleteServiceBlueprintCount').textContent = `${s.count} Tasks`;
-          document.getElementById('demoDeleteServiceInput').value = '';
-          document.getElementById('btnConfirmDeleteServiceDemo').disabled = true;
-          document.getElementById('modalDeleteService').classList.remove('hidden');
-        });
-      });
-    }
-
-    function renderSopTasks() {
-      const p1 = document.getElementById('sopPhase1Container');
-      const p2 = document.getElementById('sopPhase2Container');
-      const p3 = document.getElementById('sopPhase3Container');
-
-      const renderList = (list) => list.map(bp => `
-        <div class="p-3 sm:p-3.5 rounded-2xl bg-white/70 border border-[#E3E9EF] flex items-center justify-between gap-3 hover:border-[#147D64]/40 transition-all shadow-xs">
-          <div class="flex items-center space-x-2.5 min-w-0">
-            <span class="text-xs font-mono font-bold text-[#147D64] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 shrink-0">${bp.code}</span>
-            <span class="text-xs font-bold text-[#172B36] truncate">${bp.title}</span>
-          </div>
-          <div class="flex items-center space-x-2 shrink-0">
-            <span class="text-[10px] font-mono text-slate-400 hidden sm:inline">${bp.est}m</span>
-            <button type="button" class="btn-demo-delete-bp p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 cursor-pointer transition-all" data-code="${bp.code}" title="Permanently Delete Task">
-              <i class="fa-solid fa-trash-can text-xs"></i>
-            </button>
-          </div>
-        </div>
-      `).join('');
-
-      if (p1) p1.innerHTML = renderList(state.blueprints.filter(b => b.phase === 'Beginning'));
-      if (p2) p2.innerHTML = renderList(state.blueprints.filter(b => b.phase === 'Intermediate'));
-      if (p3) p3.innerHTML = renderList(state.blueprints.filter(b => b.phase === 'Advanced'));
-
-      document.querySelectorAll('.btn-demo-delete-bp').forEach(b => {
-        b.addEventListener('click', () => {
-          const bp = state.blueprints.find(x => x.code === b.dataset.code);
-          if (!bp) return;
-          state.targetDeleteBp = bp;
-          document.getElementById('demoDeleteTaskCode').textContent = bp.code;
-          document.getElementById('demoDeleteTaskTitle').textContent = bp.title;
-          document.getElementById('modalDeleteBlueprint').classList.remove('hidden');
-        });
-      });
-    }
-
-    function renderClientsTable() {
-      const tbody = document.getElementById('demoClientsTableBody');
-      if (!tbody) return;
-
-      const clients = [
-        { name: 'MD KAZI ABDUR RAHIM EMON', org: 'Phenom Apex Ltd.', email: 'kaziabdurrahimemon@gmail.com', cif: '100% Completed', services: 2 },
-        { name: 'Sarah Jenkins', org: 'Jenkins Global Media', email: 'sarah@jenkinsglobal.com', cif: '100% Completed', services: 3 },
-        { name: 'Tariq Rahman', org: 'Zenith Logistics Hub', email: 'tariq@zenithhub.co', cif: '85% In Review', services: 1 },
-        { name: 'Elena Rostova', org: 'Aura Skin Clinic', email: 'elena@auraclinic.ae', cif: '100% Completed', services: 2 }
+      // Tab definitions for Admin & Client
+      const adminTabs = [
+        { id: 'overview', label: '📊 Overview & KPIs' },
+        { id: 'clients', label: '👥 Client Directory' },
+        { id: 'services', label: '📦 Service Management' },
+        { id: 'service_tasks', label: '📑 SOP Blueprint Workspace' },
+        { id: 'projects', label: '📁 Service Projects' },
+        { id: 'tasks', label: '✅ Live Tasks (SOPs)' },
+        { id: 'finance', label: '💳 Payments & Ledger' },
+        { id: 'receipt_template', label: '🧾 Vector Receipt Template' },
+        { id: 'team', label: '🛡️ User & Access (RBAC)' },
+        { id: 'support', label: '🎧 Support Desk' },
+        { id: 'history', label: '⏱️ Audit & History Log' },
+        { id: 'security', label: '🔐 Security & Devices' }
       ];
 
-      tbody.innerHTML = clients.map(c => `
-        <tr class="hover:bg-white/80 transition-colors">
-          <td class="px-4 sm:px-5 py-3 font-bold text-[#172B36]">${c.org} <span class="text-[11px] text-[#5F7180] font-normal block truncate">${c.name}</span></td>
-          <td class="px-4 sm:px-5 py-3 font-mono text-[11px] text-slate-600 truncate">${c.email}</td>
-          <td class="px-4 sm:px-5 py-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-[#147D64] border border-emerald-200">${c.cif}</span></td>
-          <td class="px-4 sm:px-5 py-3 font-semibold text-[#172B36]">${c.services} Retainers</td>
-          <td class="px-4 sm:px-5 py-3 text-right">
-            <button type="button" class="btn-demo-view-client-details px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-50 hover:bg-emerald-50 text-[#172B36] hover:text-[#147D64] border border-[#E3E9EF] cursor-pointer" data-org="${c.org}">
-              Workspace
-            </button>
-          </td>
-        </tr>
-      `).join('');
-
-      tbody.querySelectorAll('.btn-demo-view-client-details').forEach(b => {
-        b.addEventListener('click', () => {
-          document.getElementById('detailClientOrgName').textContent = b.dataset.org;
-          switchTab('client_details');
-        });
-      });
-    }
-
-    function renderPaymentsTable() {
-      const tbody = document.getElementById('demoPaymentsTableBody');
-      if (!tbody) return;
-
-      const payments = [
-        { id: 'RCP-2026-0042', org: 'Phenom Apex Ltd.', method: 'Bank Wire / TT', amount: '$1,900.00', status: 'Confirmed' },
-        { id: 'RCP-2026-0041', org: 'Phenom Apex Ltd.', method: 'Stripe Card', amount: '$1,900.00', status: 'Confirmed' },
-        { id: 'RCP-2026-0040', org: 'Jenkins Global Media', method: 'Bank Wire / TT', amount: '$3,500.00', status: 'Confirmed' },
-        { id: 'RCP-2026-0039', org: 'Aura Skin Clinic', method: 'Stripe Card', amount: '$2,200.00', status: 'Confirmed' }
+      const clientTabs = [
+        { id: 'overview', label: '📊 Workspace Overview' },
+        { id: 'services', label: '📦 My Active Services' },
+        { id: 'tasks', label: '✅ Deliverables & Roadmap' },
+        { id: 'finance', label: '💳 Invoices & Receipts' },
+        { id: 'support', label: '🎧 Support & Requests' },
+        { id: 'settings', label: '⚙️ Account Settings & CIF' }
       ];
 
-      tbody.innerHTML = payments.map(p => `
-        <tr class="hover:bg-white/80 transition-colors">
-          <td class="px-4 sm:px-5 py-3 font-mono font-bold text-[#147D64]">${p.id}</td>
-          <td class="px-4 sm:px-5 py-3 font-bold text-[#172B36]">${p.org}</td>
-          <td class="px-4 sm:px-5 py-3 text-[#5F7180]">${p.method}</td>
-          <td class="px-4 sm:px-5 py-3 font-mono font-bold text-[#172B36]">${p.amount}</td>
-          <td class="px-4 sm:px-5 py-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">${p.status}</span></td>
-          <td class="px-4 sm:px-5 py-3 text-right">
-            <button type="button" class="btn-demo-view-receipt px-2.5 py-1 rounded-lg text-xs font-semibold text-[#147D64] bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 cursor-pointer" data-id="${p.id}" data-org="${p.org}" data-method="${p.method}">
-              <i class="fa-solid fa-download text-[10px] mr-1"></i> PDF
-            </button>
-          </td>
-        </tr>
-      `).join('');
-
-      tbody.querySelectorAll('.btn-demo-view-receipt').forEach(b => {
-        b.addEventListener('click', () => {
-          document.getElementById('previewReceiptId').textContent = b.dataset.id;
-          document.getElementById('previewReceiptClient').textContent = b.dataset.org;
-          document.getElementById('previewReceiptMethod').textContent = b.dataset.method;
-          document.getElementById('modalReceiptPreview').classList.remove('hidden');
-        });
-      });
-    }
-
-    function initCharts() {
-      const revCtx = document.getElementById('chartRevenueTrend');
-      if (revCtx) {
-        new Chart(revCtx, {
-          type: 'line',
-          data: {
-            labels: ['May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
-            datasets: [{
-              label: 'Confirmed Revenue ($ USD)',
-              data: [9800, 11400, 13200, 14900, 16800, 18450],
-              borderColor: '#147D64',
-              backgroundColor: 'rgba(20, 125, 100, 0.08)',
-              fill: true,
-              tension: 0.35,
-              pointBackgroundColor: '#147D64',
-              pointRadius: 4
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-              y: { grid: { color: 'rgba(227, 233, 239, 0.6)' } },
-              x: { grid: { display: false } }
-            }
-          }
-        });
-      }
-
-      const distCtx = document.getElementById('chartServiceDist');
-      if (distCtx) {
-        new Chart(distCtx, {
-          type: 'doughnut',
-          data: {
-            labels: ['WhatsApp CRM', 'LinkedIn B2B', 'Meta Marketing', 'Google Ads', 'Others'],
-            datasets: [{
-              data: [35, 25, 20, 15, 5],
-              backgroundColor: ['#147D64', '#059669', '#10B981', '#34D399', '#A7F3D0'],
-              borderWidth: 2,
-              borderColor: '#FFFFFF'
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } }
-          }
-        });
-      }
-    }
-
-    function closeMobileDrawer() {
-      const d = document.getElementById('mobileDrawer');
-      const b = document.getElementById('mobileDrawerBackdrop');
-      if (d) d.classList.add('-translate-x-full');
-      if (b) b.classList.add('hidden');
-    }
-
-    // Apply viewport emulation and hardware chassis styling
-    function applyViewport(width, role = null) {
-      if (role) {
-        state.currentRole = role;
-        document.getElementById('selectRole').value = role;
-        const roleLabels = {
-          super_admin: 'Super Admin',
-          admin: 'Administrator',
-          accounts: 'Accounts Specialist',
-          employee: 'Operations Staff',
-          client: 'Client Portal'
-        };
-        document.getElementById('sidebarRolePill').textContent = roleLabels[role] || 'Staff';
-        document.getElementById('mobileHeaderRoleBadge').textContent = roleLabels[role] || 'Staff';
-        document.getElementById('sidebarPortalSubtitle').textContent = role === 'client' ? 'Client Workspace' : 'Executive Management';
-        
-        const defaultTab = role === 'client' ? 'client_portal' : 'overview';
-        switchTab(defaultTab);
-      }
-
-      state.deviceWidth = width;
-      document.getElementById('selectDeviceWidth').value = width;
-
-      const chassis = document.getElementById('hardwareChassis');
-      const phoneStatusBar = document.getElementById('phoneStatusBar');
+      const iframe = document.getElementById('previewIframe');
+      const chassis = document.getElementById('deviceChassis');
+      const container = document.getElementById('deviceChassisContainer');
+      const workspace = document.getElementById('previewWorkspace');
+      const selectTab = document.getElementById('selectTab');
+      const selectRole = document.getElementById('selectRole');
+      const selectDevice = document.getElementById('selectDevice');
+      const selectZoom = document.getElementById('selectZoom');
+      const phoneIsland = document.getElementById('phoneIsland');
       const laptopNotch = document.getElementById('laptopNotch');
+      const labelFrameToggle = document.getElementById('labelFrameToggle');
 
-      // Reset base classes
-      chassis.className = 'w-full transition-all flex flex-col min-h-screen relative';
-      phoneStatusBar.classList.add('hidden');
-      laptopNotch.classList.add('hidden');
+      // Detect protocol for portable relative resolution
+      function getDashboardUrl(portal, role, tab) {
+        const isFile = window.location.protocol === 'file:';
+        let base = '';
+        if (portal === 'client') {
+          base = isFile ? '../client/dashboard/index.html' : '/client/dashboard/';
+          return `${base}?preview=1&role=client#${tab || 'overview'}`;
+        } else {
+          base = isFile ? '../admin/dashboard/index.html' : '/admin/dashboard/';
+          const r = role === 'super_admin' ? 'super_admin' : role;
+          return `${base}?preview=1&role=${r}#${tab || 'overview'}`;
+        }
+      }
 
-      if (width === 'fluid') {
-        chassis.style.maxWidth = '100%';
-        chassis.style.boxShadow = 'none';
-        chassis.style.border = 'none';
-        chassis.style.borderRadius = '0';
-        chassis.style.margin = '0';
-      } else {
-        const numW = parseInt(width, 10);
-        chassis.style.maxWidth = numW + 'px';
+      function populateTabsDropdown() {
+        const tabs = state.portalType === 'client' ? clientTabs : adminTabs;
+        selectTab.innerHTML = tabs.map(t => `<option value="${t.id}">${t.label}</option>`).join('');
+        selectTab.value = state.activeTab;
+      }
 
-        if (state.frameActive) {
-          if (numW <= 430) {
-            // Mobile smartphone chassis
-            chassis.classList.add('phone-chassis');
-            phoneStatusBar.classList.remove('hidden');
-          } else if (numW <= 1440) {
-            // Laptop chassis
-            chassis.classList.add('laptop-chassis');
-            laptopNotch.classList.remove('hidden');
+      function updateIframeSrc() {
+        const targetUrl = getDashboardUrl(state.portalType, state.role, state.activeTab);
+        if (iframe.contentWindow && iframe.contentWindow.location) {
+          try {
+            const curPath = iframe.contentWindow.location.pathname;
+            const curHash = (iframe.contentWindow.location.hash || '').replace('#', '');
+            const targetPath = state.portalType === 'client' ? '/client/dashboard/' : '/admin/dashboard/';
+            
+            // If already on the same dashboard page, just change hash to avoid full reload
+            if (curPath.includes(targetPath) || curPath.includes(state.portalType)) {
+              if (curHash !== state.activeTab) {
+                iframe.contentWindow.location.hash = '#' + state.activeTab;
+                return;
+              }
+            }
+          } catch (e) {
+            // Cross-origin fallback
+          }
+        }
+        iframe.src = targetUrl;
+      }
+
+      function applyDeviceDimensions() {
+        if (state.isFluid || !state.frameActive) {
+          chassis.className = 'w-full h-full relative transition-all rounded-none border-0 shadow-none';
+          chassis.style.width = '100%';
+          chassis.style.height = '100%';
+          container.style.width = '100%';
+          container.style.height = '100%';
+          container.style.transform = 'none';
+          phoneIsland.classList.add('hidden');
+          laptopNotch.classList.add('hidden');
+          return;
+        }
+
+        const w = state.orientation === 'portrait' ? state.deviceWidth : state.deviceHeight;
+        const h = state.orientation === 'portrait' ? state.deviceHeight : state.deviceWidth;
+
+        chassis.style.width = `${w}px`;
+        chassis.style.height = `${h}px`;
+
+        if (w <= 430) {
+          chassis.className = 'phone-chassis relative transition-all shadow-2xl';
+          phoneIsland.classList.remove('hidden');
+          laptopNotch.classList.add('hidden');
+        } else if (w <= 1024) {
+          chassis.className = 'tablet-chassis relative transition-all shadow-2xl';
+          phoneIsland.classList.add('hidden');
+          laptopNotch.classList.add('hidden');
+        } else {
+          chassis.className = 'laptop-chassis relative transition-all shadow-2xl';
+          phoneIsland.classList.add('hidden');
+          laptopNotch.classList.remove('hidden');
+        }
+
+        updateScaling();
+      }
+
+      // Proportional Auto-Fit Scaling (Guarantees zero squishing of iframe content)
+      function updateScaling() {
+        if (state.isFluid || !state.frameActive) {
+          container.style.transform = 'none';
+          return;
+        }
+
+        const w = state.orientation === 'portrait' ? state.deviceWidth : state.deviceHeight;
+        const h = state.orientation === 'portrait' ? state.deviceHeight : state.deviceWidth;
+
+        // Reserve 40px padding in workspace
+        const availW = Math.max(300, workspace.clientWidth - 48);
+        const availH = Math.max(300, workspace.clientHeight - 48);
+
+        let scale = 1.0;
+        if (state.zoomMode === 'fit') {
+          const scaleW = availW / (w + 24); // plus bezel
+          const scaleH = availH / (h + 24);
+          scale = Math.min(1.0, Math.min(scaleW, scaleH));
+        } else {
+          scale = parseFloat(state.zoomMode);
+        }
+
+        container.style.transform = `scale(${scale.toFixed(3)})`;
+        container.style.transformOrigin = 'center center';
+      }
+
+      function setQuickView(viewName) {
+        document.querySelectorAll('.btn-quick').forEach(b => {
+          if (b.dataset.view === viewName) {
+            b.classList.add('bg-emerald-600', 'text-white', 'shadow-sm');
+            b.classList.remove('text-slate-300');
           } else {
-            // Desktop screen
-            chassis.style.boxShadow = '0 25px 80px rgba(0,0,0,0.25)';
-            chassis.style.borderRadius = '1.5rem';
-            chassis.style.margin = '1.5rem auto';
-          }
-        } else {
-          chassis.style.border = '1px solid #E2E8F0';
-          chassis.style.boxShadow = '0 10px 40px rgba(0,0,0,0.1)';
-          chassis.style.borderRadius = '1rem';
-          chassis.style.margin = '1rem auto';
-        }
-      }
-    }
-
-    function setActiveQuickBtn(targetName) {
-      document.querySelectorAll('.btn-quick-view').forEach(b => {
-        if (b.dataset.target === targetName) {
-          b.classList.add('bg-emerald-600', 'text-white');
-          b.classList.remove('text-slate-300');
-        } else {
-          b.classList.remove('bg-emerald-600', 'text-white');
-          b.classList.add('text-slate-300');
-        }
-      });
-    }
-
-    function init() {
-      // 4-View Quick Switcher buttons
-      document.querySelectorAll('.btn-quick-view').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const target = btn.dataset.target;
-          setActiveQuickBtn(target);
-
-          if (target === 'admin-desktop') {
-            applyViewport('1280', 'super_admin');
-            showToast('Switched to Admin Dashboard (Desktop Laptop View)');
-          } else if (target === 'admin-mobile') {
-            applyViewport('390', 'super_admin');
-            showToast('Switched to Admin Dashboard (Mobile Phone View)');
-          } else if (target === 'client-desktop') {
-            applyViewport('1280', 'client');
-            showToast('Switched to Client Dashboard (Desktop Laptop View)');
-          } else if (target === 'client-mobile') {
-            applyViewport('390', 'client');
-            showToast('Switched to Client Dashboard (Mobile Phone View)');
+            b.classList.remove('bg-emerald-600', 'text-white', 'shadow-sm');
+            b.classList.add('text-slate-300');
           }
         });
+
+        if (viewName === 'super-admin-desktop') {
+          state.portalType = 'admin';
+          state.role = 'super_admin';
+          state.activeTab = 'overview';
+          state.deviceWidth = 1440;
+          state.deviceHeight = 900;
+          state.isFluid = false;
+          selectDevice.value = '1440x900';
+          selectRole.value = 'super_admin';
+          setTimeout(() => {
+            try {
+              const doc = iframe.contentWindow?.document;
+              const sidebar = doc?.getElementById('adminDesktopSidebar');
+              if (sidebar && sidebar.getAttribute('data-collapsed') === 'true') {
+                doc.getElementById('sidebarCollapseToggleBtn')?.click();
+              }
+            } catch (e) {}
+          }, 350);
+        } else if (viewName === 'super-admin-collapsed') {
+          state.portalType = 'admin';
+          state.role = 'super_admin';
+          state.activeTab = 'overview';
+          state.deviceWidth = 1440;
+          state.deviceHeight = 900;
+          state.isFluid = false;
+          selectDevice.value = '1440x900';
+          selectRole.value = 'super_admin';
+          setTimeout(() => {
+            try {
+              const doc = iframe.contentWindow?.document;
+              const sidebar = doc?.getElementById('adminDesktopSidebar');
+              if (sidebar && sidebar.getAttribute('data-collapsed') !== 'true') {
+                doc.getElementById('sidebarCollapseToggleBtn')?.click();
+              }
+            } catch (e) {}
+          }, 350);
+        } else if (viewName === 'super-admin-drawer') {
+          state.portalType = 'admin';
+          state.role = 'super_admin';
+          state.activeTab = 'overview';
+          state.deviceWidth = 390;
+          state.deviceHeight = 844;
+          state.isFluid = false;
+          selectDevice.value = '390x844';
+          selectRole.value = 'super_admin';
+          setTimeout(() => {
+            try {
+              const doc = iframe.contentWindow?.document;
+              const drawer = doc?.getElementById('mobileDrawer');
+              if (drawer && drawer.classList.contains('-translate-x-full')) {
+                doc.getElementById('mobileMenuToggleBtn')?.click();
+              }
+            } catch (e) {}
+          }, 450);
+        } else if (viewName === 'super-admin-mobile') {
+          state.portalType = 'admin';
+          state.role = 'super_admin';
+          state.activeTab = 'overview';
+          state.deviceWidth = 390;
+          state.deviceHeight = 844;
+          state.isFluid = false;
+          selectDevice.value = '390x844';
+          selectRole.value = 'super_admin';
+        } else if (viewName === 'client-desktop') {
+          state.portalType = 'client';
+          state.role = 'client';
+          state.activeTab = 'overview';
+          state.deviceWidth = 1280;
+          state.deviceHeight = 800;
+          state.isFluid = false;
+          selectDevice.value = '1280x800';
+          selectRole.value = 'client';
+        } else if (viewName === 'client-mobile') {
+          state.portalType = 'client';
+          state.role = 'client';
+          state.activeTab = 'overview';
+          state.deviceWidth = 390;
+          state.deviceHeight = 844;
+          state.isFluid = false;
+          selectDevice.value = '390x844';
+          selectRole.value = 'client';
+        } else if (viewName === 'tablet') {
+          state.portalType = 'admin';
+          state.role = 'super_admin';
+          state.activeTab = 'overview';
+          state.deviceWidth = 768;
+          state.deviceHeight = 1024;
+          state.isFluid = false;
+          selectDevice.value = '768x1024';
+          selectRole.value = 'super_admin';
+        }
+
+        populateTabsDropdown();
+        applyDeviceDimensions();
+        updateIframeSrc();
+      }
+
+      // Event Listeners
+      document.querySelectorAll('.btn-quick').forEach(btn => {
+        btn.addEventListener('click', () => setQuickView(btn.dataset.view));
       });
 
-      // Role Select Dropdown
-      document.getElementById('selectRole').addEventListener('change', (e) => {
-        applyViewport(state.deviceWidth, e.target.value);
-        showToast(`Preview context switched to ${e.target.options[e.target.selectedIndex].text}`);
+      selectDevice.addEventListener('change', (e) => {
+        const val = e.target.value;
+        if (val === 'fluid') {
+          state.isFluid = true;
+        } else {
+          state.isFluid = false;
+          const [w, h] = val.split('x').map(Number);
+          state.deviceWidth = w;
+          state.deviceHeight = h;
+        }
+        applyDeviceDimensions();
       });
 
-      // Device Width Dropdown
-      document.getElementById('selectDeviceWidth').addEventListener('change', (e) => {
-        applyViewport(e.target.value);
+      selectRole.addEventListener('change', (e) => {
+        const role = e.target.value;
+        state.role = role;
+        state.portalType = role === 'client' ? 'client' : 'admin';
+        populateTabsDropdown();
+        updateIframeSrc();
       });
 
-      // Frame Toggle
-      document.getElementById('btnToggleFrame').addEventListener('click', () => {
+      selectTab.addEventListener('change', (e) => {
+        state.activeTab = e.target.value;
+        updateIframeSrc();
+      });
+
+      selectZoom.addEventListener('change', (e) => {
+        state.zoomMode = e.target.value;
+        updateScaling();
+      });
+
+      document.getElementById('btnRotateOrientation')?.addEventListener('click', () => {
+        state.orientation = state.orientation === 'portrait' ? 'landscape' : 'portrait';
+        applyDeviceDimensions();
+      });
+
+      function toggleFrame() {
         state.frameActive = !state.frameActive;
-        document.getElementById('frameToggleLabel').textContent = state.frameActive ? 'Frame: ON' : 'Frame: OFF';
-        applyViewport(state.deviceWidth);
-        showToast(state.frameActive ? 'Realistic device frame enabled' : 'Borderless responsive mode enabled', 'info');
+        labelFrameToggle.textContent = state.frameActive ? 'Frame: ON' : 'Frame: OFF';
+        applyDeviceDimensions();
+      }
+
+      document.getElementById('btnToggleFrame')?.addEventListener('click', toggleFrame);
+      document.getElementById('btnToggleFrameMobile')?.addEventListener('click', toggleFrame);
+
+      function openDirectView() {
+        const url = getDashboardUrl(state.portalType, state.role, state.activeTab);
+        window.open(url, '_blank');
+      }
+
+      document.getElementById('btnOpenDirect')?.addEventListener('click', openDirectView);
+      document.getElementById('btnOpenDirectMobile')?.addEventListener('click', openDirectView);
+
+      window.addEventListener('resize', () => {
+        if (state.zoomMode === 'fit') updateScaling();
       });
 
-      // Mobile Drawer Toggles
-      document.getElementById('btnToggleMobileDrawer')?.addEventListener('click', () => {
-        document.getElementById('mobileDrawer')?.classList.remove('-translate-x-full');
-        document.getElementById('mobileDrawerBackdrop')?.classList.remove('hidden');
-      });
-      document.getElementById('btnCloseMobileDrawer')?.addEventListener('click', closeMobileDrawer);
-      document.getElementById('mobileDrawerBackdrop')?.addEventListener('click', closeMobileDrawer);
-      document.getElementById('btnBottomMore')?.addEventListener('click', () => {
-        document.getElementById('mobileDrawer')?.classList.remove('-translate-x-full');
-        document.getElementById('mobileDrawerBackdrop')?.classList.remove('hidden');
-      });
-
-      // Bottom Nav buttons
-      document.querySelectorAll('.btn-bottom-nav[data-tab]').forEach(b => {
-        b.addEventListener('click', () => switchTab(b.dataset.tab));
-      });
-
-      // KPI jump navigation
-      document.querySelectorAll('[data-kpi-jump]').forEach(card => {
-        card.addEventListener('click', () => switchTab(card.dataset.kpiJump));
-      });
-
-      // Back navigation buttons
-      document.getElementById('btnBackToClientsFromDetails')?.addEventListener('click', () => switchTab('clients'));
-      document.getElementById('btnBackToServicesFromSOP')?.addEventListener('click', () => switchTab('services'));
-
-      // Close modal buttons
-      document.querySelectorAll('.btn-close-demo-modal').forEach(b => {
-        b.addEventListener('click', () => {
-          document.getElementById('modalDeleteService').classList.add('hidden');
-          document.getElementById('modalDeleteBlueprint').classList.add('hidden');
-          document.getElementById('modalReceiptPreview').classList.add('hidden');
-        });
-      });
-
-      // Delete service typing confirmation
-      document.getElementById('demoDeleteServiceInput')?.addEventListener('input', (e) => {
-        const val = e.target.value.trim().toUpperCase();
-        document.getElementById('btnConfirmDeleteServiceDemo').disabled = val !== 'DELETE';
-      });
-
-      // Confirm Delete Service
-      document.getElementById('btnConfirmDeleteServiceDemo')?.addEventListener('click', () => {
-        if (!state.targetDeleteService) return;
-        state.services = state.services.filter(s => s.id !== state.targetDeleteService.id);
-        document.getElementById('serviceCountBadge').textContent = `${state.services.length} Active Services`;
-        renderServicesGrid();
-        document.getElementById('modalDeleteService').classList.add('hidden');
-        showToast(`Service "${state.targetDeleteService.name}" permanently purged from D1.`);
-      });
-
-      // Confirm Delete Blueprint
-      document.getElementById('btnConfirmDeleteBlueprintDemo')?.addEventListener('click', () => {
-        if (!state.targetDeleteBp) return;
-        state.blueprints = state.blueprints.filter(b => b.code !== state.targetDeleteBp.code);
-        renderSopTasks();
-        document.getElementById('modalDeleteBlueprint').classList.add('hidden');
-        showToast(`SOP Task [${state.targetDeleteBp.code}] permanently deleted from Cloudflare D1.`);
-      });
-
-      // Search filter for clients
-      document.getElementById('demoClientSearch')?.addEventListener('input', (e) => {
-        const query = e.target.value.toLowerCase().trim();
-        document.querySelectorAll('#demoClientsTableBody tr').forEach(row => {
-          const text = row.textContent.toLowerCase();
-          row.style.display = text.includes(query) ? '' : 'none';
-        });
-      });
-
-      // Initial Render & URL Query Parameter Auto-Selection
-      renderNav();
-      renderServicesGrid();
-      renderSopTasks();
-      renderClientsTable();
-      renderPaymentsTable();
-      initCharts();
-
+      // Initialize with Admin Desktop or Mobile from URL params if specified
       const urlParams = new URLSearchParams(window.location.search);
-      const queryView = urlParams.get('view');
-      const queryRole = urlParams.get('role');
-      const queryWidth = urlParams.get('width');
-      const queryTab = urlParams.get('tab');
+      const initView = urlParams.get('view') || 'super-admin-desktop';
+      setQuickView(initView);
 
-      if (queryView === 'admin-mobile') {
-        applyViewport(queryWidth || '390', 'super_admin');
-        setActiveQuickBtn('admin-mobile');
-      } else if (queryView === 'client-desktop') {
-        applyViewport(queryWidth || '1280', 'client');
-        setActiveQuickBtn('client-desktop');
-      } else if (queryView === 'client-mobile') {
-        applyViewport(queryWidth || '390', 'client');
-        setActiveQuickBtn('client-mobile');
-      } else if (queryView === 'admin-desktop') {
-        applyViewport(queryWidth || '1280', 'super_admin');
-        setActiveQuickBtn('admin-desktop');
-      } else {
-        const initWidth = queryWidth || '1280';
-        const initRole = queryRole || 'super_admin';
-        applyViewport(initWidth, initRole);
-        setActiveQuickBtn(initRole === 'client' ? (initWidth <= 430 ? 'client-mobile' : 'client-desktop') : (initWidth <= 430 ? 'admin-mobile' : 'admin-desktop'));
-      }
-
-      if (queryTab) {
-        switchTab(queryTab);
-      }
-    }
-
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', init);
-    } else {
-      init();
-    }
+    })();
   </script>
+
 </body>
 </html>

@@ -9,7 +9,7 @@
   <link rel="icon" type="image/png" href="/favicon.png">
 
   <!-- Clerk JavaScript SDK (Hobby / Free Tier Production CDN) -->
-  <script async crossorigin="anonymous" data-clerk-publishable-key="pk_test_cG9ldGljLWxpZ2VyLTQzNTUuY2xlcmsuYWNjb3VudHMuZGV2JA" src="https://poetic-liger-4355.clerk.accounts.dev/npm/@clerk/clerk-js@5/dist/clerk.browser.js" type="text/javascript"></script>
+  <script async crossorigin="anonymous" data-clerk-publishable-key="pk_live_Y2xlcmsud2hpenN0dWRpby5hcnQk" src="https://poetic-liger-4355.clerk.accounts.dev/npm/@clerk/clerk-js@5/dist/clerk.browser.js" type="text/javascript"></script>
 
   <!-- Google Fonts: Inter & Plus Jakarta Sans & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2885,43 +2885,59 @@
         <input type="hidden" name="clientId" id="editClientId">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Full Name *</label>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Full Legal Name *</label>
             <input type="text" name="fullName" id="editClientFullName" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
           </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Billing Entity Name *</label>
+            <input type="text" name="billingName" id="editClientBillingName" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Company / Brand Name</label>
             <input type="text" name="companyName" id="editClientCompanyName" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
           </div>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Email Address *</label>
-            <input type="email" name="email" id="editClientEmail" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
-          </div>
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Phone Number</label>
-            <input type="text" name="phone" id="editClientPhone" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Phone Number *</label>
+            <input type="text" name="phone" id="editClientPhone" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
           </div>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">City</label>
-            <input type="text" name="city" id="editClientCity" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Verified Email (Clerk SSO)</label>
+            <input type="email" name="email" id="editClientEmail" readonly disabled class="w-full px-3.5 py-2 rounded-xl bg-slate-100 text-xs text-slate-500 cursor-not-allowed select-none">
+            <span class="text-[10px] text-slate-400">Managed via Clerk SSO. Direct edits blocked.</span>
           </div>
           <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Country</label>
-            <input type="text" name="country" id="editClientCountry" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Tax ID / VAT Registration</label>
+            <input type="text" name="taxId" id="editClientTaxId" placeholder="Optional Tax/VAT ID" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
           </div>
         </div>
 
         <div>
-          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Address</label>
-          <input type="text" name="address" id="editClientAddress" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Full Billing Address *</label>
+          <input type="text" name="address" id="editClientAddress" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">City *</label>
+            <input type="text" name="city" id="editClientCity" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Country *</label>
+            <input type="text" name="country" id="editClientCountry" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Postal Code</label>
+            <input type="text" name="postalCode" id="editClientPostalCode" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Account Status</label>
             <select name="status" id="editClientStatus" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
@@ -2930,10 +2946,10 @@
             </select>
           </div>
           <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Preferred Currency</label>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Preferred Currency *</label>
             <select name="currency" id="editClientCurrency" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
-              <option value="BDT">BDT — ৳ (Bangladeshi Taka)</option>
               <option value="USD">USD — $ (US Dollar)</option>
+              <option value="BDT">BDT — ৳ (Bangladeshi Taka)</option>
               <option value="GBP">GBP — £ (British Pound)</option>
               <option value="EUR">EUR — € (Euro)</option>
               <option value="AED">AED — د.إ (UAE Dirham)</option>
@@ -2946,6 +2962,18 @@
               <option value="MYR">MYR — RM (Malaysian Ringgit)</option>
             </select>
           </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">CIF Lock Status *</label>
+            <select name="isLocked" id="editClientIsLocked" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-semibold">
+              <option value="1">Locked (Verified & Protected)</option>
+              <option value="0">Unlocked (Client Can Edit)</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="editClientAuditNote" class="text-[11px] text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-200 flex items-center justify-between">
+          <span id="editClientAuditText">Authoritative Cloudflare D1 CIF record</span>
+          <span id="editClientCompletionBadge" class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">100% Complete</span>
         </div>
 
         <div class="flex items-center justify-end space-x-3 pt-3 border-t border-[#E3E9EF]">
@@ -2954,8 +2982,7 @@
             <i class="fa-solid fa-floppy-disk text-xs"></i>
             <span>Save Profile Changes</span>
           </button>
-        </div>
-      </form>
+        </div></form>
     </div>
   </div>
 

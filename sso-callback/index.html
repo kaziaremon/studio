@@ -9,9 +9,9 @@
   <link rel="icon" type="image/png" href="/favicon.png">
 
   <!-- Clerk JavaScript SDK (Auto-resolves Production or Development environment) -->
-  <script async crossorigin="anonymous" data-clerk-publishable-key="pk_test_cG9ldGljLWxpZ2VyLTQzNTUuY2xlcmsuYWNjb3VudHMuZGV2JA" src="https://poetic-liger-4355.clerk.accounts.dev/npm/@clerk/clerk-js@5/dist/clerk.browser.js" type="text/javascript"></script>
+  <script async crossorigin="anonymous" data-clerk-publishable-key="pk_live_Y2xlcmsud2hpenN0dWRpby5hcnQk" src="https://poetic-liger-4355.clerk.accounts.dev/npm/@clerk/clerk-js@5/dist/clerk.browser.js" type="text/javascript"></script>
 
-  <!-- Google Fonts: Inter & Plus Jakarta Sans -->
+  <!-- Google Fonts: Inter & Plus Jakarta Sans & Poppins -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
@@ -131,9 +131,12 @@
           <p class="text-xs text-rose-200 mt-1 leading-relaxed" id="errorMessage">Unable to complete sign-in. Please try again.</p>
         </div>
       </div>
-      <div class="pt-2 border-t border-rose-500/20 flex gap-2">
-        <a href="/?login=true" class="flex-1 text-center py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-white border border-slate-700 transition-all">
-          <i class="fa-solid fa-arrow-left mr-1"></i> Return to Sign In
+      <div class="pt-2 border-t border-rose-500/20 flex flex-col sm:flex-row gap-2">
+        <button type="button" id="btnRetryGoogle" class="flex-1 text-center py-2.5 px-3 rounded-xl bg-brand-whiz hover:bg-emerald-600 text-xs font-bold text-white shadow-md transition-all cursor-pointer">
+          <i class="fa-brands fa-google mr-1.5"></i> Try Again with Google
+        </button>
+        <a href="/?login=true" class="flex-1 text-center py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-white border border-slate-700 transition-all">
+          <i class="fa-solid fa-arrow-left mr-1.5"></i> Return to Sign In
         </a>
       </div>
     </div>
@@ -143,25 +146,43 @@
     (function () {
       'use strict';
 
-      const CLERK_PUBLISHABLE_KEY = window.__CLERK_PUBLISHABLE_KEY__ || 'pk_test_cG9ldGljLWxpZ2VyLTQzNTUuY2xlcmsuYWNjb3VudHMuZGV2JA';
+      const CLERK_PUBLISHABLE_KEY = window.__CLERK_PUBLISHABLE_KEY__ || 'pk_live_Y2xlcmsud2hpenN0dWRpby5hcnQk';
       const API_BASE = 'https://whiz-api.kaziaremon.workers.dev/api/v1';
 
-      function detectInAppBrowser() {
-        const ua = navigator.userAgent || navigator.vendor || window.opera || '';
-        return /FBAN|FBAV|Instagram|Messenger|LinkedInApp|Line\/|TikTok|musical_ly|Snapchat|MicroMessenger/i.test(ua) ||
-          (/(iPhone|iPod|iPad).*AppleWebKit(?!.*Safari)/i.test(ua)) ||
-          (/Android.*Version\/[0-9]/i.test(ua));
+      // =========================================================================
+      // DETERMINISTIC LOGIN STATE MACHINE
+      // 1. INITIALIZING_CLERK
+      // 2. WAITING_FOR_ACTIVE_SESSION
+      // 3. FETCHING_VERIFIED_ROLE
+      // 4. AUTHORIZED
+      // 5. REDIRECTING
+      // =========================================================================
+      const AUTH_STATES = {
+        INITIALIZING_CLERK: 'INITIALIZING_CLERK',
+        WAITING_FOR_ACTIVE_SESSION: 'WAITING_FOR_ACTIVE_SESSION',
+        FETCHING_VERIFIED_ROLE: 'FETCHING_VERIFIED_ROLE',
+        AUTHORIZED: 'AUTHORIZED',
+        REDIRECTING: 'REDIRECTING',
+        ERROR: 'ERROR'
+      };
+
+      let currentAuthState = AUTH_STATES.INITIALIZING_CLERK;
+      let hasRedirected = false;
+      let isFinalizing = false;
+      let activeUserIdentity = null;
+      let cachedSessionToken = null;
+
+      function updateStep(text, percent) {
+        const label = document.getElementById('stepLabel');
+        const bar = document.getElementById('progressBar');
+        if (label) label.textContent = text;
+        if (bar && percent !== undefined) bar.style.width = `${percent}%`;
       }
 
-      function updateStep(label, percent) {
-        const stepLabel = document.getElementById('stepLabel');
-        const progressBar = document.getElementById('progressBar');
-        if (stepLabel) stepLabel.textContent = label;
-        if (progressBar) progressBar.style.width = percent + '%';
-      }
-
-      function showError(message) {
+      function showError(message, options = {}) {
+        currentAuthState = AUTH_STATES.ERROR;
         const progressBox = document.getElementById('progressBox');
+        const twoFactorBox = document.getElementById('twoFactorBox');
         const errorBox = document.getElementById('errorBox');
         const errorMessage = document.getElementById('errorMessage');
         const statusIcon = document.getElementById('statusIcon');
@@ -169,13 +190,58 @@
         const statusDesc = document.getElementById('statusDesc');
 
         if (progressBox) progressBox.classList.add('hidden');
+        if (twoFactorBox) twoFactorBox.classList.add('hidden');
         if (errorBox) errorBox.classList.remove('hidden');
-        if (errorMessage) errorMessage.textContent = message || 'OAuth authentication failed.';
+        if (errorMessage) errorMessage.textContent = message || 'An unexpected error occurred during authentication.';
         if (statusIcon) {
-          statusIcon.className = 'fa-solid fa-triangle-exclamation text-rose-400 text-2xl';
+          statusIcon.className = 'fa-solid fa-triangle-exclamation text-rose-500 text-2xl';
         }
-        if (statusTitle) statusTitle.textContent = 'Authentication Incomplete';
-        if (statusDesc) statusDesc.textContent = 'Please choose an option to continue.';
+        if (statusTitle) statusTitle.textContent = options.title || 'Authentication Notice';
+        if (statusDesc) statusDesc.textContent = options.description || 'Please review the notice below to proceed.';
+
+        // Wire Retry Buttons
+        const retryBtn = document.getElementById('btnRetryGoogle');
+        if (retryBtn) {
+          retryBtn.onclick = async () => {
+            retryBtn.disabled = true;
+            retryBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-1.5"></i> Connecting...';
+            try {
+              const origin = window.location.origin.replace('www.', '');
+              const callbackUrl = `${origin}/sso-callback/`;
+              if (window.Clerk && window.Clerk.client) {
+                await window.Clerk.client.signIn.authenticateWithRedirect({
+                  strategy: 'oauth_google',
+                  redirectUrl: callbackUrl,
+                  redirectUrlComplete: callbackUrl,
+                  continueSignUp: true
+                });
+              } else {
+                window.location.href = '/?login=true';
+              }
+            } catch (err) {
+              console.error('Retry Google OAuth error:', err);
+              window.location.href = '/?login=true';
+            }
+          };
+        }
+
+        // Dedicated Role Retry button if applicable
+        let roleRetryBtn = document.getElementById('btnRetryRoleFetch');
+        if (options.canRetryRole && activeUserIdentity && cachedSessionToken) {
+          if (!roleRetryBtn) {
+            roleRetryBtn = document.createElement('button');
+            roleRetryBtn.id = 'btnRetryRoleFetch';
+            roleRetryBtn.className = 'flex-1 text-center py-2.5 px-3 rounded-xl bg-[#087F70] hover:bg-[#06665a] text-xs font-bold text-white shadow-md transition-all cursor-pointer';
+            roleRetryBtn.innerHTML = '<i class="fa-solid fa-rotate mr-1.5"></i> Retry Role Verification';
+            const btnContainer = errorBox.querySelector('div.flex');
+            if (btnContainer) btnContainer.prepend(roleRetryBtn);
+          }
+          roleRetryBtn.onclick = async () => {
+            if (errorBox) errorBox.classList.add('hidden');
+            if (progressBox) progressBox.classList.remove('hidden');
+            await fetchVerifiedRoleAndRedirect(activeUserIdentity, cachedSessionToken);
+          };
+        }
       }
 
       function show2FAPrompt(signInResource) {
@@ -208,7 +274,7 @@
               await window.Clerk.setActive({ session: attempt.createdSessionId });
               twoFactorBox.classList.add('hidden');
               progressBox.classList.remove('hidden');
-              finalizeAuth(window.Clerk.user);
+              await handleActiveSessionEstablished(window.Clerk.user || window.Clerk.session?.user);
             } else {
               showError('Invalid verification code. Please check your authenticator and try again.');
             }
@@ -220,71 +286,192 @@
         };
       }
 
-      async function finalizeAuth(user) {
-        if (!user) {
-          throw new Error('User identity could not be retrieved from active session.');
-        }
+      function detectInAppBrowser() {
+        const ua = navigator.userAgent || navigator.vendor || window.opera || '';
+        return /FBAN|FBAV|Instagram|Messenger|LinkedInApp|Line\/|TikTok|musical_ly|Snapchat|MicroMessenger/i.test(ua) ||
+          (/(iPhone|iPod|iPad).*AppleWebKit(?!.*Safari)/i.test(ua)) ||
+          (/Android.*Version\/[0-9]/i.test(ua));
+      }
 
-        updateStep('Synchronizing with Cloudflare Authority...', 80);
+      // =========================================================================
+      // STATE 3 & 4 & 5: ROLE FETCHING, AUTHORIZATION, AND ATOMIC REDIRECTION
+      // =========================================================================
+      async function fetchVerifiedRoleAndRedirect(user, sessionToken) {
+        currentAuthState = AUTH_STATES.FETCHING_VERIFIED_ROLE;
+        updateStep('Verifying authorized workspace role...', 75);
 
-        let sessionToken = null;
-        if (window.Clerk && window.Clerk.session) {
-          try {
-            sessionToken = await window.Clerk.session.getToken();
-          } catch (tErr) {
-            console.warn('Session token retrieval notice:', tErr);
-          }
-        }
+        const primaryEmail = (
+          user.primaryEmailAddress?.emailAddress ||
+          (user.emailAddresses && user.emailAddresses[0]?.emailAddress) ||
+          ''
+        ).toLowerCase().trim();
 
-        const primaryEmail = (user.primaryEmailAddress ? user.primaryEmailAddress.emailAddress : '').toLowerCase();
-        const fullName = user.fullName || (user.firstName ? (user.firstName + ' ' + (user.lastName || '')).trim() : user.username) || 'Valued Client';
+        const fullName = user.fullName ||
+          (user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user.username) ||
+          'Valued User';
 
         const syncHeaders = {
           'Content-Type': 'application/json',
-          'X-Clerk-User-Id': user.id
+          'X-Clerk-User-Id': user.id,
+          'Authorization': 'Bearer ' + sessionToken
         };
-        if (sessionToken) {
-          syncHeaders['Authorization'] = 'Bearer ' + sessionToken;
-        }
 
-        // Idempotent provisioning & role lookup in Cloudflare D1
-        let userRole = 'client';
-        let isSuperAdmin = primaryEmail === 'kaziaremon@gmail.com';
+        let verifiedRole = null;
+        let isSuperAdmin = false;
+        let isStaff = false;
+        let fetchAttempts = 0;
+        let lastError = null;
 
-        try {
-          const syncRes = await fetch(`${API_BASE}/auth/client-sync`, {
-            method: 'POST',
-            headers: syncHeaders,
-            body: JSON.stringify({
-              clerkUserId: user.id,
-              email: primaryEmail,
-              fullName: fullName
-            })
-          }).then(r => r.json()).catch(() => ({}));
+        // Resilient fetch with up to 3 attempts with exponential backoff
+        while (!verifiedRole && fetchAttempts < 3) {
+          fetchAttempts++;
+          try {
+            // First try /auth/client-sync to guarantee user profile is synchronized in D1
+            const res = await fetch(`${API_BASE}/auth/client-sync`, {
+              method: 'POST',
+              headers: syncHeaders,
+              body: JSON.stringify({
+                clerkUserId: user.id,
+                email: primaryEmail,
+                fullName: fullName
+              })
+            });
 
-          if (syncRes && syncRes.data && syncRes.data.user) {
-            userRole = syncRes.data.user.role || userRole;
-            isSuperAdmin = Boolean(syncRes.data.user.isSuperAdmin) || isSuperAdmin;
+            if (res.ok) {
+              const json = await res.json();
+              if (json && json.success && json.data && json.data.user) {
+                verifiedRole = (json.data.user.role || '').toLowerCase();
+                isSuperAdmin = Boolean(json.data.user.isSuperAdmin);
+                isStaff = Boolean(json.data.user.isStaff);
+                break;
+              }
+            }
+
+            // Fallback to /portal/me if client-sync returned non-200
+            const meRes = await fetch(`${API_BASE}/portal/me`, {
+              headers: syncHeaders
+            });
+
+            if (meRes.ok) {
+              const meJson = await meRes.json();
+              if (meJson && meJson.success && meJson.data && meJson.data.user) {
+                verifiedRole = (meJson.data.user.role || '').toLowerCase();
+                isSuperAdmin = Boolean(meJson.data.user.isSuperAdmin);
+                isStaff = Boolean(meJson.data.user.isStaff);
+                break;
+              }
+            }
+
+            lastError = new Error(`Server returned status ${res.status} on role synchronization.`);
+          } catch (err) {
+            console.warn(`[SSO Callback] Role verification attempt ${fetchAttempts} notice:`, err);
+            lastError = err;
           }
-        } catch (syncErr) {
-          console.warn('Cloudflare sync notice (fallback to default):', syncErr);
+
+          if (!verifiedRole && fetchAttempts < 3) {
+            await new Promise(r => setTimeout(r, 600 * fetchAttempts));
+          }
         }
 
-        updateStep('Opening your workspace...', 98);
+        // CRITICAL RULE: NEVER REDIRECT TO CLIENT DASHBOARD IF ROLE IS UNKNOWN OR FAILED!
+        if (!verifiedRole) {
+          console.error('[SSO Callback] Authoritative role could not be resolved from server:', lastError);
+          showError('Unable to verify your account permissions from the server. Please check your connection and retry.', {
+            title: 'Authorization Incomplete',
+            description: 'Your login succeeded, but server role verification could not be completed.',
+            canRetryRole: true
+          });
+          return;
+        }
 
-        // Clean URL parameters from browser history
-        const cleanUrl = window.location.origin + window.location.pathname;
-        window.history.replaceState({}, document.title, cleanUrl);
+        // TRANSITION TO STATE 4: AUTHORIZED
+        currentAuthState = AUTH_STATES.AUTHORIZED;
+        console.log(`[SSO Callback] Authoritative role resolved: ${verifiedRole} (isSuperAdmin=${isSuperAdmin}, isStaff=${isStaff})`);
+
+        let targetDestination = '/client/dashboard/';
+        if (verifiedRole === 'super_admin' || verifiedRole === 'owner' || isSuperAdmin || verifiedRole === 'admin' || isStaff) {
+          targetDestination = '/admin/dashboard/';
+        } else if (verifiedRole === 'client') {
+          targetDestination = '/client/dashboard/';
+        } else {
+          showError(`Unrecognized account role: "${verifiedRole}". Please contact Whiz Studio administration.`, {
+            title: 'Unauthorized Role',
+            description: 'Your account possesses an unrecognized role definition.'
+          });
+          return;
+        }
+
+        // TRANSITION TO STATE 5: REDIRECTING (ATOMIC SINGLE-EXECUTION)
+        if (hasRedirected) return;
+        hasRedirected = true;
+        currentAuthState = AUTH_STATES.REDIRECTING;
+        updateStep('Opening your workspace...', 100);
+
+        // Clean query parameters from URL history
+        try {
+          const cleanUrl = window.location.origin + window.location.pathname;
+          window.history.replaceState({}, document.title, cleanUrl);
+        } catch (e) {}
 
         setTimeout(() => {
-          if (['owner', 'super_admin', 'admin', 'accounts', 'employee'].includes(userRole) || isSuperAdmin) {
-            window.location.href = '/admin/dashboard';
-          } else {
-            window.location.href = '/client/dashboard';
-          }
-        }, 300);
+          console.log('[SSO Callback] Performing atomic redirection to:', targetDestination);
+          window.location.replace(targetDestination);
+        }, 150);
       }
 
+      // =========================================================================
+      // STATE 2: WAITING FOR ACTIVE SESSION AND ACQUIRING TOKEN
+      // =========================================================================
+      async function handleActiveSessionEstablished(user) {
+        if (isFinalizing) return;
+        isFinalizing = true;
+        activeUserIdentity = user;
+
+        if (!user) {
+          showError('User identity could not be retrieved from the active session.');
+          return;
+        }
+
+        currentAuthState = AUTH_STATES.WAITING_FOR_ACTIVE_SESSION;
+        updateStep('Validating session credentials...', 55);
+
+        // Clear legacy whiz_session cookie to prevent cross-contamination
+        document.cookie = 'whiz_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax; Secure';
+
+        let sessionToken = null;
+        let tokenAttempts = 0;
+        const maxTokenAttempts = 15;
+
+        while (!sessionToken && tokenAttempts < maxTokenAttempts) {
+          tokenAttempts++;
+          if (window.Clerk && window.Clerk.session) {
+            try {
+              sessionToken = await window.Clerk.session.getToken();
+            } catch (tErr) {
+              console.warn('[SSO Callback] Token retrieval notice:', tErr);
+            }
+          }
+          if (!sessionToken && tokenAttempts < maxTokenAttempts) {
+            await new Promise(r => setTimeout(r, 150));
+          }
+        }
+
+        if (!sessionToken) {
+          console.error('[SSO Callback] Failed to retrieve session token after maximum attempts.');
+          showError('Authentication session could not be established. Please try signing in again.', {
+            title: 'Session Incomplete',
+            description: 'The authentication authority did not return a valid session token.'
+          });
+          return;
+        }
+
+        cachedSessionToken = sessionToken;
+        await fetchVerifiedRoleAndRedirect(user, sessionToken);
+      }
+
+      // =========================================================================
+      // STATE 1: INITIALIZING CLERK AND ORCHESTRATING AUTH CALLBACK
+      // =========================================================================
       async function executeCallback() {
         if (detectInAppBrowser()) {
           const inAppBox = document.getElementById('inAppNoticeBox');
@@ -302,154 +489,233 @@
           }
         }
 
+        // 1. Check for explicit OAuth error in URL parameters
+        try {
+          const searchParams = new URLSearchParams(window.location.search);
+          const errCode = searchParams.get('error') || searchParams.get('error_code');
+          const errDesc = searchParams.get('error_description');
+          if (errCode) {
+            if (errCode === 'access_denied') {
+              showError('Google sign-in was cancelled. Please try signing in again.');
+            } else {
+              showError(errDesc || `Authentication error (${errCode}). Please try again.`);
+            }
+            return;
+          }
+        } catch (e) {}
+
+        // 2. Wait for Clerk SDK object to load
+        currentAuthState = AUTH_STATES.INITIALIZING_CLERK;
+        updateStep('Connecting to authentication authority...', 20);
+
+        let clerkWaitAttempts = 0;
+        while (!window.Clerk && clerkWaitAttempts < 60) {
+          await new Promise(r => setTimeout(r, 50));
+          clerkWaitAttempts++;
+        }
+
         if (!window.Clerk) {
-          setTimeout(executeCallback, 50);
+          showError('Authentication service failed to initialize. Please check your internet connection and try again.');
           return;
         }
 
         try {
-          updateStep('Initializing Clerk security environment...', 30);
           if (!window.Clerk.loaded) {
             await window.Clerk.load({
-              publishableKey: CLERK_PUBLISHABLE_KEY,
-              // Intercept internal routing to prevent hard page-reloads during session finalization
-              routerPush: (to) => {
-                console.log('[SSO Callback] Clerk routerPush intercepted:', to);
-              },
-              routerReplace: (to) => {
-                console.log('[SSO Callback] Clerk routerReplace intercepted:', to);
+              publishableKey: CLERK_PUBLISHABLE_KEY
+            });
+          }
+
+          // 3. Fast-path: Check if active session already exists on Clerk
+          let activeUser = window.Clerk.user || window.Clerk.session?.user;
+          if (activeUser) {
+            await handleActiveSessionEstablished(activeUser);
+            return;
+          }
+
+          currentAuthState = AUTH_STATES.WAITING_FOR_ACTIVE_SESSION;
+          updateStep('Validating OAuth credentials...', 40);
+
+          // 4. Register auth state listener
+          if (typeof window.Clerk.addListener === 'function') {
+            window.Clerk.addListener(async (emission) => {
+              const u = emission?.user || window.Clerk.user || window.Clerk.session?.user;
+              if (u && !isFinalizing) {
+                console.log('[SSO Callback] Auth state listener detected user:', u.id);
+                await handleActiveSessionEstablished(u);
               }
             });
           }
 
-          updateStep('Validating OAuth callback credentials...', 50);
-
-          // 1. Process redirect callback
+          // 5. Process Clerk redirect callback WITHOUT any client dashboard fallback!
           if (typeof window.Clerk.handleRedirectCallback === 'function') {
             try {
               await window.Clerk.handleRedirectCallback({
-                __internal_navigateOnSetActive: async ({ session, redirectUrl }) => {
-                  console.log('[SSO Callback] Session activated in redirect handler:', session?.id);
+                firstFactorUrl: '/?login=true',
+                secondFactorUrl: '/sso-callback/',
+                continueSignUpUrl: '/sso-callback/',
+                transferable: true,
+                __internal_navigateOnSetActive: async ({ session }) => {
+                  console.log('[SSO Callback] __internal_navigateOnSetActive triggered with session:', session?.id);
+                  const resolved = session?.user || window.Clerk.user || window.Clerk.session?.user;
+                  if (resolved && !isFinalizing) {
+                    await handleActiveSessionEstablished(resolved);
+                  }
                 }
               }, async (to) => {
-                console.log('[SSO Callback] customNavigate intercepted:', to);
+                console.log('[SSO Callback] Intercepted navigation to:', to);
+                if (to && to.includes('factor-two')) {
+                  if (window.Clerk.client?.signIn?.status === 'needs_second_factor') {
+                    show2FAPrompt(window.Clerk.client.signIn);
+                    return;
+                  }
+                }
+                const resolved = window.Clerk.user || window.Clerk.session?.user;
+                if (resolved && !isFinalizing) {
+                  await handleActiveSessionEstablished(resolved);
+                }
               });
             } catch (cbErr) {
               console.warn('[SSO Callback] handleRedirectCallback notice:', cbErr);
             }
           }
 
-          // 2. Resilient session resolution loop (up to 3s) allowing cross-domain token sync
-          let user = window.Clerk.user;
+          if (isFinalizing) return;
+
+          activeUser = window.Clerk.user || window.Clerk.session?.user;
+          if (activeUser) {
+            await handleActiveSessionEstablished(activeUser);
+            return;
+          }
+
+          // 6. Inspect Clerk client state for transferable or completed sessions
           const client = window.Clerk.client;
-          const startTime = Date.now();
-          const maxWaitMs = 3000;
+          if (client) {
+            // Case A: 2FA required
+            if (client.signIn?.status === 'needs_second_factor') {
+              show2FAPrompt(client.signIn);
+              return;
+            }
 
-          while (!user && (Date.now() - startTime < maxWaitMs)) {
-            user = window.Clerk.user;
-            if (user) break;
-
-            if (client) {
-              // Case A: Session already active in Clerk client
-              const activeSession = client.sessions?.find(s => s.status === 'active') || client.sessions?.[0];
-              if (activeSession && activeSession.id) {
+            // Case B: Transferable First Factor (new Google user registration)
+            if (client.signIn?.status === 'needs_first_factor') {
+              const fv = client.signIn.firstFactorVerification;
+              if (fv && fv.status === 'transferable') {
+                updateStep('Registering new client workspace...', 60);
                 try {
-                  await window.Clerk.setActive({ session: activeSession.id });
-                  user = window.Clerk.user || activeSession.user;
-                  if (user) break;
-                } catch (actErr) {
-                  console.warn('[SSO Callback] setActive error on client session:', actErr);
-                }
-              }
-
-              // Case B: Completed SignIn with createdSessionId
-              if (client.signIn?.status === 'complete' && client.signIn.createdSessionId) {
-                try {
-                  await window.Clerk.setActive({ session: client.signIn.createdSessionId });
-                  user = window.Clerk.user;
-                  if (user) break;
-                } catch (actErr) {
-                  console.warn('[SSO Callback] setActive error on signIn session:', actErr);
-                }
-              }
-
-              // Case C: Completed SignUp with createdSessionId
-              if (client.signUp?.status === 'complete' && client.signUp.createdSessionId) {
-                try {
-                  await window.Clerk.setActive({ session: client.signUp.createdSessionId });
-                  user = window.Clerk.user;
-                  if (user) break;
-                } catch (actErr) {
-                  console.warn('[SSO Callback] setActive error on signUp session:', actErr);
-                }
-              }
-
-              // Case D: 2FA Required
-              if (client.signIn?.status === 'needs_second_factor') {
-                show2FAPrompt(client.signIn);
-                return;
-              }
-
-              // Case E: Transferable First Factor (new social registration)
-              if (client.signIn?.status === 'needs_first_factor') {
-                const fv = client.signIn.firstFactorVerification;
-                if (fv && fv.status === 'transferable') {
-                  updateStep('Registering new member with Whiz Studio...', 65);
-                  try {
-                    const completeSignUp = await client.signUp.create({ transfer: true });
-                    if (completeSignUp.status === 'complete' && completeSignUp.createdSessionId) {
-                      await window.Clerk.setActive({ session: completeSignUp.createdSessionId });
-                      user = window.Clerk.user;
-                      if (user) break;
-                    } else if (completeSignUp.status === 'missing_requirements') {
-                      if (completeSignUp.missingFields && completeSignUp.missingFields.includes('username')) {
-                        const rawEmail = completeSignUp.emailAddress || 'client';
-                        const basePart = rawEmail.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '');
-                        const candidate = `${basePart.slice(0, 16)}_${Math.random().toString(36).slice(2, 6)}`;
-                        const updated = await completeSignUp.update({ username: candidate });
-                        if (updated.status === 'complete' && updated.createdSessionId) {
-                          await window.Clerk.setActive({ session: updated.createdSessionId });
-                          user = window.Clerk.user;
-                          if (user) break;
+                  const completeSignUp = await client.signUp.create({ transfer: true });
+                  if (completeSignUp.status === 'complete' && completeSignUp.createdSessionId) {
+                    await window.Clerk.setActive({ session: completeSignUp.createdSessionId });
+                    activeUser = window.Clerk.user || window.Clerk.session?.user;
+                    if (activeUser) {
+                      await handleActiveSessionEstablished(activeUser);
+                      return;
+                    }
+                  } else if (completeSignUp.status === 'missing_requirements') {
+                    if (completeSignUp.missingFields && completeSignUp.missingFields.includes('username')) {
+                      const rawEmail = completeSignUp.emailAddress || 'client';
+                      const basePart = rawEmail.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '');
+                      const candidate = `${basePart.slice(0, 14)}_${Math.random().toString(36).slice(2, 6)}`;
+                      const updated = await completeSignUp.update({ username: candidate });
+                      if (updated.status === 'complete' && updated.createdSessionId) {
+                        await window.Clerk.setActive({ session: updated.createdSessionId });
+                        activeUser = window.Clerk.user || window.Clerk.session?.user;
+                        if (activeUser) {
+                          await handleActiveSessionEstablished(activeUser);
+                          return;
                         }
                       }
                     }
-                  } catch (transferErr) {
-                    console.warn('[SSO Callback] Transfer error:', transferErr);
                   }
-                }
-              }
-
-              // Case F: Direct SignUp missing requirements
-              if (client.signUp?.status === 'missing_requirements') {
-                if (client.signUp.missingFields && client.signUp.missingFields.includes('username')) {
-                  const rawEmail = client.signUp.emailAddress || 'client';
-                  const basePart = rawEmail.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '');
-                  const candidate = `${basePart.slice(0, 16)}_${Math.random().toString(36).slice(2, 6)}`;
-                  try {
-                    const updated = await client.signUp.update({ username: candidate });
-                    if (updated.status === 'complete' && updated.createdSessionId) {
-                      await window.Clerk.setActive({ session: updated.createdSessionId });
-                      user = window.Clerk.user;
-                      if (user) break;
-                    }
-                  } catch (upErr) {
-                    console.warn('[SSO Callback] SignUp username update error:', upErr);
-                  }
+                } catch (transferErr) {
+                  console.warn('[SSO Callback] Transfer notice:', transferErr);
                 }
               }
             }
 
-            await new Promise(res => setTimeout(res, 200));
+            // Case C: Direct SignUp missing requirements
+            if (client.signUp?.status === 'missing_requirements') {
+              if (client.signUp.missingFields && client.signUp.missingFields.includes('username')) {
+                const rawEmail = client.signUp.emailAddress || 'client';
+                const basePart = rawEmail.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '');
+                const candidate = `${basePart.slice(0, 14)}_${Math.random().toString(36).slice(2, 6)}`;
+                try {
+                  const updated = await client.signUp.update({ username: candidate });
+                  if (updated.status === 'complete' && updated.createdSessionId) {
+                    await window.Clerk.setActive({ session: updated.createdSessionId });
+                    activeUser = window.Clerk.user || window.Clerk.session?.user;
+                    if (activeUser) {
+                      await handleActiveSessionEstablished(activeUser);
+                      return;
+                    }
+                  }
+                } catch (upErr) {
+                  console.warn('[SSO Callback] SignUp username update notice:', upErr);
+                }
+              }
+            }
+
+            // Case D: Completed SignIn with createdSessionId
+            if (client.signIn?.status === 'complete' && client.signIn.createdSessionId) {
+              try {
+                await window.Clerk.setActive({ session: client.signIn.createdSessionId });
+                activeUser = window.Clerk.user || window.Clerk.session?.user;
+                if (activeUser) {
+                  await handleActiveSessionEstablished(activeUser);
+                  return;
+                }
+              } catch (actErr) {
+                console.warn('[SSO Callback] setActive signIn notice:', actErr);
+              }
+            }
+
+            // Case E: Completed SignUp with createdSessionId
+            if (client.signUp?.status === 'complete' && client.signUp.createdSessionId) {
+              try {
+                await window.Clerk.setActive({ session: client.signUp.createdSessionId });
+                activeUser = window.Clerk.user || window.Clerk.session?.user;
+                if (activeUser) {
+                  await handleActiveSessionEstablished(activeUser);
+                  return;
+                }
+              } catch (actErr) {
+                console.warn('[SSO Callback] setActive signUp notice:', actErr);
+              }
+            }
           }
 
-          if (user) {
-            await finalizeAuth(user);
+          // 7. Polling loop for cross-domain session activation
+          const startTime = Date.now();
+          const maxWaitMs = 8000;
+
+          while (!activeUser && (Date.now() - startTime < maxWaitMs)) {
+            updateStep('Finalizing session credentials...', 60);
+
+            activeUser = window.Clerk.user || window.Clerk.session?.user;
+            if (activeUser) break;
+
+            const cClient = window.Clerk.client;
+            if (cClient) {
+              const activeSession = cClient.sessions?.find(s => s.status === 'active') || cClient.sessions?.[0];
+              if (activeSession && activeSession.id) {
+                try {
+                  await window.Clerk.setActive({ session: activeSession.id });
+                  activeUser = window.Clerk.user || activeSession.user || window.Clerk.session?.user;
+                  if (activeUser) break;
+                } catch (actErr) {}
+              }
+            }
+
+            await new Promise(r => setTimeout(r, 200));
+          }
+
+          if (activeUser) {
+            await handleActiveSessionEstablished(activeUser);
             return;
           }
 
           if (window.Clerk.session && window.Clerk.session.user) {
-            await finalizeAuth(window.Clerk.session.user);
+            await handleActiveSessionEstablished(window.Clerk.session.user);
             return;
           }
 
