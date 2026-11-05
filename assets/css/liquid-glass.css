@@ -6,15 +6,24 @@
    ========================================================================== */
 
 :root {
-  --brand-whiz: #147D64;
-  --brand-emerald: #059669;
-  --brand-accent: #00A86B;
-  --brand-dark: #172B36;
-  --brand-deep: #065F46;
-  --brand-light: #F4FAF7;
-  --brand-border: #E3E9EF;
-  --brand-muted: #5F7180;
-  --brand-glow: rgba(20, 125, 100, 0.35);
+  /* Official Whiz Studio Brand Colors */
+  --brand-emerald: #087F70;
+  --brand-deep: #075C51;
+  --brand-pale: #EAF5F1;
+  --brand-pale-emerald: #EAF5F1;
+  --brand-gold: #D9AE24;
+  --brand-deep-gold: #B98C19;
+  --brand-pale-gold: #FDF8E7;
+  --brand-whiz: #087F70;
+  --brand-accent: #087F70;
+  --brand-dark: #0F172A;
+  --brand-charcoal: #172B36;
+  --brand-light: #F8FAFC;
+  --brand-border: #E2E8F0;
+  --brand-border-subtle: #E3E9EF;
+  --brand-muted: #64748B;
+  --brand-glow: rgba(8, 127, 112, 0.25);
+  --brand-gold-glow: rgba(217, 174, 36, 0.3);
 
   /* Master Liquid Glass Tokens */
   --liquid-surface: rgba(255, 255, 255, 0.78);
@@ -1124,3 +1133,125 @@ button {
 .whiz-glass-portal-root .glass-select-menu.dropup {
   bottom: auto !important;
 }
+
+
+/* ==========================================================================
+   WHIZ OFFICIAL BUTTON SYSTEM: EMERALD (PRIMARY) + GOLD (EMPHASIS) + NEUTRAL
+   ========================================================================== */
+.btn-liquid-primary,
+.btn-glass-primary,
+.btn-whiz-primary {
+  background: linear-gradient(135deg, #087F70 0%, #075C51 100%) !important;
+  color: #FFFFFF !important;
+  border: 1px solid rgba(255, 255, 255, 0.28) !important;
+  box-shadow: 0 4px 14px 0 rgba(8, 127, 112, 0.25), inset 0 1px 1px 0 rgba(255, 255, 255, 0.45) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-liquid-primary:hover,
+.btn-glass-primary:hover,
+.btn-whiz-primary:hover {
+  background: linear-gradient(135deg, #099180 0%, #086d60 100%) !important;
+  box-shadow: 0 6px 20px 0 rgba(8, 127, 112, 0.35), inset 0 1px 1px 0 rgba(255, 255, 255, 0.6) !important;
+  transform: translateY(-1px) !important;
+}
+
+.btn-liquid-gold,
+.btn-glass-gold,
+.btn-whiz-gold {
+  background: linear-gradient(135deg, #D9AE24 0%, #B98C19 100%) !important;
+  color: #172B36 !important;
+  font-weight: 700 !important;
+  border: 1px solid rgba(255, 255, 255, 0.45) !important;
+  box-shadow: 0 4px 14px 0 rgba(217, 174, 36, 0.25), inset 0 1px 1px 0 rgba(255, 255, 255, 0.6) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-liquid-gold:hover,
+.btn-glass-gold:hover,
+.btn-whiz-gold:hover {
+  background: linear-gradient(135deg, #E6BC28 0%, #C9991B 100%) !important;
+  box-shadow: 0 6px 20px 0 rgba(217, 174, 36, 0.35), inset 0 1px 1px 0 rgba(255, 255, 255, 0.75) !important;
+  transform: translateY(-1px) !important;
+}
+
+.btn-liquid-secondary,
+.btn-glass-secondary,
+.btn-whiz-secondary {
+  background: #FFFFFF !important;
+  color: #1E293B !important;
+  border: 1px solid #E2E8F0 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+  transition: all 0.2s ease !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-liquid-secondary:hover,
+.btn-glass-secondary:hover,
+.btn-whiz-secondary:hover {
+  background: #F8FAFC !important;
+  border-color: rgba(8, 127, 112, 0.35) !important;
+  color: #087F70 !important;
+  transform: translateY(-1px) !important;
+}
+
+.btn-liquid-destructive {
+  background: #FEF2F2 !important;
+  color: #DC2626 !important;
+  border: 1px solid #FECACA !important;
+  transition: all 0.2s ease !important;
+}
+
+.btn-liquid-destructive:hover {
+  background: #FEE2E2 !important;
+  border-color: #F87171 !important;
+  color: #B91C1C !important;
+}
+
+/* Master Floating Liquid Glass Navigation Dock */
+.whiz-floating-dock {
+  position: fixed !important;
+  bottom: 12px !important;
+  left: 16px !important;
+  right: 16px !important;
+  margin: 0 auto !important;
+  max-width: 480px !important;
+  z-index: 45 !important;
+  border-radius: 20px !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.9) !important;
+  box-shadow: 0 10px 30px -4px rgba(15, 23, 42, 0.12), 0 2px 8px -2px rgba(8, 127, 112, 0.06), inset 0 1px 1px 0 rgba(255, 255, 255, 0.95) !important;
+  padding: 6px 8px !important;
+}
+
+.whiz-floating-dock-item {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 6px 10px !important;
+  border-radius: 14px !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  color: #64748B !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.whiz-floating-dock-item.active {
+  background: #EAF5F1 !important;
+  color: #087F70 !important;
+  font-weight: 700 !important;
+  box-shadow: 0 1px 3px rgba(8, 127, 112, 0.08) !important;
+}
+
+/* End Whiz Button System */

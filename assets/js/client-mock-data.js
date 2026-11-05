@@ -120,6 +120,7 @@
   };
 
   window.__whizClientMock = {
+    data: mockClientData,
     getData: () => mockClientData,
 
     handleRequest: function (endpoint, options = {}) {
@@ -135,6 +136,19 @@
 
       // 2. Overview
       if (ep === '/portal/client-overview') {
+        const fullOverview = {
+          ...mockClientData.overview,
+          services: mockClientData.services,
+          projects: mockClientData.tasks,
+          invoices: mockClientData.finance ? mockClientData.finance.invoices : [],
+          payments: mockClientData.finance ? mockClientData.finance.payments : [],
+          finance: mockClientData.finance,
+          cif: mockClientData.cif,
+          overallProgressPercent: mockClientData.overview.completionRate || 82
+        };
+        return Promise.resolve({ ok: true, status: 200, data: { success: true, data: fullOverview } });
+      }
+      if (ep === '__unused_legacy_overview__') {
         return Promise.resolve({ ok: true, status: 200, data: { success: true, data: mockClientData.overview } });
       }
 

@@ -76,6 +76,9 @@
   };
 
   async function apiFetch(endpoint, options = {}) {
+    if (state.isPreview && window.__whizClientMock) {
+      return window.__whizClientMock.handleRequest(endpoint, options);
+    }
     const headers = {
       'Content-Type': 'application/json',
       ...(options.headers || {})
@@ -215,8 +218,8 @@
       const overviewRes = await apiFetch('/portal/client-overview');
       if (overviewRes.ok && overviewRes.data && overviewRes.data.success && overviewRes.data.data) {
         const d = overviewRes.data.data;
-        state.services = d.activeServices || d.services || [];
-        state.projects = d.activeProjects || d.projects || [];
+        state.services = Array.isArray(d.services) ? d.services : (Array.isArray(d.activeServices) ? d.activeServices : []);
+        state.projects = Array.isArray(d.projects) ? d.projects : (Array.isArray(d.activeProjects) ? d.activeProjects : []);
         state.payments = d.recentPayments || d.payments || [];
         state.invoices = d.invoices || [];
         state.finance = d.finance || null;
@@ -279,6 +282,8 @@
     // Overall Progress Badge & Donut Chart
     const progressBadge = document.getElementById('clientOverallProgressBadge');
     if (progressBadge) progressBadge.textContent = `${state.overallProgress}%`;
+    const miniProg = document.getElementById('statOverallProgressPercent');
+    if (miniProg) miniProg.textContent = `${state.overallProgress}%`;
 
     const canvas = document.getElementById('chartClientCompletion');
     const emptyState = document.getElementById('chartClientEmptyState');
@@ -434,7 +439,7 @@
                 <i class="fa-solid fa-shapes"></i>
               </div>
               <div>
-                <h4 class="text-sm sm:text-base font-bold text-[#172B36]">${escapeHtml(s.service_name || s.serviceName || 'Marketing Service')}</h4>
+                <h4 class="text-sm sm:text-base font-bold text-[#172B36]">${escapeHtml(s.service_name || s.serviceName || s.name || 'Marketing Service')}</h4>
                 <span class="text-xs text-slate-500">${escapeHtml(s.package_name || s.packageName || 'Standard Agency Package')}</span>
               </div>
             </div>
@@ -886,12 +891,12 @@
     if (headerBadge && headerText && headerDot) {
       headerBadge.classList.remove('hidden');
       if (isComplete) {
-        headerBadge.className = 'flex items-center space-x-1.5 px-3 py-1.5 rounded-full border text-[11px] font-semibold transition-all cursor-pointer shadow-2xs select-none bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100';
+        headerBadge.className = 'hidden md:flex items-center space-x-1.5 px-3 py-1.5 rounded-full border text-[11px] font-semibold transition-all cursor-pointer shadow-2xs select-none bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100';
         headerDot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-500';
         headerText.textContent = 'Verified';
         headerBadge.title = 'CIF Profile 100% verified. Invoice generation active.';
       } else {
-        headerBadge.className = 'flex items-center space-x-1.5 px-3 py-1.5 rounded-full border text-[11px] font-semibold transition-all cursor-pointer shadow-2xs select-none bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100';
+        headerBadge.className = 'hidden md:flex items-center space-x-1.5 px-3 py-1.5 rounded-full border text-[11px] font-semibold transition-all cursor-pointer shadow-2xs select-none bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100';
         headerDot.className = 'w-1.5 h-1.5 rounded-full bg-rose-500';
         headerText.textContent = 'Unverified';
         headerBadge.title = 'CIF profile incomplete. Click to complete profile.';
@@ -1472,6 +1477,63 @@
   async function checkAuthAndInit() {
     const authGuard = document.getElementById('clientAuthGuard');
     const mainLayout = document.getElementById('clientMainLayout');
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const isPreview = urlParams.get('preview') === '1' || urlParams.get('preview') === 'true' || urlParams.get('demo') === '1' || (window.self !== window.top && urlParams.get('preview') !== '0');
+
+    if (isPreview) {
+      state.isPreview = true;
+      const mockData = window.__whizClientMock ? (window.__whizClientMock.data || (typeof window.__whizClientMock.getData === 'function' ? window.__whizClientMock.getData() : null)) : null;
+      const user = (mockData && mockData.user) || {
+        id: 'usr_client_01',
+        fullName: 'Sarah Jenkins',
+        full_name: 'Sarah Jenkins',
+        email: 'sarah@apexglobal.io',
+        username: 'sarahjenkins',
+        role: 'client',
+        companyName: 'Apex Global Inc.',
+        company_name: 'Apex Global Inc.',
+        phone: '+1 (555) 349-2041',
+        city: 'San Francisco',
+        country: 'United States'
+      };
+
+      state.currentUser = user;
+      state.clientProfile = user;
+
+      const name = user.fullName;
+      const email = user.email;
+
+      document.querySelectorAll('.client-greeting-name').forEach(el => el.textContent = name);
+      document.querySelectorAll('.clientDisplayName').forEach(el => el.textContent = name);
+      document.querySelectorAll('.clientDisplayEmail').forEach(el => el.textContent = email);
+
+      const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'SJ';
+      document.querySelectorAll('.userAvatarText').forEach(el => el.textContent = initials);
+
+      const setMail = document.getElementById('settingsEmail');
+      if (setMail) setMail.textContent = email;
+      const setAuth = document.getElementById('settingsAuthStatus');
+      if (setAuth) setAuth.innerHTML = '<i class="fa-solid fa-shield-check text-[#087F70]"></i> Verified (Google & Email SSO)';
+
+      if (authGuard) authGuard.classList.add('hidden');
+      if (mainLayout) mainLayout.classList.remove('hidden');
+
+      try {
+        await loadCifProfile();
+      } catch (cifErr) {
+        console.warn('loadCifProfile non-fatal:', cifErr);
+      }
+      try {
+        populateProfileForm(state.cif || state.clientProfile);
+      } catch (profileErr) {
+        console.warn('Non-fatal profile form population warning:', profileErr);
+      }
+
+      switchTab('overview');
+      loadClientData();
+      return;
+    }
 
     if (!window.Clerk) {
       clientClerkAttempts++;

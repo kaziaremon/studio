@@ -83,6 +83,23 @@
     if (!profile) return;
     const role = profile.role || (isCurrentUserOwner() ? 'owner' : 'client');
     const isOwner = isCurrentUserOwner();
+    // Update header role label
+    const headerRoleEl = document.getElementById('adminHeaderRoleLabel');
+    if (headerRoleEl) {
+      if (isOwner || role === 'owner' || role === 'super_admin') {
+        headerRoleEl.textContent = 'Super Admin Console';
+      } else if (role === 'admin') {
+        headerRoleEl.textContent = 'Admin Workspace';
+      } else if (role === 'accounts') {
+        headerRoleEl.textContent = 'Accounts Portal';
+      } else if (role === 'employee') {
+        headerRoleEl.textContent = 'Employee Workspace';
+      }
+    }
+    const secRoleHeader = document.getElementById('secRoleBadgeHeader');
+    if (secRoleHeader) {
+      secRoleHeader.innerHTML = `<i class="fa-solid fa-shield-halved text-[9px]"></i> ${role.toUpperCase()}`;
+    }
 
     // 1. Update dropdown role badge
     const badge = document.getElementById('dropdownRoleBadge');
@@ -571,7 +588,7 @@
         } else if (revByCurr.length === 1) {
           revEl.textContent = formatCurrency(revByCurr[0].total, revByCurr[0].currency);
         } else {
-          revEl.innerHTML = revByCurr.map(c => `<span class="inline-block mr-2">${formatCurrency(c.total, c.currency)}</span>`).join(' • ');
+          revEl.textContent = formatCurrency(revByCurr[0].total, revByCurr[0].currency);
         }
       }
 
@@ -5576,6 +5593,8 @@
 
       const emailEl = document.getElementById('secUserEmail');
       if (emailEl) emailEl.textContent = profile.email;
+      const emailHeaderEl = document.getElementById('secUserEmailHeader');
+      if (emailHeaderEl) emailHeaderEl.textContent = profile.email;
       const userEl = document.getElementById('secClerkUserId');
       if (userEl) userEl.innerHTML = '<span class="inline-flex items-center gap-1.5 text-xs text-emerald-700 font-semibold"><i class="fa-solid fa-shield-check text-[#147D64]"></i> Preview Session Active</span>';
 
