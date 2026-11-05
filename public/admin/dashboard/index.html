@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Whiz Studio | Super Admin Console</title>
   <meta name="robots" content="noindex, nofollow">
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=20261105">
+  <link rel="icon" type="image/png" href="/favicon.png?v=20261105">
 
   <!-- Clerk JavaScript SDK (Hobby / Free Tier Production CDN) -->
   <script async crossorigin="anonymous" data-clerk-publishable-key="pk_live_Y2xlcmsud2hpenN0dWRpby5hcnQk" src="https://clerk.whizstudio.art/npm/@clerk/clerk-js@5/dist/clerk.browser.js" type="text/javascript"></script>
@@ -28,14 +28,21 @@
         extend: {
           colors: {
             brand: {
-              whiz: '#147D64',
-              primary: '#147D64',
-              dark: '#172B36',
+              whiz: '#087F70',
+              primary: '#087F70',
+              emerald: '#087F70',
+              deep: '#075C51',
+              pale: '#EAF5F1',
+              gold: '#D9AE24',
+              'gold-deep': '#B98C19',
+              'gold-pale': '#FDF8E7',
+              dark: '#0F172A',
+              charcoal: '#172B36',
               light: '#F8FAFC',
-              border: '#E3E9EF',
+              border: '#E2E8F0',
               muted: '#64748B',
               surface: '#FFFFFF',
-              accent: '#00A86B'
+              accent: '#087F70'
             }
           },
           fontFamily: {
@@ -507,7 +514,7 @@
        ========================================================================= -->
   <div id="dashboardAuthGuard" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white/95 backdrop-blur-md text-center p-6 transition-opacity duration-300">
     <div class="mb-5 flex items-center justify-center">
-      <img src="/assets/images/logo.png" alt="Whiz Studio" class="h-12 w-auto object-contain">
+      <img src="/assets/images/logo.png?v=20261105" alt="Whiz Studio" class="h-12 w-auto object-contain">
     </div>
     <h2 class="text-xl font-bold text-[#172B36] tracking-tight">Welcome to Whiz Studio</h2>
     <p class="text-xs text-slate-500 mt-2 flex items-center justify-center gap-2">
@@ -548,12 +555,12 @@
       <!-- 1. FIXED BRANDING HEADER (Whiz Studio Logo + Collapse Toggle Control) -->
       <div class="h-16 px-4 border-b border-[#E6ECE9] flex items-center justify-between shrink-0 bg-white">
         <!-- Expanded Logo -->
-        <a href="/" class="dock-expanded-only flex items-center gap-2.5 overflow-hidden group py-1" title="Whiz Studio Home">
-          <img src="/assets/images/logo.png" alt="Whiz Studio" class="h-8 w-auto object-contain transition-opacity group-hover:opacity-90">
+        <a href="/" class="dock-expanded-only flex items-center gap-2.5 overflow-hidden group py-0.5" title="Whiz Studio Home">
+          <img src="/assets/images/logo.png?v=20261105" alt="Whiz Studio" class="h-11 sm:h-12 w-auto object-contain transition-opacity group-hover:opacity-90">
         </a>
         <!-- Collapsed Icon Mark -->
         <a href="/" class="dock-collapsed-only hidden items-center justify-center p-1 group" title="Whiz Studio Home">
-          <img src="/favicon.png" alt="Whiz Studio" class="w-8 h-8 object-contain rounded-lg transition-transform group-hover:scale-105">
+          <img src="/favicon.png?v=20261105" alt="Whiz Studio" class="w-8 h-8 object-contain rounded-lg transition-transform group-hover:scale-105">
         </a>
         <!-- Toggle Control -->
         <button type="button" id="sidebarCollapseToggleBtn" class="w-8 h-8 rounded-lg flex items-center justify-center text-[#74817D] hover:text-[#087F70] hover:bg-[#EAF5F1] border border-transparent hover:border-[#087F70]/20 transition-all cursor-pointer select-none" aria-label="Collapse Navigation" title="Collapse sidebar (72px)">
@@ -797,7 +804,7 @@
       <!-- Drawer Header -->
       <div class="h-16 px-5 border-b border-[#E6ECE9] flex items-center justify-between shrink-0 bg-white">
         <a href="/" class="flex flex-col space-y-0.5">
-          <img src="/assets/images/logo.png" alt="Whiz Studio" class="h-7 w-auto object-contain self-start">
+          <img src="/assets/images/logo.png?v=20261105" alt="Whiz Studio" class="h-9 sm:h-10 w-auto object-contain self-start">
           <span class="text-[10px] text-[#087F70] font-extrabold uppercase tracking-wider pl-0.5">Super Admin Console</span>
         </a>
         <button type="button" id="mobileDrawerCloseBtn" class="w-10 h-10 rounded-xl bg-[#F7FAF9] hover:bg-[#EAF5F1] active:bg-[#E6ECE9] border border-[#E6ECE9] flex items-center justify-center text-[#74817D] hover:text-[#202D2A] cursor-pointer touch-manipulation transition-colors select-none" aria-label="Close Navigation">
@@ -926,8 +933,8 @@
 
         <!-- Center: Original Whiz Studio Logo (Mobile only, centered) -->
         <div class="md:hidden flex items-center justify-center absolute left-1/2 -translate-x-1/2 pointer-events-auto">
-          <a href="/" class="flex items-center py-1">
-            <img src="/assets/images/logo.png" alt="Whiz Studio" class="h-7 w-auto object-contain">
+          <a href="/" class="flex items-center py-0.5">
+            <img src="/assets/images/logo.png?v=20261105" alt="Whiz Studio" class="h-9 sm:h-10 w-auto object-contain">
           </a>
         </div>
 
@@ -1008,24 +1015,27 @@
                TAB 1: OVERVIEW & KPIS
                ================================================================= -->
           <div id="view_overview" class="space-y-6">
-            <!-- Welcome Hero Banner -->
-            <div class="p-6 sm:p-8 rounded-3xl bg-white border border-[#E3E9EF] shadow-sm relative overflow-hidden">
-              <div class="absolute -right-10 -bottom-10 w-64 h-64 rounded-full bg-brand-whiz/10 blur-3xl pointer-events-none"></div>
-              <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <!-- Refined Executive Overview Header -->
+            <div class="p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-white border border-[#E2E8F0] shadow-xs relative overflow-hidden">
+              <div class="absolute -right-8 -bottom-8 w-48 h-48 rounded-full bg-[#087F70]/5 blur-2xl pointer-events-none"></div>
+              <div class="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <p class="text-[11px] font-bold uppercase tracking-wider text-[#147D64] mb-1">Super Admin Console</p>
-                  <h1 class="text-2xl sm:text-3xl font-black text-[#172B36] tracking-tight">Super Admin Command Center</h1>
-                  <p class="text-xs sm:text-sm text-slate-500 mt-1 max-w-2xl">
-                    High-performance agency management. Real-time operational synchronization.
+                  <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20 mb-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-[#087F70] animate-pulse"></span>
+                    <span id="adminHeaderRoleLabel">Super Admin Console</span>
+                  </div>
+                  <h1 class="text-xl sm:text-2xl font-black text-[#172B36] tracking-tight">Overview</h1>
+                  <p class="text-xs sm:text-sm text-slate-500 mt-0.5 max-w-xl">
+                    Manage your clients, services, and operations with real-time accuracy.
                   </p>
                 </div>
-                <div class="flex flex-wrap items-center gap-3">
-                  <button type="button" id="btnQuickAddClient" class="px-4 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm hover:shadow-md transition-all flex items-center space-x-2 cursor-pointer">
+                <div class="flex items-center gap-2.5 shrink-0">
+                  <button type="button" id="btnQuickAddClient" class="px-4 py-2 rounded-xl text-xs font-bold btn-liquid-primary shadow-xs hover:shadow transition-all flex items-center space-x-2 cursor-pointer">
                     <i class="fa-solid fa-user-plus text-xs"></i>
                     <span>Add New Client</span>
                   </button>
-                  <button type="button" id="btnQuickRecordPayment" class="px-4 py-2.5 rounded-xl text-xs font-bold bg-white text-slate-800 hover:bg-slate-50 border border-[#E3E9EF] shadow-sm transition-all flex items-center space-x-2 cursor-pointer">
-                    <i class="fa-solid fa-receipt text-xs text-brand-whiz"></i>
+                  <button type="button" id="btnQuickRecordPayment" class="px-4 py-2 rounded-xl text-xs font-bold btn-liquid-gold shadow-xs hover:shadow transition-all flex items-center space-x-2 cursor-pointer">
+                    <i class="fa-solid fa-file-invoice-dollar text-xs"></i>
                     <span>Record Payment</span>
                   </button>
                 </div>
@@ -1075,7 +1085,7 @@
                   <i class="fa-solid fa-arrow-right text-[10px] text-[#147D64] opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"></i>
                 </div>
                 <div class="text-2xl sm:text-3xl font-black text-emerald-600" id="statCompletedTasks">0</div>
-                <p class="text-[10px] text-slate-500 font-medium">Delivered Checkpoints</p>
+                <p class="text-[10px] text-slate-500 font-medium">Completed Tasks</p>
               </div>
 
               <!-- KPI Card 5: Pending Tasks -->
@@ -1085,7 +1095,7 @@
                   <i class="fa-solid fa-arrow-right text-[10px] text-[#147D64] opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"></i>
                 </div>
                 <div class="text-2xl sm:text-3xl font-black text-amber-600" id="statPendingTasks">0</div>
-                <p class="text-[10px] text-slate-500 font-medium">Scheduled Queue</p>
+                <p class="text-[10px] text-slate-500 font-medium">Active Queue</p>
               </div>
 
               <!-- KPI Card 6: Confirmed Revenue -->
@@ -1094,7 +1104,7 @@
                   <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Confirmed Revenue</span>
                   <i class="fa-solid fa-arrow-right text-[10px] text-[#147D64] opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"></i>
                 </div>
-                <div class="text-xl sm:text-2xl font-black text-[#172B36] truncate" id="statConfirmedRevenue">$0.00</div>
+                <div class="text-lg sm:text-xl lg:text-2xl font-black text-[#172B36] font-mono leading-tight" id="statConfirmedRevenue">$0.00</div>
                 <p class="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
                   <i class="fa-solid fa-receipt text-[9px]"></i> Verified Ledger
                 </p>
@@ -1873,7 +1883,7 @@
                       <div class="flex items-start justify-between pt-2">
                         <!-- Top-Left Logo -->
                         <div class="w-40 sm:w-48">
-                          <img src="/assets/images/logo.png" alt="Whiz Studio" class="w-full h-auto object-contain">
+                          <img src="/assets/images/logo.png?v=20261105" alt="Whiz Studio" class="w-full h-auto object-contain">
                         </div>
 
                         <!-- Top-Right Title & Client Copy -->
@@ -2534,49 +2544,85 @@
               </div>
             </div>
 
-            <!-- SECTION A: Verified Account Identity & Security Health Overview -->
-            <div class="p-6 sm:p-8 rounded-3xl bg-white border border-[#E3E9EF] shadow-xs space-y-5">
-              <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
-                <h3 class="text-sm font-extrabold text-[#172B36] flex items-center gap-2">
-                  <i class="fa-solid fa-shield-halved text-[#147D64]"></i>
-                  <span>Account Identity &amp; Status</span>
-                </h3>
-                <span class="text-xs font-mono text-slate-400" id="secLastActiveTime">Session Verified</span>
+            <!-- SECTION A: World-Class Admin Profile Identity Header -->
+            <div class="p-6 sm:p-7 rounded-3xl bg-white border border-[#E2E8F0] shadow-xs relative overflow-hidden space-y-6">
+              <div class="absolute -right-10 -bottom-10 w-56 h-56 rounded-full bg-[#087F70]/5 blur-3xl pointer-events-none"></div>
+              
+              <!-- Profile Header Row -->
+              <div class="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-[#E2E8F0]">
+                <div class="flex items-center space-x-4">
+                  <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#087F70] to-[#075C51] text-white flex items-center justify-center font-bold text-xl uppercase shadow-sm select-none admin-display-initials shrink-0">
+                    SA
+                  </div>
+                  <div class="min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <h3 class="text-lg sm:text-xl font-black text-[#172B36] tracking-tight truncate admin-display-name">Administrator</h3>
+                      <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20" id="secRoleBadgeHeader">
+                        <i class="fa-solid fa-shield-halved text-[9px]"></i> Super Admin
+                      </span>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500 mt-1">
+                      <span class="font-mono text-slate-600 admin-display-username">@admin</span>
+                      <span class="text-slate-300">•</span>
+                      <span class="font-mono text-slate-600" id="secUserEmailHeader">admin@whizstudio.art</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="flex items-center gap-2 self-start sm:self-auto">
+                  <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-[#087F70] border border-emerald-200">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>Session Protected</span>
+                  </span>
+                </div>
               </div>
 
-              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
-                  <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Full Name</span>
+              <!-- 4-Card Identity & Platform Access Overview Grid -->
+              <div class="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="p-4 rounded-2xl bg-slate-50/80 border border-slate-100 space-y-1">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Full Name</span>
+                    <i class="fa-solid fa-user text-xs text-slate-400"></i>
+                  </div>
                   <div class="text-sm font-bold text-[#172B36] truncate" id="secFullName">—</div>
                   <div class="text-[11px] text-slate-500 font-mono" id="secUsername">@admin</div>
                 </div>
 
-                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
-                  <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Verified Email</span>
+                <div class="p-4 rounded-2xl bg-slate-50/80 border border-slate-100 space-y-1">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Verified Email</span>
+                    <i class="fa-solid fa-envelope text-xs text-slate-400"></i>
+                  </div>
                   <div class="text-sm font-bold text-[#172B36] font-mono truncate" id="secUserEmail">—</div>
                   <div class="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
-                    <i class="fa-solid fa-circle-check text-[10px]"></i> Verified Identity
+                    <i class="fa-solid fa-circle-check text-[10px]"></i> SSO Verified Identity
                   </div>
                 </div>
 
-                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
-                  <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Account Role</span>
+                <div class="p-4 rounded-2xl bg-slate-50/80 border border-slate-100 space-y-1">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Account Role</span>
+                    <i class="fa-solid fa-id-badge text-xs text-slate-400"></i>
+                  </div>
                   <div id="secRoleBadge" class="pt-0.5">
-                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-blue-50 text-blue-700 border border-blue-200">
-                      <i class="fa-solid fa-shield-halved text-[10px]"></i> Admin
+                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20">
+                      <i class="fa-solid fa-shield-halved text-[10px]"></i> Super Admin
                     </span>
                   </div>
                   <div class="text-[11px] text-slate-400 font-medium">Platform Access Level</div>
                 </div>
 
-                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
-                  <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Auth Provider</span>
+                <div class="p-4 rounded-2xl bg-slate-50/80 border border-slate-100 space-y-1">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Auth Security</span>
+                    <i class="fa-solid fa-lock text-xs text-slate-400"></i>
+                  </div>
                   <div class="text-sm font-bold text-[#172B36] flex items-center gap-1.5" id="secAuthProvider">
                     <i class="fa-brands fa-google text-slate-700 text-xs"></i>
-                    <span>Clerk Verified</span>
+                    <span>Clerk SSO</span>
                   </div>
                   <div class="text-[11px] text-emerald-700 font-semibold" id="secClerkIdShort">
-                    <i class="fa-solid fa-shield-halved text-[10px] mr-1"></i>SSO Session Verified
+                    <i class="fa-solid fa-shield-check text-[10px] mr-1"></i>2FA Active &amp; Guarded
                   </div>
                 </div>
               </div>

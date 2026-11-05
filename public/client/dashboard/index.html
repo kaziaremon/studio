@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Whiz Studio | Client Workspace</title>
   <meta name="robots" content="noindex, nofollow">
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=20261105">
+  <link rel="icon" type="image/png" href="/favicon.png?v=20261105">
 
   <!-- Clerk JavaScript SDK -->
   <script async crossorigin="anonymous" data-clerk-publishable-key="pk_live_Y2xlcmsud2hpenN0dWRpby5hcnQk" src="https://clerk.whizstudio.art/npm/@clerk/clerk-js@5/dist/clerk.browser.js" type="text/javascript"></script>
@@ -28,14 +28,21 @@
         extend: {
           colors: {
             brand: {
-              whiz: '#147D64',
-              primary: '#147D64',
-              dark: '#12212B',
-              light: '#F7F9FC',
-              border: '#E3E9EF',
-              muted: '#5F7180',
+              whiz: '#087F70',
+              primary: '#087F70',
+              emerald: '#087F70',
+              deep: '#075C51',
+              pale: '#EAF5F1',
+              gold: '#D9AE24',
+              'gold-deep': '#B98C19',
+              'gold-pale': '#FDF8E7',
+              dark: '#0F172A',
+              charcoal: '#172B36',
+              light: '#F8FAFC',
+              border: '#E2E8F0',
+              muted: '#64748B',
               surface: '#FFFFFF',
-              accent: '#00A86B'
+              accent: '#087F70'
             }
           },
           fontFamily: {
@@ -74,7 +81,7 @@
        ========================================================================= -->
   <div id="clientAuthGuard" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white/95 backdrop-blur-md text-center p-6 transition-opacity duration-300">
     <div class="mb-5 flex items-center justify-center">
-      <img src="/assets/images/logo.png" alt="Whiz Studio" class="h-12 w-auto object-contain">
+      <img src="/assets/images/logo.png?v=20261105" alt="Whiz Studio" class="h-12 w-auto object-contain">
     </div>
     <h2 class="text-xl font-bold text-[#172B36] tracking-tight">Welcome to Whiz Studio</h2>
     <p class="text-xs text-slate-500 mt-2 flex items-center justify-center gap-2">
@@ -95,7 +102,7 @@
     <!-- Drawer Header: Clean Whiz Studio Logo + Close (No "CLIENT PORTAL" text label) -->
     <div class="h-16 flex items-center justify-between px-5 border-b border-[#E6ECE9] shrink-0 bg-white">
       <a href="/" class="flex items-center py-1 group" title="Whiz Studio Home">
-        <img src="/assets/images/logo.png" alt="Whiz Studio" class="h-7 w-auto object-contain self-start transition-opacity group-hover:opacity-90">
+        <img src="/assets/images/logo.png?v=20261105" alt="Whiz Studio" class="h-9 sm:h-10 w-auto object-contain self-start transition-opacity group-hover:opacity-90">
       </a>
       <button type="button" id="clientMobileCloseBtn" class="w-9 h-9 rounded-xl bg-[#F7FAF9] hover:bg-[#EAF5F1] active:bg-[#E6ECE9] border border-[#E6ECE9] flex items-center justify-center text-[#74817D] hover:text-[#202D2A] cursor-pointer touch-manipulation transition-colors select-none" aria-label="Close Navigation">
         <i class="fa-solid fa-xmark text-xs"></i>
@@ -178,8 +185,8 @@
     <aside class="hidden lg:flex flex-col w-64 bg-white border-r border-[#E6ECE9] shrink-0 select-none">
       <!-- Brand Logo Header (No "CLIENT PORTAL" text label - Task 1) -->
       <div class="h-16 px-5 border-b border-[#E6ECE9] flex items-center shrink-0 bg-white">
-        <a href="/" class="flex items-center group py-1" title="Whiz Studio Home">
-          <img src="/assets/images/logo.png" alt="Whiz Studio" class="h-8 w-auto object-contain transition-opacity group-hover:opacity-90">
+        <a href="/" class="flex items-center group py-0.5" title="Whiz Studio Home">
+          <img src="/assets/images/logo.png?v=20261105" alt="Whiz Studio" class="h-11 sm:h-12 w-auto object-contain transition-opacity group-hover:opacity-90">
         </a>
       </div>
 
@@ -269,8 +276,8 @@
 
         <!-- Center: Original Whiz Studio Logo (Mobile only, centered) -->
         <div class="lg:hidden flex items-center justify-center absolute left-1/2 -translate-x-1/2 pointer-events-auto">
-          <a href="/" class="flex items-center py-1">
-            <img src="/assets/images/logo.png" alt="Whiz Studio" class="h-7 w-auto object-contain">
+          <a href="/" class="flex items-center py-0.5">
+            <img src="/assets/images/logo.png?v=20261105" alt="Whiz Studio" class="h-9 sm:h-10 w-auto object-contain">
           </a>
         </div>
 
@@ -290,7 +297,7 @@
           <span id="clientSubheaderTitle" class="hidden"></span>
           
           <!-- Dynamic Header Verification Badge -->
-          <button type="button" id="clientHeaderVerificationBadge" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-full border text-[11px] font-semibold transition-all cursor-pointer shadow-2xs select-none bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100" title="Click to view profile verification status">
+          <button type="button" id="clientHeaderVerificationBadge" class="hidden md:flex items-center space-x-1.5 px-3 py-1.5 rounded-full border text-[11px] font-semibold transition-all cursor-pointer shadow-2xs select-none bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100" title="Click to view profile verification status">
             <span id="clientHeaderVerificationDot" class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
             <span id="clientHeaderVerificationText">Unverified</span>
           </button>
@@ -368,36 +375,79 @@
                VIEW: OVERVIEW (id="view_overview")
                ================================================================= -->
           <div id="view_overview" class="space-y-6 pb-6">
-            <!-- Welcome Banner -->
-            <div class="p-6 sm:p-8 rounded-3xl bg-white border border-[#E3E9EF] shadow-sm relative overflow-hidden">
-              <div class="absolute -right-10 -bottom-10 w-52 h-52 rounded-full bg-[#147D64]/8 blur-3xl pointer-events-none"></div>
-              <div class="relative z-10">
-                <p class="text-[11px] font-bold uppercase tracking-wider text-[#147D64] mb-1">Welcome back</p>
-                <h1 class="text-2xl sm:text-3xl font-black text-[#172B36] tracking-tight">
-                  Hello, <span class="text-[#147D64] client-greeting-name">Client</span>
-                </h1>
-                <p class="text-xs text-[#5F7180] mt-1.5">Here's a live summary of your Whiz Studio agency workspace and active marketing campaigns.</p>
+            <!-- Refined Client Overview Header -->
+            <div class="p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-white border border-[#E2E8F0] shadow-xs relative overflow-hidden">
+              <div class="absolute -right-8 -bottom-8 w-48 h-48 rounded-full bg-[#087F70]/5 blur-2xl pointer-events-none"></div>
+              <div class="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20 mb-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-[#087F70] animate-pulse"></span>
+                    <span>Client Workspace</span>
+                  </div>
+                  <h1 class="text-xl sm:text-2xl font-black text-[#172B36] tracking-tight">Overview</h1>
+                  <p class="text-xs sm:text-sm text-slate-500 mt-0.5">
+                    Welcome back, <span class="text-[#087F70] font-bold client-greeting-name">Client</span>. Track real-time progress, active campaigns, and official invoices.
+                  </p>
+                </div>
+                <div class="flex items-center gap-2 self-start sm:self-auto shrink-0">
+                  <button type="button" data-client-tab="services" class="px-3.5 py-2 rounded-xl text-xs font-bold btn-liquid-secondary shadow-2xs hover:shadow transition-all flex items-center gap-1.5 cursor-pointer">
+                    <i class="fa-solid fa-layer-group text-xs text-[#087F70]"></i>
+                    <span>My Services</span>
+                  </button>
+                  <button type="button" data-client-tab="tasks" class="px-3.5 py-2 rounded-xl text-xs font-bold btn-liquid-primary shadow-xs hover:shadow transition-all flex items-center gap-1.5 cursor-pointer">
+                    <i class="fa-solid fa-list-check text-xs"></i>
+                    <span>Deliverables</span>
+                  </button>
+                </div>
               </div>
             </div>
 
-            <!-- Quick Stats Grid -->
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div class="p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-sm space-y-1.5">
-                <span class="text-[10px] font-bold uppercase tracking-wider text-[#5F7180]">Active Services</span>
-                <div class="text-3xl font-black text-[#172B36]" id="statActiveServices">0</div>
-                <p class="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
-                  <i class="fa-solid fa-layer-group text-[10px]"></i> Live Contracts
+            <!-- Balanced 4-Metric Grid (Clean 2-Col on Mobile, 4-Col on Desktop) -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              <!-- Metric 1: Active Services -->
+              <div data-client-tab="services" role="button" tabindex="0" class="p-3.5 sm:p-4 rounded-2xl bg-white border border-[#E2E8F0] shadow-xs hover:border-[#087F70]/40 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer select-none space-y-1 group">
+                <div class="flex items-center justify-between">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Active Services</span>
+                  <i class="fa-solid fa-arrow-right text-[10px] text-[#087F70] opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"></i>
+                </div>
+                <div class="text-2xl sm:text-3xl font-black text-[#172B36]" id="statActiveServices">0</div>
+                <p class="text-[10px] text-[#087F70] font-semibold flex items-center gap-1">
+                  <i class="fa-solid fa-layer-group text-[9px]"></i> Live Contracts
                 </p>
               </div>
-              <div class="p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-sm space-y-1.5">
-                <span class="text-[10px] font-bold uppercase tracking-wider text-[#5F7180]">Tasks Completed</span>
-                <div class="text-3xl font-black text-[#147D64]" id="statCompletedTasks">0</div>
-                <p class="text-[11px] text-[#5F7180] font-medium">Delivered Checkpoints</p>
+
+              <!-- Metric 2: Completed Tasks -->
+              <div data-client-tab="tasks" role="button" tabindex="0" class="p-3.5 sm:p-4 rounded-2xl bg-white border border-[#E2E8F0] shadow-xs hover:border-[#087F70]/40 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer select-none space-y-1 group">
+                <div class="flex items-center justify-between">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Tasks Completed</span>
+                  <i class="fa-solid fa-arrow-right text-[10px] text-[#087F70] opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"></i>
+                </div>
+                <div class="text-2xl sm:text-3xl font-black text-[#087F70]" id="statCompletedTasks">0</div>
+                <p class="text-[10px] text-slate-500 font-medium">Completed Tasks</p>
               </div>
-              <div class="p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-sm space-y-1.5">
-                <span class="text-[10px] font-bold uppercase tracking-wider text-[#5F7180]">Invoices Issued</span>
-                <div class="text-3xl font-black text-[#172B36]" id="statInvoicesCount">0</div>
-                <p class="text-[11px] text-[#5F7180] font-medium">Billing Records</p>
+
+              <!-- Metric 3: Overall Progress -->
+              <div class="p-3.5 sm:p-4 rounded-2xl bg-white border border-[#E2E8F0] shadow-xs space-y-1">
+                <div class="flex items-center justify-between">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Campaign Progress</span>
+                  <i class="fa-solid fa-chart-line text-[10px] text-[#087F70]"></i>
+                </div>
+                <div class="text-2xl sm:text-3xl font-black text-[#172B36]" id="statOverallProgressPercent">0%</div>
+                <p class="text-[10px] text-[#087F70] font-semibold flex items-center gap-1">
+                  <i class="fa-solid fa-bullseye text-[9px]"></i> Milestone Delivery
+                </p>
+              </div>
+
+              <!-- Metric 4: Invoices Issued -->
+              <div data-client-tab="finance" role="button" tabindex="0" class="p-3.5 sm:p-4 rounded-2xl bg-white border border-[#E2E8F0] shadow-xs hover:border-[#087F70]/40 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer select-none space-y-1 group">
+                <div class="flex items-center justify-between">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Invoices Issued</span>
+                  <i class="fa-solid fa-arrow-right text-[10px] text-[#087F70] opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"></i>
+                </div>
+                <div class="text-2xl sm:text-3xl font-black text-[#172B36]" id="statInvoicesCount">0</div>
+                <p class="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
+                  <i class="fa-solid fa-receipt text-[9px]"></i> Billing Records
+                </p>
               </div>
             </div>
 
@@ -536,11 +586,36 @@
                VIEW: MY PROFILE (id="view_profile")
                ================================================================= -->
           <div id="view_profile" class="hidden space-y-6">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h2 class="text-2xl font-black text-[#172B36] tracking-tight">My Profile</h2>
-                <p class="text-xs text-[#5F7180] mt-0.5">Manage your personal identity, contact details, and billing information for official invoices.</p>
+            <!-- World-Class Client Profile Identity Header Card -->
+            <div class="p-6 sm:p-7 rounded-3xl bg-white border border-[#E2E8F0] shadow-xs relative overflow-hidden space-y-5">
+              <div class="absolute -right-8 -bottom-8 w-48 h-48 rounded-full bg-[#087F70]/5 blur-2xl pointer-events-none"></div>
+              <div class="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E2E8F0]">
+                <div class="flex items-center space-x-4">
+                  <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#087F70] to-[#075C51] text-white flex items-center justify-center font-bold text-xl uppercase shadow-sm select-none userAvatarText shrink-0">
+                    CL
+                  </div>
+                  <div class="min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <h2 class="text-lg sm:text-xl font-black text-[#172B36] tracking-tight truncate clientDisplayName">Sarah Jenkins</h2>
+                      <span id="profileHeaderVerifiedBadge" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20">
+                        <i class="fa-solid fa-circle-check text-[9px]"></i> Verified Client
+                      </span>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500 mt-1">
+                      <span class="font-medium text-slate-700" id="profileHeaderCompany">Apex Global Inc.</span>
+                      <span class="text-slate-300">•</span>
+                      <span class="font-mono text-slate-600 clientDisplayEmail">sarah@apexglobal.io</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2 self-start sm:self-auto shrink-0">
+                  <span id="profileHeaderCompletionBadge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold font-mono bg-amber-50 text-amber-700 border border-amber-200">
+                    <i class="fa-solid fa-clock-rotate-left text-[11px]"></i>
+                    <span id="profileHeaderCompletionText">88% Complete</span>
+                  </span>
+                </div>
               </div>
+              <p class="text-xs text-slate-500">Manage your verified client information, billing address, and tax information for automated vector invoices.</p>
             </div>
 
             <!-- Profile Completion Progress Status Card -->
