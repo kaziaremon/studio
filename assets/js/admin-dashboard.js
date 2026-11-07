@@ -320,21 +320,21 @@
       }
     });
 
-    // Friendly Title Mapping (Phase 21 Standards)
+    // Friendly Title Mapping
     const tabTitles = {
-      overview: 'Dashboard',
+      overview: 'Overview & KPIs',
       clients: 'Client Directory',
       client_details: 'Client Workspace',
       services: 'Service Catalog',
       service_tasks: 'Task Blueprints',
-      projects: 'Client Projects',
-      tasks: 'Task Operations',
-      finance: 'Finance & Payments',
-      receipt_template: 'Invoice Studio',
-      team: 'Team & Access',
-      support: 'Support Center',
-      history: 'Activity & Audit Log',
-      security: 'Security & Access'
+      projects: 'Service Projects',
+      tasks: 'Live Tasks',
+      finance: 'Payments & Ledger',
+      receipt_template: 'Receipt Template Studio',
+      team: 'User & Access Management',
+      support: 'Support Requests',
+      history: 'Audit & History',
+      security: 'Account Security'
     };
 
     const activeTitle = tabTitles[tabId] || tabId.replace(/_/g, ' ');
@@ -383,7 +383,9 @@
     // Breadcrumb
     const breadcrumb = document.getElementById('breadcrumbActiveTab');
     if (breadcrumb) {
-      breadcrumb.textContent = activeTitle;
+      if (tabId === 'client_details') breadcrumb.textContent = 'Client Workspace';
+      else if (tabId === 'service_tasks') breadcrumb.textContent = 'Task Blueprints';
+      else breadcrumb.textContent = tabId.replace('_', ' ');
     }
 
     if (updateHash && !tabId.includes('_details') && !tabId.includes('_tasks')) {
@@ -678,7 +680,7 @@
             <p class="text-xs text-slate-500 mt-0.5">No registered client accounts match the selected filter or search criteria.</p>
           </div>
           <button type="button" class="btn-empty-add-client inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#147D64] text-white hover:bg-[#116954] text-xs font-bold transition-all shadow-xs cursor-pointer">
-            <i class="fa-solid fa-user-plus"></i> Add Client
+            <i class="fa-solid fa-user-plus"></i> Add New Client
           </button>
         </div>
       `;
@@ -786,7 +788,7 @@
             <div class="pt-2 border-t border-slate-100">
               <button type="button" class="btn-manage-client w-full py-2.5 rounded-xl text-xs font-bold bg-[#147D64] hover:bg-[#116954] active:bg-[#0e5645] text-white flex items-center justify-center gap-2 cursor-pointer transition-all shadow-xs" data-id="${escapeHtml(c.id)}">
                 <i class="fa-solid fa-sliders text-xs"></i>
-                <span>Manage Client</span>
+                <span>Manage Client Workspace</span>
               </button>
             </div>
           </div>
@@ -1923,7 +1925,7 @@
       paymentsCache = payments;
 
       if (payments.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-6 text-center text-slate-500 italic">No payments recorded. Click "Record Payment" above.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-6 text-center text-slate-500 italic">No payments recorded. Click "Record New Payment" above.</td></tr>';
         if (cardsContainer) cardsContainer.innerHTML = '<div class="p-6 rounded-2xl bg-white border border-[#E3E9EF] text-center text-slate-500 italic">No payments recorded.</div>';
         return;
       }
@@ -2994,10 +2996,8 @@
       const dateStr = h.action_timestamp ? new Date(h.action_timestamp).toLocaleString('en-US', {
         month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
       }) : '—';
-      const rawTarget = h.target_email || h.target_name || (h.target_clerk_user_id && !h.target_clerk_user_id.startsWith('user_') ? h.target_clerk_user_id : 'User Account');
-      const target = rawTarget;
-      const rawActor = h.actor_clerk_user_id || '';
-      const actor = rawActor.startsWith('usr_owner') ? 'Super Admin' : (rawActor.startsWith('user_') ? 'Administrator' : (rawActor || 'System'));
+      const target = h.target_email || h.target_name || h.target_clerk_user_id || 'User';
+      const actor = h.actor_clerk_user_id ? (h.actor_clerk_user_id.startsWith('usr_owner') ? 'Super Admin' : h.actor_clerk_user_id) : 'System';
       const prevRole = h.previous_role || 'client';
       const nextRole = h.new_role || 'admin';
       const result = h.action_result || 'success';
@@ -3029,8 +3029,7 @@
         const dateStr = h.action_timestamp ? new Date(h.action_timestamp).toLocaleString('en-US', {
           month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
         }) : '—';
-        const rawTarget = h.target_email || h.target_name || (h.target_clerk_user_id && !h.target_clerk_user_id.startsWith('user_') ? h.target_clerk_user_id : 'User Account');
-      const target = rawTarget;
+        const target = h.target_email || h.target_name || h.target_clerk_user_id || 'User';
         const prevRole = h.previous_role || 'client';
         const nextRole = h.new_role || 'admin';
         const result = h.action_result || 'success';
@@ -4170,7 +4169,7 @@
             <td class="px-6 py-4 text-right">
               <button type="button" class="btn-view-support-ticket h-9 px-3 rounded-xl text-xs font-bold bg-[#087F70]/10 text-[#087F70] hover:bg-[#087F70]/20 border border-[#087F70]/20 transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-xs" data-id="${t.id}">
                 <i class="fa-solid fa-eye text-[10px]"></i>
-                <span>Open Ticket</span>
+                <span>View Request</span>
               </button>
             </td>
           </tr>
@@ -4233,7 +4232,7 @@
             <div class="pt-1 flex items-center justify-end">
               <button type="button" class="btn-view-support-ticket w-full sm:w-auto h-11 px-5 rounded-xl text-xs font-bold btn-glass-primary shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer" data-id="${t.id}">
                 <i class="fa-solid fa-eye text-xs"></i>
-                <span>Open Ticket</span>
+                <span>View &amp; Resolve Ticket</span>
               </button>
             </div>
           </div>
