@@ -61,7 +61,7 @@
   <script src="/assets/js/pdf-lib.min.js"></script>
 
   <!-- Liquid Glass Theme Styles -->
-  <link rel="stylesheet" href="/assets/css/liquid-glass.css?v=20261107_v5_green_glass">
+  <link rel="stylesheet" href="/assets/css/liquid-glass.css?v=20261107_v6_exact_glass">
 
   <script>
     // Immediate Desktop Dock Collapsed Preference State (Zero-Flash)
@@ -920,87 +920,158 @@
     <div class="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
       
       <!-- WORKSPACE TOP HEADER -->
-      <header class="h-[72px] sm:h-20 min-h-[72px] client-header-glass border-b border-[#E6ECE9] shrink-0 flex items-center justify-between px-3.5 sm:px-6 z-20 shadow-xs relative">
-        <!-- Left: Mobile Menu Toggle / Desktop Context Breadcrumb -->
-        <div class="flex items-center space-x-3">
-          <!-- Mobile Drawer Hamburger Toggle (44px touch target) -->
-          <button type="button" id="mobileMenuToggleBtn" class="md:hidden w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-[#F7FAF9] hover:bg-[#EAF5F1] active:bg-[#E6ECE9] border border-[#E6ECE9] flex items-center justify-center text-[#202D2A] cursor-pointer touch-manipulation transition-colors select-none" aria-label="Open Navigation">
-            <i class="fa-solid fa-bars text-sm"></i>
-          </button>
+      <header class="relative z-30 px-3.5 sm:px-6 pt-3 pb-3 border-b border-white/10 client-header-glass">
+        <!-- Top Bar: Logo, Context & Circular Glass Actions -->
+        <div class="flex items-center justify-between mb-3">
+          <!-- Left: Whiz Studio Brand Logo & Role Badge -->
+          <div class="flex items-center space-x-3">
+            <a href="/" class="flex items-center gap-2.5 group select-none" title="Whiz Studio Home">
+              <div class="w-10 h-10 rounded-xl bg-theme-gradient flex items-center justify-center shadow-lg shadow-emerald-500/20 font-black text-white text-base">
+                W
+              </div>
+              <div class="flex flex-col">
+                <span class="text-base sm:text-lg font-bold text-white tracking-tight leading-tight">Whiz Studio</span>
+                <span class="text-[10px] text-emerald-400 font-extrabold uppercase tracking-wider" id="adminHeaderRoleLabel">Super Admin Console</span>
+              </div>
+            </a>
 
-          <!-- Desktop Context Breadcrumb -->
-          <div class="hidden md:flex items-center">
-            <div class="flex items-center gap-2 text-xs">
-              <span class="text-[#74817D] font-medium">Console</span>
-              <i class="fa-solid fa-chevron-right text-[10px] text-slate-300"></i>
-              <span id="breadcrumbActiveTab" class="font-bold text-[#202D2A]">Dashboard</span>
+            <!-- Desktop Breadcrumb -->
+            <div class="hidden lg:flex items-center ml-2 pl-3 border-l border-white/10 text-xs">
+              <span class="text-white/40 font-medium">Console</span>
+              <i class="fa-solid fa-chevron-right text-[9px] text-white/30 mx-2"></i>
+              <span id="breadcrumbActiveTab" class="font-semibold text-emerald-400">Dashboard</span>
             </div>
           </div>
-        </div>
 
-        <!-- Center: Original Whiz Studio Logo (Mobile only, centered) -->
-        <div class="md:hidden flex items-center justify-center absolute left-1/2 -translate-x-1/2 pointer-events-auto">
-          <a href="/" class="flex items-center py-0.5">
-            <img src="/assets/images/logo.png?v=20261105" alt="Whiz Studio" class="h-9 sm:h-10 w-auto object-contain">
-          </a>
-        </div>
+          <!-- Center: Whiz Studio Logo (Mobile only, centered) -->
+          <div class="md:hidden flex items-center justify-center absolute left-1/2 -translate-x-1/2 pointer-events-auto">
+            <a href="/" class="flex items-center py-0.5">
+              <img src="/assets/images/logo.png?v=20261105" alt="Whiz Studio" class="h-8 sm:h-9 w-auto object-contain">
+            </a>
+          </div>
 
-        <!-- Right: Mobile Refresh + User Avatar Trigger + Interactive Dropdown -->
-        <div class="flex items-center space-x-2 relative">
-          <button type="button" id="mobileQuickRefreshBtn" class="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-[#F7FAF9] hover:bg-[#EAF5F1] active:bg-[#E6ECE9] border border-[#E6ECE9] flex items-center justify-center text-[#74817D] hover:text-[#087F70] transition-colors cursor-pointer touch-manipulation" aria-label="Refresh Workspace" title="Refresh Current Tab">
-            <i class="fa-solid fa-arrows-rotate text-xs" id="mobileQuickRefreshIcon"></i>
-          </button>
-          <span id="mobileSubheaderTitle" class="hidden"></span>
-
-          <div class="relative">
-            <button type="button" id="userMenuBtn" class="flex items-center space-x-2 p-1.5 min-h-[44px] rounded-xl bg-[#F7FAF9] hover:bg-[#EAF5F1] active:bg-[#E6ECE9] border border-[#E6ECE9] text-[#202D2A] transition-all cursor-pointer touch-manipulation select-none" aria-expanded="false" aria-haspopup="true">
-              <div class="w-8 h-8 rounded-lg bg-[#EAF5F1] border border-[#087F70]/25 flex items-center justify-center font-bold text-xs text-[#087F70] admin-display-initials select-none">
-                SA
-              </div>
-              <span class="hidden md:inline-block text-xs font-bold text-[#202D2A] admin-display-name">Administrator</span>
-              <i class="fa-solid fa-chevron-down text-[10px] text-[#74817D] transition-transform duration-200" id="userMenuChevron"></i>
+          <!-- Right Controls: Quick Refresh, Help, Notifications & User Profile -->
+          <div class="flex items-center space-x-2 relative">
+            <!-- Quick Refresh Button (44px touch target) -->
+            <button type="button" id="mobileQuickRefreshBtn" class="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl btn-icon-circle text-white/70 hover:text-white transition-all cursor-pointer touch-manipulation" aria-label="Refresh Workspace" title="Refresh Current Tab">
+              <i class="fa-solid fa-arrows-rotate text-xs" id="mobileQuickRefreshIcon"></i>
             </button>
 
-            <!-- User Account Dropdown Menu -->
-            <div id="userAccountDropdown" class="hidden absolute right-0 mt-2 w-72 rounded-2xl bg-white border border-[#E6ECE9] shadow-2xl p-2.5 z-50 animate-in fade-in zoom-in-95 duration-150">
-              <div class="p-3 rounded-xl bg-[#F7FAF9] border border-[#E6ECE9] mb-2">
-                <div class="flex items-center space-x-3">
-                  <div class="w-10 h-10 rounded-xl bg-[#EAF5F1] border border-[#087F70]/25 flex items-center justify-center font-black text-sm text-[#087F70] uppercase admin-display-initials select-none">
-                    SA
-                  </div>
-                  <div class="min-w-0 flex-1">
-                    <p class="text-xs font-bold text-[#202D2A] truncate admin-display-name">Administrator</p>
-                    <p class="text-[10px] font-mono text-[#74817D] truncate admin-display-email">admin@whizstudio.art</p>
-                    <div class="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      <i class="fa-solid fa-shield-halved text-[8px]"></i>
-                      <span id="userMenuRoleBadge">Super Admin</span>
+            <!-- Help / Support Button -->
+            <button type="button" data-dash-tab="support" class="hidden sm:flex w-10 h-10 rounded-xl btn-icon-circle text-white/70 hover:text-white transition-all cursor-pointer" title="Help & Support">
+              <i class="fa-solid fa-circle-question text-xs"></i>
+            </button>
+
+            <!-- Notifications Indicator Button -->
+            <button type="button" class="hidden sm:flex w-10 h-10 rounded-xl btn-icon-circle text-white/70 hover:text-white transition-all cursor-pointer relative" title="Notifications">
+              <i class="fa-solid fa-bell text-xs"></i>
+              <span class="absolute top-2 right-2 w-2 h-2 rounded-full bg-emerald-400 border border-[#0a0a0a]"></span>
+            </button>
+
+            <span id="mobileSubheaderTitle" class="hidden">Dashboard</span>
+
+            <!-- User Menu Trigger & Dropdown -->
+            <div class="relative">
+              <button type="button" id="userMenuBtn" class="flex items-center space-x-2 p-1.5 min-h-[44px] rounded-xl glass hover:bg-white/10 text-white transition-all cursor-pointer touch-manipulation select-none" aria-expanded="false" aria-haspopup="true">
+                <div class="w-8 h-8 rounded-lg bg-theme-gradient flex items-center justify-center font-bold text-xs text-white admin-display-initials select-none shadow-xs">
+                  SA
+                </div>
+                <span class="hidden md:inline-block text-xs font-semibold text-white/90 admin-display-name">Administrator</span>
+                <i class="fa-solid fa-chevron-down text-[10px] text-white/50 transition-transform duration-200" id="userMenuChevron"></i>
+              </button>
+
+              <!-- User Account Dropdown Menu -->
+              <div id="userAccountDropdown" class="hidden absolute right-0 mt-2 w-72 rounded-2xl glass-dropdown border border-white/10 shadow-2xl p-2.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+                <div class="p-3 rounded-xl bg-white/5 border border-white/10 mb-2">
+                  <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-theme-gradient flex items-center justify-center font-black text-sm text-white uppercase admin-display-initials select-none">
+                      SA
+                    </div>
+                    <div class="min-w-0 flex-1">
+                      <p class="text-xs font-bold text-white truncate admin-display-name">Administrator</p>
+                      <p class="text-[10px] font-mono text-white/60 truncate admin-display-email">admin@whizstudio.art</p>
+                      <div class="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                        <i class="fa-solid fa-shield-halved text-[8px]"></i>
+                        <span id="userMenuRoleBadge">Super Admin</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <div class="space-y-1 text-xs">
-                <button type="button" data-dash-tab="overview" class="w-full flex items-center space-x-3 px-3 py-2 rounded-xl text-[#202D2A] hover:bg-[#F7FAF9] transition-colors text-left cursor-pointer">
-                  <i class="fa-solid fa-gauge-high w-4 text-[#74817D] text-sm"></i>
-                  <span class="font-semibold">Dashboard</span>
-                </button>
-                <button type="button" data-dash-tab="security" class="w-full flex items-center space-x-3 px-3 py-2 rounded-xl text-[#202D2A] hover:bg-[#F7FAF9] transition-colors text-left cursor-pointer">
-                  <i class="fa-solid fa-shield-halved w-4 text-[#74817D] text-sm"></i>
-                  <div class="flex-1">
-                    <p class="font-semibold text-[#202D2A]">Security &amp; Access</p>
-                    <p class="text-[10px] text-[#74817D]">Sessions &amp; credentials</p>
-                  </div>
-                </button>
-              </div>
+                <div class="space-y-1 text-xs">
+                  <button type="button" data-dash-tab="overview" class="w-full flex items-center space-x-3 px-3 py-2 rounded-xl text-white/80 hover:bg-white/10 hover:text-white transition-colors text-left cursor-pointer">
+                    <i class="fa-solid fa-gauge-high w-4 text-emerald-400 text-sm"></i>
+                    <span class="font-semibold">Dashboard</span>
+                  </button>
+                  <button type="button" data-dash-tab="security" class="w-full flex items-center space-x-3 px-3 py-2 rounded-xl text-white/80 hover:bg-white/10 hover:text-white transition-colors text-left cursor-pointer">
+                    <i class="fa-solid fa-shield-halved w-4 text-emerald-400 text-sm"></i>
+                    <div class="flex-1">
+                      <p class="font-semibold text-white">Security &amp; Access</p>
+                      <p class="text-[10px] text-white/50">Sessions &amp; credentials</p>
+                    </div>
+                  </button>
+                </div>
 
-              <div class="mt-2 pt-2 border-t border-[#E6ECE9]">
-                <button type="button" class="btn-admin-signout w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-rose-600 hover:bg-rose-50 transition-colors text-left cursor-pointer font-bold">
-                  <i class="fa-solid fa-arrow-right-from-bracket w-4 text-rose-500 text-sm"></i>
-                  <span>Sign Out</span>
-                </button>
+                <div class="mt-2 pt-2 border-t border-white/10">
+                  <button type="button" class="btn-admin-signout w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-rose-400 hover:bg-rose-500/20 transition-colors text-left cursor-pointer font-bold">
+                    <i class="fa-solid fa-arrow-right-from-bracket w-4 text-rose-400 text-sm"></i>
+                    <span>Sign Out</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- Floating Navigation Capsule Header (Reference Layout) -->
+        <div class="glass-header px-3.5 sm:px-5 py-2.5 flex items-center gap-3 overflow-hidden">
+          <!-- Drawer Toggle Button (44px touch target on mobile) -->
+          <button type="button" id="mobileMenuToggleBtn" class="w-11 h-11 min-w-[44px] min-h-[44px] sm:w-9 sm:h-9 sm:min-w-[36px] sm:min-h-[36px] rounded-xl glass hover:bg-white/10 flex items-center justify-center text-white/70 hover:text-white transition-colors cursor-pointer touch-manipulation select-none shrink-0" aria-label="Open Navigation" title="Toggle Navigation Drawer">
+            <i class="fa-solid fa-table-cells-large text-sm hidden sm:inline-block"></i>
+            <i class="fa-solid fa-bars text-sm sm:hidden"></i>
+          </button>
+
+          <!-- Title of Current View -->
+          <h2 class="text-sm sm:text-base font-bold text-white whitespace-nowrap shrink-0" id="currentViewHeaderTitle">
+            Dashboard Overview
+          </h2>
+
+          <!-- Navigation Capsule Pill Tabs (Desktop Horizontal Scrollable Capsule) -->
+          <nav class="hidden md:flex items-center gap-1 ml-2 overflow-x-auto scrollbar-hide py-0.5" id="adminHeaderNavPills">
+            <button type="button" data-dash-tab="overview" class="header-nav-pill active px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap cursor-pointer">
+              Overview
+            </button>
+            <button type="button" data-dash-tab="clients" class="header-nav-pill px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap cursor-pointer">
+              Clients
+            </button>
+            <button type="button" data-dash-tab="services" class="header-nav-pill px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap cursor-pointer">
+              Services
+            </button>
+            <button type="button" data-dash-tab="projects" class="header-nav-pill px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap cursor-pointer">
+              Projects
+            </button>
+            <button type="button" data-dash-tab="tasks" class="header-nav-pill px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap cursor-pointer">
+              Tasks
+            </button>
+            <button type="button" data-dash-tab="finance" class="header-nav-pill px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap cursor-pointer">
+              Finance
+            </button>
+            <button type="button" data-dash-tab="receipt_template" class="header-nav-pill px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap cursor-pointer">
+              Invoice Studio
+            </button>
+            <button type="button" data-dash-tab="team" class="header-nav-pill px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap cursor-pointer">
+              Team &amp; Access
+            </button>
+            <button type="button" data-dash-tab="support" class="header-nav-pill px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap cursor-pointer">
+              Support
+            </button>
+            <button type="button" data-dash-tab="history" class="header-nav-pill px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap cursor-pointer">
+              Audit Log
+            </button>
+            <button type="button" data-dash-tab="security" class="header-nav-pill px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap cursor-pointer">
+              Security
+            </button>
+          </nav>
         </div>
       </header>
 

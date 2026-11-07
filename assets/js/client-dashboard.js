@@ -141,6 +141,29 @@
   function switchTab(tabId) {
     state.activeTab = tabId;
     const tabs = ['overview', 'services', 'tasks', 'finance', 'profile', 'support', 'settings'];
+    // Sync client capsule header title and pill tabs (Reference Dashboard System)
+    const clientHeaderCapsuleTitle = document.getElementById('clientHeaderCapsuleTitle');
+    if (clientHeaderCapsuleTitle) {
+      const titles = {
+        overview: 'Dashboard Overview',
+        services: 'Service Catalog',
+        tasks: 'Task Deliverables',
+        finance: 'Invoices & Receipts',
+        profile: 'Client Profile (CIF)',
+        support: 'Support Center',
+        settings: 'Security & Preferences'
+      };
+      clientHeaderCapsuleTitle.textContent = titles[tabId] || (tabId.charAt(0).toUpperCase() + tabId.slice(1));
+    }
+    document.querySelectorAll('#clientHeaderNavPills .header-nav-pill').forEach(pill => {
+      const isTarget = pill.dataset.clientTab === tabId;
+      if (isTarget) {
+        pill.classList.add('active');
+      } else {
+        pill.classList.remove('active');
+      }
+    });
+
     tabs.forEach(t => {
       const el = document.getElementById(`view_${t}`);
       if (el) {

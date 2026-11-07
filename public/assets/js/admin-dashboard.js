@@ -338,6 +338,20 @@
     };
 
     const activeTitle = tabTitles[tabId] || tabId.replace(/_/g, ' ');
+    // Sync current view header title and pill tabs (Reference Dashboard System)
+    const currentViewHeaderTitle = document.getElementById('currentViewHeaderTitle');
+    if (currentViewHeaderTitle) {
+      currentViewHeaderTitle.textContent = activeTitle;
+    }
+    document.querySelectorAll('#adminHeaderNavPills .header-nav-pill').forEach(pill => {
+      const isTarget = pill.dataset.dashTab === tabId;
+      if (isTarget) {
+        pill.classList.add('active');
+      } else {
+        pill.classList.remove('active');
+      }
+    });
+
 
     // Update Mobile Subheader Title
     const subheaderTitle = document.getElementById('mobileSubheaderTitle');

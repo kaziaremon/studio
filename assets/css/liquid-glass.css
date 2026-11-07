@@ -1,3 +1,432 @@
+
+/* ==========================================================================
+   REFERENCE DASHBOARD REPLICATION SYSTEM (nesdesignco/Glassmorphism-Admin-Panel-UI)
+   Unified Emerald / Obsidian Frosted Glass Architecture
+   ========================================================================== */
+
+:root {
+  --background: 0 0% 4%;
+  --foreground: 0 0% 98%;
+  --card: 20 15% 8%;
+  --card-foreground: 0 0% 98%;
+  --popover: 20 15% 6%;
+  --popover-foreground: 0 0% 98%;
+  --primary: 160 40% 58%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 20 10% 12%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 20 10% 15%;
+  --muted-foreground: 0 0% 60%;
+  --accent: 160 40% 58%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 20 10% 15%;
+  --input: 20 10% 12%;
+  --ring: 160 40% 58%;
+  --radius: 1rem;
+
+  /* Reference Theme Colors - Emerald Variant */
+  --theme-primary: 160 40% 58%;
+  --theme-primary-rgb: 16, 185, 129;
+  --theme-gradient-from: #10b981;
+  --theme-gradient-to: #059669;
+
+  /* Font */
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* Background */
+  --theme-bg-color: #0a0a0a;
+
+  /* Reference Glass Variables */
+  --glass-opacity: 0.06;
+  --glass-blur: 16px;
+  --glass-border-opacity: 0.10;
+  --glass-saturation: 150%;
+
+  /* Hover increment values */
+  --glass-hover-opacity-add: 0.02;
+  --glass-hover-border-add: 0.05;
+
+  /* UI Opacity Levels */
+  --ui-opacity-5: 0.05;
+  --ui-opacity-10: 0.10;
+  --ui-opacity-15: 0.15;
+  --ui-opacity-20: 0.20;
+  --ui-opacity-40: 0.40;
+  --ui-opacity-60: 0.60;
+  --ui-opacity-80: 0.80;
+
+  /* Text Colors */
+  --text-primary: rgba(255, 255, 255, 1);
+  --text-secondary: rgba(255, 255, 255, 0.80);
+  --text-tertiary: rgba(255, 255, 255, 0.60);
+  --text-muted: rgba(255, 255, 255, 0.40);
+
+  /* Background Gradient Opacity */
+  --bg-gradient-opacity-1: 0.12;
+  --bg-gradient-opacity-2: 0.10;
+  --bg-gradient-opacity-3: 0.04;
+
+  /* Scrollbar */
+  --scrollbar-track: 0.05;
+  --scrollbar-thumb: 0.15;
+  --scrollbar-thumb-hover: 0.25;
+
+  /* Chart Colors */
+  --chart-grid-opacity: 0.05;
+  --chart-axis-opacity: 0.10;
+  --chart-text-opacity: 0.50;
+}
+
+/* Glass Portal Body Canvas */
+body.glass-portal-body {
+  background: var(--theme-bg-color) !important;
+  background-image:
+    radial-gradient(
+      ellipse 80% 80% at 20% 80%,
+      rgba(var(--theme-primary-rgb), var(--bg-gradient-opacity-1)) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      ellipse 60% 60% at 80% 20%,
+      rgba(var(--theme-primary-rgb), var(--bg-gradient-opacity-2)) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      ellipse 50% 50% at 50% 50%,
+      rgba(var(--theme-primary-rgb), var(--bg-gradient-opacity-3)) 0%,
+      transparent 60%
+    ) !important;
+  background-attachment: fixed !important;
+  color: var(--text-primary) !important;
+  font-family: var(--font-family) !important;
+  min-height: 100vh;
+}
+
+/* Replicated Glass Components */
+.glass {
+  background: rgba(255, 255, 255, var(--glass-opacity));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+  border: 1px solid rgba(255, 255, 255, var(--glass-border-opacity));
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, var(--glass-opacity)) !important;
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation)) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation)) !important;
+  border: 1px solid rgba(255, 255, 255, var(--glass-border-opacity)) !important;
+  border-radius: 1.25rem !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  background: rgba(255, 255, 255, calc(var(--glass-opacity) + var(--glass-hover-opacity-add))) !important;
+  border-color: rgba(255, 255, 255, calc(var(--glass-border-opacity) + var(--glass-hover-border-add))) !important;
+}
+
+.glass-card-stats {
+  background: rgba(255, 255, 255, var(--glass-opacity)) !important;
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation)) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation)) !important;
+  border-radius: 1.25rem !important;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card-stats:hover {
+  background: rgba(255, 255, 255, calc(var(--glass-opacity) + var(--glass-hover-opacity-add))) !important;
+}
+
+.glass-card-liquid {
+  background: rgba(255, 255, 255, var(--glass-opacity)) !important;
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation)) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation)) !important;
+  border: 1px solid rgba(255, 255, 255, var(--glass-border-opacity)) !important;
+  border-radius: 1.25rem !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card-liquid:hover {
+  background: rgba(255, 255, 255, calc(var(--glass-opacity) + var(--glass-hover-opacity-add))) !important;
+  border-color: rgba(255, 255, 255, calc(var(--glass-border-opacity) + var(--glass-hover-border-add))) !important;
+}
+
+.glass-header {
+  background: rgba(255, 255, 255, var(--glass-opacity)) !important;
+  backdrop-filter: blur(calc(var(--glass-blur) + 8px)) saturate(var(--glass-saturation)) !important;
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) + 8px)) saturate(var(--glass-saturation)) !important;
+  border: 1px solid rgba(255, 255, 255, var(--glass-border-opacity)) !important;
+  border-radius: 1rem !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-button {
+  background: rgba(255, 255, 255, var(--glass-opacity)) !important;
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation)) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation)) !important;
+  border: 1px solid rgba(255, 255, 255, var(--glass-border-opacity)) !important;
+  border-radius: 0.75rem;
+  color: #ffffff !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-button:hover {
+  background: rgba(255, 255, 255, calc(var(--glass-opacity) + var(--glass-hover-opacity-add) + var(--glass-hover-opacity-add))) !important;
+  border-color: rgba(255, 255, 255, calc(var(--glass-border-opacity) + var(--glass-hover-border-add) + var(--glass-hover-border-add))) !important;
+}
+
+.glass-input {
+  background: rgba(255, 255, 255, var(--glass-opacity)) !important;
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation)) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation)) !important;
+  border: 1px solid rgba(255, 255, 255, var(--glass-border-opacity)) !important;
+  border-radius: 0.75rem !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: var(--text-primary) !important;
+}
+
+.glass-input:focus {
+  background: rgba(255, 255, 255, calc(var(--glass-opacity) + var(--glass-hover-opacity-add))) !important;
+  border-color: rgba(var(--theme-primary-rgb), 0.5) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(var(--theme-primary-rgb), 0.2) !important;
+}
+
+.glass-sidebar {
+  background: rgba(10, 10, 10, 0.85) !important;
+  backdrop-filter: blur(calc(var(--glass-blur) + 8px)) saturate(var(--glass-saturation)) !important;
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) + 8px)) saturate(var(--glass-saturation)) !important;
+  border-right: 1px solid rgba(255, 255, 255, var(--glass-border-opacity)) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-dropdown {
+  background: #141414 !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, var(--glass-border-opacity)) !important;
+  border-radius: 1rem !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6) !important;
+  color: var(--text-primary) !important;
+}
+
+.glass-dropdown-theme {
+  background: linear-gradient(135deg, var(--theme-gradient-from) 0%, var(--theme-gradient-to) 100%) !important;
+  border: 1px solid rgba(255, 255, 255, var(--ui-opacity-20)) !important;
+  border-radius: 0.75rem !important;
+  color: var(--text-primary) !important;
+  font-weight: 500;
+}
+
+/* Primary Button with Theme Gradient */
+.btn-primary, .btn-emerald-primary {
+  background: linear-gradient(135deg, var(--theme-gradient-from) 0%, var(--theme-gradient-to) 100%) !important;
+  color: var(--text-primary) !important;
+  border: none !important;
+  border-radius: 0.75rem !important;
+  font-weight: 600 !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25) !important;
+}
+
+.btn-primary:hover, .btn-emerald-primary:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35) !important;
+}
+
+/* Icon Buttons */
+.btn-icon-circle {
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: rgba(255, 255, 255, var(--glass-opacity)) !important;
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation)) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation)) !important;
+  border: 1px solid rgba(255, 255, 255, var(--glass-border-opacity)) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: rgba(255, 255, 255, 0.75) !important;
+  cursor: pointer !important;
+}
+
+.btn-icon-circle:hover {
+  background: rgba(255, 255, 255, calc(var(--glass-opacity) + var(--glass-hover-opacity-add) + var(--glass-hover-opacity-add))) !important;
+  border-color: rgba(255, 255, 255, calc(var(--glass-border-opacity) + var(--glass-hover-border-add) + var(--glass-hover-border-add))) !important;
+  color: #ffffff !important;
+  transform: scale(1.05);
+}
+
+.btn-icon-square {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 0.5rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: rgba(255, 255, 255, var(--glass-opacity)) !important;
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation)) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation)) !important;
+  border: 1px solid rgba(255, 255, 255, var(--glass-border-opacity)) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: rgba(255, 255, 255, 0.75) !important;
+  cursor: pointer !important;
+}
+
+.btn-icon-square:hover {
+  background: rgba(255, 255, 255, calc(var(--glass-opacity) + var(--glass-hover-opacity-add) + var(--glass-hover-opacity-add))) !important;
+  border-color: rgba(255, 255, 255, calc(var(--glass-border-opacity) + var(--glass-hover-border-add) + var(--glass-hover-border-add))) !important;
+  color: #ffffff !important;
+}
+
+/* Reference Signature Notched Stat Card */
+.stat-card-wrapper {
+  position: relative;
+}
+
+.stat-card {
+  --r: 20px;
+  --s: 38px;
+
+  background: rgba(255, 255, 255, var(--glass-opacity)) !important;
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation)) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation)) !important;
+  border: 1px solid rgba(255, 255, 255, var(--glass-border-opacity)) !important;
+  border-radius: var(--r) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  --_m: /calc(2*var(--r)) calc(2*var(--r)) radial-gradient(#000 70%, #0000 72%) no-repeat;
+  mask:
+    0 0 var(--_m),
+    100% 100% var(--_m),
+    0 100% var(--_m),
+    radial-gradient(var(--s) at calc(100% - 4px) 4px, #0000 98%, #000) 0 0 no-repeat,
+    conic-gradient(at calc(100% - var(--s) - var(--r) + 4px) calc(var(--s) + var(--r) - 4px), #0000 25%, #000 0);
+  -webkit-mask:
+    0 0 var(--_m),
+    100% 100% var(--_m),
+    0 100% var(--_m),
+    radial-gradient(var(--s) at calc(100% - 4px) 4px, #0000 98%, #000) 0 0 no-repeat,
+    conic-gradient(at calc(100% - var(--s) - var(--r) + 4px) calc(var(--s) + var(--r) - 4px), #0000 25%, #000 0);
+}
+
+.stat-card:hover {
+  background: rgba(255, 255, 255, calc(var(--glass-opacity) + var(--glass-hover-opacity-add))) !important;
+  border-color: rgba(255, 255, 255, calc(var(--glass-border-opacity) + var(--glass-hover-border-add))) !important;
+}
+
+.stat-card-btn {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  z-index: 10;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, var(--glass-opacity));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+  border: 1px solid rgba(255, 255, 255, var(--glass-border-opacity));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.stat-card-btn:hover {
+  background: rgba(255, 255, 255, calc(var(--glass-opacity) + var(--glass-hover-opacity-add) + var(--glass-hover-opacity-add)));
+  border-color: rgba(255, 255, 255, calc(var(--glass-border-opacity) + var(--glass-hover-border-add) + var(--glass-hover-border-add)));
+  color: #ffffff;
+  transform: scale(1.08);
+}
+
+/* Glass Table */
+.glass-table {
+  background: rgba(255, 255, 255, var(--glass-opacity)) !important;
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation)) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation)) !important;
+  border: 1px solid rgba(255, 255, 255, var(--glass-border-opacity)) !important;
+  border-radius: 1.25rem !important;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+}
+
+.animate-slide-in {
+  animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+}
+
+/* Header Navigation Pills */
+.header-nav-pill {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.header-nav-pill.active {
+  background: linear-gradient(135deg, var(--theme-gradient-from) 0%, var(--theme-gradient-to) 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.3) !important;
+}
+
+.header-nav-pill:not(.active) {
+  color: var(--text-tertiary) !important;
+}
+
+.header-nav-pill:not(.active):hover {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, var(--ui-opacity-10)) !important;
+}
+
+/* Utility Helpers */
+.text-gradient {
+  background: linear-gradient(135deg, var(--theme-gradient-from) 0%, var(--theme-gradient-to) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.bg-theme-gradient {
+  background: linear-gradient(135deg, var(--theme-gradient-from) 0%, var(--theme-gradient-to) 100%) !important;
+}
+
+.text-theme {
+  color: var(--theme-gradient-from) !important;
+}
+
+.badge-theme {
+  background: rgba(var(--theme-primary-rgb), var(--ui-opacity-15)) !important;
+  color: var(--theme-gradient-from) !important;
+  border: 1px solid rgba(var(--theme-primary-rgb), 0.25) !important;
+}
+
 /* ==========================================================================
    WHIZ STUDIO - TRUE LIQUID GLASS DESIGN SYSTEM (MASTER RESPONSIVE ARCHITECTURE)
    Domain: whizstudio.art | Primary Brand Green: #00A86B / #059669 / #047857
