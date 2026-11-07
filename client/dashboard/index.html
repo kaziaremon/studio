@@ -260,12 +260,13 @@
     <!-- MAIN WORKSPACE -->
     <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#F7F9FC]">
 
-      <!-- TOP HEADER (Phase 2 & 11: Clean Mobile-First Header) -->
-      <header class="h-16 border-b border-[#E3E9EF] bg-white/95 backdrop-blur-xl shrink-0 flex items-center justify-between px-3 sm:px-6 z-30 shadow-xs relative">
+      <!-- TOP HEADER (Refined Glassmorphism, Minimalist Icons, Perfectly Centered Logo) -->
+      <header class="h-16 sticky top-0 border-b border-slate-200/60 bg-white/80 backdrop-blur-md backdrop-saturate-150 shrink-0 flex items-center justify-between px-3 sm:px-6 z-30 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] relative">
         <!-- Left: Mobile Toggle / Desktop Breadcrumb -->
-        <div class="flex items-center space-x-3">
-          <button type="button" id="clientMobileToggleBtn" class="lg:hidden w-10 h-10 rounded-xl bg-slate-50 hover:bg-slate-100 active:bg-slate-200 border border-[#E3E9EF] flex items-center justify-center text-[#172B36] cursor-pointer touch-manipulation transition-colors select-none" aria-label="Open Navigation">
-            <i class="fa-solid fa-bars text-sm"></i>
+        <div class="flex items-center space-x-2 sm:space-x-3">
+          <!-- Mobile Drawer Hamburger Toggle (Clean Standalone Borderless Icon with Soft Circular Tap Highlight) -->
+          <button type="button" id="clientMobileToggleBtn" class="lg:hidden w-10 h-10 rounded-full bg-transparent hover:bg-slate-100/80 active:bg-[#087F70]/10 border-none flex items-center justify-center text-[#172B36] active:text-[#087F70] cursor-pointer touch-manipulation transition-all select-none focus:outline-none focus:ring-2 focus:ring-[#087F70]/20" aria-label="Open Navigation">
+            <i class="fa-solid fa-bars text-lg text-[#172B36]"></i>
           </button>
           <!-- Desktop Clean Context -->
           <div class="hidden lg:flex items-center space-x-2 text-xs">
@@ -274,24 +275,24 @@
           </div>
         </div>
 
-        <!-- Center: Original Whiz Studio Logo (Mobile only, centered) -->
-        <div class="lg:hidden flex items-center justify-center absolute left-1/2 -translate-x-1/2 pointer-events-auto">
-          <a href="/" class="flex items-center py-0.5">
-            <img src="/assets/images/logo.png?v=20261105" alt="Whiz Studio" class="h-9 sm:h-10 w-auto object-contain">
+        <!-- Center: Original Whiz Studio Logo (Mobile only, perfectly centered horizontally and vertically & scaled for prominence) -->
+        <div class="lg:hidden absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-auto">
+          <a href="/" class="flex items-center justify-center p-1 group">
+            <img src="/assets/images/logo.png?v=20261105" alt="Whiz Studio" class="h-10 sm:h-11 w-auto max-w-[155px] object-contain transition-transform duration-200 group-hover:scale-105 drop-shadow-2xs">
           </a>
         </div>
 
         <!-- Right Controls: Desktop Live Sync & Interactive Profile Dropdown -->
-        <div class="flex items-center space-x-2 sm:space-x-2.5">
+        <div class="flex items-center space-x-1 sm:space-x-2">
           <!-- Live Sync / Refresh button (Desktop) -->
           <button type="button" id="btnRefreshClientDashboard" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-[#EAF7F1] border border-[#E3E9EF] hover:border-[#147D64]/30 text-[11px] font-bold text-[#172B36] hover:text-[#147D64] transition-all cursor-pointer shadow-xs" title="Synchronize Dashboard">
             <i class="fa-solid fa-rotate text-xs text-[#147D64]" id="btnRefreshClientIcon"></i>
             <span>Sync Live</span>
           </button>
 
-          <!-- Live Sync button (Mobile) -->
-          <button type="button" id="btnRefreshClientDashboardMobile" class="sm:hidden w-10 h-10 rounded-xl bg-slate-50 hover:bg-[#EAF7F1] border border-[#E3E9EF] flex items-center justify-center text-[#147D64] transition-all cursor-pointer touch-manipulation" aria-label="Sync Workspace" title="Synchronize Live">
-            <i class="fa-solid fa-rotate text-xs text-[#147D64]" id="btnRefreshClientIconMobile"></i>
+          <!-- Live Sync button (Mobile - Standalone Borderless Icon with Soft Circular Tap Highlight) -->
+          <button type="button" id="btnRefreshClientDashboardMobile" class="sm:hidden w-10 h-10 rounded-full bg-transparent hover:bg-slate-100/80 active:bg-[#087F70]/10 border-none flex items-center justify-center text-slate-500 hover:text-[#087F70] active:text-[#087F70] transition-all cursor-pointer touch-manipulation select-none focus:outline-none focus:ring-2 focus:ring-[#087F70]/20" aria-label="Sync Workspace" title="Synchronize Live">
+            <i class="fa-solid fa-rotate text-xs text-slate-500 hover:text-[#087F70]" id="btnRefreshClientIconMobile"></i>
           </button>
           
           <span id="clientSubheaderTitle" class="hidden"></span>
@@ -302,21 +303,20 @@
             <span id="clientHeaderVerificationText">Unverified</span>
           </button>
 
-          <!-- Interactive Client Account Trigger + Dropdown Menu -->
+          <!-- Interactive Client Account Trigger + Dropdown Menu (Clean Circular Avatar in Brand Green, No Arrow Clutter) -->
           <div class="relative">
-            <button type="button" id="clientUserMenuBtn" class="flex items-center space-x-2 p-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 active:bg-slate-200 border border-[#E3E9EF] text-[#172B36] transition-all cursor-pointer touch-manipulation select-none" aria-expanded="false" aria-haspopup="true">
-              <div class="w-8 h-8 rounded-lg bg-[#147D64]/10 border border-[#147D64]/30 flex items-center justify-center font-bold text-xs text-[#147D64] uppercase userAvatarText select-none">
+            <button type="button" id="clientUserMenuBtn" class="flex items-center gap-2 p-1 rounded-full bg-transparent hover:bg-slate-100/80 active:bg-[#087F70]/10 border-none transition-all cursor-pointer touch-manipulation select-none focus:outline-none focus:ring-2 focus:ring-[#087F70]/30" aria-expanded="false" aria-haspopup="true">
+              <div class="w-9 h-9 rounded-full bg-[#087F70] text-white flex items-center justify-center font-bold text-xs shadow-xs select-none userAvatarText tracking-wide">
                 CL
               </div>
-              <span class="hidden md:inline-block text-xs font-bold text-[#172B36] truncate max-w-[120px] client-greeting-name">Client</span>
-              <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform duration-200" id="clientUserMenuChevron"></i>
+              <span class="hidden md:inline-block text-xs font-semibold text-[#172B36] truncate max-w-[120px] client-greeting-name pr-1.5">Client</span>
             </button>
 
             <!-- Interactive Client Account Dropdown Menu -->
             <div id="clientUserAccountDropdown" class="hidden absolute right-0 mt-2 w-72 rounded-2xl bg-white border border-[#E3E9EF] shadow-2xl p-2.5 z-50 animate-in fade-in zoom-in-95 duration-150">
               <div class="p-3 rounded-xl bg-slate-50 border border-slate-100 mb-2">
                 <div class="flex items-center space-x-3">
-                  <div class="w-10 h-10 rounded-xl bg-[#147D64]/10 border border-[#147D64]/30 flex items-center justify-center font-bold text-sm text-[#147D64] uppercase userAvatarText select-none">
+                  <div class="w-10 h-10 rounded-full bg-[#087F70] text-white flex items-center justify-center font-bold text-sm shadow-xs userAvatarText select-none tracking-wide">
                     CL
                   </div>
                   <div class="min-w-0 flex-1">

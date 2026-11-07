@@ -5958,6 +5958,92 @@
     document.getElementById('auditCategoryFilter')?.addEventListener('change', () => {
       renderAuditHistoryList();
     });
+
+    // Custom Glassmorphic Audit Category Dropdown Component
+    const auditCatTrigger = document.getElementById('btnAuditCategoryDropdown');
+    const auditCatMenu = document.getElementById('auditCategoryDropdownMenu');
+    const auditCatChevron = document.getElementById('auditCategoryDropdownChevron');
+    const auditCatLabel = document.getElementById('auditCategoryDropdownCurrentLabel');
+    const nativeAuditCatSelect = document.getElementById('auditCategoryFilter');
+
+    function toggleAuditCatMenu() {
+      if (!auditCatMenu) return;
+      const isHidden = auditCatMenu.classList.contains('hidden');
+      if (isHidden) {
+        auditCatMenu.classList.remove('hidden');
+        if (auditCatChevron) auditCatChevron.classList.add('rotate-180');
+        if (auditCatTrigger) auditCatTrigger.setAttribute('aria-expanded', 'true');
+      } else {
+        closeAuditCatMenu();
+      }
+    }
+
+    function closeAuditCatMenu() {
+      if (!auditCatMenu) return;
+      auditCatMenu.classList.add('hidden');
+      if (auditCatChevron) auditCatChevron.classList.remove('rotate-180');
+      if (auditCatTrigger) auditCatTrigger.setAttribute('aria-expanded', 'false');
+    }
+
+    if (auditCatTrigger) {
+      auditCatTrigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleAuditCatMenu();
+      });
+    }
+
+    document.querySelectorAll('.custom-audit-cat-option').forEach(opt => {
+      opt.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const val = opt.getAttribute('data-value') || 'all';
+        const labelText = opt.querySelector('span')?.textContent || 'All Categories';
+
+        if (auditCatLabel) auditCatLabel.textContent = labelText;
+
+        document.querySelectorAll('.custom-audit-cat-option').forEach(o => {
+          const isSelected = o === opt;
+          o.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+          const check = o.querySelector('.audit-option-check');
+          const icon = o.querySelector('i:first-child');
+          if (isSelected) {
+            o.className = 'custom-audit-cat-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-[#087F70] bg-[#087F70]/10 hover:bg-[#087F70]/15 cursor-pointer transition-colors select-none font-sans text-left';
+            if (check) check.classList.remove('hidden');
+            if (icon) {
+              icon.classList.remove('text-slate-400');
+              icon.classList.add('text-[#087F70]');
+            }
+          } else {
+            o.className = 'custom-audit-cat-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left';
+            if (check) check.classList.add('hidden');
+            if (icon && !icon.classList.contains('fa-layer-group')) {
+              icon.classList.add('text-slate-400');
+              icon.classList.remove('text-[#087F70]');
+            }
+          }
+        });
+
+        if (nativeAuditCatSelect) {
+          nativeAuditCatSelect.value = val;
+          nativeAuditCatSelect.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        closeAuditCatMenu();
+      });
+    });
+
+    document.addEventListener('click', (e) => {
+      if (auditCatMenu && !auditCatMenu.classList.contains('hidden')) {
+        if (!auditCatMenu.contains(e.target) && !auditCatTrigger?.contains(e.target)) {
+          closeAuditCatMenu();
+        }
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && auditCatMenu && !auditCatMenu.classList.contains('hidden')) {
+        closeAuditCatMenu();
+      }
+    });
     document.getElementById('btnRefreshAuditHistory')?.addEventListener('click', async () => {
       await loadHistoryData();
       showToast('Audit feed updated.', 'success');
