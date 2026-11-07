@@ -64,7 +64,7 @@
   <script src="/assets/js/whiz-document-pdf.js"></script>
 
   <!-- Liquid Glass Theme -->
-  <link rel="stylesheet" href="/assets/css/liquid-glass.css?v=20261107_v6_exact_glass">
+  <link rel="stylesheet" href="/assets/css/liquid-glass.css?v=20261107_v7_exact_glass">
 
   <style>
     ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -463,54 +463,82 @@
               </div>
             </div>
 
-            <!-- Balanced 4-Metric Grid (Clean 2-Col on Mobile, 4-Col on Desktop) -->
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <!-- Balanced 4-Metric Grid (Reference Notched Stat Cards) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4 animate-fade-in">
               <!-- Metric 1: Active Services -->
-              <div data-client-tab="services" role="button" tabindex="0" class="client-glass-card p-4 sm:p-5 space-y-1.5 cursor-pointer select-none group">
-                <div class="flex items-center justify-between">
-                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Active Services</span>
-                  <i class="fa-solid fa-arrow-right text-[10px] text-[#087F70] opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"></i>
+              <div class="stat-card-wrapper group">
+                <div data-client-tab="services" role="button" tabindex="0" class="stat-card p-4 sm:p-5 space-y-2 cursor-pointer select-none">
+                  <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-full glass flex items-center justify-center text-emerald-400">
+                      <i class="fa-solid fa-layer-group text-xs"></i>
+                    </div>
+                    <span class="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Services</span>
+                  </div>
+                  <div class="text-2xl sm:text-3xl font-black text-white" id="statActiveServices">0</div>
+                  <div class="pt-2 border-t border-white/10 text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
+                    <i class="fa-solid fa-cube text-[9px]"></i> Active Contracts
+                  </div>
                 </div>
-                <div class="text-2xl sm:text-3xl font-black text-[#172B36]" id="statActiveServices">0</div>
-                <p class="text-[10px] text-[#087F70] font-semibold flex items-center gap-1">
-                  <i class="fa-solid fa-layer-group text-[9px]"></i> Active Contracts
-                </p>
+                <button type="button" class="stat-card-btn" aria-label="Open Services" data-client-tab="services">
+                  <i class="fa-solid fa-arrow-up-right text-xs"></i>
+                </button>
               </div>
 
               <!-- Metric 2: Completed Milestones -->
-              <div data-client-tab="tasks" role="button" tabindex="0" class="client-glass-card p-4 sm:p-5 space-y-1.5 cursor-pointer select-none group">
-                <div class="flex items-center justify-between">
-                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Completed Milestones</span>
-                  <i class="fa-solid fa-arrow-right text-[10px] text-[#087F70] opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"></i>
+              <div class="stat-card-wrapper group">
+                <div data-client-tab="tasks" role="button" tabindex="0" class="stat-card p-4 sm:p-5 space-y-2 cursor-pointer select-none">
+                  <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-full glass flex items-center justify-center text-teal-400">
+                      <i class="fa-solid fa-circle-check text-xs"></i>
+                    </div>
+                    <span class="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Deliverables</span>
+                  </div>
+                  <div class="text-2xl sm:text-3xl font-black text-white" id="statCompletedTasks">0</div>
+                  <div class="pt-2 border-t border-white/10 text-[10px] text-teal-400 font-semibold flex items-center gap-1">
+                    <i class="fa-solid fa-list-check text-[9px]"></i> Verified Deliverables
+                  </div>
                 </div>
-                <div class="text-2xl sm:text-3xl font-black text-[#087F70]" id="statCompletedTasks">0</div>
-                <p class="text-[10px] text-slate-500 font-medium flex items-center gap-1">
-                  <i class="fa-solid fa-circle-check text-[9px] text-slate-400"></i> Completed Tasks
-                </p>
+                <button type="button" class="stat-card-btn" aria-label="Open Deliverables" data-client-tab="tasks">
+                  <i class="fa-solid fa-arrow-up-right text-xs"></i>
+                </button>
               </div>
 
-              <!-- Metric 3: Delivery Progress -->
-              <div class="client-glass-card p-4 sm:p-5 space-y-1.5">
-                <div class="flex items-center justify-between">
-                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Delivery Progress</span>
-                  <i class="fa-solid fa-chart-line text-[10px] text-[#087F70]"></i>
+              <!-- Metric 3: Overall Progress -->
+              <div class="stat-card-wrapper group">
+                <div data-client-tab="services" role="button" tabindex="0" class="stat-card p-4 sm:p-5 space-y-2 cursor-pointer select-none">
+                  <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-full glass flex items-center justify-center text-cyan-400">
+                      <i class="fa-solid fa-chart-line text-xs"></i>
+                    </div>
+                    <span class="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Progress</span>
+                  </div>
+                  <div class="text-2xl sm:text-3xl font-black text-white" id="statOverallProgressPercent">0%</div>
+                  <div class="pt-2 border-t border-white/10 text-[10px] text-cyan-400 font-semibold flex items-center gap-1">
+                    <i class="fa-solid fa-arrow-trend-up text-[9px]"></i> Execution Pace
+                  </div>
                 </div>
-                <div class="text-2xl sm:text-3xl font-black text-[#172B36]" id="statOverallProgressPercent">0%</div>
-                <p class="text-[10px] text-[#087F70] font-semibold flex items-center gap-1">
-                  <i class="fa-solid fa-bullseye text-[9px]"></i> Milestone Delivery
-                </p>
+                <button type="button" class="stat-card-btn" aria-label="Open Progress" data-client-tab="services">
+                  <i class="fa-solid fa-arrow-up-right text-xs"></i>
+                </button>
               </div>
 
-              <!-- Metric 4: Issued Invoices -->
-              <div data-client-tab="finance" role="button" tabindex="0" class="client-glass-card p-4 sm:p-5 space-y-1.5 cursor-pointer select-none group">
-                <div class="flex items-center justify-between">
-                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Issued Invoices</span>
-                  <i class="fa-solid fa-arrow-right text-[10px] text-[#087F70] opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"></i>
+              <!-- Metric 4: Invoices & Receipts -->
+              <div class="stat-card-wrapper group">
+                <div data-client-tab="finance" role="button" tabindex="0" class="stat-card p-4 sm:p-5 space-y-2 cursor-pointer select-none">
+                  <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-full glass flex items-center justify-center text-emerald-300">
+                      <i class="fa-solid fa-receipt text-xs"></i>
+                    </div>
+                    <span class="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Invoices</span>
+                  </div>
+                  <div class="text-2xl sm:text-3xl font-black text-white" id="statInvoicesCount">0</div>
+                  <div class="pt-2 border-t border-white/10 text-[10px] text-emerald-300 font-semibold flex items-center gap-1">
+                    <i class="fa-solid fa-file-invoice text-[9px]"></i> Downloadable PDFs
+                  </div>
                 </div>
-                <div class="text-2xl sm:text-3xl font-black text-[#172B36]" id="statInvoicesCount">0</div>
-                <p class="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
-                  <i class="fa-solid fa-receipt text-[9px]"></i> Billing Records
-                </p>
+                <button type="button" class="stat-card-btn" aria-label="Open Invoices" data-client-tab="finance">
+                  <i class="fa-solid fa-arrow-up-right text-xs"></i>
+                </button>
               </div>
             </div>
 

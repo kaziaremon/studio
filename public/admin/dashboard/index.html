@@ -61,7 +61,7 @@
   <script src="/assets/js/pdf-lib.min.js"></script>
 
   <!-- Liquid Glass Theme Styles -->
-  <link rel="stylesheet" href="/assets/css/liquid-glass.css?v=20261107_v6_exact_glass">
+  <link rel="stylesheet" href="/assets/css/liquid-glass.css?v=20261107_v7_exact_glass">
 
   <script>
     // Immediate Desktop Dock Collapsed Preference State (Zero-Flash)
@@ -1110,72 +1110,120 @@
               </div>
             </div>
 
-            <!-- KPI Metric Cards Grid (6 Live Cloudflare D1 Counters - Clickable Navigation Shortcuts) -->
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5 sm:gap-4">
+            <!-- KPI Metric Cards Grid (Reference Notched Stat Cards) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5 sm:gap-4 animate-fade-in">
               <!-- KPI Card 1: Active Clients -->
-              <div id="kpiCardClients" data-kpi-nav="clients" data-kpi-filter="active" role="button" tabindex="0" aria-label="View Active Clients" class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs hover:border-[#147D64]/40 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 cursor-pointer select-none space-y-1 group relative">
-                <div class="flex items-center justify-between">
-                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Active Clients</span>
-                  <i class="fa-solid fa-arrow-right text-[10px] text-[#147D64] opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"></i>
+              <div class="stat-card-wrapper group">
+                <div id="kpiCardClients" data-kpi-nav="clients" data-kpi-filter="active" role="button" tabindex="0" aria-label="View Active Clients" class="stat-card p-4 sm:p-5 cursor-pointer select-none space-y-2">
+                  <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-full glass flex items-center justify-center text-emerald-400">
+                      <i class="fa-solid fa-users text-xs"></i>
+                    </div>
+                    <span class="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Clients</span>
+                  </div>
+                  <div class="text-2xl sm:text-3xl font-black text-white" id="statTotalClients">0</div>
+                  <div class="pt-2 border-t border-white/10 text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
+                    <i class="fa-solid fa-circle-check text-[9px]"></i> Active Directory
+                  </div>
                 </div>
-                <div class="text-2xl sm:text-3xl font-black text-[#172B36]" id="statTotalClients">0</div>
-                <p class="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
-                  <i class="fa-solid fa-users text-[9px]"></i> Active Directory
-                </p>
+                <button type="button" class="stat-card-btn" aria-label="Open Clients" data-kpi-nav="clients">
+                  <i class="fa-solid fa-arrow-up-right text-xs"></i>
+                </button>
               </div>
 
               <!-- KPI Card 2: Active Projects -->
-              <div id="kpiCardProjects" data-kpi-nav="projects" data-kpi-filter="active" role="button" tabindex="0" aria-label="View Active Projects" class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs hover:border-[#147D64]/40 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 cursor-pointer select-none space-y-1 group relative">
-                <div class="flex items-center justify-between">
-                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Active Projects</span>
-                  <i class="fa-solid fa-arrow-right text-[10px] text-[#147D64] opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"></i>
+              <div class="stat-card-wrapper group">
+                <div id="kpiCardProjects" data-kpi-nav="projects" data-kpi-filter="active" role="button" tabindex="0" aria-label="View Active Projects" class="stat-card p-4 sm:p-5 cursor-pointer select-none space-y-2">
+                  <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-full glass flex items-center justify-center text-cyan-400">
+                      <i class="fa-solid fa-diagram-project text-xs"></i>
+                    </div>
+                    <span class="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Projects</span>
+                  </div>
+                  <div class="text-2xl sm:text-3xl font-black text-white" id="statActiveProjects">0</div>
+                  <div class="pt-2 border-t border-white/10 text-[10px] text-cyan-400 font-semibold flex items-center gap-1">
+                    <i class="fa-solid fa-spinner text-[9px] fa-spin-pulse"></i> In Progress
+                  </div>
                 </div>
-                <div class="text-2xl sm:text-3xl font-black text-brand-whiz" id="statActiveProjects">0</div>
-                <p class="text-[10px] text-slate-500 font-medium">In-Progress Sprints</p>
+                <button type="button" class="stat-card-btn" aria-label="Open Projects" data-kpi-nav="projects">
+                  <i class="fa-solid fa-arrow-up-right text-xs"></i>
+                </button>
               </div>
 
               <!-- KPI Card 3: Active Services -->
-              <div id="kpiCardServices" data-kpi-nav="services" data-kpi-filter="active" role="button" tabindex="0" aria-label="View Active Services" class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs hover:border-[#147D64]/40 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 cursor-pointer select-none space-y-1 group relative">
-                <div class="flex items-center justify-between">
-                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Active Services</span>
-                  <i class="fa-solid fa-arrow-right text-[10px] text-[#147D64] opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"></i>
+              <div class="stat-card-wrapper group">
+                <div id="kpiCardServices" data-kpi-nav="services" data-kpi-filter="active" role="button" tabindex="0" aria-label="View Active Services" class="stat-card p-4 sm:p-5 cursor-pointer select-none space-y-2">
+                  <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-full glass flex items-center justify-center text-emerald-300">
+                      <i class="fa-solid fa-layer-group text-xs"></i>
+                    </div>
+                    <span class="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Services</span>
+                  </div>
+                  <div class="text-2xl sm:text-3xl font-black text-white" id="statActiveServices">0</div>
+                  <div class="pt-2 border-t border-white/10 text-[10px] text-emerald-300 font-semibold flex items-center gap-1">
+                    <i class="fa-solid fa-cube text-[9px]"></i> Active Catalog
+                  </div>
                 </div>
-                <div class="text-2xl sm:text-3xl font-black text-[#172B36]" id="statActiveServices">0</div>
-                <p class="text-[10px] text-blue-600 font-semibold flex items-center gap-1">
-                  <i class="fa-solid fa-layer-group text-[9px]"></i> Client Contracts
-                </p>
+                <button type="button" class="stat-card-btn" aria-label="Open Services" data-kpi-nav="services">
+                  <i class="fa-solid fa-arrow-up-right text-xs"></i>
+                </button>
               </div>
 
               <!-- KPI Card 4: Completed Tasks -->
-              <div id="kpiCardCompletedTasks" data-kpi-nav="tasks" data-kpi-filter="completed" role="button" tabindex="0" aria-label="View Completed Tasks" class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs hover:border-[#147D64]/40 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 cursor-pointer select-none space-y-1 group relative">
-                <div class="flex items-center justify-between">
-                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Completed Tasks</span>
-                  <i class="fa-solid fa-arrow-right text-[10px] text-[#147D64] opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"></i>
+              <div class="stat-card-wrapper group">
+                <div id="kpiCardCompletedTasks" data-kpi-nav="tasks" data-kpi-filter="completed" role="button" tabindex="0" aria-label="View Completed Tasks" class="stat-card p-4 sm:p-5 cursor-pointer select-none space-y-2">
+                  <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-full glass flex items-center justify-center text-teal-400">
+                      <i class="fa-solid fa-circle-check text-xs"></i>
+                    </div>
+                    <span class="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Completed</span>
+                  </div>
+                  <div class="text-2xl sm:text-3xl font-black text-white" id="statCompletedTasks">0</div>
+                  <div class="pt-2 border-t border-white/10 text-[10px] text-teal-400 font-semibold flex items-center gap-1">
+                    <i class="fa-solid fa-check-double text-[9px]"></i> Verified QA
+                  </div>
                 </div>
-                <div class="text-2xl sm:text-3xl font-black text-emerald-600" id="statCompletedTasks">0</div>
-                <p class="text-[10px] text-slate-500 font-medium">Completed Tasks</p>
+                <button type="button" class="stat-card-btn" aria-label="Open Completed Tasks" data-kpi-nav="tasks">
+                  <i class="fa-solid fa-arrow-up-right text-xs"></i>
+                </button>
               </div>
 
               <!-- KPI Card 5: Pending Tasks -->
-              <div id="kpiCardPendingTasks" data-kpi-nav="tasks" data-kpi-filter="pending" role="button" tabindex="0" aria-label="View Pending Tasks" class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs hover:border-[#147D64]/40 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 cursor-pointer select-none space-y-1 group relative">
-                <div class="flex items-center justify-between">
-                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Pending Tasks</span>
-                  <i class="fa-solid fa-arrow-right text-[10px] text-[#147D64] opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"></i>
+              <div class="stat-card-wrapper group">
+                <div id="kpiCardPendingTasks" data-kpi-nav="tasks" data-kpi-filter="pending" role="button" tabindex="0" aria-label="View Pending Tasks" class="stat-card p-4 sm:p-5 cursor-pointer select-none space-y-2">
+                  <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-full glass flex items-center justify-center text-amber-400">
+                      <i class="fa-solid fa-hourglass-half text-xs"></i>
+                    </div>
+                    <span class="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Pending</span>
+                  </div>
+                  <div class="text-2xl sm:text-3xl font-black text-white" id="statPendingTasks">0</div>
+                  <div class="pt-2 border-t border-white/10 text-[10px] text-amber-400 font-semibold flex items-center gap-1">
+                    <i class="fa-solid fa-clock text-[9px]"></i> Operations Queue
+                  </div>
                 </div>
-                <div class="text-2xl sm:text-3xl font-black text-amber-600" id="statPendingTasks">0</div>
-                <p class="text-[10px] text-slate-500 font-medium">Active Queue</p>
+                <button type="button" class="stat-card-btn" aria-label="Open Pending Tasks" data-kpi-nav="tasks">
+                  <i class="fa-solid fa-arrow-up-right text-xs"></i>
+                </button>
               </div>
 
               <!-- KPI Card 6: Confirmed Revenue -->
-              <div id="kpiCardRevenue" data-kpi-nav="finance" data-kpi-filter="confirmed" role="button" tabindex="0" aria-label="View Confirmed Revenue" class="role-financial-only p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs hover:border-[#147D64]/40 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 cursor-pointer select-none space-y-1 group relative">
-                <div class="flex items-center justify-between">
-                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Confirmed Revenue</span>
-                  <i class="fa-solid fa-arrow-right text-[10px] text-[#147D64] opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"></i>
+              <div class="stat-card-wrapper group">
+                <div id="kpiCardRevenue" data-kpi-nav="finance" data-kpi-filter="all" role="button" tabindex="0" aria-label="View Confirmed Revenue" class="stat-card p-4 sm:p-5 cursor-pointer select-none space-y-2">
+                  <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-full glass flex items-center justify-center text-emerald-400">
+                      <i class="fa-solid fa-dollar-sign text-xs"></i>
+                    </div>
+                    <span class="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Revenue</span>
+                  </div>
+                  <div class="text-2xl sm:text-3xl font-black text-white" id="statConfirmedRevenue">$0.00</div>
+                  <div class="pt-2 border-t border-white/10 text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
+                    <i class="fa-solid fa-shield text-[9px]"></i> Confirmed Ledger
+                  </div>
                 </div>
-                <div class="text-lg sm:text-xl lg:text-2xl font-black text-[#172B36] font-mono leading-tight" id="statConfirmedRevenue">$0.00</div>
-                <p class="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
-                  <i class="fa-solid fa-receipt text-[9px]"></i> Verified Ledger
-                </p>
+                <button type="button" class="stat-card-btn" aria-label="Open Finance" data-kpi-nav="finance">
+                  <i class="fa-solid fa-arrow-up-right text-xs"></i>
+                </button>
               </div>
             </div>
 
