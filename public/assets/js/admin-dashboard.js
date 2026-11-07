@@ -1020,16 +1020,30 @@
       if (!auditLogs || auditLogs.length === 0) {
         audList.innerHTML = '<p class="text-slate-500 italic text-xs">No audit logs for this client yet.</p>';
       } else {
-        audList.innerHTML = auditLogs.map(a => `
-          <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50/70 border border-[#E6ECE9] text-[11px]">
-            <div class="flex items-center space-x-2">
-              <span class="w-1.5 h-1.5 rounded-full bg-[#087F70]"></span>
-              <span class="font-bold text-[#172B36] uppercase">${a.action}</span>
-              <span class="text-[#5F7180]">${a.user_email || 'System'}</span>
+        audList.innerHTML = auditLogs.map(a => {
+          const actionText = escapeHtml(a.action || 'ACTIVITY');
+          const actorEmail = escapeHtml(a.user_email || a.user_name || 'System');
+          const dateStr = a.created_at || a.timestamp ? new Date(a.created_at || a.timestamp).toLocaleDateString() : '';
+          const detailsStr = a.details ? (typeof a.details === 'object' ? JSON.stringify(a.details) : String(a.details)) : '';
+
+          return `
+            <div class="p-2.5 rounded-xl bg-slate-50/70 border border-[#E6ECE9] text-[11px] min-w-0 max-w-full overflow-hidden space-y-1.5 [overflow-wrap:anywhere] [word-break:break-all] break-all" style="overflow-wrap: anywhere; word-break: break-all;">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 min-w-0">
+                <div class="flex items-start sm:items-center gap-1.5 min-w-0 flex-1 flex-wrap [overflow-wrap:anywhere] [word-break:break-all] break-all" style="overflow-wrap: anywhere; word-break: break-all;">
+                  <span class="w-1.5 h-1.5 rounded-full bg-[#087F70] shrink-0 mt-1 sm:mt-0"></span>
+                  <span class="font-bold text-[#172B36] uppercase tracking-wide [overflow-wrap:anywhere] [word-break:break-all] break-all" style="overflow-wrap: anywhere; word-break: break-all;">${actionText}</span>
+                  <span class="text-[#5F7180] [overflow-wrap:anywhere] [word-break:break-all] break-all" style="overflow-wrap: anywhere; word-break: break-all;">• ${actorEmail}</span>
+                </div>
+                ${dateStr ? `<span class="text-[#5F7180] font-mono text-[10px] shrink-0 self-start sm:self-auto">${dateStr}</span>` : ''}
+              </div>
+              ${detailsStr ? `
+                <div class="text-[10px] text-slate-600 bg-white/80 p-2 rounded-lg border border-[#E6ECE9] [overflow-wrap:anywhere] [word-break:break-all] break-all whitespace-pre-wrap leading-relaxed select-text" style="overflow-wrap: anywhere; word-break: break-all;">
+                  ${escapeHtml(detailsStr)}
+                </div>
+              ` : ''}
             </div>
-            <span class="text-[#5F7180] font-mono">${new Date(a.created_at).toLocaleDateString()}</span>
-          </div>
-        `).join('');
+          `;
+        }).join('');
       }
     }
   }

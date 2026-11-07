@@ -1415,14 +1415,14 @@
                 </div>
 
                 <!-- Recent Client Activity History -->
-                <div class="p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-white border border-[#E6ECE9] shadow-xs hover:border-[#087F70]/20 transition-all space-y-3.5">
+                <div class="p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-white border border-[#E6ECE9] shadow-xs hover:border-[#087F70]/20 transition-all space-y-3.5 overflow-hidden">
                   <div class="flex items-center justify-between pb-2.5 border-b border-[#E6ECE9]">
                     <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                       <i class="fa-solid fa-clock-rotate-left text-[#087F70]"></i>
                       <span>Audit &amp; Modification History</span>
                     </h4>
                   </div>
-                  <div id="clientAuditHistoryList" class="space-y-2 text-xs">
+                  <div id="clientAuditHistoryList" class="space-y-2 text-xs min-w-0 max-w-full overflow-hidden" style="overflow-wrap: anywhere; word-break: break-all;">
                     <p class="text-slate-500 italic">Loading audit trail...</p>
                   </div>
                 </div>
