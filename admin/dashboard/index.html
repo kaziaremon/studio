@@ -1193,10 +1193,10 @@
             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <div class="relative flex-1">
                 <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
-                <input type="text" id="adminClientSearchInput" placeholder="Search clients by name, company, or email..." class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white border border-[#E3E9EF] text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-brand-whiz transition-all">
+                <input type="text" id="adminClientSearchInput" placeholder="Search clients by name, company, or email..." class="w-full h-11 pl-10 pr-4 rounded-xl bg-white border border-[#E3E9EF] text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-brand-whiz transition-all">
               </div>
               <!-- Custom Glassmorphic Client Status Filter Dropdown Component -->
-              <div class="relative font-sans shrink-0" id="customClientStatusDropdown">
+              <div class="relative font-sans shrink-0 w-full sm:w-56 md:w-64" id="customClientStatusDropdown">
                 <!-- Hidden native select for programmatic & backward compatibility -->
                 <select id="adminClientStatusFilter" class="hidden" aria-hidden="true">
                   <option value="active" selected>Active Clients Only</option>
@@ -1207,19 +1207,19 @@
                 <!-- Custom Dropdown Trigger Button -->
                 <button type="button" 
                   id="btnClientStatusDropdown" 
-                  class="h-10 px-3.5 rounded-xl bg-white/90 hover:bg-white active:bg-slate-50 border border-[#E3E9EF] hover:border-[#087F70]/40 shadow-2xs hover:shadow-xs text-xs font-semibold text-[#172B36] transition-all inline-flex items-center justify-between gap-2.5 cursor-pointer touch-manipulation select-none focus:outline-none focus:ring-2 focus:ring-[#087F70]/20 font-sans w-full sm:w-auto"
+                  class="w-full h-11 px-4 rounded-xl bg-white hover:bg-slate-50/80 active:bg-slate-100 border border-[#E3E9EF] hover:border-[#087F70]/40 shadow-2xs hover:shadow-xs text-xs font-semibold text-[#172B36] transition-all inline-flex items-center justify-between gap-2.5 cursor-pointer touch-manipulation select-none focus:outline-none focus:ring-2 focus:ring-[#087F70]/20 font-sans"
                   aria-haspopup="listbox" 
                   aria-expanded="false">
-                  <div class="flex items-center gap-2 min-w-0">
-                    <i class="fa-solid fa-filter text-[11px] text-[#087F70]"></i>
-                    <span id="clientStatusDropdownCurrentLabel" class="font-sans truncate text-xs font-medium text-[#172B36]">Active Clients Only</span>
+                  <div class="flex items-center gap-2.5 min-w-0">
+                    <i class="fa-solid fa-filter text-[11px] text-[#087F70] shrink-0"></i>
+                    <span id="clientStatusDropdownCurrentLabel" class="font-sans truncate text-xs font-semibold text-[#172B36]">Active Clients Only</span>
                   </div>
-                  <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform duration-200" id="clientStatusDropdownChevron"></i>
+                  <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform duration-200 shrink-0" id="clientStatusDropdownChevron"></i>
                 </button>
 
                 <!-- Custom Dropdown Menu (Crisp White / Glassmorphic Floating Popover) -->
                 <div id="clientStatusDropdownMenu" 
-                  class="hidden absolute right-0 sm:right-0 mt-1.5 w-56 rounded-2xl bg-white/95 backdrop-blur-xl border border-[#E3E9EF] shadow-xl p-1.5 z-40 space-y-0.5 animate-in fade-in zoom-in-95 duration-150 font-sans"
+                  class="hidden absolute right-0 mt-1.5 w-full min-w-full sm:w-64 rounded-2xl bg-white/95 backdrop-blur-xl border border-[#E3E9EF] shadow-xl p-1.5 z-40 space-y-0.5 animate-in fade-in zoom-in-95 duration-150 font-sans"
                   role="listbox" 
                   tabindex="-1">
                   
@@ -1280,63 +1280,58 @@
                VIEW: CLIENT MANAGEMENT WORKSPACE (Phase 3)
                ================================================================= -->
           <div id="view_client_details" class="hidden space-y-3.5 sm:space-y-5">
-            <!-- Client Details Top Navigation Bar -->
-            <div class="flex items-center justify-between gap-3 pb-1">
-              <div class="flex items-center gap-2 sm:gap-3">
-                <button type="button" id="btnBackToClients" class="h-9 px-3 rounded-xl bg-white hover:bg-slate-50 active:bg-slate-100 border border-[#E3E9EF] shadow-2xs flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-[#172B36] transition-all cursor-pointer select-none focus:outline-none focus:ring-2 focus:ring-[#087F70]/20" title="Back to Client Directory">
-                  <i class="fa-solid fa-arrow-left text-xs text-[#087F70]"></i>
-                  <span>Back to Clients</span>
+            <!-- Client Details Sleek Integrated Breadcrumb Navigation -->
+            <div class="flex items-center justify-between gap-3 px-1 py-1 font-sans">
+              <nav aria-label="Breadcrumb" class="flex items-center gap-2 text-xs">
+                <button type="button" id="btnBackToClients" class="group inline-flex items-center gap-1.5 text-slate-500 hover:text-[#087F70] transition-colors font-medium cursor-pointer focus:outline-none focus:text-[#087F70]" title="Back to Client Directory">
+                  <i class="fa-solid fa-arrow-left text-[11px] text-[#087F70] group-hover:-translate-x-0.5 transition-transform"></i>
+                  <span>Clients Directory</span>
                 </button>
-                <div class="flex items-center gap-1.5 text-xs text-slate-400">
-                  <span class="text-slate-300">/</span>
-                  <span class="text-slate-600 font-medium" id="clientDetailTitle">Client Workspace</span>
-                </div>
-              </div>
-              <div class="flex items-center gap-2">
-                <span id="clientDetailStatusBadge" class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">Active</span>
-              </div>
+                <i class="fa-solid fa-chevron-right text-[9px] text-slate-300"></i>
+                <span class="text-slate-800 font-bold truncate" id="clientDetailTitle">Client Workspace</span>
+              </nav>
             </div>
 
             <!-- Unified Authoritative Client Profile Card (Consolidated Identity + Reorganized Actions) -->
             <div class="p-4 sm:p-6 lg:p-7 rounded-2xl sm:rounded-3xl bg-white border border-[#E6ECE9] shadow-xs space-y-4 sm:space-y-5">
-              <!-- Top Row: Avatar + Identity + Actions Bar -->
+              <!-- Top Row: Identity + Actions 2x2 Grid -->
               <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-5">
-                <!-- Avatar & Identity (No Duplications, Proper Wrapping, No Ellipses Cutoff) -->
-                <div class="flex items-start sm:items-center gap-3.5 sm:gap-4 min-w-0 flex-1">
-                  <div class="w-13 h-13 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-[#087F70]/10 to-[#087F70]/25 border border-[#087F70]/30 flex items-center justify-center font-black text-base sm:text-xl text-[#087F70] uppercase shrink-0 shadow-2xs" id="clientAvatarInitials">
-                    CL
+                <!-- Clean Identity (Avatar Removed, Typography-First, Single Flawless Status Badge) -->
+                <div class="min-w-0 flex-1 space-y-1">
+                  <!-- Hidden anchor for JS compatibility -->
+                  <span id="clientAvatarInitials" class="hidden" aria-hidden="true"></span>
+                  <div class="flex flex-wrap items-center gap-2.5">
+                    <h2 class="text-lg sm:text-xl lg:text-2xl font-black text-[#172B36] tracking-tight leading-snug break-words [overflow-wrap:anywhere]" id="clientCardFullName">Client Name</h2>
+                    <span id="clientCardStatusBadge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200/90 shadow-2xs shrink-0 select-none">
+                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                      <span>Active</span>
+                    </span>
                   </div>
-                  <div class="min-w-0 flex-1 space-y-1">
-                    <div class="flex flex-wrap items-center gap-2">
-                      <h2 class="text-lg sm:text-xl lg:text-2xl font-black text-[#172B36] tracking-tight leading-snug break-words [overflow-wrap:anywhere]" id="clientCardFullName">Client Name</h2>
-                      <span id="clientCardStatusBadge" class="hidden sm:inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">Active</span>
-                    </div>
-                    <div class="text-xs sm:text-sm font-semibold text-[#087F70] break-words [overflow-wrap:anywhere]" id="clientCardCompanyName">Company Name</div>
-                    <p class="text-xs text-slate-500 font-normal leading-relaxed" id="clientDetailSubtitle">Managing organization and operational services</p>
-                  </div>
+                  <div class="text-xs sm:text-sm font-semibold text-[#087F70] break-words [overflow-wrap:anywhere]" id="clientCardCompanyName">Company Name</div>
+                  <p class="text-xs text-slate-500 font-normal leading-relaxed" id="clientDetailSubtitle">Managing organization and operational services</p>
                 </div>
 
-                <!-- Reorganized Action Buttons: Neatly aligned inside profile header -->
-                <div class="flex flex-wrap items-center gap-2 sm:gap-2.5 shrink-0 pt-3 lg:pt-0 border-t lg:border-t-0 border-[#E6ECE9]">
-                  <button type="button" id="btnOpenEditClientModal" class="h-9 px-3.5 sm:px-4 rounded-xl text-xs font-semibold bg-white hover:bg-slate-50 active:bg-slate-100 text-[#172B36] border border-[#E3E9EF] hover:border-slate-300 shadow-2xs transition-all inline-flex items-center justify-center gap-1.5 cursor-pointer">
+                <!-- Reorganized Action Buttons: Symmetrical 2x2 Grid Layout -->
+                <div class="grid grid-cols-2 gap-2 sm:gap-2.5 w-full sm:w-[340px] lg:w-[360px] shrink-0 pt-3 lg:pt-0 border-t lg:border-t-0 border-[#E6ECE9]">
+                  <button type="button" id="btnOpenEditClientModal" class="h-10 px-3.5 rounded-xl text-xs font-semibold bg-white hover:bg-slate-50 active:bg-slate-100 text-[#172B36] border border-[#E3E9EF] hover:border-slate-300 shadow-2xs transition-all flex items-center justify-center gap-2 cursor-pointer w-full select-none">
                     <i class="fa-solid fa-pen-to-square text-xs text-[#087F70]"></i>
-                    <span>Edit Profile</span>
+                    <span class="truncate">Edit Profile</span>
                   </button>
-                  <button type="button" id="btnOpenAssignServiceClientModal" class="h-9 px-3.5 sm:px-4 rounded-xl text-xs font-semibold bg-[#087F70] hover:bg-[#066559] active:bg-[#055046] text-white shadow-2xs hover:shadow-xs transition-all inline-flex items-center justify-center gap-1.5 cursor-pointer">
+                  <button type="button" id="btnOpenAssignServiceClientModal" class="h-10 px-3.5 rounded-xl text-xs font-semibold bg-[#087F70] hover:bg-[#066559] active:bg-[#055046] text-white shadow-2xs hover:shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer w-full select-none">
                     <i class="fa-solid fa-plus text-xs"></i>
-                    <span>Assign Service</span>
+                    <span class="truncate">Assign Service</span>
                   </button>
-                  <button type="button" id="btnSuspendClientAction" class="h-9 px-3.5 sm:px-4 rounded-xl text-xs font-semibold text-amber-700 bg-amber-50/80 hover:bg-amber-100 border border-amber-200/80 shadow-2xs transition-all inline-flex items-center justify-center gap-1.5 cursor-pointer">
+                  <button type="button" id="btnSuspendClientAction" class="h-10 px-3.5 rounded-xl text-xs font-semibold text-amber-700 bg-amber-50/80 hover:bg-amber-100 border border-amber-200/80 shadow-2xs transition-all flex items-center justify-center gap-2 cursor-pointer w-full select-none">
                     <i class="fa-solid fa-pause text-xs text-amber-600"></i>
-                    <span>Suspend Client</span>
+                    <span class="truncate">Suspend Client</span>
                   </button>
-                  <button type="button" id="btnReactivateClientAction" class="hidden h-9 px-3.5 sm:px-4 rounded-xl text-xs font-semibold text-emerald-700 bg-emerald-50/80 hover:bg-emerald-100 border border-emerald-200/80 shadow-2xs transition-all inline-flex items-center justify-center gap-1.5 cursor-pointer">
+                  <button type="button" id="btnReactivateClientAction" class="hidden h-10 px-3.5 rounded-xl text-xs font-semibold text-emerald-700 bg-emerald-50/80 hover:bg-emerald-100 border border-emerald-200/80 shadow-2xs transition-all flex items-center justify-center gap-2 cursor-pointer w-full select-none">
                     <i class="fa-solid fa-play text-xs text-emerald-600"></i>
-                    <span>Reactivate Client</span>
+                    <span class="truncate">Reactivate Client</span>
                   </button>
-                  <button type="button" id="btnDeleteClientAction" class="h-9 px-3.5 sm:px-4 rounded-xl text-xs font-semibold text-rose-700 bg-rose-50/80 hover:bg-rose-100 border border-rose-200/80 shadow-2xs transition-all inline-flex items-center justify-center gap-1.5 cursor-pointer">
+                  <button type="button" id="btnDeleteClientAction" class="h-10 px-3.5 rounded-xl text-xs font-semibold text-rose-700 bg-rose-50/80 hover:bg-rose-100 border border-rose-200/80 shadow-2xs transition-all flex items-center justify-center gap-2 cursor-pointer w-full select-none">
                     <i class="fa-solid fa-trash-can text-xs text-rose-600"></i>
-                    <span>Delete Client</span>
+                    <span class="truncate">Delete Client</span>
                   </button>
                 </div>
               </div>
@@ -1410,10 +1405,10 @@
                   <div class="space-y-2.5">
                     <label class="block text-[10px] uppercase font-bold text-slate-500 tracking-wider">Preferred Billing Currency</label>
                     <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2.5 w-full">
-                      <div class="relative flex-1 min-w-0">
-                        <select id="clientPreferredCurrencySelect" class="w-full min-w-0 h-10 px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs font-semibold text-[#172B36] focus:bg-white focus:outline-none focus:border-[#087F70] focus:ring-1 focus:ring-[#087F70]/20 transition-all cursor-pointer">
+                      <div class="relative flex-1 min-w-0 font-sans" id="customClientPreferredCurrencyDropdown">
+                        <select id="clientPreferredCurrencySelect" class="hidden" aria-hidden="true">
                           <option value="BDT">BDT — ৳ (Bangladeshi Taka)</option>
-                          <option value="USD">USD — $ (US Dollar)</option>
+                          <option value="USD" selected>USD — $ (US Dollar)</option>
                           <option value="GBP">GBP — £ (British Pound)</option>
                           <option value="EUR">EUR — € (Euro)</option>
                           <option value="AED">AED — د.إ (UAE Dirham)</option>
@@ -1425,6 +1420,75 @@
                           <option value="JPY">JPY — ¥ (Japanese Yen)</option>
                           <option value="MYR">MYR — RM (Malaysian Ringgit)</option>
                         </select>
+
+                        <!-- Custom Dropdown Trigger Button -->
+                        <button type="button" 
+                          id="btnClientCurrencyDropdown" 
+                          class="w-full h-10 px-3.5 rounded-xl bg-white hover:bg-slate-50 active:bg-slate-100 border border-[#E3E9EF] hover:border-[#087F70]/40 shadow-2xs hover:shadow-xs text-xs font-semibold text-[#172B36] transition-all inline-flex items-center justify-between gap-2.5 cursor-pointer touch-manipulation select-none focus:outline-none focus:ring-2 focus:ring-[#087F70]/20 font-sans"
+                          aria-haspopup="listbox" 
+                          aria-expanded="false">
+                          <div class="flex items-center gap-2 min-w-0">
+                            <i class="fa-solid fa-coins text-[11px] text-[#087F70]"></i>
+                            <span id="clientCurrencyDropdownCurrentLabel" class="font-sans truncate text-xs font-medium text-[#172B36]">USD — $ (US Dollar)</span>
+                          </div>
+                          <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform duration-200" id="clientCurrencyDropdownChevron"></i>
+                        </button>
+
+                        <!-- Custom Floating Popover Menu -->
+                        <div id="clientCurrencyDropdownMenu" 
+                          class="hidden absolute left-0 right-0 mt-1.5 max-h-56 overflow-y-auto rounded-2xl bg-white/95 backdrop-blur-xl border border-[#E3E9EF] shadow-xl p-1.5 z-40 space-y-0.5 animate-in fade-in zoom-in-95 duration-150 font-sans"
+                          role="listbox" 
+                          tabindex="-1">
+                          
+                          <button type="button" class="custom-client-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left" data-value="BDT" role="option">
+                            <span class="truncate">BDT — ৳ (Bangladeshi Taka)</span>
+                            <i class="fa-solid fa-check text-xs text-[#087F70] currency-option-check hidden"></i>
+                          </button>
+                          <button type="button" class="custom-client-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-[#087F70] bg-[#087F70]/10 hover:bg-[#087F70]/15 cursor-pointer transition-colors select-none font-sans text-left" data-value="USD" role="option">
+                            <span class="truncate">USD — $ (US Dollar)</span>
+                            <i class="fa-solid fa-check text-xs text-[#087F70] currency-option-check"></i>
+                          </button>
+                          <button type="button" class="custom-client-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left" data-value="GBP" role="option">
+                            <span class="truncate">GBP — £ (British Pound)</span>
+                            <i class="fa-solid fa-check text-xs text-[#087F70] currency-option-check hidden"></i>
+                          </button>
+                          <button type="button" class="custom-client-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left" data-value="EUR" role="option">
+                            <span class="truncate">EUR — € (Euro)</span>
+                            <i class="fa-solid fa-check text-xs text-[#087F70] currency-option-check hidden"></i>
+                          </button>
+                          <button type="button" class="custom-client-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left" data-value="AED" role="option">
+                            <span class="truncate">AED — د.إ (UAE Dirham)</span>
+                            <i class="fa-solid fa-check text-xs text-[#087F70] currency-option-check hidden"></i>
+                          </button>
+                          <button type="button" class="custom-client-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left" data-value="SAR" role="option">
+                            <span class="truncate">SAR — ر.س (Saudi Riyal)</span>
+                            <i class="fa-solid fa-check text-xs text-[#087F70] currency-option-check hidden"></i>
+                          </button>
+                          <button type="button" class="custom-client-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left" data-value="CAD" role="option">
+                            <span class="truncate">CAD — CA$ (Canadian Dollar)</span>
+                            <i class="fa-solid fa-check text-xs text-[#087F70] currency-option-check hidden"></i>
+                          </button>
+                          <button type="button" class="custom-client-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left" data-value="AUD" role="option">
+                            <span class="truncate">AUD — A$ (Australian Dollar)</span>
+                            <i class="fa-solid fa-check text-xs text-[#087F70] currency-option-check hidden"></i>
+                          </button>
+                          <button type="button" class="custom-client-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left" data-value="SGD" role="option">
+                            <span class="truncate">SGD — S$ (Singapore Dollar)</span>
+                            <i class="fa-solid fa-check text-xs text-[#087F70] currency-option-check hidden"></i>
+                          </button>
+                          <button type="button" class="custom-client-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left" data-value="INR" role="option">
+                            <span class="truncate">INR — ₹ (Indian Rupee)</span>
+                            <i class="fa-solid fa-check text-xs text-[#087F70] currency-option-check hidden"></i>
+                          </button>
+                          <button type="button" class="custom-client-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left" data-value="JPY" role="option">
+                            <span class="truncate">JPY — ¥ (Japanese Yen)</span>
+                            <i class="fa-solid fa-check text-xs text-[#087F70] currency-option-check hidden"></i>
+                          </button>
+                          <button type="button" class="custom-client-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left" data-value="MYR" role="option">
+                            <span class="truncate">MYR — RM (Malaysian Ringgit)</span>
+                            <i class="fa-solid fa-check text-xs text-[#087F70] currency-option-check hidden"></i>
+                          </button>
+                        </div>
                       </div>
                       <button type="button" id="btnSaveClientCurrency" class="w-full sm:w-auto h-10 px-4 py-2 rounded-xl text-xs font-semibold bg-[#087F70] hover:bg-[#066559] active:bg-[#055046] text-white shrink-0 transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 shadow-2xs hover:shadow-xs">
                         <i class="fa-solid fa-floppy-disk text-xs"></i>
@@ -3197,47 +3261,153 @@
         <input type="hidden" name="clientId" id="assignServiceClientId">
         <div>
           <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Select Catalog Service *</label>
-          <select name="serviceId" id="assignServiceSelect" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:outline-none focus:border-brand-whiz">
-            <option value="">Choose a service...</option>
-          </select>
+          <div class="relative font-sans" id="customAssignServiceDropdown">
+            <!-- Hidden native select for form submit and programmatic compatibility -->
+            <select name="serviceId" id="assignServiceSelect" required class="hidden" aria-hidden="true">
+              <option value="">Choose a service...</option>
+            </select>
+            <!-- Custom Dropdown Trigger Button -->
+            <button type="button" 
+              id="btnAssignServiceTrigger" 
+              class="w-full h-11 px-3.5 rounded-xl bg-white hover:bg-slate-50 active:bg-slate-100 border border-[#E3E9EF] hover:border-[#087F70]/40 shadow-2xs hover:shadow-xs text-xs font-semibold text-[#172B36] transition-all inline-flex items-center justify-between gap-2.5 cursor-pointer touch-manipulation select-none focus:outline-none focus:ring-2 focus:ring-[#087F70]/20 font-sans"
+              aria-haspopup="listbox" 
+              aria-expanded="false">
+              <div class="flex items-center gap-2 min-w-0">
+                <i class="fa-solid fa-layer-group text-[11px] text-[#087F70]"></i>
+                <span id="assignServiceCurrentLabel" class="font-sans truncate text-xs font-medium text-slate-500">Choose a service...</span>
+              </div>
+              <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform duration-200" id="assignServiceChevron"></i>
+            </button>
+            <!-- Custom Dropdown Menu -->
+            <div id="assignServiceMenu" 
+              class="hidden absolute left-0 right-0 mt-1.5 max-h-56 overflow-y-auto rounded-2xl bg-white/95 backdrop-blur-xl border border-[#E3E9EF] shadow-2xl p-1.5 z-50 space-y-0.5 animate-in fade-in zoom-in-95 duration-150 font-sans"
+              role="listbox" 
+              tabindex="-1">
+              <div class="p-3 text-center text-xs text-slate-400 italic">Loading services...</div>
+            </div>
+          </div>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Package Tier</label>
-            <input type="text" name="packageName" value="Standard Retainer" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
+            <input type="text" name="packageName" value="Standard Retainer" class="w-full h-11 px-3.5 rounded-xl bg-white border border-[#E3E9EF] text-xs text-[#172B36]">
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Price *</label>
-            <input type="number" step="0.01" name="priceDollars" id="assignServicePrice" value="1000" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-mono">
+            <input type="number" step="0.01" name="priceDollars" id="assignServicePrice" value="1000" required class="w-full h-11 px-3.5 rounded-xl bg-white border border-[#E3E9EF] text-xs text-[#172B36] font-mono">
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Currency *</label>
-            <select name="currency" id="assignServiceCurrency" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:border-brand-whiz">
-              <option value="BDT">BDT — ৳</option>
-              <option value="USD" selected>USD — $</option>
-              <option value="GBP">GBP — £</option>
-              <option value="EUR">EUR — €</option>
-              <option value="AED">AED — د.إ</option>
-              <option value="SAR">SAR — ر.س</option>
-              <option value="CAD">CAD — CA$</option>
-              <option value="AUD">AUD — A$</option>
-              <option value="SGD">SGD — S$</option>
-              <option value="INR">INR — ₹</option>
-              <option value="JPY">JPY — ¥</option>
-              <option value="MYR">MYR — RM</option>
-            </select>
+            <div class="relative font-sans" id="customAssignCurrencyDropdown">
+              <!-- Hidden native select for form submit and programmatic compatibility -->
+              <select name="currency" id="assignServiceCurrency" class="hidden" aria-hidden="true">
+                <option value="BDT">BDT — ৳</option>
+                <option value="USD" selected>USD — $</option>
+                <option value="GBP">GBP — £</option>
+                <option value="EUR">EUR — €</option>
+                <option value="AED">AED — د.إ</option>
+                <option value="SAR">SAR — ر.س</option>
+                <option value="CAD">CAD — CA$</option>
+                <option value="AUD">AUD — A$</option>
+                <option value="SGD">SGD — S$</option>
+                <option value="INR">INR — ₹</option>
+                <option value="JPY">JPY — ¥</option>
+                <option value="MYR">MYR — RM</option>
+              </select>
+              <!-- Custom Dropdown Trigger Button -->
+              <button type="button" 
+                id="btnAssignCurrencyTrigger" 
+                class="w-full h-11 px-3.5 rounded-xl bg-white hover:bg-slate-50 active:bg-slate-100 border border-[#E3E9EF] hover:border-[#087F70]/40 shadow-2xs hover:shadow-xs text-xs font-semibold text-[#172B36] transition-all inline-flex items-center justify-between gap-2.5 cursor-pointer touch-manipulation select-none focus:outline-none focus:ring-2 focus:ring-[#087F70]/20 font-sans"
+                aria-haspopup="listbox" 
+                aria-expanded="false">
+                <span id="assignCurrencyCurrentLabel" class="font-sans truncate text-xs font-medium text-[#172B36]">USD — $</span>
+                <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform duration-200" id="assignCurrencyChevron"></i>
+              </button>
+              <!-- Custom Dropdown Menu -->
+              <div id="assignCurrencyMenu" 
+                class="hidden absolute right-0 w-48 mt-1.5 max-h-52 overflow-y-auto rounded-2xl bg-white/95 backdrop-blur-xl border border-[#E3E9EF] shadow-2xl p-1.5 z-50 space-y-0.5 animate-in fade-in zoom-in-95 duration-150 font-sans"
+                role="listbox" 
+                tabindex="-1">
+                <button type="button" class="custom-assign-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left" data-value="BDT" role="option">
+                  <span>BDT — ৳</span>
+                  <i class="fa-solid fa-check text-xs text-[#087F70] assign-currency-check hidden"></i>
+                </button>
+                <button type="button" class="custom-assign-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-[#087F70] bg-[#087F70]/10 hover:bg-[#087F70]/15 cursor-pointer transition-colors select-none font-sans text-left" data-value="USD" role="option">
+                  <span>USD — $</span>
+                  <i class="fa-solid fa-check text-xs text-[#087F70] assign-currency-check"></i>
+                </button>
+                <button type="button" class="custom-assign-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left" data-value="GBP" role="option">
+                  <span>GBP — £</span>
+                  <i class="fa-solid fa-check text-xs text-[#087F70] assign-currency-check hidden"></i>
+                </button>
+                <button type="button" class="custom-assign-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left" data-value="EUR" role="option">
+                  <span>EUR — €</span>
+                  <i class="fa-solid fa-check text-xs text-[#087F70] assign-currency-check hidden"></i>
+                </button>
+                <button type="button" class="custom-assign-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left" data-value="AED" role="option">
+                  <span>AED — د.إ</span>
+                  <i class="fa-solid fa-check text-xs text-[#087F70] assign-currency-check hidden"></i>
+                </button>
+                <button type="button" class="custom-assign-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left" data-value="SAR" role="option">
+                  <span>SAR — ر.س</span>
+                  <i class="fa-solid fa-check text-xs text-[#087F70] assign-currency-check hidden"></i>
+                </button>
+                <button type="button" class="custom-assign-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left" data-value="CAD" role="option">
+                  <span>CAD — CA$</span>
+                  <i class="fa-solid fa-check text-xs text-[#087F70] assign-currency-check hidden"></i>
+                </button>
+                <button type="button" class="custom-assign-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left" data-value="AUD" role="option">
+                  <span>AUD — A$</span>
+                  <i class="fa-solid fa-check text-xs text-[#087F70] assign-currency-check hidden"></i>
+                </button>
+                <button type="button" class="custom-assign-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left" data-value="SGD" role="option">
+                  <span>SGD — S$</span>
+                  <i class="fa-solid fa-check text-xs text-[#087F70] assign-currency-check hidden"></i>
+                </button>
+                <button type="button" class="custom-assign-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left" data-value="INR" role="option">
+                  <span>INR — ₹</span>
+                  <i class="fa-solid fa-check text-xs text-[#087F70] assign-currency-check hidden"></i>
+                </button>
+                <button type="button" class="custom-assign-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left" data-value="JPY" role="option">
+                  <span>JPY — ¥</span>
+                  <i class="fa-solid fa-check text-xs text-[#087F70] assign-currency-check hidden"></i>
+                </button>
+                <button type="button" class="custom-assign-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left" data-value="MYR" role="option">
+                  <span>MYR — RM</span>
+                  <i class="fa-solid fa-check text-xs text-[#087F70] assign-currency-check hidden"></i>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Start Date</label>
-            <input type="date" name="startDate" id="assignServiceStartDate" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
+            <div class="custom-datepicker-wrapper relative font-sans" data-datepicker-target="assignServiceStartDate">
+              <input type="text" name="startDate" id="assignServiceStartDate" class="hidden" aria-hidden="true">
+              <button type="button" class="custom-datepicker-trigger w-full h-11 px-3.5 rounded-xl bg-white hover:bg-slate-50 active:bg-slate-100 border border-[#E3E9EF] hover:border-[#087F70]/40 shadow-2xs text-xs font-semibold text-[#172B36] flex items-center justify-between cursor-pointer select-none transition-all focus:outline-none focus:ring-2 focus:ring-[#087F70]/20 font-sans" aria-label="Select start date">
+                <span class="flex items-center gap-2 truncate">
+                  <i class="fa-regular fa-calendar text-[#087F70] text-xs shrink-0"></i>
+                  <span class="datepicker-label truncate">Nov 7, 2026</span>
+                </span>
+                <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 chevron-icon shrink-0"></i>
+              </button>
+            </div>
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Target Completion</label>
-            <input type="date" name="deadline" id="assignServiceDeadline" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
+            <div class="custom-datepicker-wrapper relative font-sans" data-datepicker-target="assignServiceDeadline">
+              <input type="text" name="deadline" id="assignServiceDeadline" class="hidden" aria-hidden="true">
+              <button type="button" class="custom-datepicker-trigger w-full h-11 px-3.5 rounded-xl bg-white hover:bg-slate-50 active:bg-slate-100 border border-[#E3E9EF] hover:border-[#087F70]/40 shadow-2xs text-xs font-semibold text-[#172B36] flex items-center justify-between cursor-pointer select-none transition-all focus:outline-none focus:ring-2 focus:ring-[#087F70]/20 font-sans" aria-label="Select target completion date">
+                <span class="flex items-center gap-2 truncate">
+                  <i class="fa-regular fa-calendar text-[#087F70] text-xs shrink-0"></i>
+                  <span class="datepicker-label truncate text-slate-400">Select date...</span>
+                </span>
+                <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 chevron-icon shrink-0"></i>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -3878,7 +4048,16 @@
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Payment Date *</label>
-            <input type="date" name="paymentDate" id="paymentDateInput" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:border-brand-whiz">
+            <div class="custom-datepicker-wrapper relative font-sans" data-datepicker-target="paymentDateInput">
+              <input type="text" name="paymentDate" id="paymentDateInput" required class="hidden" aria-hidden="true">
+              <button type="button" class="custom-datepicker-trigger w-full h-11 px-3.5 rounded-xl bg-white hover:bg-slate-50 active:bg-slate-100 border border-[#E3E9EF] hover:border-[#087F70]/40 shadow-2xs text-xs font-semibold text-[#172B36] flex items-center justify-between cursor-pointer select-none transition-all focus:outline-none focus:ring-2 focus:ring-[#087F70]/20 font-sans" aria-label="Select payment date">
+                <span class="flex items-center gap-2 truncate">
+                  <i class="fa-regular fa-calendar text-[#087F70] text-xs shrink-0"></i>
+                  <span class="datepicker-label truncate">Nov 7, 2026</span>
+                </span>
+                <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 chevron-icon shrink-0"></i>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -3948,7 +4127,16 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Payment Date *</label>
-            <input type="date" name="paymentDate" id="editPaymentDate" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:border-[#147D64]">
+            <div class="custom-datepicker-wrapper relative font-sans" data-datepicker-target="editPaymentDate">
+              <input type="text" name="paymentDate" id="editPaymentDate" required class="hidden" aria-hidden="true">
+              <button type="button" class="custom-datepicker-trigger w-full h-11 px-3.5 rounded-xl bg-white hover:bg-slate-50 active:bg-slate-100 border border-[#E3E9EF] hover:border-[#087F70]/40 shadow-2xs text-xs font-semibold text-[#172B36] flex items-center justify-between cursor-pointer select-none transition-all focus:outline-none focus:ring-2 focus:ring-[#087F70]/20 font-sans" aria-label="Select payment date">
+                <span class="flex items-center gap-2 truncate">
+                  <i class="fa-regular fa-calendar text-[#087F70] text-xs shrink-0"></i>
+                  <span class="datepicker-label truncate">Nov 7, 2026</span>
+                </span>
+                <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 chevron-icon shrink-0"></i>
+              </button>
+            </div>
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Payment Method *</label>
@@ -4302,6 +4490,41 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Reusable Custom Glassmorphic Date Picker Popover Component -->
+  <div id="whizCustomDatePickerPopover" 
+    class="hidden fixed z-[99] w-72 rounded-2xl bg-white/95 backdrop-blur-xl border border-[#E3E9EF] shadow-2xl p-3.5 space-y-3 font-sans select-none animate-in fade-in zoom-in-95 duration-150" 
+    role="dialog" 
+    aria-label="Choose Date"
+    tabindex="-1">
+    
+    <!-- Calendar Navigation Header -->
+    <div class="flex items-center justify-between pb-2 border-b border-[#E3E9EF]">
+      <button type="button" id="btnDatepickerPrevMonth" class="w-8 h-8 rounded-lg hover:bg-slate-100 active:bg-slate-200 flex items-center justify-center text-slate-600 hover:text-[#087F70] cursor-pointer transition-colors" aria-label="Previous Month">
+        <i class="fa-solid fa-chevron-left text-xs"></i>
+      </button>
+      <span id="datepickerMonthYearLabel" class="text-xs font-bold text-[#172B36] tracking-tight">November 2026</span>
+      <button type="button" id="btnDatepickerNextMonth" class="w-8 h-8 rounded-lg hover:bg-slate-100 active:bg-slate-200 flex items-center justify-center text-slate-600 hover:text-[#087F70] cursor-pointer transition-colors" aria-label="Next Month">
+        <i class="fa-solid fa-chevron-right text-xs"></i>
+      </button>
+    </div>
+
+    <!-- Day of Week Headers -->
+    <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-bold uppercase tracking-wider text-slate-400">
+      <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+    </div>
+
+    <!-- Calendar 7-Column Days Matrix Grid -->
+    <div id="datepickerDaysGrid" class="grid grid-cols-7 gap-1">
+      <!-- Generated dynamically in JavaScript -->
+    </div>
+
+    <!-- Quick Actions Footer -->
+    <div class="flex items-center justify-between pt-2 border-t border-[#E3E9EF] text-xs">
+      <button type="button" id="btnDatepickerClear" class="text-[11px] font-medium text-slate-400 hover:text-rose-600 cursor-pointer transition-colors">Clear</button>
+      <button type="button" id="btnDatepickerToday" class="text-[11px] font-bold text-[#087F70] hover:underline cursor-pointer transition-colors">Today</button>
     </div>
   </div>
 

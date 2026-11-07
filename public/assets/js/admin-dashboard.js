@@ -997,11 +997,11 @@
 
     statusBadges.forEach(statusBadge => {
       if (client.status === 'suspended') {
-        statusBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-200 shrink-0';
-        statusBadge.textContent = 'Suspended';
+        statusBadge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200/90 shadow-2xs shrink-0 select-none';
+        statusBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span><span>Suspended</span>';
       } else {
-        statusBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0';
-        statusBadge.textContent = client.status || 'Active';
+        statusBadge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200/90 shadow-2xs shrink-0 select-none';
+        statusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span><span>${escapeHtml(client.status || 'Active')}</span>`;
       }
     });
 
@@ -1048,7 +1048,12 @@
     // Populate Preferred Currency in Financial Preferences
     const clientCurrency = (cif.currency || client.currency || (effectiveCountry === 'Bangladesh' || (effectivePhone && effectivePhone.startsWith('+880')) ? 'BDT' : 'USD')).toUpperCase();
     const currSelect = document.getElementById('clientPreferredCurrencySelect');
-    if (currSelect) currSelect.value = clientCurrency;
+    if (currSelect) {
+      currSelect.value = clientCurrency;
+      if (typeof syncClientPreferredCurrencyDropdown === 'function') {
+        syncClientPreferredCurrencyDropdown(clientCurrency);
+      }
+    }
     const currBadge = document.getElementById('clientPreferredCurrencyBadge');
     if (currBadge) currBadge.textContent = clientCurrency;
 
@@ -2240,7 +2245,11 @@
             document.getElementById('editPaymentReceiptNum').textContent = p.receipt_number;
             document.getElementById('editPaymentInvoiceNum').textContent = p.invoice_number || 'INV-DIRECT';
             document.getElementById('editPaymentAmountDisplay').textContent = formatCurrency(p.amount_cents || 0, p.currency || 'USD');
-            document.getElementById('editPaymentDate').value = p.payment_date || new Date().toISOString().split('T')[0];
+            const epd = document.getElementById('editPaymentDate');
+            if (epd) {
+              epd.value = p.payment_date || new Date().toISOString().split('T')[0];
+              if (typeof updateDatePickerTrigger === 'function') updateDatePickerTrigger(epd);
+            }
             document.getElementById('editPaymentMethod').value = p.payment_method || 'bank_transfer';
             document.getElementById('editPaymentReference').value = p.payment_reference || '';
             document.getElementById('editPaymentNotes').value = p.financial_notes || '';
@@ -4825,6 +4834,9 @@
 
       document.getElementById('assignServiceClientId').value = clientId;
       const select = document.getElementById('assignServiceSelect');
+      const menu = document.getElementById('assignServiceMenu');
+      const triggerLabel = document.getElementById('assignServiceCurrentLabel');
+
       if (select) {
         select.innerHTML = '<option value="">Choose a service...</option>' + state.servicesCache.map(s => `
           <option value="${s.id}" data-price="${(s.standard_price_cents || 100000) / 100}" data-pkg="${s.default_package || 'Standard Retainer'}">[${s.code}] ${s.name}</option>
@@ -4839,7 +4851,63 @@
         });
       }
 
-      document.getElementById('assignServiceStartDate').value = new Date().toISOString().split('T')[0];
+      if (triggerLabel) triggerLabel.textContent = 'Choose a service...';
+      if (menu) {
+        menu.innerHTML = '<button type="button" class="custom-assign-service-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-500 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left" data-value="" data-label="Choose a service..."><span>Choose a service...</span></button>' + state.servicesCache.map(s => `
+          <button type="button" class="custom-assign-service-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left" data-value="${s.id}" data-price="${(s.standard_price_cents || 100000) / 100}" data-pkg="${escapeHtml(s.default_package || 'Standard Retainer')}" data-label="[${s.code}] ${escapeHtml(s.name)}">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="w-1.5 h-1.5 rounded-full bg-[#087F70]"></span>
+              <span class="truncate">[${s.code}] ${escapeHtml(s.name)}</span>
+            </div>
+            <span class="font-mono text-[11px] text-slate-400 group-hover:text-[#087F70] shrink-0">$${((s.standard_price_cents || 100000) / 100).toFixed(2)}</span>
+          </button>
+        `).join('');
+
+        menu.querySelectorAll('.custom-assign-service-option').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const val = btn.dataset.value;
+            const label = btn.dataset.label;
+            const price = btn.dataset.price;
+            const pkg = btn.dataset.pkg;
+            if (triggerLabel) triggerLabel.textContent = label;
+            if (select) {
+              select.value = val;
+              select.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            if (price) {
+              const priceInput = document.getElementById('assignServicePrice');
+              if (priceInput) priceInput.value = price;
+            }
+            if (pkg) {
+              const pkgInput = document.querySelector('#formAssignService input[name="packageName"]');
+              if (pkgInput) pkgInput.value = pkg;
+            }
+            closeAssignServiceMenu();
+          });
+        });
+      }
+
+      // Sync active client's preferred currency into modal
+      const activeClient = state.clientsCache?.find(c => c.id === clientId);
+      const clientCur = (activeClient?.currency || 'USD').toUpperCase();
+      if (typeof syncAssignCurrencyDropdown === 'function') {
+        syncAssignCurrencyDropdown(clientCur);
+      }
+
+      // Sync start date & deadline datepicker displays
+      const todayIso = new Date().toISOString().split('T')[0];
+      const startInput = document.getElementById('assignServiceStartDate');
+      if (startInput) {
+        startInput.value = todayIso;
+        if (typeof updateDatePickerTrigger === 'function') updateDatePickerTrigger(startInput);
+      }
+      const deadlineInput = document.getElementById('assignServiceDeadline');
+      if (deadlineInput) {
+        deadlineInput.value = '';
+        if (typeof updateDatePickerTrigger === 'function') updateDatePickerTrigger(deadlineInput);
+      }
+
       document.getElementById('modalAssignService')?.classList.remove('hidden');
     });
 
@@ -5324,7 +5392,10 @@
       const dateInput = document.getElementById('paymentDateInput');
       const refInput = document.getElementById('paymentReferenceInput');
 
-      if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
+      if (dateInput) {
+        dateInput.value = new Date().toISOString().split('T')[0];
+        if (typeof updateDatePickerTrigger === 'function') updateDatePickerTrigger(dateInput);
+      }
       if (refInput && !refInput.value) refInput.value = 'TXN-' + Math.floor(100000 + Math.random() * 900000);
 
       if (modal && select) {
@@ -6195,6 +6266,455 @@
       });
       syncClientStatusDropdown(nativeClientStatusSelect.value || 'active');
     }
+
+    // -------------------------------------------------------------------------
+    // Custom Glassmorphic Client Preferred Currency Dropdown Component
+    // -------------------------------------------------------------------------
+    const clientCurrTrigger = document.getElementById('btnClientCurrencyDropdown');
+    const clientCurrMenu = document.getElementById('clientCurrencyDropdownMenu');
+    const clientCurrChevron = document.getElementById('clientCurrencyDropdownChevron');
+    const clientCurrLabel = document.getElementById('clientCurrencyDropdownCurrentLabel');
+    const nativeClientCurrSelect = document.getElementById('clientPreferredCurrencySelect');
+
+    function toggleClientCurrMenu() {
+      if (!clientCurrMenu) return;
+      const isHidden = clientCurrMenu.classList.contains('hidden');
+      if (isHidden) {
+        clientCurrMenu.classList.remove('hidden');
+        if (clientCurrChevron) clientCurrChevron.classList.add('rotate-180');
+        if (clientCurrTrigger) clientCurrTrigger.setAttribute('aria-expanded', 'true');
+      } else {
+        closeClientCurrMenu();
+      }
+    }
+
+    function closeClientCurrMenu() {
+      if (!clientCurrMenu) return;
+      clientCurrMenu.classList.add('hidden');
+      if (clientCurrChevron) clientCurrChevron.classList.remove('rotate-180');
+      if (clientCurrTrigger) clientCurrTrigger.setAttribute('aria-expanded', 'false');
+    }
+
+    function syncClientPreferredCurrencyDropdown(val) {
+      if (!val) return;
+      const cleanVal = val.toUpperCase();
+      document.querySelectorAll('.custom-client-currency-option').forEach(opt => {
+        const optVal = (opt.getAttribute('data-value') || '').toUpperCase();
+        const isSelected = optVal === cleanVal;
+        opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+        const check = opt.querySelector('.currency-option-check');
+        if (isSelected) {
+          opt.className = 'custom-client-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-[#087F70] bg-[#087F70]/10 hover:bg-[#087F70]/15 cursor-pointer transition-colors select-none font-sans text-left';
+          if (check) check.classList.remove('hidden');
+          const optText = opt.querySelector('span')?.textContent || opt.textContent.trim();
+          if (clientCurrLabel) clientCurrLabel.textContent = optText;
+        } else {
+          opt.className = 'custom-client-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left';
+          if (check) check.classList.add('hidden');
+        }
+      });
+      if (nativeClientCurrSelect && nativeClientCurrSelect.value !== cleanVal) {
+        nativeClientCurrSelect.value = cleanVal;
+      }
+    }
+
+    if (clientCurrTrigger) {
+      clientCurrTrigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleClientCurrMenu();
+      });
+    }
+
+    document.querySelectorAll('.custom-client-currency-option').forEach(opt => {
+      opt.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const val = opt.getAttribute('data-value') || 'USD';
+        syncClientPreferredCurrencyDropdown(val);
+        if (nativeClientCurrSelect) {
+          nativeClientCurrSelect.value = val;
+          nativeClientCurrSelect.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        closeClientCurrMenu();
+      });
+    });
+
+    if (nativeClientCurrSelect) {
+      nativeClientCurrSelect.addEventListener('change', () => {
+        syncClientPreferredCurrencyDropdown(nativeClientCurrSelect.value);
+      });
+    }
+
+    // -------------------------------------------------------------------------
+    // Custom Glassmorphic Assign Service Modal Dropdowns
+    // -------------------------------------------------------------------------
+    const assignServiceTrigger = document.getElementById('btnAssignServiceTrigger');
+    const assignServiceMenu = document.getElementById('assignServiceMenu');
+    const assignServiceChevron = document.getElementById('assignServiceChevron');
+    const assignServiceLabel = document.getElementById('assignServiceCurrentLabel');
+    const nativeAssignServiceSelect = document.getElementById('assignServiceSelect');
+
+    function toggleAssignServiceMenu() {
+      if (!assignServiceMenu) return;
+      const isHidden = assignServiceMenu.classList.contains('hidden');
+      if (isHidden) {
+        assignServiceMenu.classList.remove('hidden');
+        if (assignServiceChevron) assignServiceChevron.classList.add('rotate-180');
+        if (assignServiceTrigger) assignServiceTrigger.setAttribute('aria-expanded', 'true');
+      } else {
+        closeAssignServiceMenu();
+      }
+    }
+
+    function closeAssignServiceMenu() {
+      if (!assignServiceMenu) return;
+      assignServiceMenu.classList.add('hidden');
+      if (assignServiceChevron) assignServiceChevron.classList.remove('rotate-180');
+      if (assignServiceTrigger) assignServiceTrigger.setAttribute('aria-expanded', 'false');
+    }
+
+    if (assignServiceTrigger) {
+      assignServiceTrigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleAssignServiceMenu();
+      });
+    }
+
+    // Assign Currency Dropdown
+    const assignCurrTrigger = document.getElementById('btnAssignCurrencyTrigger');
+    const assignCurrMenu = document.getElementById('assignCurrencyMenu');
+    const assignCurrChevron = document.getElementById('assignCurrencyChevron');
+    const assignCurrLabel = document.getElementById('assignCurrencyCurrentLabel');
+    const nativeAssignCurrSelect = document.getElementById('assignServiceCurrency');
+
+    function toggleAssignCurrencyMenu() {
+      if (!assignCurrMenu) return;
+      const isHidden = assignCurrMenu.classList.contains('hidden');
+      if (isHidden) {
+        assignCurrMenu.classList.remove('hidden');
+        if (assignCurrChevron) assignCurrChevron.classList.add('rotate-180');
+        if (assignCurrTrigger) assignCurrTrigger.setAttribute('aria-expanded', 'true');
+      } else {
+        closeAssignCurrencyMenu();
+      }
+    }
+
+    function closeAssignCurrencyMenu() {
+      if (!assignCurrMenu) return;
+      assignCurrMenu.classList.add('hidden');
+      if (assignCurrChevron) assignCurrChevron.classList.remove('rotate-180');
+      if (assignCurrTrigger) assignCurrTrigger.setAttribute('aria-expanded', 'false');
+    }
+
+    function syncAssignCurrencyDropdown(val) {
+      if (!val) return;
+      const cleanVal = val.toUpperCase();
+      document.querySelectorAll('.custom-assign-currency-option').forEach(opt => {
+        const optVal = (opt.getAttribute('data-value') || '').toUpperCase();
+        const isSelected = optVal === cleanVal;
+        opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+        const check = opt.querySelector('.assign-currency-check');
+        if (isSelected) {
+          opt.className = 'custom-assign-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-[#087F70] bg-[#087F70]/10 hover:bg-[#087F70]/15 cursor-pointer transition-colors select-none font-sans text-left';
+          if (check) check.classList.remove('hidden');
+          const optText = opt.querySelector('span')?.textContent || opt.textContent.trim();
+          if (assignCurrLabel) assignCurrLabel.textContent = optText;
+        } else {
+          opt.className = 'custom-assign-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left';
+          if (check) check.classList.add('hidden');
+        }
+      });
+      if (nativeAssignCurrSelect && nativeAssignCurrSelect.value !== cleanVal) {
+        nativeAssignCurrSelect.value = cleanVal;
+      }
+    }
+
+    if (assignCurrTrigger) {
+      assignCurrTrigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleAssignCurrencyMenu();
+      });
+    }
+
+    document.querySelectorAll('.custom-assign-currency-option').forEach(opt => {
+      opt.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const val = opt.getAttribute('data-value') || 'USD';
+        syncAssignCurrencyDropdown(val);
+        if (nativeAssignCurrSelect) {
+          nativeAssignCurrSelect.value = val;
+          nativeAssignCurrSelect.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        closeAssignCurrencyMenu();
+      });
+    });
+
+    // -------------------------------------------------------------------------
+    // Universal Custom Glassmorphic Date Picker Controller
+    // -------------------------------------------------------------------------
+    let _activeDatePickerTarget = null;
+    let _activeDatePickerTrigger = null;
+    let _calendarYear = new Date().getFullYear();
+    let _calendarMonth = new Date().getMonth();
+
+    function formatDisplayDate(isoDateStr) {
+      if (!isoDateStr) return 'Select date...';
+      const parts = isoDateStr.split('-').map(Number);
+      if (parts.length !== 3 || isNaN(parts[0])) return isoDateStr;
+      const [y, m, d] = parts;
+      const dateObj = new Date(y, m - 1, d);
+      return dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function updateDatePickerTrigger(inputEl) {
+      if (!inputEl) return;
+      const wrapper = inputEl.closest('.custom-datepicker-wrapper') || document.querySelector(`[data-datepicker-target="${inputEl.id}"]`);
+      if (!wrapper) return;
+      const label = wrapper.querySelector('.datepicker-label');
+      if (!label) return;
+      const val = inputEl.value;
+      if (!val) {
+        label.textContent = 'Select date...';
+        label.classList.add('text-slate-400');
+        label.classList.remove('text-[#172B36]');
+      } else {
+        label.textContent = formatDisplayDate(val);
+        label.classList.remove('text-slate-400');
+        label.classList.add('text-[#172B36]');
+      }
+    }
+
+    function positionDatePicker(triggerEl, popoverEl) {
+      if (!triggerEl || !popoverEl) return;
+      const rect = triggerEl.getBoundingClientRect();
+      const popoverWidth = 288;
+      const popoverHeight = 310;
+
+      let left = rect.left;
+      if (left + popoverWidth > window.innerWidth - 12) {
+        left = Math.max(12, window.innerWidth - popoverWidth - 12);
+      }
+
+      let top = rect.bottom + 6;
+      if (top + popoverHeight > window.innerHeight - 12 && rect.top > popoverHeight) {
+        top = Math.max(12, rect.top - popoverHeight - 6);
+      }
+
+      popoverEl.style.left = `${Math.round(left)}px`;
+      popoverEl.style.top = `${Math.round(top)}px`;
+    }
+
+    function renderCalendarGrid() {
+      const popover = document.getElementById('whizCustomDatePickerPopover');
+      const label = document.getElementById('datepickerMonthYearLabel');
+      const grid = document.getElementById('datepickerDaysGrid');
+      if (!popover || !label || !grid) return;
+
+      const monthNames = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+      ];
+      label.textContent = `${monthNames[_calendarMonth]} ${_calendarYear}`;
+
+      grid.innerHTML = '';
+
+      const firstDayIndex = new Date(_calendarYear, _calendarMonth, 1).getDay();
+      const lastDayOfMonth = new Date(_calendarYear, _calendarMonth + 1, 0).getDate();
+      const prevMonthLastDay = new Date(_calendarYear, _calendarMonth, 0).getDate();
+
+      const selectedVal = _activeDatePickerTarget ? _activeDatePickerTarget.value : '';
+      const today = new Date();
+      const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+      // Previous month filler days
+      for (let i = firstDayIndex - 1; i >= 0; i--) {
+        const dayNum = prevMonthLastDay - i;
+        const filler = document.createElement('div');
+        filler.className = 'w-8 h-8 rounded-lg text-xs font-normal text-slate-300 flex items-center justify-center pointer-events-none select-none';
+        filler.textContent = dayNum;
+        grid.appendChild(filler);
+      }
+
+      // Current month days
+      for (let day = 1; day <= lastDayOfMonth; day++) {
+        const isoString = `${_calendarYear}-${String(_calendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const isSelected = selectedVal === isoString;
+        const isToday = todayIso === isoString;
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = day;
+        btn.dataset.isoDate = isoString;
+
+        let cls = 'w-8 h-8 rounded-lg text-xs font-medium flex items-center justify-center cursor-pointer transition-colors select-none font-sans ';
+        if (isSelected) {
+          cls += 'bg-[#087F70] text-white font-bold shadow-xs hover:bg-[#066559]';
+        } else if (isToday) {
+          cls += 'ring-1.5 ring-[#087F70] font-bold text-[#087F70] hover:bg-[#087F70]/10';
+        } else {
+          cls += 'text-[#172B36] hover:bg-[#087F70]/10 hover:text-[#087F70]';
+        }
+        btn.className = cls;
+
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (_activeDatePickerTarget) {
+            _activeDatePickerTarget.value = isoString;
+            _activeDatePickerTarget.dispatchEvent(new Event('input', { bubbles: true }));
+            _activeDatePickerTarget.dispatchEvent(new Event('change', { bubbles: true }));
+            updateDatePickerTrigger(_activeDatePickerTarget);
+          }
+          closeDatePicker();
+        });
+
+        grid.appendChild(btn);
+      }
+
+      // Next month filler days
+      const totalCells = firstDayIndex + lastDayOfMonth;
+      const remainingCells = (7 - (totalCells % 7)) % 7;
+      for (let j = 1; j <= remainingCells; j++) {
+        const filler = document.createElement('div');
+        filler.className = 'w-8 h-8 rounded-lg text-xs font-normal text-slate-300 flex items-center justify-center pointer-events-none select-none';
+        filler.textContent = j;
+        grid.appendChild(filler);
+      }
+    }
+
+    function openDatePicker(targetInput, triggerBtn) {
+      const popover = document.getElementById('whizCustomDatePickerPopover');
+      if (!popover || !targetInput) return;
+
+      _activeDatePickerTarget = targetInput;
+      _activeDatePickerTrigger = triggerBtn;
+
+      const currentVal = targetInput.value;
+      if (currentVal && /^\d{4}-\d{2}-\d{2}$/.test(currentVal)) {
+        const [y, m] = currentVal.split('-').map(Number);
+        _calendarYear = y;
+        _calendarMonth = m - 1;
+      } else {
+        const today = new Date();
+        _calendarYear = today.getFullYear();
+        _calendarMonth = today.getMonth();
+      }
+
+      positionDatePicker(triggerBtn, popover);
+      popover.classList.remove('hidden');
+      renderCalendarGrid();
+      triggerBtn?.classList.add('border-[#087F70]', 'ring-2', 'ring-[#087F70]/20');
+    }
+
+    function closeDatePicker() {
+      const popover = document.getElementById('whizCustomDatePickerPopover');
+      if (popover) popover.classList.add('hidden');
+      if (_activeDatePickerTrigger) {
+        _activeDatePickerTrigger.classList.remove('border-[#087F70]', 'ring-2', 'ring-[#087F70]/20');
+      }
+      _activeDatePickerTarget = null;
+      _activeDatePickerTrigger = null;
+    }
+
+    document.getElementById('btnDatepickerPrevMonth')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      _calendarMonth--;
+      if (_calendarMonth < 0) {
+        _calendarMonth = 11;
+        _calendarYear--;
+      }
+      renderCalendarGrid();
+    });
+
+    document.getElementById('btnDatepickerNextMonth')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      _calendarMonth++;
+      if (_calendarMonth > 11) {
+        _calendarMonth = 0;
+        _calendarYear++;
+      }
+      renderCalendarGrid();
+    });
+
+    document.getElementById('btnDatepickerToday')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const today = new Date();
+      const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      if (_activeDatePickerTarget) {
+        _activeDatePickerTarget.value = todayIso;
+        _activeDatePickerTarget.dispatchEvent(new Event('input', { bubbles: true }));
+        _activeDatePickerTarget.dispatchEvent(new Event('change', { bubbles: true }));
+        updateDatePickerTrigger(_activeDatePickerTarget);
+      }
+      closeDatePicker();
+    });
+
+    document.getElementById('btnDatepickerClear')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (_activeDatePickerTarget) {
+        _activeDatePickerTarget.value = '';
+        _activeDatePickerTarget.dispatchEvent(new Event('input', { bubbles: true }));
+        _activeDatePickerTarget.dispatchEvent(new Event('change', { bubbles: true }));
+        updateDatePickerTrigger(_activeDatePickerTarget);
+      }
+      closeDatePicker();
+    });
+
+    // Wire all datepicker triggers
+    document.querySelectorAll('.custom-datepicker-wrapper').forEach(wrapper => {
+      const targetId = wrapper.dataset.datepickerTarget;
+      const targetInput = targetId ? document.getElementById(targetId) : wrapper.querySelector('input');
+      const triggerBtn = wrapper.querySelector('.custom-datepicker-trigger');
+      if (triggerBtn && targetInput) {
+        triggerBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const popover = document.getElementById('whizCustomDatePickerPopover');
+          if (popover && !popover.classList.contains('hidden') && _activeDatePickerTarget === targetInput) {
+            closeDatePicker();
+          } else {
+            openDatePicker(targetInput, triggerBtn);
+          }
+        });
+        targetInput.addEventListener('change', () => updateDatePickerTrigger(targetInput));
+        updateDatePickerTrigger(targetInput);
+      }
+    });
+
+    // Global click outside and escape handlers for custom popovers
+    document.addEventListener('click', (e) => {
+      // Date Picker
+      const dpPopover = document.getElementById('whizCustomDatePickerPopover');
+      if (dpPopover && !dpPopover.classList.contains('hidden')) {
+        if (!dpPopover.contains(e.target) && !_activeDatePickerTrigger?.contains(e.target)) {
+          closeDatePicker();
+        }
+      }
+      // Client Currency Menu
+      if (clientCurrMenu && !clientCurrMenu.classList.contains('hidden')) {
+        if (!clientCurrMenu.contains(e.target) && !clientCurrTrigger?.contains(e.target)) {
+          closeClientCurrMenu();
+        }
+      }
+      // Assign Service Menu
+      if (assignServiceMenu && !assignServiceMenu.classList.contains('hidden')) {
+        if (!assignServiceMenu.contains(e.target) && !assignServiceTrigger?.contains(e.target)) {
+          closeAssignServiceMenu();
+        }
+      }
+      // Assign Currency Menu
+      if (assignCurrMenu && !assignCurrMenu.classList.contains('hidden')) {
+        if (!assignCurrMenu.contains(e.target) && !assignCurrTrigger?.contains(e.target)) {
+          closeAssignCurrencyMenu();
+        }
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeDatePicker();
+        closeClientCurrMenu();
+        closeAssignServiceMenu();
+        closeAssignCurrencyMenu();
+      }
+    });
 
     // Hash change handler for deep linking & back/forward
     window.addEventListener('hashchange', () => {
