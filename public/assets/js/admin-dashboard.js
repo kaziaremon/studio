@@ -1219,7 +1219,7 @@
       const hasExtraDetails = Boolean(bp.steps || bp.where_location || bp.qa_criteria);
 
       return `
-        <div class="p-3.5 sm:p-5 rounded-2xl bg-[#FDFEFE] hover:bg-white border border-[#E6ECE9] hover:border-[#087F70]/30 shadow-2xs hover:shadow-xs transition-all space-y-3 group" data-blueprint-id="${bp.id}">
+        <div class="p-3 sm:p-5 rounded-2xl bg-[#FDFEFE] hover:bg-white border border-[#E6ECE9] hover:border-[#087F70]/30 shadow-2xs hover:shadow-xs transition-all space-y-2.5 sm:space-y-3 group" data-blueprint-id="${bp.id}">
           <!-- Top Row: Code Badge + Priority + Estimate -->
           <div class="flex items-center justify-between gap-2 flex-wrap">
             <div class="flex items-center gap-2">
@@ -1238,7 +1238,7 @@
           </div>
 
           <!-- Operational Core: WHY (Strategic Objective) -->
-          <div class="p-3 rounded-xl bg-[#F7FAF9] border border-[#E6ECE9] space-y-1">
+          <div class="p-2.5 sm:p-3 rounded-xl bg-[#F7FAF9] border border-[#E6ECE9] space-y-1">
             <div class="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[#087F70]">
               <i class="fa-solid fa-bullseye text-[10px]"></i>
               <span>Why (Strategic Objective)</span>
@@ -1247,7 +1247,7 @@
           </div>
 
           <!-- Operational Core: DONE WHEN (Measurable Standard) -->
-          <div class="p-3 rounded-xl bg-white border border-[#E6ECE9] space-y-1">
+          <div class="p-2.5 sm:p-3 rounded-xl bg-white border border-[#E6ECE9] space-y-1">
             <div class="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[#202D2A]">
               <i class="fa-solid fa-circle-check text-[10px] text-[#087F70]"></i>
               <span>Done When (Measurable Standard)</span>
@@ -1261,7 +1261,7 @@
               ${bp.steps ? `
                 <div class="space-y-1">
                   <span class="text-[11px] font-bold uppercase tracking-wider text-[#74817D] block">Operational Steps:</span>
-                  <div class="p-2.5 rounded-xl bg-[#F7FAF9] border border-[#E6ECE9] text-xs text-[#202D2A] whitespace-pre-line leading-relaxed font-sans">${escapeHtml(bp.steps)}</div>
+                  <div class="p-2 sm:p-2.5 rounded-xl bg-[#F7FAF9] border border-[#E6ECE9] text-xs text-[#202D2A] whitespace-pre-line leading-relaxed font-sans">${escapeHtml(bp.steps)}</div>
                 </div>
               ` : ''}
               ${bp.where_location ? `
@@ -1271,7 +1271,7 @@
                 </div>
               ` : ''}
               ${bp.qa_criteria ? `
-                <div class="p-2.5 rounded-xl bg-[#EAF5F1]/60 border border-[#087F70]/20 text-xs text-[#087F70]">
+                <div class="p-2 sm:p-2.5 rounded-xl bg-[#EAF5F1]/60 border border-[#087F70]/20 text-xs text-[#087F70]">
                   <span class="font-bold uppercase text-[10px] tracking-wider block mb-0.5">QA Criteria:</span>
                   <span class="text-[#202D2A]">${escapeHtml(bp.qa_criteria)}</span>
                 </div>
