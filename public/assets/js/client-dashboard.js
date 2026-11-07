@@ -687,7 +687,7 @@
 
     if (isComplete) {
       if (title) title.textContent = 'Profile Verified (100%)';
-      if (desc) desc.textContent = 'All 8 mandatory billing fields verified in Cloudflare D1. Official PDF invoice generation active.';
+      if (desc) desc.textContent = 'All 8 mandatory billing fields verified. Official PDF invoice generation active.';
       if (icon) {
         icon.className = 'w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold text-sm shrink-0';
         icon.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
@@ -713,7 +713,7 @@
     const originalText = btn ? btn.innerHTML : '';
     if (btn) {
       btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Saving to Cloudflare D1...';
+      btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Saving changes...';
     }
 
     try {
@@ -853,7 +853,7 @@
       if (setMail) setMail.textContent = email;
 
       const setClerkId = document.getElementById('settingsClerkUserId');
-      if (setClerkId) setClerkId.textContent = clerkUser.id;
+      if (setClerkId) setClerkId.innerHTML = '<i class="fa-solid fa-shield-check text-[#147D64] mr-1.5"></i><span>Hardware-Backed SSO Session Active</span>';
 
       const setAuthProv = document.getElementById('settingsAuthProvider');
       const hasGoogle = clerkUser.externalAccounts?.some(a => a.provider === 'google');

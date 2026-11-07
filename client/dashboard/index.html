@@ -284,7 +284,7 @@
         <!-- Right Controls: Desktop Live Sync & Interactive Profile Dropdown -->
         <div class="flex items-center space-x-2 sm:space-x-2.5">
           <!-- Live Sync / Refresh button (Desktop) -->
-          <button type="button" id="btnRefreshClientDashboard" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-[#EAF7F1] border border-[#E3E9EF] hover:border-[#147D64]/30 text-[11px] font-bold text-[#172B36] hover:text-[#147D64] transition-all cursor-pointer shadow-xs" title="Synchronize with Cloudflare D1">
+          <button type="button" id="btnRefreshClientDashboard" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-[#EAF7F1] border border-[#E3E9EF] hover:border-[#147D64]/30 text-[11px] font-bold text-[#172B36] hover:text-[#147D64] transition-all cursor-pointer shadow-xs" title="Synchronize Dashboard">
             <i class="fa-solid fa-rotate text-xs text-[#147D64]" id="btnRefreshClientIcon"></i>
             <span>Sync Live</span>
           </button>
@@ -798,7 +798,7 @@
               <div class="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs">
                 <div class="flex items-center gap-2 text-xs text-slate-500">
                   <i class="fa-solid fa-shield-halved text-[#147D64]"></i>
-                  <span>Stored securely in Cloudflare D1. Permanent across devices.</span>
+                  <span>Stored securely in cloud database. Permanent across devices.</span>
                 </div>
                 <button type="submit" id="btnSaveClientProfile" class="w-full sm:w-auto px-6 py-2.5 rounded-xl text-xs font-bold bg-[#147D64] hover:bg-[#12694f] active:bg-[#0f5742] text-white transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer">
                   <i class="fa-solid fa-floppy-disk"></i>
@@ -892,14 +892,15 @@
                         <i class="fa-brands fa-google text-slate-700 text-sm"></i>
                         <span class="font-medium text-[#172B36]" id="settingsAuthProvider">Google Single Sign-On</span>
                       </div>
-                      <span class="text-[10px] font-mono text-slate-400">OAuth 2.0 / Clerk</span>
+                      <span class="text-[10px] font-mono text-slate-400">Encrypted OAuth / SSO</span>
                     </div>
                   </div>
 
                   <div>
-                    <span class="text-[10px] uppercase font-bold text-[#5F7180] block mb-1">Clerk Security Identity</span>
-                    <div class="p-3 rounded-xl bg-slate-50 border border-[#E3E9EF] text-[11px] font-mono text-slate-600 truncate" id="settingsClerkUserId">
-                      user_...
+                    <span class="text-[10px] uppercase font-bold text-[#5F7180] block mb-1">Authentication Method</span>
+                    <div class="p-3 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs font-semibold text-emerald-800 flex items-center gap-2" id="settingsClerkUserId">
+                      <i class="fa-solid fa-shield-check text-[#147D64]"></i>
+                      <span>Hardware-Backed SSO Session Active</span>
                     </div>
                   </div>
                 </div>

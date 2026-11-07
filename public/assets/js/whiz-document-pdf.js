@@ -422,7 +422,7 @@
       page.drawText(l, { x: marginX + 12, y: summaryTopY - (docData.paymentReference ? 58 : 45) - (idx * 11), size: 7.5, font: fontOblique, color: cMuted });
     });
 
-    page.drawText('Official payment acknowledgment digitally recorded in Cloudflare D1 ledger.', {
+    page.drawText('Official payment acknowledgment digitally recorded in verified ledger.', {
       x: marginX + 12,
       y: summaryTopY - 96,
       size: 7,

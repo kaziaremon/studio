@@ -198,6 +198,102 @@
   }
 
   // =========================================================================
+  // IDENTITY & AUDIT PRIVACY PROTECTION ENGINE (ZERO RAW ID LEAKAGE)
+  // =========================================================================
+  function resolveUserIdentity(rawIdOrEmail, roleHint = '') {
+    if (!rawIdOrEmail) return roleHint === 'target' ? 'Authorized Account' : 'System';
+    const clean = String(rawIdOrEmail).trim();
+    if (!clean || clean === '—' || clean === 'null' || clean === 'undefined') {
+      return roleHint === 'target' ? 'Authorized Account' : 'System';
+    }
+
+    // Direct owner checks
+    if (clean.toLowerCase() === 'kaziaremon@gmail.com' || clean.startsWith('usr_owner') || clean === 'owner') {
+      return 'Super Admin';
+    }
+
+    // Direct email check (already a human-readable email)
+    if (clean.includes('@')) {
+      const userWithEmail = (state.usersCache || []).find(u => (u.email || '').toLowerCase() === clean.toLowerCase());
+      if (userWithEmail && (userWithEmail.full_name || userWithEmail.fullName)) {
+        return userWithEmail.full_name || userWithEmail.fullName;
+      }
+      return clean;
+    }
+
+    // Search usersCache by Clerk ID, ID, or Email
+    const cachedUser = (state.usersCache || []).find(u =>
+      (u.clerk_user_id && u.clerk_user_id === clean) ||
+      (u.clerkUserId && u.clerkUserId === clean) ||
+      (u.id && u.id === clean) ||
+      (u.email && u.email.toLowerCase() === clean.toLowerCase())
+    );
+    if (cachedUser) {
+      return cachedUser.full_name || cachedUser.fullName || cachedUser.email || (cachedUser.role === 'admin' ? 'Administrator' : 'Team Member');
+    }
+
+    // Search clientsCache by Clerk ID, ID, or Email
+    const cachedClient = (state.clientsCache || []).find(c =>
+      (c.clerk_user_id && c.clerk_user_id === clean) ||
+      (c.id && c.id === clean) ||
+      (c.email && c.email.toLowerCase() === clean.toLowerCase())
+    );
+    if (cachedClient) {
+      return cachedClient.full_name || cachedClient.company_name || cachedClient.email || 'Client';
+    }
+
+    // Search active Clerk session user
+    if (window.Clerk?.user && (window.Clerk.user.id === clean || clean === window.Clerk.user.primaryEmailAddress?.emailAddress)) {
+      return window.Clerk.user.fullName || window.Clerk.user.primaryEmailAddress?.emailAddress || 'Administrator';
+    }
+
+    // STRICT PRIVACY PROTECTION: Block any raw Clerk ID (user_...) or backend hash
+    if (clean.startsWith('user_') || clean.startsWith('usr_') || clean.startsWith('org_') || /^[a-zA-Z0-9_-]{20,}$/.test(clean)) {
+      if (roleHint === 'target') return 'Authorized Account';
+      if (roleHint === 'client') return 'Client';
+      return 'Administrator';
+    }
+
+    return clean;
+  }
+
+  function sanitizeAuditDetails(details, fallbackName = '') {
+    if (!details) return '';
+    let text = '';
+    if (typeof details === 'object') {
+      try {
+        const copy = JSON.parse(JSON.stringify(details));
+        for (const [k, v] of Object.entries(copy)) {
+          if (typeof v === 'string') {
+            if (v.startsWith('user_') || v.startsWith('usr_')) {
+              copy[k] = resolveUserIdentity(v, k.includes('target') ? 'target' : 'actor');
+            }
+          }
+        }
+        text = JSON.stringify(copy, null, 2);
+      } catch (e) {
+        text = String(details);
+      }
+    } else {
+      text = String(details);
+    }
+
+    // Regex replace any remaining Clerk ID string patterns (e.g., user_3LSEtPcTNnyxAwwf7LdhNCK7ROO)
+    text = text.replace(/user_[a-zA-Z0-9]{15,}/g, (match) => {
+      return resolveUserIdentity(match, 'target');
+    });
+
+    // Replace internal owner IDs
+    text = text.replace(/usr_owner[a-zA-Z0-9_]*/g, 'Super Admin');
+
+    // Replace backend architecture references
+    text = text.replace(/Cloudflare\s+D1/gi, 'Cloud Database');
+    text = text.replace(/\bD1\b/g, 'Database');
+
+    return text;
+  }
+
+  // =========================================================================
   // AUTHENTICATED API FETCH HELPER
   // =========================================================================
   async function apiFetch(endpoint, options = {}) {
@@ -597,14 +693,14 @@
       const actEl = document.getElementById('overviewActivityList');
       if (actEl && d.recentActivity) {
         if (d.recentActivity.length === 0) {
-          actEl.innerHTML = '<p class="text-slate-500 italic p-4 text-center">No recent system activity recorded in D1.</p>';
+          actEl.innerHTML = '<p class="text-slate-500 italic p-4 text-center">No recent system activity recorded.</p>';
         } else {
           actEl.innerHTML = d.recentActivity.map(a => `
             <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-[#E3E9EF]">
               <div class="flex items-center space-x-2.5">
                 <span class="w-2 h-2 rounded-full bg-brand-whiz"></span>
-                <span class="font-bold text-[#172B36] uppercase text-[10px]">${a.action}</span>
-                <span class="text-slate-500 text-xs">${a.resource_type || ''}</span>
+                <span class="font-bold text-[#172B36] uppercase text-[10px]">${escapeHtml(a.action)}</span>
+                <span class="text-slate-500 text-xs">${escapeHtml(sanitizeAuditDetails(a.resource_type || ''))}</span>
               </div>
               <span class="text-[11px] text-slate-400 font-mono">${new Date(a.created_at).toLocaleTimeString()}</span>
             </div>
@@ -889,7 +985,9 @@
     const cClk = document.getElementById('clientCardClerkId');
     if (cClk) cClk.innerHTML = client.clerk_user_id ? '<span class="text-emerald-700 font-semibold"><i class="fa-solid fa-shield-check text-[#147D64] mr-1"></i>SSO Verified</span>' : '<span class="text-slate-400">Pending SSO link</span>';
     const cOrg = document.getElementById('clientCardOrgId');
-    if (cOrg) cOrg.textContent = client.organization_name || client.organization_id || 'Not Linked';
+    if (cOrg) {
+      cOrg.textContent = client.organization_name || (client.organization_id ? (client.organization_id.startsWith('org_') ? 'Primary Client Workspace' : client.organization_id) : 'Personal Workspace');
+    }
 
     // Populate Preferred Currency in Financial Preferences
     const clientCurrency = (cif.currency || client.currency || (effectiveCountry === 'Bangladesh' || (effectivePhone && effectivePhone.startsWith('+880')) ? 'BDT' : 'USD')).toUpperCase();
@@ -1029,9 +1127,9 @@
       } else {
         audList.innerHTML = auditLogs.map(a => {
           const actionText = escapeHtml(a.action || 'ACTIVITY');
-          const actorEmail = escapeHtml(a.user_email || a.user_name || 'System');
+          const actorEmail = escapeHtml(resolveUserIdentity(a.user_email || a.user_name || a.actor_id || a.clerk_id, 'actor'));
           const dateStr = a.created_at || a.timestamp ? new Date(a.created_at || a.timestamp).toLocaleDateString() : '';
-          const detailsStr = a.details ? (typeof a.details === 'object' ? JSON.stringify(a.details) : String(a.details)) : '';
+          const detailsStr = a.details ? sanitizeAuditDetails(a.details, effectiveFullName) : '';
 
           return `
             <div class="p-2.5 rounded-xl bg-slate-50/70 border border-[#E6ECE9] text-[11px] min-w-0 max-w-full overflow-hidden space-y-1.5 [overflow-wrap:anywhere] [word-break:break-all] break-all" style="overflow-wrap: anywhere; word-break: break-all;">
@@ -1539,7 +1637,7 @@
               </div>
               <p class="text-[11px] text-emerald-800/90 leading-relaxed">
                 No active client contracts, projects, or invoices reference this service.
-                Permanently deleting it will purge the service catalog record and all <strong>${check.taskBlueprintCount || 0} master SOP blueprints</strong> from Cloudflare D1.
+                Permanently deleting it will purge the service catalog record and all <strong>${check.taskBlueprintCount || 0} master SOP blueprints</strong>.
               </p>
             </div>
           `;
@@ -2906,7 +3004,7 @@
         newRoleSelect.dispatchEvent(new Event('change'));
       }
       if (titleEl) titleEl.innerHTML = '<i class="fa-solid fa-user-gear text-[#087F70] mr-2"></i><span>Update Account Role & Permissions</span>';
-      if (descEl) descEl.textContent = `Configure new security role permissions for ${name} (${email}). An immutable audit record will be registered in Cloudflare D1.`;
+      if (descEl) descEl.textContent = `Configure new security role permissions for ${name} (${email}). An authoritative audit record will be registered.`;
       if (submitBtn) {
         submitBtn.innerHTML = '<i class="fa-solid fa-check text-xs mr-1"></i><span>Confirm & Update Role</span>';
       }
@@ -3026,12 +3124,12 @@
       const dateStr = h.action_timestamp ? new Date(h.action_timestamp).toLocaleString('en-US', {
         month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
       }) : '—';
-      const target = h.target_email || h.target_name || h.target_clerk_user_id || 'User';
-      const actor = h.actor_clerk_user_id ? (h.actor_clerk_user_id.startsWith('usr_owner') ? 'Super Admin' : h.actor_clerk_user_id) : 'System';
+      const target = resolveUserIdentity(h.target_email || h.target_name || h.target_clerk_user_id || h.user_name || 'User', 'target');
+      const actor = resolveUserIdentity(h.actor_email || h.actor_name || h.actor_clerk_user_id || h.changed_by, 'actor');
       const prevRole = h.previous_role || 'client';
       const nextRole = h.new_role || 'admin';
       const result = h.action_result || 'success';
-      const reason = h.reason || 'Administrative role update';
+      const reason = sanitizeAuditDetails(h.reason || 'Administrative role update');
 
       return `
         <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
@@ -3059,11 +3157,12 @@
         const dateStr = h.action_timestamp ? new Date(h.action_timestamp).toLocaleString('en-US', {
           month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
         }) : '—';
-        const target = h.target_email || h.target_name || h.target_clerk_user_id || 'User';
+        const target = resolveUserIdentity(h.target_email || h.target_name || h.target_clerk_user_id || h.user_name || 'User', 'target');
+        const actor = resolveUserIdentity(h.actor_email || h.actor_name || h.actor_clerk_user_id || h.changed_by, 'actor');
         const prevRole = h.previous_role || 'client';
         const nextRole = h.new_role || 'admin';
         const result = h.action_result || 'success';
-        const reason = h.reason || 'Administrative role update';
+        const reason = sanitizeAuditDetails(h.reason || 'Administrative role update');
 
         return `
           <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs space-y-2.5">
@@ -3077,8 +3176,9 @@
               <i class="fa-solid fa-arrow-right text-[9px] text-slate-400"></i>
               <span class="capitalize px-2 py-0.5 rounded font-bold text-[11px] ${nextRole === 'admin' || nextRole === 'owner' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-700'}">${escapeHtml(nextRole)}</span>
             </div>
-            <div class="text-[11px] text-slate-500 pt-1.5 border-t border-slate-100">
-              <span>Reason: <strong>${escapeHtml(reason)}</strong></span>
+            <div class="text-[11px] text-slate-500 pt-1.5 border-t border-slate-100 flex items-center justify-between gap-2">
+              <span>By <strong>${escapeHtml(actor)}</strong></span>
+              <span class="truncate max-w-[160px] text-slate-400">${escapeHtml(reason)}</span>
             </div>
           </div>
         `;
@@ -3421,18 +3521,25 @@
         hour12: true
       }) : '—';
 
-      const actorEmail = l.user_email || 'System';
-      const resourceInfo = l.resource_type ? `${l.resource_type}${l.resource_id ? ` #${l.resource_id.slice(0, 12)}` : ''}` : '';
+      const actorEmail = resolveUserIdentity(l.user_email || l.user_id || l.actor_id || 'System', 'actor');
+      let resourceInfo = '';
+      if (l.resource_type) {
+        let resId = l.resource_id ? String(l.resource_id) : '';
+        if (resId.startsWith('user_') || resId.startsWith('usr_')) {
+          resId = resolveUserIdentity(resId, 'target');
+          resourceInfo = `${l.resource_type} (${resId})`;
+        } else if (resId.startsWith('org_')) {
+          resourceInfo = `${l.resource_type} (Workspace)`;
+        } else if (resId) {
+          resourceInfo = `${l.resource_type} #${resId.slice(0, 10)}`;
+        } else {
+          resourceInfo = l.resource_type;
+        }
+      }
 
       let detailsHtml = '';
       if (l.details) {
-        let detailsFormatted = '';
-        try {
-          const parsed = typeof l.details === 'string' ? JSON.parse(l.details) : l.details;
-          detailsFormatted = JSON.stringify(parsed, null, 2);
-        } catch (e) {
-          detailsFormatted = String(l.details);
-        }
+        const detailsFormatted = sanitizeAuditDetails(l.details);
 
         detailsHtml = `
           <details class="mt-2.5 pt-2 border-t border-slate-100 text-slate-600">
@@ -5010,7 +5117,7 @@
       setBtnLoading(submitBtn, false);
 
       if (res.ok && res.data && res.data.success) {
-        showToast('Task blueprint updated successfully in D1!', 'success');
+        showToast('Task blueprint updated successfully!', 'success');
         document.getElementById('modalEditBlueprint')?.classList.add('hidden');
         openServiceTasksWorkspace(state.selectedServiceId);
       } else {
@@ -5040,7 +5147,7 @@
         setBtnLoading(btn, false);
 
         if (res.ok && res.data && res.data.success) {
-          showToast(res.data.message || 'Task blueprint permanently deleted from Cloudflare D1.', 'success');
+          showToast(res.data.message || 'Task blueprint permanently deleted.', 'success');
           document.getElementById('modalDeleteBlueprint')?.classList.add('hidden');
 
           state.currentBlueprints = state.currentBlueprints.filter(b => b.id !== bpId);
@@ -5406,7 +5513,7 @@
       setBtnLoading(submitBtn, false);
 
       if (res.ok && res.data && res.data.success) {
-        showToast(res.data.message || 'User role successfully updated in D1.', 'success');
+        showToast(res.data.message || 'User role successfully updated.', 'success');
         document.getElementById('modalRoleChange')?.classList.add('hidden');
         loadTeamData();
       } else {
