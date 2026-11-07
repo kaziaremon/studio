@@ -183,13 +183,13 @@
     });
 
     const labels = {
-      overview: 'Campaign Overview',
-      services: 'My Active Services',
-      tasks: 'Deliverables Progress',
-      finance: 'Invoices',
-      profile: 'My Profile',
-      support: 'Support & Inquiries',
-      settings: 'Account Security'
+      overview: 'Dashboard Overview',
+      services: 'Active Services',
+      tasks: 'Deliverables',
+      finance: 'Billing & Invoices',
+      profile: 'Client Profile',
+      support: 'Support Center',
+      settings: 'Security & Access'
     };
 
     const breadcrumb = document.getElementById('breadcrumbActiveTab');
@@ -355,18 +355,22 @@
 
     if (state.services.length === 0) {
       list.innerHTML = `
-        <div class="p-5 sm:p-7 rounded-2xl bg-[#F7FAF9] border border-[#E6ECE9] text-center space-y-3.5">
-          <div class="w-11 h-11 rounded-2xl bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20 flex items-center justify-center mx-auto text-base shadow-2xs">
+        <div class="p-6 sm:p-8 rounded-2xl bg-[#F7FAF9] border border-[#E6ECE9] text-center space-y-4">
+          <div class="w-12 h-12 rounded-2xl bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20 flex items-center justify-center mx-auto text-xl shadow-2xs">
             <i class="fa-solid fa-shapes"></i>
           </div>
-          <div class="space-y-1 max-w-sm mx-auto">
-            <p class="font-bold text-xs text-[#202D2A]">No active marketing services attached yet</p>
-            <p class="text-[11px] text-[#74817D] leading-relaxed">Explore our marketing packages and dedicated campaign execution to accelerate your brand.</p>
+          <div class="space-y-1.5 max-w-sm mx-auto">
+            <p class="font-bold text-xs sm:text-sm text-[#172B36]">No active services provisioned yet</p>
+            <p class="text-xs text-[#74817D] leading-relaxed">Explore our marketing packages and dedicated campaign execution to accelerate your brand, or request a custom proposal.</p>
           </div>
-          <div class="pt-1">
-            <a href="/#services" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#087F70] hover:bg-[#066559] active:bg-[#054f46] text-white text-xs font-bold transition-all shadow-xs cursor-pointer touch-manipulation">
+          <div class="pt-2 flex flex-wrap items-center justify-center gap-2.5">
+            <a href="/#services" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl btn-liquid-primary text-white text-xs font-bold transition-all shadow-xs cursor-pointer touch-manipulation min-h-[44px]">
               <i class="fa-solid fa-compass text-xs"></i>
-              <span>Browse Service Catalog</span>
+              <span>Explore Services</span>
+            </a>
+            <a href="/#contact" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl btn-liquid-gold text-[#172B36] text-xs font-bold transition-all shadow-2xs cursor-pointer touch-manipulation min-h-[44px]">
+              <i class="fa-solid fa-sparkles text-xs"></i>
+              <span>Request Proposal</span>
             </a>
           </div>
         </div>
@@ -417,12 +421,24 @@
 
     if (state.services.length === 0) {
       list.innerHTML = `
-        <div class="p-8 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 space-y-2">
-          <i class="fa-solid fa-layer-group text-2xl text-slate-600 block mb-1"></i>
-          <p>No active services provisioned for this account.</p>
-          <a href="/#services" class="inline-block mt-2 px-3.5 py-1.5 rounded-xl bg-brand-whiz text-white font-bold transition-all">
-            Explore Services
-          </a>
+        <div class="client-glass-card p-8 sm:p-12 text-center space-y-4">
+          <div class="w-14 h-14 rounded-2xl bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20 flex items-center justify-center mx-auto text-2xl shadow-2xs">
+            <i class="fa-solid fa-shapes"></i>
+          </div>
+          <div class="space-y-1.5 max-w-md mx-auto">
+            <h4 class="font-bold text-sm sm:text-base text-[#172B36]">No active services provisioned yet</h4>
+            <p class="text-xs text-slate-500 leading-relaxed">Explore our marketing packages and dedicated campaign execution to accelerate your brand, or request a custom proposal.</p>
+          </div>
+          <div class="pt-2 flex flex-wrap items-center justify-center gap-3">
+            <a href="/#services" class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl btn-liquid-primary text-white text-xs font-bold transition-all shadow-xs min-h-[44px]">
+              <i class="fa-solid fa-compass text-xs"></i>
+              <span>Explore Services</span>
+            </a>
+            <a href="/#contact" class="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl btn-liquid-gold text-[#172B36] text-xs font-bold transition-all shadow-2xs min-h-[44px]">
+              <i class="fa-solid fa-sparkles text-xs"></i>
+              <span>Request Proposal</span>
+            </a>
+          </div>
         </div>
       `;
       return;
@@ -486,13 +502,19 @@
 
     if (state.projects.length === 0) {
       list.innerHTML = `
-        <div class="p-8 sm:p-12 rounded-3xl bg-white border border-[#E3E9EF] text-center space-y-3">
-          <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto text-xl">
+        <div class="client-glass-card p-8 sm:p-12 text-center space-y-4">
+          <div class="w-14 h-14 rounded-2xl bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20 flex items-center justify-center mx-auto text-2xl shadow-2xs">
             <i class="fa-solid fa-list-check"></i>
           </div>
-          <div class="space-y-1">
-            <h4 class="font-bold text-sm text-[#172B36]">No active project campaigns provisioned yet</h4>
-            <p class="text-xs text-slate-500 max-w-sm mx-auto">When your service agreement is activated, milestone checkpoints and progress updates will appear here.</p>
+          <div class="space-y-1.5 max-w-md mx-auto">
+            <h4 class="font-bold text-sm sm:text-base text-[#172B36]">No active campaign deliverables assigned yet</h4>
+            <p class="text-xs text-slate-500 leading-relaxed">When your service agreement is activated, milestone checkpoints and progress updates will appear here.</p>
+          </div>
+          <div class="pt-2">
+            <button type="button" data-client-tab="services" class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl btn-liquid-primary text-white text-xs font-bold transition-all shadow-xs min-h-[44px]">
+              <i class="fa-solid fa-layer-group text-xs"></i>
+              <span>Active Services</span>
+            </button>
           </div>
         </div>
       `;
@@ -1313,13 +1335,13 @@
     let emptyNotice = '';
     if (invoices.length === 0 && payments.length === 0) {
       emptyNotice = `
-        <div class="p-8 sm:p-12 rounded-3xl bg-white border border-[#E3E9EF] text-center space-y-3">
-          <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto text-xl">
+        <div class="client-glass-card p-8 sm:p-12 text-center space-y-4">
+          <div class="w-14 h-14 rounded-2xl bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20 flex items-center justify-center mx-auto text-2xl shadow-2xs">
             <i class="fa-solid fa-file-invoice"></i>
           </div>
-          <div class="space-y-1">
-            <h4 class="font-bold text-sm text-[#172B36]">No billing records published yet</h4>
-            <p class="text-xs text-slate-500 max-w-sm mx-auto">When Whiz Studio finance confirms and issues an official invoice for your marketing contract, it will appear here for instant preview and A4 PDF generation.</p>
+          <div class="space-y-1.5 max-w-md mx-auto">
+            <h4 class="font-bold text-sm sm:text-base text-[#172B36]">No billing records published yet</h4>
+            <p class="text-xs text-slate-500 leading-relaxed">When Whiz Studio finance confirms and issues an official invoice for your marketing contract, it will appear here for instant preview and A4 PDF generation.</p>
           </div>
         </div>
       `;
@@ -1814,16 +1836,18 @@
       }
     });
 
-    // Dropdown Navigation & Account Links (Priority 6)
+    // Dropdown Navigation & Account Links
     document.querySelectorAll('.client-dropdown-account-link, .client-dropdown-tab-link').forEach(link => {
       link.addEventListener('click', () => {
         closeClientDropdown();
-        const action = link.dataset.clientAction;
-        const tab = link.dataset.tab;
-        if (action) {
-          switchTab('settings');
-        } else if (tab) {
+        const tab = link.dataset.clientTab || link.dataset.tab;
+        if (tab) {
           switchTab(tab);
+        } else {
+          const action = link.dataset.clientAction;
+          if (action === 'profile') switchTab('profile');
+          else if (action === 'support') switchTab('support');
+          else if (action === 'settings' || action === 'security') switchTab('settings');
         }
       });
     });
