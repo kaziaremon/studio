@@ -297,62 +297,170 @@
   <!-- Toast Notification Dispatcher -->
   <div id="toastContainer" class="fixed top-24 right-5 z-[100] flex flex-col space-y-3 max-w-sm w-full pointer-events-auto"></div>
 
-  <!-- =========================================================================
-       HEADER / GLASS NAVIGATION BAR
+    <!-- =========================================================================
+       PREMIUM LIQUID GLASS FLOATING NAVIGATION BAR
        ========================================================================= -->
   <header class="fixed top-0 left-0 right-0 z-50 transition-all duration-300">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-2">
-      <nav id="mainNav" class="glass-nav rounded-2xl px-4 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between border border-white/40 shadow-[0_4px_30px_rgba(0,0,0,0.06)] transition-all duration-300">
+    <div class="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 pt-3 sm:pt-4 pb-2">
+      <nav id="mainNav" class="glass-nav rounded-2xl px-3.5 sm:px-5 md:px-6 py-2 sm:py-2.5 flex items-center justify-between transition-all duration-300 relative" aria-label="Main Navigation">
         
-        <!-- Brand Logo: Single <img> tag, perfectly proportional and responsive -->
-        <a href="#home" class="inline-flex items-center group transition-transform hover:scale-[1.02] focus:outline-none" aria-label="Whiz Studio Home">
-          <img src="assets/images/logo.png?v=20261105" alt="Whiz Studio" decoding="async" class="h-9 sm:h-11 md:h-12 w-auto max-w-[150px] sm:max-w-[190px] md:max-w-none object-contain">
+        <!-- 1. Brand Logo: Original <img> tag, perfectly proportional and responsive -->
+        <a href="#home" class="inline-flex items-center group transition-transform hover:scale-[1.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-whiz/50 rounded-lg flex-shrink-0" aria-label="Whiz Studio Home">
+          <img src="assets/images/logo.png?v=20261105" alt="Whiz Studio" decoding="async" class="h-8 sm:h-9 md:h-10 w-auto max-w-[130px] sm:max-w-[160px] md:max-w-none object-contain transition-all">
         </a>
 
-        <!-- Desktop Navigation Links -->
-        <div id="desktopNavLinks" class="hidden lg:flex items-center space-x-1 xl:space-x-2 text-sm font-semibold text-slate-800">
-          <a href="#home" class="nav-link px-4 py-1.5 rounded-full">Home</a>
-          <a href="#about" class="nav-link px-4 py-1.5 rounded-full">About Us</a>
-          <a href="#services" class="nav-link px-4 py-1.5 rounded-full">Services</a>
-          <a href="#pricing" class="nav-link px-4 py-1.5 rounded-full">Pricing</a>
-          <a href="#articles" class="nav-link px-4 py-1.5 rounded-full">Articles</a>
-          <a href="#testimonials" class="nav-link px-4 py-1.5 rounded-full">Reviews</a>
-          <a href="#faq" class="nav-link px-4 py-1.5 rounded-full">FAQ</a>
+        <!-- 2. Desktop Navigation Links (Centered, Balanced Spacing, Pill Hover/Active) -->
+        <div id="desktopNavLinks" class="hidden lg:flex items-center space-x-1 xl:space-x-1.5 text-[13px] xl:text-sm font-semibold text-slate-800">
+          <a href="#home" class="nav-link px-3.5 xl:px-4 py-1.5 rounded-full transition-all">Home</a>
+          <a href="#about" class="nav-link px-3.5 xl:px-4 py-1.5 rounded-full transition-all">About Us</a>
+          <a href="#services" class="nav-link px-3.5 xl:px-4 py-1.5 rounded-full transition-all">Services</a>
+          <a href="#pricing" class="nav-link px-3.5 xl:px-4 py-1.5 rounded-full transition-all">Pricing</a>
+          <a href="#articles" class="nav-link px-3.5 xl:px-4 py-1.5 rounded-full transition-all">Articles</a>
+          <a href="#testimonials" class="nav-link px-3.5 xl:px-4 py-1.5 rounded-full transition-all">Reviews</a>
+          <a href="#faq" class="nav-link px-3.5 xl:px-4 py-1.5 rounded-full transition-all">FAQ</a>
         </div>
 
-        <!-- Main Call-to-Action -->
-        <div class="flex items-center space-x-2 sm:space-x-3">
-          <button id="myAccountNavBtn" type="button" class="inline-flex items-center justify-center px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm text-slate-800 hover:text-brand-whiz bg-white/50 hover:bg-white/80 border border-white/60 hover:border-emerald-300 transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-whiz/50 active:scale-[0.98] cursor-pointer" aria-haspopup="dialog" aria-expanded="false" aria-controls="accountPortalModal">
-            <i class="fa-solid fa-circle-user text-xs sm:text-sm mr-1.5 text-brand-whiz"></i>
-            <span>My Account</span>
-          </button>
+        <!-- 3. Navigation Controls & Actions (Single Horizontal Row) -->
+        <div class="flex items-center space-x-2 sm:space-x-2.5 flex-shrink-0">
+          
+          <!-- User Profile / Account Control Container -->
+          <div class="relative" id="profileDropdownContainer">
+            <!-- Profile Button: Compact 40-44px on mobile, sleek pill on desktop -->
+            <button id="myAccountNavBtn" type="button" class="relative inline-flex items-center justify-center h-10 sm:h-10 md:h-11 px-2.5 sm:px-3 md:px-3.5 rounded-xl font-bold text-xs sm:text-sm text-slate-800 hover:text-brand-whiz bg-white/60 hover:bg-white/90 border border-white/80 hover:border-emerald-300 transition-all shadow-[0_2px_8px_rgba(0,0,0,0.03)] focus:outline-none focus:ring-2 focus:ring-brand-whiz/40 active:scale-[0.97] cursor-pointer" aria-haspopup="menu" aria-expanded="false" aria-controls="userProfileDropdown" aria-label="Account and Profile Menu">
+              <span id="navUserAvatarWrap" class="relative w-7 h-7 rounded-lg bg-emerald-50 text-brand-whiz flex items-center justify-center overflow-hidden border border-emerald-200/60 flex-shrink-0">
+                <i id="navUserIcon" class="fa-solid fa-circle-user text-sm text-brand-whiz"></i>
+                <img id="navUserImg" src="" alt="User Avatar" class="hidden w-full h-full object-cover">
+                <span id="navUserStatusDot" class="hidden absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white"></span>
+              </span>
+              <!-- Desktop Name Label (Hidden on mobile to keep navbar ultra-compact and single-row) -->
+              <span id="navUserName" class="hidden md:inline-block ml-2 max-w-[110px] truncate text-slate-800 font-semibold text-xs tracking-tight">My Account</span>
+              <i class="hidden md:inline-block fa-solid fa-chevron-down text-[10px] ml-1.5 text-slate-400 transition-transform duration-200" id="profileDropdownChevron"></i>
+            </button>
 
-          <a href="#contact" class="hidden sm:inline-flex items-center justify-center px-5 py-2.5 rounded-xl font-bold text-sm btn-glass-primary shadow-sm">
+            <!-- Premium Floating Profile Dropdown (Liquid Glass Aesthetic) -->
+            <div id="userProfileDropdown" class="hidden absolute right-0 top-full mt-2.5 w-72 sm:w-80 rounded-2xl glass-menu-card p-4 z-50 text-left transition-all duration-200 origin-top-right focus:outline-none" role="menu" aria-orientation="vertical" tabindex="-1">
+              
+              <!-- Authenticated State View -->
+              <div id="profileDropdownAuthView" class="hidden space-y-3">
+                <div class="flex items-center space-x-3 pb-3 border-b border-slate-100">
+                  <div class="w-11 h-11 rounded-full bg-emerald-50 text-brand-whiz flex items-center justify-center overflow-hidden border border-emerald-200 flex-shrink-0 shadow-sm">
+                    <i id="dropdownUserIcon" class="fa-solid fa-circle-user text-xl text-brand-whiz"></i>
+                    <img id="dropdownUserImg" src="" alt="Profile Photo" class="hidden w-full h-full object-cover">
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <div class="flex items-center space-x-1.5">
+                      <p id="dropdownUserName" class="text-sm font-bold text-slate-900 truncate">Account User</p>
+                      <span id="dropdownUserRoleBadge" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-brand-whiz border border-emerald-200 uppercase tracking-wider flex-shrink-0">Client</span>
+                    </div>
+                    <p id="dropdownUserEmail" class="text-xs text-slate-500 truncate mt-0.5">user@example.com</p>
+                  </div>
+                </div>
+
+                <div class="space-y-1">
+                  <button id="dropdownDashboardBtn" type="button" class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 hover:text-brand-whiz hover:bg-emerald-50/70 transition-all text-left group">
+                    <div class="flex items-center space-x-2.5">
+                      <i class="fa-solid fa-gauge-high text-slate-400 group-hover:text-brand-whiz text-xs sm:text-sm w-4 text-center transition-colors"></i>
+                      <span id="dropdownDashboardLabel">Go to Dashboard</span>
+                    </div>
+                    <i class="fa-solid fa-arrow-right text-[10px] text-slate-400 group-hover:text-brand-whiz group-hover:translate-x-0.5 transition-all"></i>
+                  </button>
+
+                  <button id="dropdownSettingsBtn" type="button" class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 hover:text-brand-whiz hover:bg-emerald-50/70 transition-all text-left group">
+                    <div class="flex items-center space-x-2.5">
+                      <i class="fa-solid fa-user-gear text-slate-400 group-hover:text-brand-whiz text-xs sm:text-sm w-4 text-center transition-colors"></i>
+                      <span>Account Settings</span>
+                    </div>
+                    <i class="fa-solid fa-arrow-right text-[10px] text-slate-400 group-hover:text-brand-whiz group-hover:translate-x-0.5 transition-all"></i>
+                  </button>
+                </div>
+
+                <div class="border-t border-slate-100 pt-1.5">
+                  <button id="dropdownSignOutBtn" type="button" class="btn-portal-signout w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-rose-600 hover:bg-rose-50 transition-all text-left">
+                    <i class="fa-solid fa-arrow-right-from-bracket text-xs sm:text-sm w-4 text-center text-rose-500"></i>
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Guest State View -->
+              <div id="profileDropdownGuestView" class="space-y-3">
+                <div class="flex items-start space-x-3 pb-2.5 border-b border-slate-100">
+                  <div class="w-10 h-10 rounded-xl bg-emerald-50 text-brand-whiz flex items-center justify-center flex-shrink-0 border border-emerald-200/60 shadow-sm">
+                    <i class="fa-solid fa-building-shield text-base text-brand-whiz"></i>
+                  </div>
+                  <div>
+                    <p class="text-sm font-bold text-slate-900">Whiz Studio Portal</p>
+                    <p class="text-xs text-slate-500 leading-snug mt-0.5">Sign in to manage campaigns, invoices, and performance reports.</p>
+                  </div>
+                </div>
+
+                <button id="dropdownSignInBtn" type="button" class="w-full btn-glass-primary py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center space-x-2 shadow-sm">
+                  <i class="fa-solid fa-arrow-right-to-bracket text-xs"></i>
+                  <span>Sign In / Client Portal</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Desktop Contact CTA -->
+          <a href="#contact" class="hidden sm:inline-flex items-center justify-center h-10 md:h-11 px-4 sm:px-5 rounded-xl font-bold text-xs sm:text-sm btn-glass-primary shadow-sm hover:shadow-md transition-all">
             <span>Contact with Us</span>
             <i class="fa-solid fa-arrow-right text-xs ml-2"></i>
           </a>
 
-          <!-- Mobile Hamburger -->
-          <button id="mobileMenuToggle" class="lg:hidden w-11 h-11 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-slate-800 hover:text-brand-whiz hover:bg-white/40 border border-white/60 transition-all focus:outline-none" aria-label="Toggle Navigation" aria-expanded="false">
-            <i class="fa-solid fa-bars text-lg"></i>
+          <!-- Mobile Hamburger Menu Button (40-44px, matching profile button) -->
+          <button id="mobileMenuToggle" type="button" class="lg:hidden w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center rounded-xl text-slate-800 hover:text-brand-whiz bg-white/60 hover:bg-white/90 border border-white/80 hover:border-emerald-300 transition-all shadow-[0_2px_8px_rgba(0,0,0,0.03)] focus:outline-none focus:ring-2 focus:ring-brand-whiz/40 active:scale-[0.97]" aria-label="Toggle Navigation Menu" aria-expanded="false" aria-controls="mobileMenu">
+            <span class="hamburger-box">
+              <span class="hamburger-line hamburger-line-1" id="hamLine1"></span>
+              <span class="hamburger-line hamburger-line-2" id="hamLine2"></span>
+              <span class="hamburger-line hamburger-line-3" id="hamLine3"></span>
+            </span>
           </button>
         </div>
       </nav>
 
-      <!-- Mobile Dropdown Menu -->
-      <div id="mobileMenu" class="hidden lg:hidden mt-2 bg-white/30 backdrop-blur-xl border border-white/40 shadow-[0_12px_40px_rgba(0,168,107,0.12)] rounded-3xl p-5 sm:p-6 flex flex-col items-center justify-center space-y-2 text-center">
-        <a href="#home" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]">Home</a>
-        <a href="#about" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]">About Us</a>
-        <a href="#services" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]">Services</a>
-        <a href="#pricing" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]">Pricing</a>
-        <a href="#articles" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]">Articles</a>
-        <a href="#testimonials" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]">Reviews</a>
-        <a href="#faq" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]">FAQ</a>
-        <button id="myAccountMobileNavBtn" type="button" class="mobile-nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 hover:text-brand-whiz bg-white/70 hover:bg-white border border-white/80 transition-all min-h-[44px] w-full max-w-xs mt-1 shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-whiz/50 active:scale-[0.98] cursor-pointer" aria-haspopup="dialog" aria-expanded="false" aria-controls="accountPortalModal">
-          <i class="fa-solid fa-circle-user text-xs mr-2 text-brand-whiz"></i>
-          <span>My Account</span>
-        </button>
-        <a href="#contact" class="mobile-nav-link inline-flex items-center justify-center text-center px-7 py-3 rounded-full text-sm font-bold text-white bg-brand-whiz hover:bg-emerald-700 shadow-sm mt-2 min-h-[44px]">Contact with Us</a>
+      <!-- Mobile Dropdown Navigation Menu (Floating Liquid Glass Card) -->
+      <div id="mobileMenu" class="hidden lg:hidden mt-2.5 glass-menu-card rounded-2xl p-4 sm:p-5 flex flex-col space-y-1 transition-all duration-300" role="region" aria-label="Mobile Navigation">
+        <a href="#home" class="mobile-nav-link nav-link flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-800 hover:text-brand-whiz transition-all min-h-[44px]">
+          <span>Home</span>
+          <i class="fa-solid fa-chevron-right text-[10px] text-slate-400"></i>
+        </a>
+        <a href="#about" class="mobile-nav-link nav-link flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-800 hover:text-brand-whiz transition-all min-h-[44px]">
+          <span>About Us</span>
+          <i class="fa-solid fa-chevron-right text-[10px] text-slate-400"></i>
+        </a>
+        <a href="#services" class="mobile-nav-link nav-link flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-800 hover:text-brand-whiz transition-all min-h-[44px]">
+          <span>Services</span>
+          <i class="fa-solid fa-chevron-right text-[10px] text-slate-400"></i>
+        </a>
+        <a href="#pricing" class="mobile-nav-link nav-link flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-800 hover:text-brand-whiz transition-all min-h-[44px]">
+          <span>Pricing</span>
+          <i class="fa-solid fa-chevron-right text-[10px] text-slate-400"></i>
+        </a>
+        <a href="#articles" class="mobile-nav-link nav-link flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-800 hover:text-brand-whiz transition-all min-h-[44px]">
+          <span>Articles</span>
+          <i class="fa-solid fa-chevron-right text-[10px] text-slate-400"></i>
+        </a>
+        <a href="#testimonials" class="mobile-nav-link nav-link flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-800 hover:text-brand-whiz transition-all min-h-[44px]">
+          <span>Reviews</span>
+          <i class="fa-solid fa-chevron-right text-[10px] text-slate-400"></i>
+        </a>
+        <a href="#faq" class="mobile-nav-link nav-link flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-800 hover:text-brand-whiz transition-all min-h-[44px]">
+          <span>FAQ</span>
+          <i class="fa-solid fa-chevron-right text-[10px] text-slate-400"></i>
+        </a>
+
+        <div class="border-t border-slate-200/60 my-2 pt-2 space-y-2">
+          <button id="myAccountMobileNavBtn" type="button" class="mobile-nav-link w-full flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-bold text-slate-800 hover:text-brand-whiz bg-white/70 hover:bg-white border border-white/80 transition-all min-h-[44px] shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-whiz/50 active:scale-[0.98] cursor-pointer" aria-haspopup="dialog" aria-expanded="false" aria-controls="accountPortalModal">
+            <i class="fa-solid fa-circle-user text-xs mr-2 text-brand-whiz"></i>
+            <span>My Account</span>
+          </button>
+          
+          <a href="#contact" class="mobile-nav-link w-full flex items-center justify-center px-5 py-2.5 rounded-xl text-sm font-bold text-white btn-glass-primary shadow-sm min-h-[44px]">
+            <span>Contact with Us</span>
+            <i class="fa-solid fa-arrow-right text-xs ml-2"></i>
+          </a>
+        </div>
       </div>
     </div>
   </header>

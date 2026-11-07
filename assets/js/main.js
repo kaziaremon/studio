@@ -1141,12 +1141,10 @@ function initNavigation() {
 
   // Navbar glass background scroll reactivity
   window.addEventListener('scroll', () => {
-    if (window.scrollY > 30) {
-      nav.classList.add('shadow-md', 'bg-white/90');
-      nav.classList.remove('bg-white/70');
+    if (window.scrollY > 25) {
+      nav.classList.add('is-scrolled', 'shadow-md');
     } else {
-      nav.classList.remove('shadow-md', 'bg-white/90');
-      nav.classList.add('bg-white/70');
+      nav.classList.remove('is-scrolled', 'shadow-md');
     }
   }, { passive: true });
 
@@ -1156,20 +1154,33 @@ function initNavigation() {
     
     mobileToggle.addEventListener('click', (e) => {
       e.stopPropagation();
+      // Close user profile dropdown if open
+      const profileDropdown = document.getElementById('userProfileDropdown');
+      const profileBtn = document.getElementById('myAccountNavBtn');
+      const profileChevron = document.getElementById('profileDropdownChevron');
+      if (profileDropdown && profileDropdown.classList.contains('dropdown-open')) {
+        profileDropdown.classList.remove('dropdown-open');
+        profileDropdown.classList.add('hidden');
+        if (profileBtn) profileBtn.setAttribute('aria-expanded', 'false');
+        if (profileChevron) profileChevron.classList.remove('rotate-180');
+      }
+
       const isClosed = mobileMenu.classList.contains('hidden');
       if (isClosed) {
         mobileMenu.classList.remove('hidden');
         mobileToggle.setAttribute('aria-expanded', 'true');
+        mobileToggle.classList.add('mobile-menu-active');
         if (toggleIcon) {
           toggleIcon.classList.remove('fa-bars');
           toggleIcon.classList.add('fa-xmark');
         }
         if (window.gsap) {
-          gsap.fromTo(mobileMenu, { opacity: 0, y: -12, scale: 0.98 }, { opacity: 1, y: 0, scale: 1, duration: 0.25, ease: 'power2.out' });
+          gsap.fromTo(mobileMenu, { opacity: 0, y: -10, scale: 0.98 }, { opacity: 1, y: 0, scale: 1, duration: 0.25, ease: 'power2.out' });
         }
       } else {
         mobileMenu.classList.add('hidden');
-        mobileToggle.setAttribute('aria-expanded', 'false');
+        mobileToggle.setAttribute('aria-expanded', 'false'); mobileToggle.classList.remove('mobile-menu-active');
+        mobileToggle.classList.remove('mobile-menu-active');
         if (toggleIcon) {
           toggleIcon.classList.remove('fa-xmark');
           toggleIcon.classList.add('fa-bars');
@@ -1180,7 +1191,7 @@ function initNavigation() {
     mobileLinks.forEach(link => {
       link.addEventListener('click', () => {
         mobileMenu.classList.add('hidden');
-        mobileToggle.setAttribute('aria-expanded', 'false');
+        mobileToggle.setAttribute('aria-expanded', 'false'); mobileToggle.classList.remove('mobile-menu-active');
         if (toggleIcon) {
           toggleIcon.classList.remove('fa-xmark');
           toggleIcon.classList.add('fa-bars');
@@ -1192,7 +1203,19 @@ function initNavigation() {
     document.addEventListener('click', (e) => {
       if (!mobileMenu.classList.contains('hidden') && !header.contains(e.target)) {
         mobileMenu.classList.add('hidden');
+        mobileToggle.setAttribute('aria-expanded', 'false'); mobileToggle.classList.remove('mobile-menu-active');
+        if (toggleIcon) {
+          toggleIcon.classList.remove('fa-xmark');
+          toggleIcon.classList.add('fa-bars');
+        }
+      }
+    });
+      document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !mobileMenu.classList.contains('hidden')) {
+        mobileMenu.classList.add('hidden');
         mobileToggle.setAttribute('aria-expanded', 'false');
+        mobileToggle.classList.remove('mobile-menu-active');
+        mobileToggle.focus();
         if (toggleIcon) {
           toggleIcon.classList.remove('fa-xmark');
           toggleIcon.classList.add('fa-bars');

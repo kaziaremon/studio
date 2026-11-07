@@ -437,26 +437,97 @@
   }
 
   // Primary Auth Sync & State Handler
+    // =========================================================================
+  // PROFILE DROPDOWN CONTROLS
+  // =========================================================================
+  function openProfileDropdown() {
+    const dropdown = document.getElementById('userProfileDropdown');
+    const btn = document.getElementById('myAccountNavBtn');
+    const chevron = document.getElementById('profileDropdownChevron');
+    if (!dropdown) return;
+
+    dropdown.classList.remove('hidden');
+    requestAnimationFrame(() => {
+      dropdown.classList.add('dropdown-open');
+    });
+    if (btn) btn.setAttribute('aria-expanded', 'true');
+    if (chevron) chevron.classList.add('rotate-180');
+  }
+
+  function closeProfileDropdown() {
+    const dropdown = document.getElementById('userProfileDropdown');
+    const btn = document.getElementById('myAccountNavBtn');
+    const chevron = document.getElementById('profileDropdownChevron');
+    if (!dropdown) return;
+
+    dropdown.classList.remove('dropdown-open');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+    if (chevron) chevron.classList.remove('rotate-180');
+    setTimeout(() => {
+      if (!dropdown.classList.contains('dropdown-open')) {
+        dropdown.classList.add('hidden');
+      }
+    }, 200);
+  }
+
+  function toggleProfileDropdown() {
+    const dropdown = document.getElementById('userProfileDropdown');
+    const mobileMenu = document.getElementById('mobileMenu');
+    const mobileToggle = document.getElementById('mobileMenuToggle');
+    if (!dropdown) return;
+
+    // Close mobile navigation drawer if open
+    if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
+      mobileMenu.classList.add('hidden');
+      if (mobileToggle) {
+        mobileToggle.setAttribute('aria-expanded', 'false');
+        mobileToggle.classList.remove('mobile-menu-active');
+      }
+    }
+
+    if (dropdown.classList.contains('dropdown-open')) {
+      closeProfileDropdown();
+    } else {
+      openProfileDropdown();
+    }
+  }
+
   async function syncAuthState() {
     if (!window.Clerk) return;
 
     const user = window.Clerk.user;
     state.currentUser = user;
 
-    const navBtns = [
-      document.getElementById('myAccountNavBtn'),
-      document.getElementById('myAccountMobileNavBtn')
-    ].filter(Boolean);
+    const authView = document.getElementById('profileDropdownAuthView');
+    const guestView = document.getElementById('profileDropdownGuestView');
+    const navUserImg = document.getElementById('navUserImg');
+    const navUserIcon = document.getElementById('navUserIcon');
+    const navUserName = document.getElementById('navUserName');
+    const navUserStatusDot = document.getElementById('navUserStatusDot');
 
     if (!user) {
       state.userRole = 'guest';
       state.backendProfile = null;
-      navBtns.forEach(btn => {
-        const span = btn.querySelector('span');
+      if (authView) authView.classList.add('hidden');
+      if (guestView) guestView.classList.remove('hidden');
+      if (navUserStatusDot) navUserStatusDot.classList.add('hidden');
+      if (navUserImg) {
+        navUserImg.classList.add('hidden');
+        navUserImg.src = '';
+      }
+      if (navUserIcon) {
+        navUserIcon.classList.remove('hidden');
+        navUserIcon.className = 'fa-solid fa-circle-user text-sm text-brand-whiz';
+      }
+      if (navUserName) navUserName.textContent = 'My Account';
+
+      const mobileBtn = document.getElementById('myAccountMobileNavBtn');
+      if (mobileBtn) {
+        const span = mobileBtn.querySelector('span');
         if (span) span.textContent = 'My Account';
-        const icon = btn.querySelector('i');
-        if (icon) icon.className = 'fa-solid fa-circle-user text-xs sm:text-sm mr-1.5 text-brand-whiz';
-      });
+        const icon = mobileBtn.querySelector('i');
+        if (icon) icon.className = 'fa-solid fa-circle-user text-xs mr-2 text-brand-whiz';
+      }
       return;
     }
 
@@ -484,22 +555,75 @@
       state.userRole = 'unresolved';
     }
 
-    // Update Nav buttons to show Name & Role
-    const displayName = user.firstName || user.username || (user.primaryEmailAddress ? user.primaryEmailAddress.emailAddress.split('@')[0] : 'User');
-    navBtns.forEach(btn => {
-      const span = btn.querySelector('span');
-      if (span) {
-        span.textContent = displayName;
+    // Update Nav buttons and Profile Dropdown to show Name & Role
+    const fullName = user.fullName || [user.firstName, user.lastName].filter(Boolean).join(' ') || user.username || (user.primaryEmailAddress ? user.primaryEmailAddress.emailAddress.split('@')[0] : 'User');
+    const shortName = user.firstName || user.username || fullName.split(' ')[0] || 'Account';
+    const email = user.primaryEmailAddress ? user.primaryEmailAddress.emailAddress : '';
+    const avatarUrl = user.imageUrl;
+    const roleBadge = state.userRole === 'super_admin' ? 'Super Admin' : (state.userRole === 'admin' ? 'Admin' : (state.userRole === 'client' ? 'Client' : (state.userRole || 'Member')));
+    const dashboardTitle = (state.userRole === 'super_admin' || state.userRole === 'admin') ? 'Management Console' : 'Client Portal';
+
+    // Desktop nav pill label (hidden on mobile)
+    if (navUserName) navUserName.textContent = shortName;
+
+    // Avatar in navbar button
+    if (avatarUrl && navUserImg) {
+      navUserImg.src = avatarUrl;
+      navUserImg.classList.remove('hidden');
+      if (navUserIcon) navUserIcon.classList.add('hidden');
+    } else if (navUserIcon) {
+      navUserIcon.classList.remove('hidden');
+      if (navUserImg) navUserImg.classList.add('hidden');
+      if (state.userRole === 'super_admin' || state.userRole === 'admin') {
+        navUserIcon.className = 'fa-solid fa-shield-halved text-sm text-slate-800';
+      } else {
+        navUserIcon.className = 'fa-solid fa-circle-user text-sm text-brand-whiz';
       }
-      const icon = btn.querySelector('i');
+    }
+    if (navUserStatusDot) navUserStatusDot.classList.remove('hidden');
+
+    // Update Dropdown view
+    if (authView) authView.classList.remove('hidden');
+    if (guestView) guestView.classList.add('hidden');
+
+    const dropdownName = document.getElementById('dropdownUserName');
+    if (dropdownName) dropdownName.textContent = fullName;
+
+    const dropdownRole = document.getElementById('dropdownUserRoleBadge');
+    if (dropdownRole) dropdownRole.textContent = roleBadge;
+
+    const dropdownEmail = document.getElementById('dropdownUserEmail');
+    if (dropdownEmail) dropdownEmail.textContent = email;
+
+    const dropdownDashboardLabel = document.getElementById('dropdownDashboardLabel');
+    if (dropdownDashboardLabel) dropdownDashboardLabel.textContent = dashboardTitle;
+
+    const dropdownUserImg = document.getElementById('dropdownUserImg');
+    const dropdownUserIcon = document.getElementById('dropdownUserIcon');
+    if (avatarUrl && dropdownUserImg) {
+      dropdownUserImg.src = avatarUrl;
+      dropdownUserImg.classList.remove('hidden');
+      if (dropdownUserIcon) dropdownUserIcon.classList.add('hidden');
+    } else if (dropdownUserIcon) {
+      dropdownUserIcon.classList.remove('hidden');
+      if (dropdownUserImg) dropdownUserImg.classList.add('hidden');
+      dropdownUserIcon.className = (state.userRole === 'super_admin' || state.userRole === 'admin')
+        ? 'fa-solid fa-shield-halved text-xl text-slate-800'
+        : 'fa-solid fa-circle-user text-xl text-brand-whiz';
+    }
+
+    // Mobile nav button
+    const mobileBtn = document.getElementById('myAccountMobileNavBtn');
+    if (mobileBtn) {
+      const span = mobileBtn.querySelector('span');
+      if (span) span.textContent = dashboardTitle;
+      const icon = mobileBtn.querySelector('i');
       if (icon) {
-        if (state.userRole === 'super_admin' || state.userRole === 'admin') {
-          icon.className = 'fa-solid fa-shield-halved text-xs sm:text-sm mr-1.5 text-slate-800';
-        } else {
-          icon.className = 'fa-solid fa-circle-user text-xs sm:text-sm mr-1.5 text-brand-whiz';
-        }
+        icon.className = (state.userRole === 'super_admin' || state.userRole === 'admin')
+          ? 'fa-solid fa-shield-halved text-xs mr-2 text-slate-800'
+          : 'fa-solid fa-gauge-high text-xs mr-2 text-brand-whiz';
       }
-    });
+    }
   }
 
   // Open Current Dashboard based on Role
@@ -2377,15 +2501,28 @@
 
   // Global Event Binding (Attaches handlers ONCE)
   function bindEvents() {
-    ['myAccountNavBtn', 'myAccountMobileNavBtn'].forEach(id => {
-      const btn = document.getElementById(id);
-      if (btn) {
-        btn.addEventListener('click', (e) => {
-          e.preventDefault();
-          openUserDashboard();
-        });
-      }
-    });
+    const navBtn = document.getElementById('myAccountNavBtn');
+    if (navBtn) {
+      navBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        toggleProfileDropdown();
+      });
+    }
+
+    const mobileNavBtn = document.getElementById('myAccountMobileNavBtn');
+    if (mobileNavBtn) {
+      mobileNavBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const mobileMenu = document.getElementById('mobileMenu');
+        const mobileToggle = document.getElementById('mobileMenuToggle');
+        if (mobileMenu) mobileMenu.classList.add('hidden');
+        if (mobileToggle) {
+          mobileToggle.setAttribute('aria-expanded', 'false');
+          mobileToggle.classList.remove('mobile-menu-active');
+        }
+        openUserDashboard();
+      });
+    }
 
     ['accountModalCloseBtn', 'accountModalBackdrop'].forEach(id => {
       const el = document.getElementById(id);
@@ -2561,18 +2698,64 @@
     if (adminInviteForm) adminInviteForm.addEventListener('submit', handleInviteAdmin);
 
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && state.currentModal) {
-        closeModal(state.currentModal);
+      if (e.key === 'Escape') {
+        closeProfileDropdown();
+        if (state.currentModal) {
+          closeModal(state.currentModal);
+        }
       }
     });
 
     // Global Click Delegation ensures all modal, tab, and subview triggers respond instantly
     document.addEventListener('click', (e) => {
-      // 1. My Account Nav triggers
-      if (e.target.closest('#myAccountNavBtn, #myAccountMobileNavBtn')) {
+            // 1. My Account Nav triggers
+      if (e.target.closest('#myAccountNavBtn')) {
         e.preventDefault();
+        toggleProfileDropdown();
+        return;
+      }
+
+      if (e.target.closest('#myAccountMobileNavBtn')) {
+        e.preventDefault();
+        const mobileMenu = document.getElementById('mobileMenu');
+        const mobileToggle = document.getElementById('mobileMenuToggle');
+        if (mobileMenu) mobileMenu.classList.add('hidden');
+        if (mobileToggle) {
+          mobileToggle.setAttribute('aria-expanded', 'false');
+          mobileToggle.classList.remove('mobile-menu-active');
+        }
         openUserDashboard();
         return;
+      }
+
+      if (e.target.closest('#dropdownDashboardBtn')) {
+        e.preventDefault();
+        closeProfileDropdown();
+        openUserDashboard();
+        return;
+      }
+
+      if (e.target.closest('#dropdownSettingsBtn')) {
+        e.preventDefault();
+        closeProfileDropdown();
+        openModal('accountPortalModal');
+        return;
+      }
+
+      if (e.target.closest('#dropdownSignInBtn')) {
+        e.preventDefault();
+        closeProfileDropdown();
+        openModal('accountPortalModal');
+        return;
+      }
+
+      // Close profile dropdown on outside click
+      const profileContainer = document.getElementById('profileDropdownContainer');
+      const dropdown = document.getElementById('userProfileDropdown');
+      if (dropdown && dropdown.classList.contains('dropdown-open')) {
+        if (!profileContainer || !profileContainer.contains(e.target)) {
+          closeProfileDropdown();
+        }
       }
 
       // 2. Modal Close triggers
@@ -2729,6 +2912,10 @@
   }
 
   // Resilient Lifecycle Initialization
+  window.syncWhizAuthState = syncAuthState;
+  window.toggleProfileDropdown = toggleProfileDropdown;
+  window.closeProfileDropdown = closeProfileDropdown;
+
   function init() {
     bindEvents();
     initClerk();
