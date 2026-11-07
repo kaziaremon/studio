@@ -812,7 +812,10 @@
 
     const titleEl = document.getElementById('clientDetailTitle');
     const subEl = document.getElementById('clientDetailSubtitle');
-    if (titleEl) titleEl.textContent = 'Loading Client Record...';
+    if (titleEl) {
+      titleEl.textContent = 'Loading Client Record...';
+      titleEl.title = '';
+    }
 
     const res = await apiFetch(`/clients/${clientId}`);
     if (!res.ok || !res.data || !res.data.data) {
@@ -824,8 +827,14 @@
     const { client, services, projects, invoices, payments, auditLogs } = res.data.data;
 
     // Header info
-    if (titleEl) titleEl.textContent = client.company_name || client.full_name || 'Client Record';
-    if (subEl) subEl.textContent = `${client.full_name || 'Client'} (${client.email})${client.is_unassigned ? ' • Unassigned Company' : ''}`;
+    if (titleEl) {
+      titleEl.textContent = client.company_name || client.full_name || 'Client Record';
+      titleEl.title = titleEl.textContent;
+    }
+    if (subEl) {
+      subEl.textContent = `${client.full_name || 'Client'} (${client.email})${client.is_unassigned ? ' • Unassigned Company' : ''}`;
+      subEl.title = subEl.textContent;
+    }
 
     const statusBadge = document.getElementById('clientDetailStatusBadge');
     const btnSuspend = document.getElementById('btnSuspendClientAction');
@@ -930,7 +939,7 @@
         });
       } else {
         srvList.innerHTML = services.map(s => `
-          <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] flex items-center justify-between gap-4 shadow-xs">
+          <div class="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-white border border-[#E6ECE9] flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 shadow-2xs hover:border-[#087F70]/30 transition-all">
             <div class="flex items-center space-x-3 min-w-0">
               <div class="w-9 h-9 rounded-xl bg-brand-whiz/15 text-brand-whiz border border-brand-whiz/30 flex items-center justify-center font-bold text-xs shrink-0">
                 <i class="fa-solid fa-bolt"></i>
@@ -944,11 +953,11 @@
                 </div>
               </div>
             </div>
-            <div class="flex items-center space-x-3 shrink-0">
+            <div class="flex items-center space-x-3 shrink-0 self-end sm:self-auto">
               ${state.adminProfile?.role !== 'employee' && s.price_cents != null ? `<span class="text-xs font-mono font-bold text-brand-whiz">${formatCurrency(s.price_cents || 0, s.currency || clientCurrency || "USD")}</span>` : ''}
               <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${s.status === 'active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-50 text-slate-600 border border-slate-200'}">${s.status}</span>
               ${s.status === 'active' ? `
-                <button type="button" class="btn-cancel-client-service text-slate-500 hover:text-rose-400 p-1 cursor-pointer transition-colors" data-cs="${s.id}" title="Cancel Service">
+                <button type="button" class="btn-cancel-client-service text-slate-500 hover:text-rose-600 p-1 cursor-pointer transition-colors" data-cs="${s.id}" title="Cancel Service">
                   <i class="fa-solid fa-ban text-xs"></i>
                 </button>
               ` : ''}
@@ -966,7 +975,7 @@
               showToast('Service cancelled.', 'info');
               openClientDetails(clientId);
             } else {
-              showToast('Failed to cancel service.', 'error');
+              showToast(cancelRes.data?.error || 'Failed to cancel service.', 'error');
             }
           });
         });
@@ -984,7 +993,7 @@
         prjList.innerHTML = projects.map(p => {
           const percent = p.progress_percent || 0;
           return `
-            <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] space-y-2.5 shadow-xs">
+            <div class="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-white border border-[#E6ECE9] space-y-2.5 shadow-2xs hover:border-[#087F70]/30 transition-all">
               <div class="flex items-center justify-between">
                 <div>
                   <h4 class="text-xs font-bold text-[#172B36]">${p.name}</h4>
@@ -1012,9 +1021,9 @@
         audList.innerHTML = '<p class="text-slate-500 italic text-xs">No audit logs for this client yet.</p>';
       } else {
         audList.innerHTML = auditLogs.map(a => `
-          <div class="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-[11px]">
+          <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50/70 border border-[#E6ECE9] text-[11px]">
             <div class="flex items-center space-x-2">
-              <span class="w-1.5 h-1.5 rounded-full bg-brand-whiz"></span>
+              <span class="w-1.5 h-1.5 rounded-full bg-[#087F70]"></span>
               <span class="font-bold text-[#172B36] uppercase">${a.action}</span>
               <span class="text-[#5F7180]">${a.user_email || 'System'}</span>
             </div>
