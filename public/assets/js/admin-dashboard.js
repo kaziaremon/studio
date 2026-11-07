@@ -828,30 +828,37 @@
 
     // Header info
     if (titleEl) {
-      titleEl.textContent = client.company_name || client.full_name || 'Client Record';
+      titleEl.textContent = 'Client Workspace';
       titleEl.title = titleEl.textContent;
     }
     if (subEl) {
-      subEl.textContent = `${client.full_name || 'Client'} (${client.email})${client.is_unassigned ? ' • Unassigned Company' : ''}`;
+      subEl.textContent = client.is_unassigned ? 'Unassigned Organization • Master Operational Record' : 'Authoritative Client Record & Active Services';
       subEl.title = subEl.textContent;
     }
 
-    const statusBadge = document.getElementById('clientDetailStatusBadge');
+    const statusBadges = [
+      document.getElementById('clientDetailStatusBadge'),
+      document.getElementById('clientCardStatusBadge')
+    ].filter(Boolean);
     const btnSuspend = document.getElementById('btnSuspendClientAction');
     const btnReactivate = document.getElementById('btnReactivateClientAction');
 
-    if (statusBadge) {
+    statusBadges.forEach(statusBadge => {
       if (client.status === 'suspended') {
-        statusBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-200';
+        statusBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-200 shrink-0';
         statusBadge.textContent = 'Suspended';
-        btnSuspend?.classList.add('hidden');
-        btnReactivate?.classList.remove('hidden');
       } else {
-        statusBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200';
+        statusBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0';
         statusBadge.textContent = client.status || 'Active';
-        btnSuspend?.classList.remove('hidden');
-        btnReactivate?.classList.add('hidden');
       }
+    });
+
+    if (client.status === 'suspended') {
+      btnSuspend?.classList.add('hidden');
+      btnReactivate?.classList.remove('hidden');
+    } else {
+      btnSuspend?.classList.remove('hidden');
+      btnReactivate?.classList.add('hidden');
     }
     // Profile Card
     const cif = client.cif || {};
@@ -4752,9 +4759,9 @@
     document.getElementById('btnDeleteClientAction')?.addEventListener('click', () => {
       const clientId = state.selectedClientId;
       if (!clientId) return;
-      const titleEl = document.getElementById('clientDetailTitle');
+      const nameEl = document.getElementById('clientCardFullName') || document.getElementById('clientDetailTitle');
       const targetNameEl = document.getElementById('deleteClientTargetName');
-      if (targetNameEl && titleEl) targetNameEl.textContent = titleEl.textContent;
+      if (targetNameEl && nameEl) targetNameEl.textContent = nameEl.textContent;
 
       // Ensure Clerk deletion option is unchecked by default
       const clerkOpt = document.getElementById('deleteClientClerkOption');
