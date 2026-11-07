@@ -657,7 +657,63 @@
     }
   }
 
+  function updateOverviewGreeting() {
+    const greetingEl = document.getElementById('overviewGreetingTitle');
+    const quoteEl = document.getElementById('overviewMotivationalQuote');
+    if (!greetingEl && !quoteEl) return;
+
+    // Dynamic time-aware greeting based on local hour
+    const hour = new Date().getHours();
+    let timeGreeting = 'Good Morning';
+    if (hour >= 12 && hour < 17) {
+      timeGreeting = 'Good Afternoon';
+    } else if (hour >= 17 || hour < 4) {
+      timeGreeting = 'Good Evening';
+    }
+
+    // Resolve authenticated user's first name
+    const rawFullName = state.adminProfile?.full_name || 
+                        state.adminProfile?.fullName || 
+                        window.Clerk?.user?.firstName || 
+                        window.Clerk?.user?.fullName || 
+                        '';
+    let firstName = '';
+    if (rawFullName) {
+      const parts = rawFullName.trim().split(/\s+/);
+      firstName = parts[0];
+      if (['md', 'md.', 'mr', 'mr.', 'ms', 'ms.', 'dr', 'dr.'].includes(firstName.toLowerCase()) && parts.length > 1) {
+        firstName = parts[1];
+      }
+    } else {
+      firstName = 'Kazi';
+    }
+
+    if (firstName) {
+      firstName = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
+    }
+
+    if (greetingEl) {
+      greetingEl.textContent = `${timeGreeting}, ${firstName}!`;
+    }
+
+    // Rotating motivational subtext
+    const quotes = [
+      "Ready to crush your agency goals today?",
+      "Here is a snapshot of your operational momentum today.",
+      "Let's scale your agency to new heights with seamless execution.",
+      "Operational excellence and client success start with daily focus.",
+      "Empowering enterprise growth with real-time clarity and precision.",
+      "Every milestone achieved is another step towards scaling mastery."
+    ];
+
+    if (quoteEl) {
+      const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+      quoteEl.textContent = randomQuote;
+    }
+  }
+
   async function loadOverviewData() {
+    updateOverviewGreeting();
     const res = await apiFetch('/portal/admin/stats');
     if (res.ok && res.data && res.data.data) {
       const d = res.data.data;
@@ -5718,6 +5774,7 @@
       state.adminProfile = profile;
 
       applyRoleAdaptiveUI(profile);
+      updateOverviewGreeting();
       initGlassSelects(); // Initial setup on load
 
       const name = profile.fullName;
@@ -5831,6 +5888,7 @@
       }
 
       applyRoleAdaptiveUI(profile);
+      updateOverviewGreeting();
 
       // Populate user info in UI
       const name = profile.fullName || profile.full_name || user.fullName || 'Super Admin';
@@ -5918,6 +5976,7 @@
           const filterSelect = document.getElementById('adminClientStatusFilter');
           if (filterSelect) {
             filterSelect.value = targetFilter || 'active';
+            syncClientStatusDropdown(filterSelect.value);
           }
           loadClientsData();
         } else if (targetTab === 'projects') {
@@ -6048,6 +6107,94 @@
       await loadHistoryData();
       showToast('Audit feed updated.', 'success');
     });
+
+    // Custom Glassmorphic Client Status Filter Dropdown Component
+    const clientStatusTrigger = document.getElementById('btnClientStatusDropdown');
+    const clientStatusMenu = document.getElementById('clientStatusDropdownMenu');
+    const clientStatusChevron = document.getElementById('clientStatusDropdownChevron');
+    const clientStatusLabel = document.getElementById('clientStatusDropdownCurrentLabel');
+    const nativeClientStatusSelect = document.getElementById('adminClientStatusFilter');
+
+    function toggleClientStatusMenu() {
+      if (!clientStatusMenu) return;
+      const isHidden = clientStatusMenu.classList.contains('hidden');
+      if (isHidden) {
+        clientStatusMenu.classList.remove('hidden');
+        if (clientStatusChevron) clientStatusChevron.classList.add('rotate-180');
+        if (clientStatusTrigger) clientStatusTrigger.setAttribute('aria-expanded', 'true');
+      } else {
+        closeClientStatusMenu();
+      }
+    }
+
+    function closeClientStatusMenu() {
+      if (!clientStatusMenu) return;
+      clientStatusMenu.classList.add('hidden');
+      if (clientStatusChevron) clientStatusChevron.classList.remove('rotate-180');
+      if (clientStatusTrigger) clientStatusTrigger.setAttribute('aria-expanded', 'false');
+    }
+
+    function syncClientStatusDropdown(val) {
+      document.querySelectorAll('.custom-client-status-option').forEach(opt => {
+        const optVal = opt.getAttribute('data-value');
+        const isSelected = optVal === val;
+        opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+        const check = opt.querySelector('.client-status-option-check');
+        if (isSelected) {
+          opt.className = 'custom-client-status-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-[#087F70] bg-[#087F70]/10 hover:bg-[#087F70]/15 cursor-pointer transition-colors select-none font-sans text-left';
+          if (check) check.classList.remove('hidden');
+          const labelSpan = opt.querySelector('span:last-child');
+          const labelText = labelSpan ? labelSpan.textContent.trim() : (val === 'active' ? 'Active Clients Only' : (val === 'suspended' ? 'Suspended Clients' : 'All Clients'));
+          if (clientStatusLabel) clientStatusLabel.textContent = labelText;
+        } else {
+          opt.className = 'custom-client-status-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left';
+          if (check) check.classList.add('hidden');
+        }
+      });
+    }
+
+    if (clientStatusTrigger) {
+      clientStatusTrigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleClientStatusMenu();
+      });
+    }
+
+    document.querySelectorAll('.custom-client-status-option').forEach(opt => {
+      opt.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const val = opt.getAttribute('data-value') || 'active';
+        syncClientStatusDropdown(val);
+
+        if (nativeClientStatusSelect) {
+          nativeClientStatusSelect.value = val;
+          nativeClientStatusSelect.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        closeClientStatusMenu();
+      });
+    });
+
+    document.addEventListener('click', (e) => {
+      if (clientStatusMenu && !clientStatusMenu.classList.contains('hidden')) {
+        if (!clientStatusMenu.contains(e.target) && !clientStatusTrigger?.contains(e.target)) {
+          closeClientStatusMenu();
+        }
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && clientStatusMenu && !clientStatusMenu.classList.contains('hidden')) {
+        closeClientStatusMenu();
+      }
+    });
+
+    if (nativeClientStatusSelect) {
+      nativeClientStatusSelect.addEventListener('change', () => {
+        syncClientStatusDropdown(nativeClientStatusSelect.value);
+      });
+      syncClientStatusDropdown(nativeClientStatusSelect.value || 'active');
+    }
 
     // Hash change handler for deep linking & back/forward
     window.addEventListener('hashchange', () => {
