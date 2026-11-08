@@ -64,7 +64,7 @@
   <script src="/assets/js/whiz-document-pdf.js"></script>
 
   <!-- Liquid Glass Theme -->
-  <link rel="stylesheet" href="/assets/css/liquid-glass.css?v=4.0">
+  <link rel="stylesheet" href="/assets/css/liquid-glass.css?v=20261108_close_btn">
 
   <style>
     * {
@@ -80,6 +80,80 @@
       color-scheme: light !important;
     }
     .pb-safe { padding-bottom: env(safe-area-inset-bottom, 1rem); }
+
+    /* Master Universal 32px Circular Close Button */
+    .whiz-modal-close-btn {
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      width: 32px !important;
+      height: 32px !important;
+      min-width: 32px !important;
+      min-height: 32px !important;
+      max-width: 32px !important;
+      max-height: 32px !important;
+      aspect-ratio: 1 / 1 !important;
+      flex: 0 0 32px !important;
+      flex-shrink: 0 !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      border-radius: 50% !important;
+      background-color: #F1F5F9 !important;
+      border: 1px solid rgba(226, 232, 240, 0.95) !important;
+      color: #64748B !important;
+      font-size: 13px !important;
+      line-height: 1 !important;
+      cursor: pointer !important;
+      outline: none !important;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+      transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+      box-sizing: border-box !important;
+      user-select: none !important;
+      -webkit-user-select: none !important;
+      touch-manipulation: manipulation !important;
+      z-index: 20;
+    }
+    .whiz-modal-close-btn:hover {
+      background-color: #E2E8F0 !important;
+      color: #0F172A !important;
+      border-color: #CBD5E1 !important;
+      transform: scale(1.05) !important;
+    }
+    .whiz-modal-close-btn:active {
+      background-color: #CBD5E1 !important;
+      transform: scale(0.95) !important;
+    }
+    .whiz-modal-close-btn:focus-visible {
+      box-shadow: 0 0 0 3px rgba(8, 127, 112, 0.25) !important;
+    }
+    .whiz-modal-close-btn i,
+    .whiz-modal-close-btn svg {
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      width: 13px !important;
+      height: 13px !important;
+      font-size: 13px !important;
+      line-height: 1 !important;
+      vertical-align: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      pointer-events: none !important;
+      transform: none !important;
+    }
+    .whiz-modal-close-btn.whiz-modal-close-btn-dark,
+    .whiz-modal-close-btn-dark {
+      background-color: rgba(30, 41, 59, 0.9) !important;
+      border-color: rgba(51, 65, 85, 0.9) !important;
+      color: #94A3B8 !important;
+    }
+    .whiz-modal-close-btn.whiz-modal-close-btn-dark:hover,
+    .whiz-modal-close-btn-dark:hover {
+      background-color: #334155 !important;
+      color: #FFFFFF !important;
+      border-color: #64748B !important;
+    }
+
   </style>
 </head>
 <body class="h-full bg-[#F7F9FC] text-[#172B36] flex flex-col font-sans antialiased selection:bg-[#147D64]/20 selection:text-[#147D64]">
@@ -112,9 +186,9 @@
       <a href="/" class="flex items-center py-1 group" title="Whiz Studio Home">
         <img src="/assets/images/logo.png?v=20261105" alt="Whiz Studio" class="h-9 sm:h-10 w-auto object-contain self-start transition-opacity group-hover:opacity-90">
       </a>
-      <button type="button" id="clientMobileCloseBtn" class="w-9 h-9 rounded-xl bg-[#F7FAF9] hover:bg-[#EAF5F1] active:bg-[#E6ECE9] border border-[#E6ECE9] flex items-center justify-center text-[#74817D] hover:text-[#202D2A] cursor-pointer touch-manipulation transition-colors select-none" aria-label="Close Navigation">
-        <i class="fa-solid fa-xmark text-xs"></i>
-      </button>
+      <button type="button" id="clientMobileCloseBtn" class="whiz-modal-close-btn" aria-label="Close Navigation">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
     </div>
 
     <!-- Drawer Navigation (Structured Sections) -->
@@ -1073,7 +1147,7 @@
         <div class="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 flex items-center justify-center font-bold text-xl shrink-0">
           <i class="fa-solid fa-address-card"></i>
         </div>
-        <button type="button" id="btnCloseProfileRequiredModal" class="text-slate-400 hover:text-slate-700 text-lg cursor-pointer p-1">
+        <button type="button" id="btnCloseProfileRequiredModal" class="whiz-modal-close-btn" aria-label="Close modal">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
@@ -1113,7 +1187,7 @@
             <p class="text-[11px] text-[#5F7180]">Free preview mode does not count toward your daily 2-PDF generation limit.</p>
           </div>
         </div>
-        <button type="button" id="btnClosePreviewModal" class="text-slate-400 hover:text-slate-700 text-lg cursor-pointer p-1">
+        <button type="button" id="btnClosePreviewModal" class="whiz-modal-close-btn" aria-label="Close modal">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
@@ -1157,7 +1231,7 @@
           <i class="fa-solid fa-key text-[#147D64]"></i>
           <span id="modalClientPasswordTitle">Set Account Password</span>
         </h3>
-        <button type="button" id="btnClosePasswordModal" class="text-slate-400 hover:text-slate-700 text-lg cursor-pointer p-1">
+        <button type="button" id="btnClosePasswordModal" class="whiz-modal-close-btn" aria-label="Close modal">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>

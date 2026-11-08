@@ -48,7 +48,7 @@
 
   <!-- Critical Resource Preloads for Google Core Web Vitals & Maximum LCP Performance -->
   <link rel="preload" as="image" href="assets/images/logo.png?v=20261105" type="image/png">
-  <link rel="preload" as="style" href="assets/css/liquid-glass.css">
+  <link rel="preload" as="style" href="assets/css/liquid-glass.css?v=20261108_close_btn">
   <link rel="sitemap" type="application/xml" title="Sitemap" href="/sitemap.xml">
   <!-- Clerk JavaScript SDK (Hobby / Free Tier Production CDN) -->
   <script async crossorigin="anonymous" data-clerk-publishable-key="pk_live_Y2xlcmsud2hpenN0dWRpby5hcnQk" src="https://clerk.whizstudio.art/npm/@clerk/clerk-js@5/dist/clerk.browser.js" type="text/javascript"></script>
@@ -279,7 +279,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 
   <!-- Bespoke True Liquid Glass Stylesheet -->
-  <link rel="stylesheet" href="assets/css/liquid-glass.css?v=2.5">
+  <link rel="stylesheet" href="assets/css/liquid-glass.css?v=20261108_close_btn">
 </head>
 <body class="bg-[#F4FAF7] text-slate-900 selection:bg-brand-whiz selection:text-white antialiased relative min-h-screen">
 
@@ -1423,8 +1423,8 @@
       <!-- Pinned Modal Header -->
       <div class="p-6 sm:p-8 pb-4 pr-14 border-b border-slate-200/50 relative shrink-0">
         <!-- Close Button -->
-        <button onclick="closeServiceModal()" class="absolute top-5 right-5 w-9 h-9 rounded-full bg-white/70 hover:bg-white text-slate-600 hover:text-slate-900 border border-white/80 flex items-center justify-center transition-all shadow-xs" aria-label="Close Modal">
-          <i class="fa-solid fa-xmark text-base"></i>
+        <button onclick="closeServiceModal()" class="whiz-modal-close-btn absolute top-5 right-5" aria-label="Close Modal">
+          <i class="fa-solid fa-xmark"></i>
         </button>
 
         <div class="flex items-center space-x-2 mb-2">
@@ -1484,8 +1484,8 @@
       
       <!-- Pinned Modal Header -->
       <div class="p-6 sm:p-8 md:p-10 pb-4 pr-14 border-b border-slate-200/50 relative shrink-0">
-        <button onclick="closeArticleModal()" class="absolute top-5 right-5 w-9 h-9 rounded-full bg-white/70 hover:bg-white text-slate-600 hover:text-slate-900 border border-white/80 flex items-center justify-center transition-all shadow-xs" aria-label="Close Article">
-          <i class="fa-solid fa-xmark text-base"></i>
+        <button onclick="closeArticleModal()" class="whiz-modal-close-btn absolute top-5 right-5" aria-label="Close Article">
+          <i class="fa-solid fa-xmark"></i>
         </button>
 
         <div id="articleModalMeta" class="text-xs font-extrabold text-emerald-900 uppercase tracking-wider mb-2"></div>
@@ -1516,7 +1516,7 @@
 
         <!-- =========================================================================
        MODAL 3: MY ACCOUNT PORTAL (CLIENT & ADMIN DUAL-PORTAL SYSTEM)
-       Powered by Clerk JS Authentication & Cloudflare D1 Backend ($0 Free Tier)
+       Powered by Encrypted Authentication & Enterprise Cloud Architecture ($0 Free Tier)
        ========================================================================= -->
   <div id="accountPortalModal" class="hidden fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-6 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="accountModalTitle">
     <!-- Backdrop Overlay (Liquid Glass Specular Blur) -->
@@ -1538,8 +1538,8 @@
         </div>
 
         <!-- Accessible Top-Right Close Button -->
-        <button id="accountModalCloseBtn" type="button" class="w-9 h-9 rounded-full bg-slate-100/90 hover:bg-slate-200 text-slate-500 hover:text-slate-800 border border-slate-200/80 flex items-center justify-center transition-all shadow-xs focus:outline-none focus:ring-2 focus:ring-brand-whiz/50 cursor-pointer" aria-label="Close Account Portal">
-          <i class="fa-solid fa-xmark text-base"></i>
+        <button id="accountModalCloseBtn" type="button" class="whiz-modal-close-btn" aria-label="Close Account Portal">
+          <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
 
@@ -1923,9 +1923,9 @@
           <button type="button" class="btn-portal-signout px-3 py-1.5 rounded-xl text-xs font-bold text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-all cursor-pointer">
             <i class="fa-solid fa-arrow-right-from-bracket mr-1"></i> Sign Out
           </button>
-          <button id="clientDashboardCloseBtn" type="button" class="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-all cursor-pointer" aria-label="Close Dashboard">
-            <i class="fa-solid fa-xmark text-base"></i>
-          </button>
+          <button id="clientDashboardCloseBtn" type="button" class="whiz-modal-close-btn" aria-label="Close Dashboard">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
         </div>
       </div>
 
@@ -1980,7 +1980,7 @@
                 <div id="clientOverviewProgressBar" class="bg-gradient-to-r from-brand-whiz to-emerald-400 h-3 rounded-full transition-all duration-500" style="width: 0%;"></div>
               </div>
               <div class="flex items-center justify-between text-[11px] text-slate-400 mt-2">
-                <span class="flex items-center"><i class="fa-solid fa-bolt text-emerald-500 mr-1"></i> Automated D1 live calculation</span>
+                <span class="flex items-center"><i class="fa-solid fa-bolt text-emerald-500 mr-1"></i> Automated live calculation</span>
                 <span>Operational privacy preserved</span>
               </div>
             </div>
@@ -2016,11 +2016,11 @@
             </div>
           </div>
 
-          <!-- TAB 2: MY PROFILE (D1 PERSISTENCE) -->
+          <!-- TAB 2: MY PROFILE (CLOUD PERSISTENCE) -->
           <div id="clientTabContent_profile" class="hidden space-y-5">
             <div>
               <h4 class="text-lg font-extrabold text-slate-900">Personal & Business Profile</h4>
-              <p class="text-xs text-slate-500">Your profile details are securely stored in Whiz Studio's Cloudflare D1 database.</p>
+              <p class="text-xs text-slate-500">Your profile details are securely stored in Whiz Studio's secure cloud database.</p>
             </div>
             <form id="clientProfileForm" class="space-y-4">
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -2059,7 +2059,7 @@
             </form>
           </div>
 
-          <!-- TAB 3: MY SERVICES (LIVE D1 SYNC) -->
+          <!-- TAB 3: MY SERVICES (LIVE SYNC) -->
           <div id="clientTabContent_services" class="hidden space-y-6">
             <div class="flex items-center justify-between">
               <div>
@@ -2078,7 +2078,7 @@
                   <i class="fa-solid fa-layer-group"></i>
                 </div>
                 <h5 class="text-base font-bold text-slate-900">Loading Provisioned Services...</h5>
-                <p class="text-xs sm:text-sm text-slate-500 max-w-md">Synchronizing active contracts and progress status with Whiz Studio Cloudflare D1.</p>
+                <p class="text-xs sm:text-sm text-slate-500 max-w-md">Synchronizing active contracts and progress status with Whiz Studio Cloud.</p>
               </div>
             </div>
           </div>
@@ -2129,7 +2129,7 @@
             <div class="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-xs">
               <div class="px-5 py-3.5 border-b border-slate-200/70 bg-slate-50/50 flex items-center justify-between">
                 <h5 class="text-xs font-extrabold uppercase tracking-wider text-slate-700">Verified Payment Transactions</h5>
-                <span class="text-[11px] text-slate-400">Cloudflare D1 Verified</span>
+                <span class="text-[11px] text-slate-400">Enterprise Verified</span>
               </div>
               <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse text-xs">
@@ -2245,9 +2245,9 @@
           <button type="button" class="btn-portal-signout px-3 py-1.5 rounded-xl text-xs font-bold text-slate-300 hover:text-rose-400 hover:bg-slate-800 border border-slate-700 transition-all cursor-pointer">
             <i class="fa-solid fa-arrow-right-from-bracket mr-1"></i> Sign Out
           </button>
-          <button id="adminDashboardCloseBtn" type="button" class="w-9 h-9 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-all cursor-pointer" aria-label="Close Admin Console">
-            <i class="fa-solid fa-xmark text-base"></i>
-          </button>
+          <button id="adminDashboardCloseBtn" type="button" class="whiz-modal-close-btn whiz-modal-close-btn-dark" aria-label="Close Admin Console">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
         </div>
       </div>
 
@@ -2284,7 +2284,7 @@
           <div id="adminTabContent_overview" class="space-y-6">
             <div>
               <h4 class="text-lg font-extrabold text-white">Live Platform Metrics</h4>
-              <p class="text-xs text-slate-400">All data is backed by Cloudflare D1 real database queries ($0 Free Tier).</p>
+              <p class="text-xs text-slate-400">All data is backed by verified platform database records.</p>
             </div>
 
             <!-- KPI Cards -->

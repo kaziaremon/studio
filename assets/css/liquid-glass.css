@@ -1337,4 +1337,87 @@ button {
   box-shadow: 0 1px 3px rgba(8, 127, 112, 0.08) !important;
 }
 
+/* ==========================================================================
+   WHIZ STUDIO MASTER 32px CIRCULAR CLOSE (X) BUTTON COMPONENT
+   Guarantees 1:1 Aspect Ratio, Strict 32x32px Symmetry & Flexbox Centering
+   ========================================================================== */
+.whiz-modal-close-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+  max-width: 32px !important;
+  max-height: 32px !important;
+  aspect-ratio: 1 / 1 !important;
+  flex: 0 0 32px !important;
+  flex-shrink: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 50% !important;
+  background-color: #F1F5F9 !important;
+  border: 1px solid rgba(226, 232, 240, 0.95) !important;
+  color: #64748B !important;
+  font-size: 13px !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+  outline: none !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+  transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+  box-sizing: border-box !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  touch-manipulation: manipulation !important;
+  z-index: 20;
+}
+
+.whiz-modal-close-btn:hover {
+  background-color: #E2E8F0 !important;
+  color: #0F172A !important;
+  border-color: #CBD5E1 !important;
+  transform: scale(1.05) !important;
+}
+
+.whiz-modal-close-btn:active {
+  background-color: #CBD5E1 !important;
+  transform: scale(0.95) !important;
+}
+
+.whiz-modal-close-btn:focus-visible {
+  box-shadow: 0 0 0 3px rgba(8, 127, 112, 0.25) !important;
+}
+
+.whiz-modal-close-btn i,
+.whiz-modal-close-btn svg {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 13px !important;
+  height: 13px !important;
+  font-size: 13px !important;
+  line-height: 1 !important;
+  vertical-align: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  pointer-events: none !important;
+  transform: none !important;
+}
+
+/* Dark theme / dark background variant */
+.whiz-modal-close-btn.whiz-modal-close-btn-dark,
+.whiz-modal-close-btn-dark {
+  background-color: rgba(30, 41, 59, 0.9) !important;
+  border-color: rgba(51, 65, 85, 0.9) !important;
+  color: #94A3B8 !important;
+}
+
+.whiz-modal-close-btn.whiz-modal-close-btn-dark:hover,
+.whiz-modal-close-btn-dark:hover {
+  background-color: #334155 !important;
+  color: #FFFFFF !important;
+  border-color: #64748B !important;
+}
+
 /* End Whiz Button System */

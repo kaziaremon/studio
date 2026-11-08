@@ -61,7 +61,7 @@
   <script src="/assets/js/pdf-lib.min.js"></script>
 
   <!-- Liquid Glass Theme Styles -->
-  <link rel="stylesheet" href="/assets/css/liquid-glass.css?v=4.0">
+  <link rel="stylesheet" href="/assets/css/liquid-glass.css?v=20261108_close_btn">
 
   <script>
     // Immediate Desktop Dock Collapsed Preference State (Zero-Flash)
@@ -592,6 +592,79 @@
   background: rgba(8, 127, 112, 0.5) !important;
 }
 
+/* Master Universal 32px Circular Close Button */
+.whiz-modal-close-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+  max-width: 32px !important;
+  max-height: 32px !important;
+  aspect-ratio: 1 / 1 !important;
+  flex: 0 0 32px !important;
+  flex-shrink: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 50% !important;
+  background-color: #F1F5F9 !important;
+  border: 1px solid rgba(226, 232, 240, 0.95) !important;
+  color: #64748B !important;
+  font-size: 13px !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+  outline: none !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+  transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+  box-sizing: border-box !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  touch-manipulation: manipulation !important;
+  z-index: 20;
+}
+.whiz-modal-close-btn:hover {
+  background-color: #E2E8F0 !important;
+  color: #0F172A !important;
+  border-color: #CBD5E1 !important;
+  transform: scale(1.05) !important;
+}
+.whiz-modal-close-btn:active {
+  background-color: #CBD5E1 !important;
+  transform: scale(0.95) !important;
+}
+.whiz-modal-close-btn:focus-visible {
+  box-shadow: 0 0 0 3px rgba(8, 127, 112, 0.25) !important;
+}
+.whiz-modal-close-btn i,
+.whiz-modal-close-btn svg {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 13px !important;
+  height: 13px !important;
+  font-size: 13px !important;
+  line-height: 1 !important;
+  vertical-align: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  pointer-events: none !important;
+  transform: none !important;
+}
+.whiz-modal-close-btn.whiz-modal-close-btn-dark,
+.whiz-modal-close-btn-dark {
+  background-color: rgba(30, 41, 59, 0.9) !important;
+  border-color: rgba(51, 65, 85, 0.9) !important;
+  color: #94A3B8 !important;
+}
+.whiz-modal-close-btn.whiz-modal-close-btn-dark:hover,
+.whiz-modal-close-btn-dark:hover {
+  background-color: #334155 !important;
+  color: #FFFFFF !important;
+  border-color: #64748B !important;
+}
+
   </style>
 </head>
 <body class="h-full bg-[#F8FAFC] text-slate-800 flex flex-col font-sans antialiased selection:bg-[#147D64] selection:text-white">
@@ -894,8 +967,8 @@
           <img src="/assets/images/logo.png?v=20261105" alt="Whiz Studio" class="h-9 sm:h-10 w-auto object-contain self-start">
           <span class="text-[10px] text-[#087F70] font-extrabold uppercase tracking-wider pl-0.5">Super Admin Console</span>
         </a>
-        <button type="button" id="mobileDrawerCloseBtn" class="w-10 h-10 rounded-xl bg-[#F7FAF9] hover:bg-[#EAF5F1] active:bg-[#E6ECE9] border border-[#E6ECE9] flex items-center justify-center text-[#74817D] hover:text-[#202D2A] cursor-pointer touch-manipulation transition-colors select-none" aria-label="Close Navigation">
-          <i class="fa-solid fa-xmark text-sm"></i>
+        <button type="button" id="mobileDrawerCloseBtn" class="whiz-modal-close-btn" aria-label="Close Navigation">
+          <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
 
@@ -3164,8 +3237,8 @@
           <i class="fa-solid fa-user-plus text-[#087F70] text-sm shrink-0"></i>
           <span class="truncate">Add New Client & Provision Services</span>
         </h3>
-        <button type="button" class="btn-close-modal absolute top-4 right-4 sm:top-5 sm:right-6 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#172B36] flex items-center justify-center transition-all cursor-pointer shadow-2xs z-20" data-modal="modalAddClient" aria-label="Close modal">
-          <i class="fa-solid fa-xmark text-sm sm:text-base"></i>
+        <button type="button" class="btn-close-modal whiz-modal-close-btn absolute top-4 right-4 sm:top-5 sm:right-6" data-modal="modalAddClient" aria-label="Close modal">
+          <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
 
@@ -3458,8 +3531,8 @@
           <i class="fa-solid fa-user-pen text-[#087F70] text-sm shrink-0"></i>
           <span class="truncate">Edit Client Business Profile</span>
         </h3>
-        <button type="button" class="btn-close-modal absolute top-4 right-4 sm:top-5 sm:right-6 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#172B36] flex items-center justify-center transition-all cursor-pointer shadow-2xs z-20" data-modal="modalEditClient" aria-label="Close modal">
-          <i class="fa-solid fa-xmark text-sm sm:text-base"></i>
+        <button type="button" class="btn-close-modal whiz-modal-close-btn absolute top-4 right-4 sm:top-5 sm:right-6" data-modal="modalEditClient" aria-label="Close modal">
+          <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
 
@@ -3699,8 +3772,8 @@
           <i class="fa-solid fa-layer-group text-[#087F70] text-sm shrink-0"></i>
           <span class="truncate">Assign Service to Client</span>
         </h3>
-        <button type="button" class="btn-close-modal absolute top-4 right-4 sm:top-5 sm:right-6 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#172B36] flex items-center justify-center transition-all cursor-pointer shadow-2xs z-20" data-modal="modalAssignService" aria-label="Close modal">
-          <i class="fa-solid fa-xmark text-sm sm:text-base"></i>
+        <button type="button" class="btn-close-modal whiz-modal-close-btn absolute top-4 right-4 sm:top-5 sm:right-6" data-modal="modalAssignService" aria-label="Close modal">
+          <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
 
@@ -3924,8 +3997,8 @@
           <i class="fa-solid fa-plus text-[#087F70] text-sm shrink-0"></i>
           <span class="truncate">Add New Service to Catalog</span>
         </h3>
-        <button type="button" class="btn-close-modal absolute top-4 right-4 sm:top-5 sm:right-6 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#172B36] flex items-center justify-center transition-all cursor-pointer shadow-2xs z-20" data-modal="modalAddService" aria-label="Close modal">
-          <i class="fa-solid fa-xmark text-sm sm:text-base"></i>
+        <button type="button" class="btn-close-modal whiz-modal-close-btn absolute top-4 right-4 sm:top-5 sm:right-6" data-modal="modalAddService" aria-label="Close modal">
+          <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
 
@@ -4045,8 +4118,8 @@
           <i class="fa-solid fa-pen-to-square text-[#087F70] text-sm shrink-0"></i>
           <span class="truncate">Edit Service Master Definition</span>
         </h3>
-        <button type="button" class="btn-close-modal absolute top-4 right-4 sm:top-5 sm:right-6 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#172B36] flex items-center justify-center transition-all cursor-pointer shadow-2xs z-20" data-modal="modalEditService" aria-label="Close modal">
-          <i class="fa-solid fa-xmark text-sm sm:text-base"></i>
+        <button type="button" class="btn-close-modal whiz-modal-close-btn absolute top-4 right-4 sm:top-5 sm:right-6" data-modal="modalEditService" aria-label="Close modal">
+          <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
 
@@ -4179,8 +4252,8 @@
           <i class="fa-solid fa-pen-nib text-[#087F70] text-sm shrink-0"></i>
           <span class="truncate">Edit Master SOP Task Blueprint</span>
         </h3>
-        <button type="button" class="btn-close-modal absolute top-4 right-4 sm:top-5 sm:right-6 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#172B36] flex items-center justify-center transition-all cursor-pointer shadow-2xs z-20" data-modal="modalEditBlueprint" aria-label="Close modal">
-          <i class="fa-solid fa-xmark text-sm sm:text-base"></i>
+        <button type="button" class="btn-close-modal whiz-modal-close-btn absolute top-4 right-4 sm:top-5 sm:right-6" data-modal="modalEditBlueprint" aria-label="Close modal">
+          <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
 
@@ -4391,8 +4464,8 @@
           <i class="fa-solid fa-plus text-[#087F70] text-sm shrink-0"></i>
           <span class="truncate">Add New SOP Task Blueprint</span>
         </h3>
-        <button type="button" class="btn-close-modal absolute top-4 right-4 sm:top-5 sm:right-6 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#172B36] flex items-center justify-center transition-all cursor-pointer shadow-2xs z-20" data-modal="modalAddBlueprint" aria-label="Close modal">
-          <i class="fa-solid fa-xmark text-sm sm:text-base"></i>
+        <button type="button" class="btn-close-modal whiz-modal-close-btn absolute top-4 right-4 sm:top-5 sm:right-6" data-modal="modalAddBlueprint" aria-label="Close modal">
+          <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
 
@@ -4560,8 +4633,8 @@
           <i class="fa-solid fa-list-check text-[#087F70] text-sm shrink-0"></i>
           <span class="truncate">Operational Task Details</span>
         </h3>
-        <button type="button" class="btn-close-modal absolute top-4 right-4 sm:top-5 sm:right-6 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#172B36] flex items-center justify-center transition-all cursor-pointer shadow-2xs z-20" data-modal="modalLiveTaskDetail" aria-label="Close modal">
-          <i class="fa-solid fa-xmark text-sm sm:text-base"></i>
+        <button type="button" class="btn-close-modal whiz-modal-close-btn absolute top-4 right-4 sm:top-5 sm:right-6" data-modal="modalLiveTaskDetail" aria-label="Close modal">
+          <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
 
@@ -4692,8 +4765,8 @@
           <i class="fa-solid fa-receipt text-[#087F70] text-sm shrink-0"></i>
           <span class="truncate">Record Confirmed Payment</span>
         </h3>
-        <button type="button" class="btn-close-modal absolute top-4 right-4 sm:top-5 sm:right-6 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#172B36] flex items-center justify-center transition-all cursor-pointer shadow-2xs z-20" data-modal="modalRecordPayment" aria-label="Close modal">
-          <i class="fa-solid fa-xmark text-sm sm:text-base"></i>
+        <button type="button" class="btn-close-modal whiz-modal-close-btn absolute top-4 right-4 sm:top-5 sm:right-6" data-modal="modalRecordPayment" aria-label="Close modal">
+          <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
 
@@ -4943,8 +5016,8 @@
           <i class="fa-solid fa-pen-to-square text-[#147D64] text-sm shrink-0"></i>
           <span class="truncate">Edit Payment Details</span>
         </h3>
-        <button type="button" class="btn-close-modal absolute top-4 right-4 sm:top-5 sm:right-6 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#172B36] flex items-center justify-center transition-all cursor-pointer shadow-2xs z-20" data-modal="modalEditPayment" aria-label="Close modal">
-          <i class="fa-solid fa-xmark text-sm sm:text-base"></i>
+        <button type="button" class="btn-close-modal whiz-modal-close-btn absolute top-4 right-4 sm:top-5 sm:right-6" data-modal="modalEditPayment" aria-label="Close modal">
+          <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
 
@@ -5062,8 +5135,8 @@
           <i class="fa-solid fa-scale-balanced text-[#147D64] text-sm shrink-0"></i>
           <span class="truncate">Financial Correction</span>
         </h3>
-        <button type="button" class="btn-close-modal absolute top-4 right-4 sm:top-5 sm:right-6 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#172B36] flex items-center justify-center transition-all cursor-pointer shadow-2xs z-20" data-modal="modalCorrectPayment" aria-label="Close modal">
-          <i class="fa-solid fa-xmark text-sm sm:text-base"></i>
+        <button type="button" class="btn-close-modal whiz-modal-close-btn absolute top-4 right-4 sm:top-5 sm:right-6" data-modal="modalCorrectPayment" aria-label="Close modal">
+          <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
 
@@ -5209,8 +5282,8 @@
           <i class="fa-solid fa-user-shield text-brand-whiz"></i>
           <span>Confirm Role Change</span>
         </h3>
-        <button type="button" class="btn-close-modal text-slate-500 hover:text-[#172B36] cursor-pointer" data-modal="modalRoleChange">
-          <i class="fa-solid fa-xmark text-lg"></i>
+        <button type="button" class="btn-close-modal whiz-modal-close-btn" data-modal="modalRoleChange" aria-label="Close modal">
+          <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
       <p class="text-xs text-slate-600 leading-relaxed" id="modalRoleChangeDesc">
@@ -5297,8 +5370,8 @@
             <p class="text-[10px] text-slate-400 font-mono truncate" id="modalSupportTicketId">TIC-...</p>
           </div>
         </div>
-        <button type="button" id="btnCloseSupportModal" class="btn-close-modal absolute top-4 right-4 sm:top-5 sm:right-6 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#172B36] flex items-center justify-center transition-all cursor-pointer shadow-2xs z-20" data-modal="modalSupportDetail" aria-label="Close modal">
-          <i class="fa-solid fa-xmark text-sm sm:text-base"></i>
+        <button type="button" id="btnCloseSupportModal" class="btn-close-modal whiz-modal-close-btn absolute top-4 right-4 sm:top-5 sm:right-6" data-modal="modalSupportDetail" aria-label="Close modal">
+          <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
 
@@ -5394,8 +5467,8 @@
           <h3 class="text-base font-bold text-slate-800">Edit Payment Method Details</h3>
           <p class="text-xs text-slate-500 mt-0.5">Configure approved account information printed on Client Invoices & Receipts.</p>
         </div>
-        <button type="button" onclick="document.getElementById('modalEditPaymentMethod').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 transition-colors p-1.5 rounded-lg hover:bg-slate-100 cursor-pointer">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        <button type="button" onclick="document.getElementById('modalEditPaymentMethod').classList.add('hidden')" class="whiz-modal-close-btn" aria-label="Close modal">
+          <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
 
