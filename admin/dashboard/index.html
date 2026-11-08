@@ -57,11 +57,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
-  <!-- pdf-lib for Pure Client-Side Vector PDF Generation (Zero Server Storage) -->
-  <script src="/assets/js/pdf-lib.min.js"></script>
-  <!-- html2pdf for zero-storage client-side HTML-to-PDF rendering -->
-  <script src="/assets/js/html2pdf.bundle.min.js"></script>
-
+  
   <!-- Liquid Glass Theme Styles -->
   <link rel="stylesheet" href="/assets/css/liquid-glass.css?v=20261108_close_btn">
 
@@ -893,20 +889,7 @@
               </div>
             </button>
 
-            <!-- 7. Receipt Template -->
-            <button type="button" data-dash-tab="receipt_template" class="whiz-dock-item" aria-label="Receipt Template">
-              <div class="w-5 h-5 flex items-center justify-center shrink-0">
-                <i class="fa-solid fa-receipt text-sm dock-icon"></i>
-              </div>
-              <span class="dock-label flex-1 truncate">Receipt Template</span>
-              <span class="dock-badge ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-teal-50 text-teal-700 border border-teal-200/60">Vector</span>
-              <div class="dock-floating-tooltip" role="tooltip">
-                <div class="flex items-center gap-1.5">
-                  <span>Receipt Template</span>
-                  <span class="text-[9px] font-bold px-1 py-0.2 rounded bg-teal-500/25 text-teal-300">Vector</span>
-                </div>
-              </div>
-            </button>
+            
           </nav>
         </div>
 
@@ -1086,11 +1069,7 @@
               <i class="fa-solid fa-money-bill-wave text-xs w-4 dock-icon"></i>
               <span class="flex-1">Payments &amp; Ledger</span>
             </button>
-            <button type="button" data-dash-tab="receipt_template" class="whiz-dock-item w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-semibold transition-all text-left touch-manipulation cursor-pointer">
-              <i class="fa-solid fa-receipt text-xs w-4 dock-icon"></i>
-              <span class="flex-1">Receipt Template</span>
-              <span class="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-md bg-teal-50 text-teal-700 border border-teal-200/60">Vector</span>
-            </button>
+            
           </nav>
         </div>
 
@@ -1545,7 +1524,7 @@
                 </div>
 
                 <!-- Reorganized Action Buttons: Symmetrical 2x2 Grid Layout -->
-                <div class="grid grid-cols-2 gap-2 sm:gap-2.5 w-full sm:w-[340px] lg:w-[360px] shrink-0 pt-3 lg:pt-0 border-t lg:border-t-0 border-[#E6ECE9]">
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-2.5 w-full sm:w-[480px] lg:w-[520px] shrink-0 pt-3 lg:pt-0 border-t lg:border-t-0 border-[#E6ECE9]">
                   <button type="button" id="btnOpenEditClientModal" class="h-10 px-3.5 rounded-xl text-xs font-semibold bg-white hover:bg-slate-50 active:bg-slate-100 text-[#172B36] border border-[#E3E9EF] hover:border-slate-300 shadow-2xs transition-all flex items-center justify-center gap-2 cursor-pointer w-full select-none">
                     <i class="fa-solid fa-pen-to-square text-xs text-[#087F70]"></i>
                     <span class="truncate">Edit Profile</span>
@@ -1553,6 +1532,10 @@
                   <button type="button" id="btnOpenAssignServiceClientModal" class="role-service-provisioning h-10 px-3.5 rounded-xl text-xs font-semibold bg-[#087F70] hover:bg-[#066559] active:bg-[#055046] text-white shadow-2xs hover:shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer w-full select-none">
                     <i class="fa-solid fa-plus text-xs"></i>
                     <span class="truncate">Assign Service</span>
+                  </button>
+                  <button type="button" id="btnResetClientReceiptLimit" class="h-10 px-3.5 rounded-xl text-xs font-semibold text-[#087F70] bg-[#EAF5F1] hover:bg-[#d5ece3] border border-[#087F70]/30 shadow-2xs transition-all flex items-center justify-center gap-2 cursor-pointer w-full select-none" title="Reset this client's daily PDF download quota">
+                    <i class="fa-solid fa-rotate-left text-xs text-[#087F70]"></i>
+                    <span class="truncate">Reset Receipt Limit</span>
                   </button>
                   <button type="button" id="btnSuspendClientAction" class="h-10 px-3.5 rounded-xl text-xs font-semibold text-amber-700 bg-amber-50/80 hover:bg-amber-100 border border-amber-200/80 shadow-2xs transition-all flex items-center justify-center gap-2 cursor-pointer w-full select-none">
                     <i class="fa-solid fa-pause text-xs text-amber-600"></i>
@@ -2142,271 +2125,6 @@
                   <p class="text-xs text-slate-500 italic">Loading payment methods...</p>
                 </div>
               </div>
-            </div>
-          </div>
-
-          <!-- =================================================================
-               TAB 7: INVOICE & RECEIPT TEMPLATE DESIGNER & PREVIEW
-               ================================================================= -->
-          <div id="view_receipt_template" class="hidden space-y-6">
-            <!-- Header & Action Bar -->
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-[#E3E9EF]">
-              <div>
-                <h2 class="text-2xl font-black text-[#172B36] tracking-tight">Invoice &amp; Receipt Template Studio</h2>
-                <p class="text-xs text-slate-500">Live preview, customization, and browser-side vector PDF generation matching official agency stationery.</p>
-              </div>
-              <div class="flex items-center gap-2.5">
-                <div class="inline-flex rounded-xl bg-slate-100 p-1 border border-[#E3E9EF]">
-                  <button type="button" id="btnTplModeInvoice" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all bg-white text-[#172B36] shadow-sm cursor-pointer">
-                    <i class="fa-solid fa-file-invoice mr-1 text-[#147D64]"></i> Invoice
-                  </button>
-                  <button type="button" id="btnTplModeReceipt" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-500 hover:text-[#172B36] cursor-pointer">
-                    <i class="fa-solid fa-receipt mr-1"></i> Payment Receipt
-                  </button>
-                </div>
-                <button type="button" id="btnDownloadTemplatePdf" class="px-4 py-2 rounded-xl text-xs font-bold btn-glass-primary shadow-sm hover:shadow-md transition-all flex items-center gap-2 cursor-pointer">
-                  <i class="fa-solid fa-file-arrow-down text-sm"></i>
-                  <span>Download PDF Document</span>
-                </button>
-              </div>
-            </div>
-
-            <!-- Main Studio Grid -->
-            <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
-              
-              <!-- Left Column: Template Configuration Controls (5 cols on xl) -->
-              <div class="xl:col-span-5 space-y-5">
-                <div class="p-6 rounded-3xl bg-white border border-[#E3E9EF] shadow-sm space-y-4">
-                  <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-700 flex items-center gap-2 pb-2 border-b border-[#E3E9EF]">
-                    <i class="fa-solid fa-sliders text-[#147D64]"></i>
-                    <span>Document Metadata &amp; Billing</span>
-                  </h3>
-
-                  <div class="space-y-3.5 text-xs">
-                    <div class="grid grid-cols-2 gap-3">
-                      <div>
-                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Doc Number</label>
-                        <input type="text" id="tplDocNumber" value="829926" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] font-mono text-slate-800 text-xs focus:outline-none focus:border-[#147D64]">
-                      </div>
-                      <div>
-                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Issue Date</label>
-                        <input type="text" id="tplDocDate" value="29 September, 2026" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-slate-800 text-xs focus:outline-none focus:border-[#147D64]">
-                      </div>
-                    </div>
-
-                    <div>
-                      <label class="block text-[11px] font-bold text-slate-600 mb-1">Billed Client / Business Name</label>
-                      <input type="text" id="tplClientName" value="Pholl Bihar" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] font-semibold text-slate-800 text-xs focus:outline-none focus:border-[#147D64]">
-                    </div>
-
-                    <div>
-                      <label class="block text-[11px] font-bold text-slate-600 mb-1">Client Address</label>
-                      <textarea id="tplClientAddress" rows="2" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-slate-800 text-xs focus:outline-none focus:border-[#147D64]">Adjacent to Sukundirbag Primary School Lal Bridge Area, Bonomala Road Ward 39, Tongi Gazipur City Corporation Gazipur, Bangladesh</textarea>
-                    </div>
-
-                    <div>
-                      <label class="block text-[11px] font-bold text-slate-600 mb-1">Client Phone Number</label>
-                      <input type="text" id="tplClientPhone" value="+880 1624644435" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-slate-800 text-xs focus:outline-none focus:border-[#147D64]">
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-3">
-                      <div>
-                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Payment Type</label>
-                        <input type="text" id="tplPaymentType" value="Facebook Ads" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-slate-800 text-xs focus:outline-none focus:border-[#147D64]">
-                      </div>
-                      <div>
-                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Payment Method</label>
-                        <input type="text" id="tplPaymentMethod" value="Bkash" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-slate-800 text-xs focus:outline-none focus:border-[#147D64]">
-                      </div>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-3">
-                      <div>
-                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Account Holder Name</label>
-                        <input type="text" id="tplAccountDetails" value="Md Kazi Abdur Rahim Emon" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-slate-800 text-xs focus:outline-none focus:border-[#147D64]">
-                      </div>
-                      <div>
-                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Agency Phone</label>
-                        <input type="text" id="tplAgencyPhone" value="+880 1560066374" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-slate-800 text-xs focus:outline-none focus:border-[#147D64]">
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Line Item Setup -->
-                <div class="p-6 rounded-3xl bg-white border border-[#E3E9EF] shadow-sm space-y-4">
-                  <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-700 flex items-center gap-2 pb-2 border-b border-[#E3E9EF]">
-                    <i class="fa-solid fa-list-check text-[#147D64]"></i>
-                    <span>Line Items &amp; Pricing</span>
-                  </h3>
-                  <div class="space-y-3 text-xs">
-                    <div>
-                      <label class="block text-[11px] font-bold text-slate-600 mb-1">Item Description</label>
-                      <input type="text" id="tplItemDesc" value="Facebook Ads Expenses &amp; Service Change" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-slate-800 text-xs focus:outline-none focus:border-[#147D64]">
-                    </div>
-                    <div class="grid grid-cols-3 gap-2">
-                      <div>
-                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Qty</label>
-                        <input type="number" id="tplItemQty" value="2" min="1" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-slate-800 text-xs focus:outline-none focus:border-[#147D64]">
-                      </div>
-                      <div>
-                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Rate</label>
-                        <input type="number" id="tplItemRate" value="1250" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-slate-800 text-xs focus:outline-none focus:border-[#147D64]">
-                      </div>
-                      <div>
-                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Total</label>
-                        <input type="number" id="tplItemAmount" value="2500" class="w-full px-3 py-2 rounded-xl bg-slate-100 border border-[#E3E9EF] font-bold text-[#147D64] text-xs" readonly>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Verified Security Badge -->
-                <div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs space-y-1.5">
-                  <div class="flex items-center gap-2 font-bold">
-                    <i class="fa-solid fa-signature text-base text-[#147D64]"></i>
-                    <span>Official Ink Signature &amp; Vector PDF Engine</span>
-                  </div>
-                  <p class="text-[11px] text-emerald-700 leading-relaxed">
-                    Embedded official signature with cryptographic audit reference. Generated vector PDFs run 100% inside client browser memory with zero server disk storage.
-                  </p>
-                </div>
-              </div>
-
-              <!-- Right Column: Live A4 Stationery Visual Preview (7 cols on xl) -->
-              <div class="xl:col-span-7 w-full overflow-hidden">
-                <div class="rounded-3xl bg-slate-100/80 border border-slate-200 p-2 sm:p-6 overflow-x-auto shadow-inner">
-                  
-                  <!-- Simulated A4 Paper Sheet (Ratio 1:1.414) with responsive mobile scale -->
-                  <div id="tplA4PreviewSheet" class="relative bg-white text-[#172B36] w-full max-w-[620px] mx-auto rounded-xl shadow-2xl p-4 sm:p-10 overflow-hidden font-sans select-none border border-slate-200 min-h-[640px] sm:min-h-[820px] flex flex-col justify-between">
-                    
-                    <!-- Luxury Corner Accents from Template -->
-                    <img src="/assets/images/template-corner-top-right.png" alt="" class="absolute top-0 right-0 w-24 sm:w-44 pointer-events-none select-none">
-                    <img src="/assets/images/template-corner-bottom-left.png" alt="" class="absolute bottom-0 left-0 w-20 sm:w-40 pointer-events-none select-none">
-
-                    <div class="relative z-10 space-y-6">
-                      <!-- Top Header Row: Logo & Document Title -->
-                      <div class="flex items-start justify-between pt-2">
-                        <!-- Top-Left Logo -->
-                        <div class="w-40 sm:w-48">
-                          <img src="/assets/images/logo.png?v=20261105" alt="Whiz Studio" class="w-full h-auto object-contain">
-                        </div>
-
-                        <!-- Top-Right Title & Client Copy -->
-                        <div class="text-right pr-2">
-                          <h1 id="previewDocType" class="text-3xl sm:text-4xl font-black text-[#147D64] tracking-tight leading-none uppercase">INVOICE</h1>
-                          <p class="text-xs sm:text-sm font-bold text-slate-800 mt-1">Client Copy</p>
-                          <div class="w-36 sm:w-44 h-0.5 bg-[#147D64] ml-auto mt-2"></div>
-                        </div>
-                      </div>
-
-                      <!-- Details Grid: Billed To (Left) & Invoice Meta (Right) -->
-                      <div class="grid grid-cols-2 gap-4 sm:gap-6 pt-2">
-                        <!-- Left: BILLED TO -->
-                        <div class="space-y-1 text-xs">
-                          <p class="font-extrabold text-[#147D64] uppercase tracking-wider text-[11px]">BILLED TO:</p>
-                          <p id="previewClientName" class="font-black text-slate-900 text-sm">Pholl Bihar</p>
-                          <p class="text-[11px] text-slate-700 leading-tight">
-                            <span class="font-bold text-slate-900">Address:</span>
-                            <span id="previewClientAddress" class="text-slate-700">Adjacent to Sukundirbag Primary School Lal Bridge Area, Bonomala Road Ward 39, Tongi Gazipur City Corporation Gazipur, Bangladesh</span>
-                          </p>
-                          <p class="text-[11px] text-slate-700">
-                            <span class="font-bold text-slate-900">Phone Number:</span>
-                            <span id="previewClientPhone" class="text-slate-800">+880 1624644435</span>
-                          </p>
-                        </div>
-
-                        <!-- Right: Metadata & Payment Info -->
-                        <div class="text-right space-y-1.5 text-xs">
-                          <div>
-                            <span id="previewDocNumberLabel" class="font-extrabold text-[#147D64] text-[11px]">INVOICE NO: </span>
-                            <span id="previewDocNumber" class="font-black text-slate-900 text-sm font-mono">829926</span>
-                            <p id="previewDocDate" class="text-[11px] text-slate-600 mt-0.5">29 September, 2026</p>
-                          </div>
-
-                          <div>
-                            <p class="font-extrabold text-[#147D64] uppercase tracking-wider text-[11px]">PAYMENT TYPE</p>
-                            <p id="previewPaymentType" class="font-semibold text-slate-800 text-[11px]">Facebook Ads</p>
-                          </div>
-
-                          <div>
-                            <p class="font-extrabold text-[#147D64] uppercase tracking-wider text-[11px]">PAYMENT METHOD</p>
-                            <p id="previewPaymentMethod" class="font-semibold text-slate-800 text-[11px]">Bkash</p>
-                            <p class="text-[10px] text-slate-600">Account Details –</p>
-                            <p id="previewAccountDetails" class="font-semibold text-slate-800 text-[11px]">Md Kazi Abdur Rahim Emon</p>
-                            <p class="text-[10px] text-slate-700">Phone Number: <span id="previewAgencyPhone">+880 1560066374</span></p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <!-- Line Items Table -->
-                      <div class="pt-2">
-                        <div class="border-y border-[#147D64] py-2">
-                          <table class="w-full text-xs">
-                            <thead>
-                              <tr class="text-[#147D64] font-extrabold text-[11px]">
-                                <th class="text-left pb-1 font-bold">Description</th>
-                                <th class="text-center pb-1 font-bold">Quantity</th>
-                                <th class="text-center pb-1 font-bold">Rate</th>
-                                <th class="text-right pb-1 font-bold">Amount</th>
-                              </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-100 text-[11px]">
-                              <tr>
-                                <td id="previewItemDesc" class="py-2.5 font-medium text-slate-800 pr-2">Facebook Ads Expenses &amp; Service Change</td>
-                                <td id="previewItemQty" class="py-2.5 text-center text-slate-700">2</td>
-                                <td id="previewItemRate" class="py-2.5 text-center text-slate-700">1250</td>
-                                <td id="previewItemRowAmount" class="py-2.5 text-right font-semibold text-slate-900">2500</td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-
-                        <!-- Total Row -->
-                        <div class="flex items-center justify-end space-x-12 pt-3 pr-1 text-xs">
-                          <span class="font-extrabold text-[#147D64] tracking-wider text-sm">TOTAL</span>
-                          <span id="previewTotalAmount" class="font-black text-[#147D64] text-sm font-mono">2500</span>
-                        </div>
-                      </div>
-                    </div>
-
-<!-- Bottom Section: Notes & System-Generated Notice (No Signature / Seal) -->
-                    <div class="relative z-10 pt-6 pb-2 space-y-4">
-                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start border-t border-[#E3E9EF] pt-4">
-                        <!-- Bottom-Left: NOTES & Agency Contacts -->
-                        <div class="space-y-1 text-xs">
-                          <p class="font-extrabold text-[#147D64] uppercase tracking-wider text-[11px]">NOTES &amp; CONTACT DETAILS:</p>
-                          <p class="font-black text-slate-900 text-xs">Whiz Studio</p>
-                          <p class="text-[10px] text-slate-600 leading-tight">
-                            <span class="font-bold text-slate-800">Address:</span> House 53, Road 7, Block A, Mirpur 12, Dhaka 1216, Bangladesh
-                          </p>
-                          <p class="text-[10px] text-slate-600">
-                            <span class="font-bold text-slate-800">Phone:</span> +880 1815127022  •  <span class="font-bold text-slate-800">Email:</span> info@whizstudio.art
-                          </p>
-                        </div>
-
-                        <!-- Bottom-Right: Verification & Digital Ref -->
-                        <div class="sm:text-right space-y-1.5 text-xs">
-                          <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20">
-                            <i class="fa-solid fa-shield-check text-[11px]"></i>
-                            <span>Digitally Authenticated Document</span>
-                          </div>
-                          <p class="text-[10px] text-slate-500 font-mono">Ledger Cryptographic Ref: <span class="font-bold text-slate-700">VERIFIED-LEDGER-ONLINE</span></p>
-                        </div>
-                      </div>
-
-                      <!-- Standardized Official Footer Note -->
-                      <div class="pt-3 border-t border-slate-100 text-center">
-                        <p class="text-[10px] sm:text-[11px] font-semibold text-slate-600 italic">
-                          "This is a system-generated online invoice and does not require a physical signature or seal."
-                        </p>
-                      </div>
-                    </div>
-
-                  </div>
-                </div>
-              </div>
-
             </div>
           </div>
 
@@ -4826,7 +4544,7 @@
       <div class="relative flex items-center justify-between p-5 sm:p-7 pb-4 sm:pb-5 border-b border-[#E3E9EF] shrink-0 pr-14 sm:pr-16 bg-white z-10">
         <h3 class="text-base sm:text-lg font-bold text-[#172B36] flex items-center gap-2 min-w-0">
           <i class="fa-solid fa-receipt text-[#087F70] text-sm shrink-0"></i>
-          <span class="truncate">Record Confirmed Payment</span>
+          <span class="truncate">Add Payment to Ledger</span>
         </h3>
         <button type="button" class="btn-close-modal whiz-modal-close-btn absolute top-4 right-4 sm:top-5 sm:right-6" data-modal="modalRecordPayment" aria-label="Close modal">
           <i class="fa-solid fa-xmark"></i>
@@ -5027,34 +4745,8 @@
             </div>
           </div>
 
-          <!-- 4. Relevant Service / Existing Invoice Custom Glass Dropdown -->
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Relevant Service or Existing Invoice (Optional)</label>
-            <div class="glass-select-wrapper" data-glass-select="paymentInvoiceSelect">
-              <select name="invoiceId" id="paymentInvoiceSelect" class="sr-only" tabindex="-1" aria-hidden="true">
-                <option value="">Auto-create or match client contract...</option>
-              </select>
-              <button type="button" class="glass-select-trigger" id="paymentInvoiceSelectTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="paymentInvoiceSelectMenu">
-                <span class="flex items-center gap-2 min-w-0">
-                  <i class="fa-solid fa-file-invoice-dollar text-[#087F70] text-xs shrink-0 select-icon"></i>
-                  <span class="select-label truncate font-sans text-xs font-semibold text-[#172B36]">Auto-create or match client contract...</span>
-                </span>
-                <i class="fa-solid fa-chevron-down chevron-icon shrink-0"></i>
-              </button>
-              <div class="glass-select-menu" id="paymentInvoiceSelectMenu" role="listbox" aria-label="Invoice Reference">
-                <button type="button" class="glass-select-option selected" data-value="" role="option" aria-selected="true">
-                  <i class="fa-solid fa-file-invoice-dollar text-[#087F70] text-xs shrink-0 option-icon"></i>
-                  <span class="select-opt-text truncate font-sans font-medium text-slate-500">Auto-create or match client contract...</span>
-                  <i class="fa-solid fa-check check-icon"></i>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Transaction Reference / TxID *</label>
-            <input type="text" name="paymentReference" id="paymentReferenceInput" required placeholder="TXN-98472948" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-mono focus:border-brand-whiz">
-          </div>
+          <input type="hidden" name="invoiceId" id="paymentInvoiceSelect" value="auto">
+          <input type="hidden" name="paymentReference" id="paymentReferenceInput" value="">
 
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Payment Notes (Optional)</label>

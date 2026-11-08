@@ -491,7 +491,7 @@
     const fTitleW = fontBold.widthOfTextAtSize(footerTitle, 9);
     page.drawText(footerTitle, { x: (width - fTitleW) / 2, y: footerY + 20, size: 9, font: fontBold, color: cCharcoal });
 
-    const footerSub = 'This is a system-generated online invoice and does not require a physical signature or seal.';
+    const footerSub = 'This is a system-generated online receipt. No physical signature or seal is required.';
     const fSubW = fontRegular.widthOfTextAtSize(footerSub, 7.5);
     page.drawText(footerSub, { x: (width - fSubW) / 2, y: footerY + 9, size: 7.5, font: fontRegular, color: cMuted });
 

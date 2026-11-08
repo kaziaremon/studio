@@ -1383,36 +1383,34 @@
 
     const quotaText = document.getElementById('quotaRemainingText');
     const quotaBadge = document.getElementById('quotaBadgePill');
-    const notice = document.getElementById('previewAllowanceNotice');
 
-    const str = `Daily PDF Allowance: ${q.remaining}/${q.max} remaining`;
+    const isLimit = q.isLimitReached || q.remaining <= 0;
     if (quotaText) {
-      quotaText.textContent = q.remaining <= 0 ? `Daily PDF Allowance: 0/${q.max} (Limit Reached)` : str;
+      quotaText.textContent = isLimit
+        ? `Daily download limit reached (0/${q.max})`
+        : `Daily PDF Allowance: ${q.remaining}/${q.max} remaining`;
     }
     if (quotaBadge) {
-      if (q.remaining <= 0) {
-        quotaBadge.className = 'px-3 py-1.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-300 flex items-center gap-1.5 shadow-xs';
+      if (isLimit) {
+        quotaBadge.className = 'px-3.5 py-2 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-300 flex items-center gap-2 shadow-xs';
       } else {
-        quotaBadge.className = 'px-3 py-1.5 rounded-full text-xs font-bold bg-[#147D64]/10 text-[#147D64] border border-[#147D64]/20 flex items-center gap-1.5 shadow-xs';
+        quotaBadge.className = 'px-3.5 py-2 rounded-full text-xs font-bold bg-[#087F70]/10 text-[#087F70] border border-[#087F70]/20 flex items-center gap-2 shadow-xs';
       }
     }
-    if (notice) {
-      notice.textContent = `Daily Allowance: ${q.remaining}/${q.max} remaining today (Resets at midnight Dhaka time)`;
-    }
 
-    // Disable all download / generate invoice buttons if limit reached
-    const downloadBtns = document.querySelectorAll('.btn-download-doc, .btn-generate-invoice');
+    // Disable all download receipt buttons if limit reached
+    const downloadBtns = document.querySelectorAll('.btn-download-receipt');
     downloadBtns.forEach(btn => {
-      if (q.remaining <= 0) {
+      if (isLimit) {
         btn.disabled = true;
         btn.classList.add('opacity-50', 'cursor-not-allowed');
-        btn.classList.remove('hover:bg-[#12694f]');
-        btn.setAttribute('title', 'Daily limit reached: Maximum 2 invoice downloads per day.');
+        btn.classList.remove('hover:bg-[#066559]');
+        btn.setAttribute('title', 'Daily download limit reached.');
       } else if (!btn.hasAttribute('data-loading')) {
         btn.disabled = false;
         btn.classList.remove('opacity-50', 'cursor-not-allowed');
-        btn.classList.add('hover:bg-[#12694f]');
-        btn.setAttribute('title', 'Generate authentic vector A4 PDF');
+        btn.classList.add('hover:bg-[#066559]');
+        btn.setAttribute('title', 'Download official system-generated receipt');
       }
     });
   }
@@ -1529,7 +1527,7 @@
     }
   }
 
-  // 5. Render Finance Invoices & Payment Receipts
+  // 5. Render Transaction History (Text-Based Ledger & Rate-Limited Digital Receipts)
   function renderFinanceReceipts() {
     const list = document.getElementById('financeFullList');
     const countEl = document.getElementById('financeReceiptsCount');
@@ -1538,10 +1536,8 @@
     updateCifUi();
     updateQuotaUi();
 
-    const invoices = state.invoices || [];
     const payments = state.payments || [];
-    const totalRecords = invoices.length + payments.length;
-    if (countEl) countEl.textContent = `${invoices.length} Published Invoices, ${payments.length} Confirmed Payments`;
+    if (countEl) countEl.textContent = `${payments.length} Verified Transactions Recorded in Ledger`;
 
     // Multi-Currency Ledger Breakdown Cards
     let currencyCardsHtml = '';
@@ -1553,7 +1549,7 @@
             ${currs.map(c => `
               <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs space-y-2">
                 <div class="flex items-center justify-between pb-2 border-b border-[#E3E9EF]">
-                  <span class="text-xs font-black uppercase text-brand-whiz bg-brand-whiz/10 px-2 py-0.5 rounded-md border border-brand-whiz/20">${escapeHtml(c.currency)}</span>
+                  <span class="text-xs font-black uppercase text-[#087F70] bg-[#087F70]/10 px-2 py-0.5 rounded-md border border-[#087F70]/20">${escapeHtml(c.currency)}</span>
                   <span class="text-[10px] uppercase font-bold text-slate-500">Currency Ledger</span>
                 </div>
                 <div class="grid grid-cols-2 gap-2 text-xs">
@@ -1577,465 +1573,203 @@
       }
     }
 
-    // Invoices Section
-    let invoicesSectionHtml = '';
-    if (invoices.length > 0) {
-      invoicesSectionHtml = `
-        <div class="space-y-4 mb-8">
-          <div class="flex items-center justify-between pb-2 border-b border-[#E3E9EF]">
-            <h3 class="text-sm font-black text-[#172B36] flex items-center gap-2">
-              <i class="fa-solid fa-file-invoice text-[#147D64]"></i>
-              <span>Official Client Invoices</span>
-            </h3>
-            <span class="text-[11px] font-bold text-slate-500">${invoices.length} Invoices Available</span>
-          </div>
-
-          <!-- Mobile Cards -->
-          <div class="md:hidden space-y-3">
-            ${invoices.map(inv => {
-              const num = inv.invoice_number || 'INV-1001';
-              const date = inv.issue_date || 'N/A';
-              const srvName = inv.service_name || inv.serviceName || 'Agency Retainer Service';
-              const isPaid = (inv.outstanding_balance_cents === 0) || inv.status === 'paid';
-              return `
-                <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs space-y-3">
-                  <div class="flex items-start justify-between gap-2">
-                    <div>
-                      <span class="font-mono text-xs font-bold text-[#147D64]">${escapeHtml(num)}</span>
-                      <div class="text-[11px] font-bold text-[#172B36] mt-0.5">${escapeHtml(srvName)}</div>
-                      <div class="text-[10px] text-slate-400 font-mono">Issued: ${escapeHtml(date)} • Due: ${escapeHtml(inv.due_date || 'N/A')}</div>
-                    </div>
-                    <div class="text-right">
-                      <span class="text-sm font-black font-mono text-[#172B36] block">${formatCurrency(inv.total_cents || 0, inv.currency || "USD")}</span>
-                      <span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase ${isPaid ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'} inline-block mt-0.5">
-                        ${isPaid ? 'Paid in Full' : 'Due: ' + formatCurrency(inv.outstanding_balance_cents || 0, inv.currency || 'USD')}
-                      </span>
-                    </div>
-                  </div>
-                  <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
-                    <button type="button" class="btn-preview-doc py-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all" data-type="invoice" data-id="${inv.id}" data-num="${num}">
-                      <i class="fa-solid fa-eye text-[11px]"></i>
-                      <span>Preview</span>
-                    </button>
-                    <button type="button" class="btn-download-doc btn-generate-invoice py-2 rounded-xl bg-[#147D64] hover:bg-[#12694f] text-white text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-xs" data-type="invoice" data-id="${inv.id}" data-num="${num}">
-                      <i class="fa-solid fa-file-invoice text-[11px]"></i>
-                      <span>Generate Invoice</span>
-                    </button>
-                  </div>
-                </div>
-              `;
-            }).join('')}
-          </div>
-
-          <!-- Desktop Table -->
-          <div class="hidden md:block rounded-3xl bg-white border border-[#E3E9EF] overflow-hidden shadow-xs">
-            <div class="overflow-x-auto">
-              <table class="w-full text-left text-xs text-slate-600 min-w-[760px]">
-                <thead class="bg-slate-50/80 border-b border-[#E3E9EF] text-[11px] uppercase font-bold text-slate-500">
-                  <tr>
-                    <th class="p-4">Invoice #</th>
-                    <th class="p-4">Purchased Service</th>
-                    <th class="p-4">Issue Date</th>
-                    <th class="p-4">Total Amount</th>
-                    <th class="p-4">Amount Paid</th>
-                    <th class="p-4">Outstanding</th>
-                    <th class="p-4">Status</th>
-                    <th class="p-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-[#E3E9EF]">
-                  ${invoices.map(inv => {
-                    const num = inv.invoice_number || 'INV-1001';
-                    const srvName = inv.service_name || inv.serviceName || 'Professional Retainer';
-                    const isPaid = (inv.outstanding_balance_cents === 0) || inv.status === 'paid';
-                    return `
-                      <tr class="hover:bg-slate-50/80 transition-colors">
-                        <td class="p-4 font-mono font-bold text-[#147D64]">${escapeHtml(num)}</td>
-                        <td class="p-4">
-                          <div class="font-bold text-[#172B36]">${escapeHtml(srvName)}</div>
-                          <div class="text-[10px] text-slate-400 font-mono">Due: ${escapeHtml(inv.due_date || 'N/A')}</div>
-                        </td>
-                        <td class="p-4 text-slate-500 font-mono">${escapeHtml(inv.issue_date || 'N/A')}</td>
-                        <td class="p-4 font-mono font-bold text-[#172B36]">${formatCurrency(inv.total_cents || 0, inv.currency || "USD")}</td>
-                        <td class="p-4 font-mono text-emerald-600 font-semibold">${formatCurrency(inv.amount_paid_cents || 0, inv.currency || "USD")}</td>
-                        <td class="p-4 font-mono font-bold ${isPaid ? 'text-slate-400' : 'text-amber-600'}">${formatCurrency(inv.outstanding_balance_cents || 0, inv.currency || "USD")}</td>
-                        <td class="p-4">
-                          <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${isPaid ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}">
-                            ${isPaid ? 'Paid in Full' : 'Pending'}
-                          </span>
-                        </td>
-                        <td class="p-4 text-right space-x-1.5">
-                          <button type="button" class="btn-preview-doc px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold transition-all cursor-pointer" data-type="invoice" data-id="${inv.id}" data-num="${num}" title="View instant vector preview">
-                            <i class="fa-solid fa-eye mr-1"></i> Preview
-                          </button>
-                          <button type="button" class="btn-download-doc btn-generate-invoice px-3.5 py-1.5 rounded-xl bg-[#147D64] hover:bg-[#12694f] text-white text-xs font-bold transition-all cursor-pointer shadow-xs" data-type="invoice" data-id="${inv.id}" data-num="${num}" title="Generate authentic vector A4 PDF">
-                            <i class="fa-solid fa-file-invoice mr-1"></i> Generate Invoice
-                          </button>
-                        </td>
-                      </tr>
-                    `;
-                  }).join('')}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    // Payment Receipts Section
-    let paymentsSectionHtml = '';
-    if (payments.length > 0) {
-      paymentsSectionHtml = `
-        <div class="space-y-4">
-          <div class="flex items-center justify-between pb-2 border-b border-[#E3E9EF]">
-            <h3 class="text-sm font-black text-[#172B36] flex items-center gap-2">
-              <i class="fa-solid fa-receipt text-[#147D64]"></i>
-              <span>Payment Receipts (Evidence of Payment)</span>
-            </h3>
-            <span class="text-[11px] font-bold text-slate-500">${payments.length} Receipts</span>
-          </div>
-
-          <!-- Mobile Cards -->
-          <div class="md:hidden space-y-3">
-            ${payments.map(p => {
-              const num = p.receipt_number || p.receiptNumber || 'RCPT-1001';
-              const date = p.payment_date || p.paymentDate || 'N/A';
-              const method = p.payment_method || p.paymentMethod || 'Online';
-              return `
-                <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs space-y-3">
-                  <div class="flex items-start justify-between gap-2">
-                    <div>
-                      <span class="font-mono text-xs font-bold text-[#147D64]">${escapeHtml(num)}</span>
-                      <div class="text-[11px] text-slate-500 font-mono mt-0.5">Paid: ${escapeHtml(date)}</div>
-                    </div>
-                    <div class="text-right">
-                      <span class="text-sm font-black font-mono text-emerald-600 block">${formatCurrency(p.amount_cents || p.amountCents || 0, p.currency || "USD")}</span>
-                      <span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 inline-block mt-0.5">Confirmed</span>
-                    </div>
-                  </div>
-                  <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
-                    <button type="button" class="btn-preview-doc py-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-all" data-type="receipt" data-id="${p.id}" data-num="${num}">
-                      <i class="fa-solid fa-eye text-[11px]"></i>
-                      <span>Preview</span>
-                    </button>
-                    <button type="button" class="btn-download-doc btn-generate-invoice py-2 rounded-xl bg-[#147D64] hover:bg-[#12694f] text-white text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-all shadow-xs" data-type="receipt" data-id="${p.id}" data-num="${num}">
-                      <i class="fa-solid fa-receipt text-[11px]"></i>
-                      <span>Generate Receipt</span>
-                    </button>
-                  </div>
-                </div>
-              `;
-            }).join('')}
-          </div>
-
-          <!-- Desktop Table -->
-          <div class="hidden md:block rounded-3xl bg-white border border-[#E3E9EF] overflow-hidden shadow-xs">
-            <div class="overflow-x-auto">
-              <table class="w-full text-left text-xs text-slate-600 min-w-[650px]">
-                <thead class="bg-slate-50/80 border-b border-[#E3E9EF] text-[11px] uppercase font-bold text-slate-500">
-                  <tr>
-                    <th class="p-4">Receipt #</th>
-                    <th class="p-4">Payment Date</th>
-                    <th class="p-4">Payment Method</th>
-                    <th class="p-4">Amount Paid</th>
-                    <th class="p-4">Invoice Link</th>
-                    <th class="p-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-[#E3E9EF]">
-                  ${payments.map(p => {
-                    const num = p.receipt_number || p.receiptNumber || 'RCPT-1001';
-                    return `
-                      <tr class="hover:bg-slate-50/80 transition-colors">
-                        <td class="p-4 font-mono font-bold text-[#147D64]">${escapeHtml(num)}</td>
-                        <td class="p-4 text-slate-500 font-mono">${escapeHtml(p.payment_date || p.paymentDate || 'N/A')}</td>
-                        <td class="p-4 uppercase text-[11px] text-slate-600 font-semibold">${escapeHtml(p.payment_method || p.paymentMethod || 'Online')}</td>
-                        <td class="p-4 font-mono font-bold text-emerald-600">${formatCurrency(p.amount_cents || p.amountCents || 0, p.currency || "USD")}</td>
-                        <td class="p-4 font-mono text-slate-500">${escapeHtml(p.invoice_number || '—')}</td>
-                        <td class="p-4 text-right space-x-1.5">
-                          <button type="button" class="btn-preview-doc px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold transition-all cursor-pointer" data-type="receipt" data-id="${p.id}" data-num="${num}">
-                            <i class="fa-solid fa-eye mr-1"></i> Preview
-                          </button>
-                          <button type="button" class="btn-download-doc px-3 py-1.5 rounded-xl bg-[#147D64] hover:bg-[#12694f] text-white text-xs font-bold transition-all cursor-pointer shadow-xs" data-type="receipt" data-id="${p.id}" data-num="${num}">
-                            <i class="fa-solid fa-download mr-1"></i> PDF Receipt
-                          </button>
-                        </td>
-                      </tr>
-                    `;
-                  }).join('')}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    let emptyNotice = '';
-    if (invoices.length === 0 && payments.length === 0) {
-      emptyNotice = `
+    if (payments.length === 0) {
+      list.innerHTML = `
+        ${currencyCardsHtml}
         <div class="p-8 sm:p-12 rounded-3xl bg-white border border-[#E3E9EF] text-center space-y-3">
           <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto text-xl">
-            <i class="fa-solid fa-file-invoice"></i>
+            <i class="fa-solid fa-receipt"></i>
           </div>
           <div class="space-y-1">
-            <h4 class="font-bold text-sm text-[#172B36]">No billing records published yet</h4>
-            <p class="text-xs text-slate-500 max-w-sm mx-auto">When Whiz Studio finance confirms and issues an official invoice for your marketing contract, it will appear here for instant preview and A4 PDF generation.</p>
+            <h4 class="font-bold text-sm text-[#172B36]">No transaction history recorded yet</h4>
+            <p class="text-xs text-slate-500 max-w-sm mx-auto">When your payments are committed to the ledger by Whiz Studio finance, they will appear here with instant zero-storage receipt downloads.</p>
           </div>
         </div>
       `;
+      return;
     }
+
+    const q = state.receiptQuota || getDailyInvoiceQuota();
+    const isLimitReached = q.isLimitReached || q.remaining <= 0;
+
+    const formatPaymentMethod = (m) => {
+      const s = String(m || 'bank_transfer').toLowerCase();
+      if (s.includes('mobile') || s.includes('bkash') || s.includes('nagad') || s.includes('mfs')) return 'Mobile Banking (MFS)';
+      if (s.includes('bank') || s.includes('wire')) return 'Bank Transfer / Wire';
+      if (s.includes('card')) return 'Credit / Debit Card';
+      if (s.includes('cash')) return 'Cash / Cheque';
+      if (s.includes('online')) return 'Online Banking';
+      return s.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    };
 
     list.innerHTML = `
       ${currencyCardsHtml}
-      ${invoicesSectionHtml}
-      ${paymentsSectionHtml}
-      ${emptyNotice}
-    `;
-
-    // Wire actions
-    list.querySelectorAll('.btn-preview-doc').forEach(btn => {
-      btn.addEventListener('click', () => {
-        handleDocumentAction(btn.dataset.type, btn.dataset.id, btn.dataset.num, true, btn);
-      });
-    });
-
-    list.querySelectorAll('.btn-download-doc').forEach(btn => {
-      btn.addEventListener('click', () => {
-        handleDocumentAction(btn.dataset.type, btn.dataset.id, btn.dataset.num, false, btn);
-      });
-    });
-  }
-
-  // 6. Zero-Storage HTML Invoice Template Builder (A4, Inter, No Signatures/Seals, Standardized System Footer)
-  function buildInvoiceHtml(docData) {
-    const isReceipt = docData.documentType === 'receipt';
-    const docTitle = isReceipt ? 'PAYMENT RECEIPT' : 'INVOICE';
-    const numLabel = isReceipt ? 'RECEIPT NO:' : 'INVOICE NO:';
-    const docNum = isReceipt ? (docData.receiptNumber || docData.receipt_number || docData.number) : (docData.invoiceNumber || docData.invoice_number || docData.number || 'INV-2026-001');
-    const client = docData.client || {
-      fullName: docData.client_name || state.cif?.fullName || state.currentUser?.fullName || 'Valued Client',
-      billingName: docData.client_name || state.cif?.billingName || state.currentUser?.fullName || 'Valued Client',
-      companyName: state.cif?.companyName || docData.client_name || '',
-      billingAddress: state.cif?.billingAddress || 'Dhaka, Bangladesh',
-      city: state.cif?.city || 'Dhaka',
-      country: state.cif?.country || 'Bangladesh',
-      email: state.cif?.email || state.currentUser?.email || 'client@whizstudio.art',
-      phone: state.cif?.phone || '+880 1815127022'
-    };
-    const issuer = docData.issuer || {
-      legalName: 'Whiz Studio',
-      address: 'House 53, Road 7, Block A, Mirpur 12',
-      city: 'Dhaka',
-      postalCode: '1216',
-      country: 'Bangladesh',
-      email: 'info@whizstudio.art',
-      phone: '+880 1815127022',
-      website: 'https://whizstudio.art'
-    };
-    const srvName = docData.serviceName || docData.service_name || docData.title || docData.description || 'Agency Retainer Service';
-    const totalCents = Number(docData.totalCents || docData.total_cents || docData.amount_cents || docData.amountCents || 0);
-    const curr = (docData.currency || 'USD').toUpperCase();
-    const items = (Array.isArray(docData.items) && docData.items.length > 0) ? docData.items : [{
-      description: srvName,
-      quantity: 1,
-      unitPriceCents: totalCents,
-      totalCents: totalCents
-    }];
-    const issueDate = docData.issueDate || docData.issue_date || docData.paymentDate || docData.payment_date || new Date().toISOString().split('T')[0];
-    const isPaid = (docData.outstanding_balance_cents === 0) || docData.status === 'paid' || isReceipt;
-
-    return `
-      <div class="whiz-a4-invoice-container" style="width: 210mm; min-height: 297mm; padding: 18mm 16mm; background: #ffffff; color: #172B36; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; box-sizing: border-box; position: relative; display: flex; flex-direction: column; justify-content: space-between;">
-        
-        <!-- Top Decorative Accent Strip -->
-        <div style="position: absolute; top: 0; left: 0; right: 0; height: 5px; display: flex;">
-          <div style="flex: 7; background: #087F70;"></div>
-          <div style="flex: 3; background: #C69A40;"></div>
+      <div class="space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#E3E9EF]">
+          <div>
+            <h3 class="text-sm font-black text-[#172B36] flex items-center gap-2">
+              <i class="fa-solid fa-clock-rotate-left text-[#087F70]"></i>
+              <span>Transaction History</span>
+            </h3>
+            <p class="text-xs text-slate-500 mt-0.5">Verified financial transactions and electronic receipts</p>
+          </div>
+          <span class="text-xs font-semibold text-slate-500">${payments.length} Records</span>
         </div>
 
-        <!-- Main Content Area -->
-        <div>
-          <!-- Header: Logo & Title -->
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; padding-top: 6mm; margin-bottom: 8mm;">
-            <div>
-              <img src="/assets/images/logo.png?v=20261105" alt="Whiz Studio" style="max-height: 48px; width: auto; object-fit: contain; display: block;" crossorigin="anonymous">
-              <p style="font-size: 8.5pt; color: #5F7180; margin: 6px 0 0 0; font-weight: 500;">Digital Marketing & Performance Growth Agency</p>
-            </div>
-            <div style="text-align: right;">
-              <h1 style="font-size: 26pt; font-weight: 900; color: #087F70; margin: 0; line-height: 1; letter-spacing: -0.5px; text-transform: uppercase;">${escapeHtml(docTitle)}</h1>
-              <p style="font-size: 8.5pt; font-weight: 700; color: #172B36; margin: 4px 0 0 0;">Official Client Ledger Copy</p>
-              <div style="width: 140px; height: 2px; background: #C69A40; margin-left: auto; margin-top: 6px;"></div>
-            </div>
-          </div>
+        <!-- Mobile Cards View -->
+        <div class="md:hidden space-y-3">
+          ${payments.map(p => {
+            const date = p.payment_date || p.paymentDate || 'N/A';
+            const srv = p.service_name || p.serviceName || p.serviceProvided || 'Agency Retainer Service';
+            const method = formatPaymentMethod(p.payment_method || p.paymentMethod);
+            const amount = formatCurrency(p.amount_cents || p.amountCents || 0, p.currency || 'USD');
+            const receiptNum = p.receipt_number || p.receiptNumber || 'RCPT-1001';
 
-          <!-- Section Divider -->
-          <div style="height: 1px; background: #E3E9EF; margin-bottom: 7mm;"></div>
-
-          <!-- Billing Info Grid: Billed From & Billed To -->
-          <div style="display: flex; justify-content: space-between; gap: 20px; margin-bottom: 8mm;">
-            <!-- Left: Billed From -->
-            <div style="flex: 1; font-size: 8.5pt; line-height: 1.5; color: #475569;">
-              <p style="font-size: 8pt; font-weight: 800; color: #C69A40; text-transform: uppercase; margin: 0 0 4px 0; letter-spacing: 0.5px;">BILLED FROM</p>
-              <p style="font-size: 10pt; font-weight: 800; color: #172B36; margin: 0 0 2px 0;">${escapeHtml(issuer.legalName || 'Whiz Studio')}</p>
-              <p style="margin: 0;">${escapeHtml(issuer.address || 'House 53, Road 7, Block A, Mirpur 12')}</p>
-              <p style="margin: 0;">${escapeHtml(issuer.city || 'Dhaka')} ${escapeHtml(issuer.postalCode || '1216')}, ${escapeHtml(issuer.country || 'Bangladesh')}</p>
-              <p style="margin: 0; color: #5F7180;">${escapeHtml(issuer.email || 'info@whizstudio.art')} | ${escapeHtml(issuer.phone || '+880 1815127022')}</p>
-            </div>
-
-            <!-- Right: Billed To -->
-            <div style="flex: 1; font-size: 8.5pt; line-height: 1.5; color: #475569;">
-              <p style="font-size: 8pt; font-weight: 800; color: #087F70; text-transform: uppercase; margin: 0 0 4px 0; letter-spacing: 0.5px;">${isReceipt ? 'RECEIVED FROM' : 'BILLED TO'}</p>
-              <p style="font-size: 10pt; font-weight: 800; color: #172B36; margin: 0 0 2px 0;">${escapeHtml(client.billingName || client.fullName || 'Valued Client')}</p>
-              ${client.companyName ? `<p style="font-weight: 700; color: #087F70; margin: 0;">${escapeHtml(client.companyName)}</p>` : ''}
-              <p style="margin: 0;">${escapeHtml(client.billingAddress || client.address || 'Dhaka, Bangladesh')}</p>
-              <p style="margin: 0;">${escapeHtml([client.city, client.country].filter(Boolean).join(', '))}</p>
-              <p style="margin: 0; color: #5F7180;">${escapeHtml([client.email, client.phone].filter(Boolean).join(' • '))}</p>
-            </div>
-
-            <!-- Metadata Box -->
-            <div style="width: 170px; text-align: right; font-size: 8.5pt; line-height: 1.6;">
-              <div>
-                <span style="font-weight: 800; color: #087F70;">${escapeHtml(numLabel)}</span>
-                <span style="font-weight: 900; color: #172B36; font-family: 'JetBrains Mono', monospace;">${escapeHtml(docNum)}</span>
+            return `
+              <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs space-y-3">
+                <div class="flex items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <span class="text-[10px] font-mono font-bold text-[#087F70]">${escapeHtml(date)}</span>
+                    <h4 class="text-xs font-bold text-[#172B36] truncate mt-0.5">${escapeHtml(srv)}</h4>
+                    <span class="text-[11px] text-slate-500">${escapeHtml(method)}</span>
+                  </div>
+                  <div class="text-right shrink-0">
+                    <span class="text-sm font-mono font-black text-[#172B36]">${amount}</span>
+                  </div>
+                </div>
+                <div class="pt-2 border-t border-slate-100">
+                  <button type="button" class="btn-download-receipt w-full py-2.5 rounded-xl ${isLimitReached ? 'bg-slate-100 text-slate-400 opacity-50 cursor-not-allowed border border-slate-200' : 'bg-[#087F70] hover:bg-[#066559] active:bg-[#055046] text-white shadow-xs cursor-pointer'} text-xs font-bold flex items-center justify-center gap-2 transition-all" data-id="${p.id}" data-receipt="${receiptNum}" ${isLimitReached ? 'disabled title="Daily download limit reached."' : 'title="Download Receipt"'}>
+                    <i class="fa-solid ${isLimitReached ? 'fa-lock' : 'fa-file-arrow-down'} text-xs"></i>
+                    <span>Download Receipt</span>
+                  </button>
+                </div>
               </div>
-              <div style="color: #64748B; font-size: 8pt;">Date: <strong style="color: #172B36;">${escapeHtml(issueDate)}</strong></div>
-              <div style="color: #64748B; font-size: 8pt;">Method: <strong style="color: #172B36;">${escapeHtml(docData.paymentMethod || docData.payment_method || 'Bank Transfer')}</strong></div>
-              <div style="margin-top: 6px;">
-                <span style="display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 7.5pt; font-weight: 800; text-transform: uppercase; background: #EAF5F1; color: #087F70; border: 1px solid rgba(8, 127, 112, 0.25);">
-                  ${isPaid ? 'PAID IN FULL' : 'PAYMENT PENDING'}
-                </span>
-              </div>
-            </div>
-          </div>
+            `;
+          }).join('')}
+        </div>
 
-          <!-- Line Items Table -->
-          <table style="width: 100%; border-collapse: collapse; margin-bottom: 8mm; font-size: 9pt;">
-            <thead>
-              <tr style="background: #F8FAFC; border-top: 1.5px solid #087F70; border-bottom: 1px solid #E2E8F0;">
-                <th style="text-align: left; padding: 8px 10px; font-size: 8pt; font-weight: 800; color: #087F70; text-transform: uppercase;">SERVICE DESCRIPTION</th>
-                <th style="text-align: center; padding: 8px 10px; font-size: 8pt; font-weight: 800; color: #087F70; text-transform: uppercase; width: 60px;">QTY</th>
-                <th style="text-align: right; padding: 8px 10px; font-size: 8pt; font-weight: 800; color: #087F70; text-transform: uppercase; width: 110px;">UNIT PRICE</th>
-                <th style="text-align: right; padding: 8px 10px; font-size: 8pt; font-weight: 800; color: #087F70; text-transform: uppercase; width: 110px;">TOTAL</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${items.map((it, idx) => `
-                <tr style="border-bottom: 1px solid #E2E8F0; background: ${idx % 2 === 1 ? '#FAFCFB' : '#FFFFFF'};">
-                  <td style="padding: 10px; font-weight: 600; color: #172B36;">${escapeHtml(it.description || srvName)}</td>
-                  <td style="padding: 10px; text-align: center; color: #475569;">${it.quantity || 1}</td>
-                  <td style="padding: 10px; text-align: right; font-family: 'JetBrains Mono', monospace; color: #475569;">${formatCurrency(it.unitPriceCents || it.totalCents || totalCents, curr)}</td>
-                  <td style="padding: 10px; text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #172B36;">${formatCurrency(it.totalCents || totalCents, curr)}</td>
+        <!-- Desktop Table View -->
+        <div class="hidden md:block rounded-3xl bg-white border border-[#E3E9EF] overflow-hidden shadow-xs">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-600 min-w-[700px]">
+              <thead class="bg-slate-50/80 border-b border-[#E3E9EF] text-[11px] uppercase font-bold text-slate-500">
+                <tr>
+                  <th class="p-4">Date</th>
+                  <th class="p-4">Service Provided</th>
+                  <th class="p-4">Payment Method</th>
+                  <th class="p-4">Amount</th>
+                  <th class="p-4 text-right">Action</th>
                 </tr>
-              `).join('')}
-            </tbody>
-          </table>
+              </thead>
+              <tbody class="divide-y divide-[#E3E9EF]">
+                ${payments.map(p => {
+                  const date = p.payment_date || p.paymentDate || 'N/A';
+                  const srv = p.service_name || p.serviceName || p.serviceProvided || 'Agency Retainer Service';
+                  const method = formatPaymentMethod(p.payment_method || p.paymentMethod);
+                  const amount = formatCurrency(p.amount_cents || p.amountCents || 0, p.currency || 'USD');
+                  const receiptNum = p.receipt_number || p.receiptNumber || 'RCPT-1001';
 
-          <!-- Totals & Financial Terms Grid -->
-          <div style="display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; margin-bottom: 8mm;">
-            <!-- Left: Financial Terms -->
-            <div style="flex: 1; padding: 12px; border-radius: 10px; background: #F8FAFC; border: 1px solid #E2E8F0; font-size: 8pt; line-height: 1.5; color: #64748B;">
-              <p style="font-weight: 800; color: #087F70; text-transform: uppercase; margin: 0 0 4px 0; font-size: 7.5pt;">PAYMENT & FINANCIAL TERMS</p>
-              <p style="margin: 0; color: #334155;">All deliverables verified and approved under active service agreement.</p>
-              <p style="margin: 0; color: #334155;">Reference: <strong>${escapeHtml(docData.paymentReference || docData.payment_reference || 'LEDGER-VERIFIED')}</strong></p>
-              <p style="margin: 4px 0 0 0; color: #94A3B8; font-style: italic;">Official payment acknowledgment recorded digitally in Whiz Studio ledger.</p>
-            </div>
-
-            <!-- Right: Summary Box -->
-            <div style="width: 220px; font-size: 9pt;">
-              <div style="display: flex; justify-content: space-between; padding: 4px 0; color: #64748B;">
-                <span>Subtotal:</span>
-                <span style="font-family: 'JetBrains Mono', monospace; font-weight: 600; color: #172B36;">${formatCurrency(totalCents, curr)}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; padding: 6px 8px; margin: 4px 0; background: #EAF5F1; border: 1px solid rgba(8, 127, 112, 0.3); border-radius: 6px; font-weight: 800; color: #087F70;">
-                <span>INVOICE TOTAL:</span>
-                <span style="font-family: 'JetBrains Mono', monospace; font-size: 10.5pt;">${formatCurrency(totalCents, curr)}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; padding: 4px 0; color: #059669; font-weight: 700;">
-                <span>Amount Paid:</span>
-                <span style="font-family: 'JetBrains Mono', monospace;">${formatCurrency(isPaid ? totalCents : (docData.amount_paid_cents || 0), curr)}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; padding: 4px 0; color: #64748B;">
-                <span>Remaining Balance:</span>
-                <span style="font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #172B36;">${formatCurrency(isPaid ? 0 : (docData.outstanding_balance_cents || 0), curr)}</span>
-              </div>
-            </div>
+                  return `
+                    <tr class="hover:bg-slate-50/80 transition-colors">
+                      <td class="p-4 font-mono font-medium text-slate-600">${escapeHtml(date)}</td>
+                      <td class="p-4">
+                        <div class="font-bold text-[#172B36]">${escapeHtml(srv)}</div>
+                        <div class="text-[10px] text-slate-400 font-mono">Receipt Ref: ${escapeHtml(receiptNum)}</div>
+                      </td>
+                      <td class="p-4 text-slate-600 font-medium">${escapeHtml(method)}</td>
+                      <td class="p-4 font-mono font-black text-[#172B36]">${amount}</td>
+                      <td class="p-4 text-right">
+                        <button type="button" class="btn-download-receipt inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl ${isLimitReached ? 'bg-slate-100 text-slate-400 opacity-50 cursor-not-allowed border border-slate-200' : 'bg-[#087F70] hover:bg-[#066559] active:bg-[#055046] text-white shadow-xs cursor-pointer'} text-xs font-bold transition-all" data-id="${p.id}" data-receipt="${receiptNum}" ${isLimitReached ? 'disabled title="Daily download limit reached."' : 'title="Download Receipt"'}>
+                          <i class="fa-solid ${isLimitReached ? 'fa-lock' : 'fa-file-arrow-down'} text-xs"></i>
+                          <span>Download Receipt</span>
+                        </button>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
           </div>
         </div>
-
-        <!-- Footer Section: Notes & Standardized System Notice (NO Signature / Seal) -->
-        <div style="border-top: 1px solid #E2E8F0; padding-top: 6mm;">
-          <div style="display: flex; justify-content: space-between; align-items: flex-end; font-size: 8pt; color: #64748B; margin-bottom: 4mm;">
-            <div>
-              <p style="font-weight: 800; color: #087F70; margin: 0 0 2px 0; text-transform: uppercase;">Whiz Studio</p>
-              <p style="margin: 0;">House 53, Road 7, Block A, Mirpur 12, Dhaka 1216, BD</p>
-              <p style="margin: 0;">info@whizstudio.art | https://whizstudio.art</p>
-            </div>
-            <div style="text-align: right;">
-              <span style="display: inline-block; padding: 3px 8px; border-radius: 9999px; font-size: 7pt; font-weight: 800; background: #F1F5F9; color: #475569; border: 1px solid #CBD5E1;">
-                DIGITALLY AUTHENTICATED
-              </span>
-            </div>
-          </div>
-
-          <!-- Standardized Footer Note Required by Architecture -->
-          <div style="text-align: center; border-top: 1px dashed #CBD5E1; padding-top: 3mm;">
-            <p style="font-size: 8pt; font-weight: 600; color: #64748B; margin: 0; font-style: italic;">
-              "This is a system-generated online invoice and does not require a physical signature or seal."
-            </p>
-          </div>
-        </div>
-
       </div>
     `;
+
+    // Wire up download receipt buttons
+    list.querySelectorAll('.btn-download-receipt').forEach(btn => {
+      btn.addEventListener('click', () => {
+        handleReceiptDownload(btn.dataset.id, btn.dataset.receipt, btn);
+      });
+    });
   }
 
-  // 7. Zero-Storage Client-Side PDF Renderer (html2pdf / jsPDF / pdf-lib - Never Saved to Cloudflare/R2)
-  async function generateInvoicePdfClientSide(docData, download = true) {
-    const htmlContent = buildInvoiceHtml(docData);
-    const num = docData.invoiceNumber || docData.invoice_number || docData.receiptNumber || docData.receipt_number || docData.number || 'DOC';
-    const type = docData.documentType === 'receipt' ? 'Receipt' : 'Invoice';
-    const filename = `WhizStudio_${type}_${num}.pdf`;
-
-    // Priority 1: Client-side html2pdf engine (jsPDF + html2canvas in browser memory)
-    if (typeof window.html2pdf === 'function') {
-      const container = document.createElement('div');
-      container.style.position = 'fixed';
-      container.style.top = '-99999px';
-      container.style.left = '-99999px';
-      container.style.width = '210mm';
-      container.innerHTML = htmlContent;
-      document.body.appendChild(container);
-
-      const opt = {
-        margin: [0, 0, 0, 0],
-        filename: filename,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
-
-      try {
-        if (download) {
-          await window.html2pdf().set(opt).from(container).save();
-          if (container.parentNode) document.body.removeChild(container);
-          return null;
-        } else {
-          const pdfBlob = await window.html2pdf().set(opt).from(container).outputPdf('blob');
-          if (container.parentNode) document.body.removeChild(container);
-          return pdfBlob;
-        }
-      } catch (err) {
-        if (container.parentNode) document.body.removeChild(container);
-        console.warn('[html2pdf] Rendering fallback to vector PDF engine:', err);
-      }
+  // 6. Handle Receipt Download: Strict Zero-Storage Client-Side Execution with Dynamic 3-Stream Merging
+  async function handleReceiptDownload(paymentId, receiptNumber, buttonEl) {
+    const quota = state.receiptQuota || getDailyInvoiceQuota();
+    if (quota.isLimitReached || quota.remaining <= 0) {
+      showToast('Daily download limit reached.', 'error');
+      return;
     }
 
-    // Priority 2 / Fallback: Pure in-browser Vector PDF Engine via WhizDocumentPdf & pdf-lib (Zero Server Storage)
-    const pdfBytes = await buildDocumentPdf(docData);
-    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-    if (download) {
+    if (state.cif && !state.cif.isComplete) {
+      switchTab('profile');
+      showToast('Please complete your Profile (CIF) before downloading receipts.', 'error');
+      return;
+    }
+
+    const originalText = buttonEl ? buttonEl.innerHTML : '';
+    if (buttonEl) {
+      buttonEl.disabled = true;
+      buttonEl.setAttribute('data-loading', 'true');
+      buttonEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-xs mr-1.5"></i><span>Preparing Receipt...</span>';
+    }
+
+    try {
+      // Stream 1 + 2 + 3: Authorize on backend and retrieve merged data payload
+      const idempotencyKey = `whiz_rcpt_${receiptNumber}_${Date.now()}`;
+      const authRes = await apiFetch('/pdf/authorize-receipt', {
+        method: 'POST',
+        body: JSON.stringify({
+          paymentId,
+          receiptNumber,
+          idempotencyKey
+        })
+      });
+
+      if (!authRes.ok || !authRes.data || !authRes.data.success) {
+        if (authRes.data?.code === 'DAILY_QUOTA_EXCEEDED') {
+          showToast('Daily download limit reached.', 'error');
+          state.receiptQuota = { ...quota, remaining: 0, isLimitReached: true };
+          updateQuotaUi();
+          return;
+        }
+        if (authRes.data?.code === 'CIF_INCOMPLETE') {
+          switchTab('profile');
+          showToast(authRes.data.error || 'Please complete your Profile before downloading receipts.', 'error');
+          return;
+        }
+        throw new Error(authRes.data?.error || 'Failed to authorize receipt download.');
+      }
+
+      if (authRes.data.quota) {
+        state.receiptQuota = authRes.data.quota;
+        recordInvoiceDownload();
+      }
+
+      const docData = authRes.data.data;
+
+      // Pure client-side zero-storage vector A4 compilation
+      let pdfBytes;
+      if (window.WhizDocumentPdf && typeof window.WhizDocumentPdf.compileWhizDocumentPdf === 'function') {
+        pdfBytes = await window.WhizDocumentPdf.compileWhizDocumentPdf(docData);
+      } else if (typeof window.compileWhizDocumentPdf === 'function') {
+        pdfBytes = await window.compileWhizDocumentPdf(docData);
+      } else {
+        throw new Error('PDF Engine not loaded. Please refresh the page.');
+      }
+
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const filename = `WhizStudio_Receipt_${receiptNumber || 'OFFICIAL'}.pdf`;
+
       const downloadUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = downloadUrl;
@@ -2044,180 +1778,16 @@
       a.click();
       a.remove();
       URL.revokeObjectURL(downloadUrl);
-      return null;
-    }
-    return blob;
-  }
 
-  // 8. Vector PDF Fallback Engine via WhizDocumentPdf & pdf-lib
-  async function buildDocumentPdf(docData) {
-    if (window.WhizDocumentPdf && typeof window.WhizDocumentPdf.compileWhizDocumentPdf === 'function') {
-      return await window.WhizDocumentPdf.compileWhizDocumentPdf(docData);
-    }
-    if (typeof window.compileWhizDocumentPdf === 'function') {
-      return await window.compileWhizDocumentPdf(docData);
-    }
-    throw new Error('WHIZ Document PDF Engine unavailable. Please refresh the page.');
-  }
-
-  // 9. Document Action Handler (Preview vs Zero-Storage Client Download with Daily Rate Limit)
-  async function handleDocumentAction(type, id, number, isPreview = false, buttonEl = null) {
-    const originalText = buttonEl ? buttonEl.innerHTML : '';
-    if (buttonEl) {
-      buttonEl.disabled = true;
-      buttonEl.setAttribute('data-loading', 'true');
-      buttonEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-1"></i> Processing...';
-    }
-
-    try {
-      // CIF Verification Guard: If CIF incomplete, redirect to profile immediately!
-      if (!isPreview && state.cif && !state.cif.isComplete) {
-        switchTab('profile');
-        const modalReq = document.getElementById('modalProfileRequired');
-        if (modalReq) modalReq.classList.remove('hidden');
-        showToast('Client Information Form (CIF) is incomplete. 100% profile completion required before PDF download.', 'error');
-        return;
-      }
-
-      // Daily Rate Limit Guard (Strict 2 downloads per day)
-      if (!isPreview) {
-        const quota = getDailyInvoiceQuota();
-        if (quota.remaining <= 0) {
-          showToast('Daily limit reached: You can generate a maximum of 2 invoices per day. Your allowance resets at midnight.', 'error');
-          updateQuotaUi();
-          return;
-        }
-      }
-
-      // Match item from state
-      let matchedRecord = null;
-      if (type === 'invoice') {
-        matchedRecord = (state.invoices || []).find(inv => String(inv.id) === String(id) || inv.invoice_number === number || inv.invoice_no === number);
-      } else {
-        matchedRecord = (state.payments || []).find(p => String(p.id) === String(id) || p.receipt_number === number || p.receipt_no === number);
-      }
-
-      let docData = null;
-
-      if (isPreview) {
-        // Free preview does NOT consume quota!
-        try {
-          const endpoint = type === 'receipt' ? `/pdf/data/receipt/${encodeURIComponent(number)}` : `/pdf/data/invoice/${encodeURIComponent(number)}`;
-          const res = await apiFetch(endpoint);
-          if (res.ok && res.data && res.data.success) {
-            docData = res.data.data;
-          }
-        } catch (e) {
-          console.warn('Backend preview fetch failed, using local ledger record:', e);
-        }
-
-        if (!docData && matchedRecord) {
-          docData = {
-            documentType: type,
-            number: number,
-            invoiceNumber: number,
-            receiptNumber: number,
-            serviceName: matchedRecord.service_name || matchedRecord.serviceName || matchedRecord.title || 'Marketing & Growth Service',
-            totalCents: matchedRecord.total_cents || matchedRecord.amount_cents || matchedRecord.amountCents || 100000,
-            currency: matchedRecord.currency || 'USD',
-            issueDate: matchedRecord.issue_date || matchedRecord.payment_date || new Date().toISOString().split('T')[0],
-            paymentMethod: matchedRecord.payment_method || 'Bank Transfer',
-            paymentReference: matchedRecord.payment_reference || 'LEDGER-VERIFIED',
-            status: matchedRecord.status || 'paid',
-            outstanding_balance_cents: matchedRecord.outstanding_balance_cents || 0
-          };
-        }
-
-        if (!docData) {
-          throw new Error('Failed to retrieve preview data for this ledger item.');
-        }
-
-        // Generate PDF blob in browser memory with zero server storage
-        const blob = await generateInvoicePdfClientSide(docData, false);
-        const blobUrl = URL.createObjectURL(blob);
-
-        const iframe = document.getElementById('previewDocIframe');
-        const spinner = document.getElementById('previewLoadingSpinner');
-        const title = document.getElementById('previewDocTitle');
-        const modal = document.getElementById('modalDocumentPreview');
-        const downloadBtn = document.getElementById('btnDownloadFromPreview');
-
-        if (title) title.textContent = `${type === 'receipt' ? 'Receipt' : 'Invoice'} Preview: ${number}`;
-        if (iframe) iframe.src = blobUrl;
-        if (spinner) spinner.classList.add('hidden');
-        if (downloadBtn) {
-          downloadBtn.onclick = () => {
-            closePreviewModal();
-            handleDocumentAction(type, id, number, false, buttonEl);
-          };
-        }
-        if (modal) modal.classList.remove('hidden');
-
-      } else {
-        // Official Generation Workflow: Zero Server Storage
-        try {
-          const endpoint = type === 'receipt' ? '/pdf/authorize-receipt' : '/pdf/authorize-invoice';
-          const idempotencyKey = `whiz_pdf_${type}_${number}_${Date.now()}`;
-          const payload = type === 'receipt'
-            ? { paymentId: id, receiptNumber: number, idempotencyKey }
-            : { invoiceId: id, invoiceNumber: number, idempotencyKey };
-
-          const authRes = await apiFetch(endpoint, {
-            method: 'POST',
-            body: JSON.stringify(payload)
-          });
-
-          if (authRes.ok && authRes.data && authRes.data.success) {
-            docData = authRes.data.data;
-            if (authRes.data.quota) {
-              state.receiptQuota = authRes.data.quota;
-            }
-          }
-        } catch (authErr) {
-          console.warn('[PDF Auth] Backend auth notice, proceeding with local ledger zero-storage generation:', authErr);
-        }
-
-        if (!docData && matchedRecord) {
-          docData = {
-            documentType: type,
-            number: number,
-            invoiceNumber: number,
-            receiptNumber: number,
-            serviceName: matchedRecord.service_name || matchedRecord.serviceName || matchedRecord.title || 'Marketing & Growth Service',
-            totalCents: matchedRecord.total_cents || matchedRecord.amount_cents || matchedRecord.amountCents || 100000,
-            currency: matchedRecord.currency || 'USD',
-            issueDate: matchedRecord.issue_date || matchedRecord.payment_date || new Date().toISOString().split('T')[0],
-            paymentMethod: matchedRecord.payment_method || 'Bank Transfer',
-            paymentReference: matchedRecord.payment_reference || 'LEDGER-VERIFIED',
-            status: matchedRecord.status || 'paid',
-            outstanding_balance_cents: matchedRecord.outstanding_balance_cents || 0
-          };
-        }
-
-        if (!docData) {
-          throw new Error('Ledger data could not be retrieved.');
-        }
-
-        // Consume 1 allowance from daily limit (Max 2 downloads per day)
-        const recorded = recordInvoiceDownload();
-        if (!recorded) {
-          showToast('Daily limit reached: You can generate a maximum of 2 invoices per day. Your allowance resets at midnight.', 'error');
-          return;
-        }
-
-        // Zero-storage client-side PDF download directly on user's device
-        await generateInvoicePdfClientSide(docData, true);
-
-        showToast(`Official ${type === 'receipt' ? 'Receipt' : 'Invoice'} ${number} generated and downloaded to your device!`, 'success');
-      }
+      showToast(`Receipt ${receiptNumber} generated and downloaded successfully!`, 'success');
     } catch (err) {
-      console.error('Document generation error:', err);
-      showToast(err.message || 'Operation failed.', 'error');
+      console.error('Receipt download error:', err);
+      showToast(err.message || 'Failed to generate receipt PDF.', 'error');
     } finally {
       if (buttonEl) {
+        buttonEl.innerHTML = originalText;
         buttonEl.disabled = false;
         buttonEl.removeAttribute('data-loading');
-        buttonEl.innerHTML = originalText;
       }
       updateQuotaUi();
     }

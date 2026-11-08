@@ -574,7 +574,7 @@
       tabId = 'finance';
     }
     // Hard Rule 3: Employee Dashboard Constraints (Operational only)
-    else if (normRole === 'employee' && ['finance', 'receipt_template', 'team', 'history'].includes(tabId)) {
+    else if (normRole === 'employee' && ['finance', 'team', 'history'].includes(tabId)) {
       showToast('Access Denied: Financial and administrative modules are strictly restricted for employee accounts.', 'warning');
       tabId = 'tasks';
     }
@@ -583,7 +583,7 @@
 
     const allViews = [
       'overview', 'clients', 'client_details', 'services', 'service_tasks',
-      'projects', 'tasks', 'finance', 'receipt_template', 'team',
+      'projects', 'tasks', 'finance', 'team',
       'support', 'history', 'security'
     ];
 
@@ -605,7 +605,6 @@
       projects: 'Service Projects',
       tasks: 'Live Tasks',
       finance: 'Payments & Ledger',
-      receipt_template: 'Receipt Template Studio',
       team: 'User & Access Management',
       support: 'Support Requests',
       history: 'Audit & History',
@@ -2322,10 +2321,7 @@
             <td class="px-6 py-4 text-slate-500 text-xs">${p.payment_date || 'N/A'}</td>
             <td class="px-6 py-4 text-right">
               <div class="flex items-center justify-end space-x-1.5">
-                <button type="button" class="btn-download-receipt-admin px-2.5 py-1 rounded-lg text-xs font-bold btn-glass-primary shadow-xs cursor-pointer" data-receipt="${p.receipt_number}" title="Download Vector PDF Receipt">
-                  <i class="fa-solid fa-file-pdf mr-1"></i> Receipt
-                </button>
-                <button type="button" class="btn-edit-payment-admin px-2 py-1 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer" data-id="${p.id}" title="Edit Metadata">
+                                <button type="button" class="btn-edit-payment-admin px-2 py-1 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer" data-id="${p.id}" title="Edit Metadata">
                   <i class="fa-solid fa-pen"></i>
                 </button>
                 <button type="button" class="btn-correct-payment-admin px-2 py-1 rounded-lg text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-700 transition-colors cursor-pointer" data-id="${p.id}" title="Financial Correction">
@@ -2375,10 +2371,7 @@
               </div>
 
               <div class="flex items-center justify-end gap-1.5 pt-2 border-t border-[#E3E9EF]">
-                <button type="button" class="btn-download-receipt-admin flex-1 py-1.5 rounded-xl text-xs font-bold btn-glass-primary text-center cursor-pointer" data-receipt="${p.receipt_number}">
-                  <i class="fa-solid fa-file-pdf mr-1"></i> Receipt
-                </button>
-                <button type="button" class="btn-edit-payment-admin px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer" data-id="${p.id}">
+                                <button type="button" class="btn-edit-payment-admin px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer" data-id="${p.id}">
                   Edit
                 </button>
                 <button type="button" class="btn-correct-payment-admin px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-700 cursor-pointer" data-id="${p.id}">
@@ -2404,19 +2397,7 @@
       const attachListeners = (container) => {
         if (!container) return;
 
-        // Download Receipt PDF
-        container.querySelectorAll('.btn-download-receipt-admin').forEach(b => {
-          b.addEventListener('click', async () => {
-            const receiptNum = b.dataset.receipt;
-            const res = await apiFetch(`/pdf/data/receipt/${receiptNum}`);
-            if (res.ok && res.data && res.data.data) {
-              await generateReceiptPdfInBrowser(res.data.data);
-            } else {
-              showToast('Failed to fetch receipt data for download.', 'error');
-            }
-          });
-        });
-
+        
         // Edit Payment Details Modal
         container.querySelectorAll('.btn-edit-payment-admin').forEach(b => {
           b.addEventListener('click', () => {
@@ -3873,312 +3854,7 @@
     }).join('');
   }
 
-  // =========================================================================
-  // OFFICIAL DOCUMENT & PDF GENERATION (pdf-lib, Zero Server Storage)
-  // Matching Supplied Authentic Whiz Studio Clean Master Template
-  async function generateOfficialDocumentPdf(docData) {
-    if (!window.PDFLib) {
-      showToast('PDF generation engine unavailable. Please reload.', 'error');
-      return;
-    }
-
-    try {
-      showToast('Compiling official high-resolution vector PDF...', 'info');
-
-      const { PDFDocument, rgb, StandardFonts } = window.PDFLib;
-      const pdfDoc = await PDFDocument.create();
-      const page = pdfDoc.addPage([595.44, 842.16]); // A4 Size in points
-      const { width, height } = page.getSize();
-
-      const toPdfX = (imgX) => (imgX / 2481) * width;
-      const toPdfY = (imgY) => height - ((imgY / 3509) * height);
-
-      const isReceipt = docData.documentType === 'receipt' || docData.type === 'receipt';
-      const templateUrl = isReceipt
-        ? '/assets/images/receipt-master-template-clean-2481x3509.png'
-        : '/assets/images/invoice-master-template-clean-2481x3509.png';
-
-      try {
-        const tBuf = await fetch(templateUrl).then(r => r.arrayBuffer());
-        const bgImg = await pdfDoc.embedPng(tBuf);
-        page.drawImage(bgImg, { x: 0, y: 0, width, height });
-      } catch (e) {
-        console.warn('Fallback template load:', e);
-        const fbBuf = await fetch('/assets/images/invoice-master-template-clean-2481x3509.png').then(r => r.arrayBuffer());
-        const bgImg = await pdfDoc.embedPng(fbBuf);
-        page.drawImage(bgImg, { x: 0, y: 0, width, height });
-      }
-
-      const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-      const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
-
-      const tealColor = rgb(43/255, 138/255, 121/255); // #2B8A79
-      const darkColor = rgb(34/255, 34/255, 34/255);   // #222222
-      const mutedColor = rgb(100/255, 100/255, 100/255); // #666666
-
-      function wrapAddress(text, maxChars = 38) {
-        if (!text) return [];
-        const words = String(text).split(' ');
-        const lines = [];
-        let current = '';
-        for (const w of words) {
-          if ((current + ' ' + w).trim().length > maxChars) {
-            if (current) lines.push(current.trim());
-            current = w;
-          } else {
-            current = (current + ' ' + w).trim();
-          }
-        }
-        if (current) lines.push(current.trim());
-        return lines;
-      }
-
-      if (isReceipt) {
-        page.drawText('RECEIPT', {
-          x: toPdfX(1383),
-          y: toPdfY(450),
-          size: 38,
-          font: fontBold,
-          color: tealColor
-        });
-        page.drawText('Official Payment Confirmation', {
-          x: toPdfX(1410),
-          y: toPdfY(560),
-          size: 11,
-          font: fontBold,
-          color: darkColor
-        });
-      }
-
-      // BILLED TO
-      const client = docData.client || {};
-      const clientName = client.billingName || client.organizationName || client.fullName || docData.clientName || 'Valued Client';
-      page.drawText(clientName, {
-        x: toPdfX(252),
-        y: toPdfY(840),
-        size: 12.5,
-        font: fontBold,
-        color: darkColor
-      });
-
-      const fullAddr = [client.billingAddress || client.address || docData.clientAddress, client.city, client.country].filter(Boolean).join(', ');
-      const addrLines = wrapAddress(fullAddr, 40);
-      let addrY = 905;
-      addrLines.slice(0, 4).forEach((line, idx) => {
-        page.drawText((idx === 0 ? 'Address: ' : '') + line, {
-          x: toPdfX(252),
-          y: toPdfY(addrY),
-          size: 9.5,
-          font: idx === 0 ? fontBold : fontRegular,
-          color: darkColor
-        });
-        addrY += 65;
-      });
-
-      const clientPhone = client.phone || docData.clientPhone;
-      if (clientPhone) {
-        page.drawText(`Phone Number: ${clientPhone}`, {
-          x: toPdfX(252),
-          y: toPdfY(1185),
-          size: 9.5,
-          font: fontBold,
-          color: darkColor
-        });
-      }
-
-      // Right Column
-      const rightEdgeX = toPdfX(2238);
-      const numLabel = isReceipt ? 'RECEIPT NO: ' : 'INVOICE NO: ';
-      const docNum = isReceipt ? (docData.receiptNumber || docData.docNumber || 'RCPT-1001') : (docData.invoiceNumber || docData.docNumber || 'INV-1001');
-      const numValW = fontRegular.widthOfTextAtSize(docNum, 10.5);
-      const numLabelW = fontBold.widthOfTextAtSize(numLabel, 10.5);
-
-      page.drawText(docNum, {
-        x: rightEdgeX - numValW,
-        y: toPdfY(745),
-        size: 10.5,
-        font: fontRegular,
-        color: darkColor
-      });
-      page.drawText(numLabel, {
-        x: rightEdgeX - numValW - numLabelW,
-        y: toPdfY(745),
-        size: 10.5,
-        font: fontBold,
-        color: tealColor
-      });
-
-      const rawDate = isReceipt ? (docData.paymentDate || docData.docDate || docData.generatedAt) : (docData.issueDate || docData.docDate || docData.generatedAt);
-      let formattedDate = rawDate;
-      try {
-        formattedDate = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(rawDate));
-      } catch (_) {}
-      const dateW = fontRegular.widthOfTextAtSize(formattedDate, 10.5);
-      page.drawText(formattedDate, {
-        x: rightEdgeX - dateW,
-        y: toPdfY(835),
-        size: 10.5,
-        font: fontRegular,
-        color: darkColor
-      });
-
-      // PAYMENT TYPE
-      const pTypeLabel = 'PAYMENT TYPE';
-      const pTypeLabelW = fontBold.widthOfTextAtSize(pTypeLabel, 9.5);
-      page.drawText(pTypeLabel, {
-        x: rightEdgeX - pTypeLabelW,
-        y: toPdfY(910),
-        size: 9.5,
-        font: fontBold,
-        color: tealColor
-      });
-      const pTypeVal = docData.serviceName || docData.paymentType || 'Agency Digital Services';
-      const pTypeValW = fontRegular.widthOfTextAtSize(pTypeVal, 10);
-      page.drawText(pTypeVal, {
-        x: rightEdgeX - pTypeValW,
-        y: toPdfY(1000),
-        size: 10,
-        font: fontRegular,
-        color: darkColor
-      });
-
-      // PAYMENT METHOD
-      const pMethodLabel = 'PAYMENT METHOD';
-      const pMethodLabelW = fontBold.widthOfTextAtSize(pMethodLabel, 9.5);
-      page.drawText(pMethodLabel, {
-        x: rightEdgeX - pMethodLabelW,
-        y: toPdfY(1090),
-        size: 9.5,
-        font: fontBold,
-        color: tealColor
-      });
-      const pMethodVal = docData.paymentMethod || 'Bank Transfer';
-      const pMethodValW = fontRegular.widthOfTextAtSize(pMethodVal, 10.5);
-      page.drawText(pMethodVal, {
-        x: rightEdgeX - pMethodValW,
-        y: toPdfY(1170),
-        size: 10.5,
-        font: fontRegular,
-        color: darkColor
-      });
-
-      // Account Details
-      const accConfig = docData.paymentAccountDetails || {};
-      const accLabel = 'Account Details -';
-      const accLabelW = fontRegular.widthOfTextAtSize(accLabel, 9);
-      page.drawText(accLabel, {
-        x: rightEdgeX - accLabelW,
-        y: toPdfY(1240),
-        size: 9,
-        font: fontRegular,
-        color: mutedColor
-      });
-
-      const accName = accConfig.accountName || docData.accountDetails || 'Md Kazi Abdur Rahim Emon';
-      const accNameW = fontRegular.widthOfTextAtSize(accName, 9.5);
-      page.drawText(accName, {
-        x: rightEdgeX - accNameW,
-        y: toPdfY(1305),
-        size: 9.5,
-        font: fontRegular,
-        color: darkColor
-      });
-
-      const accNumStr = accConfig.accountNumber ? `Phone / A/C: ${accConfig.accountNumber}` : (docData.agencyPhone ? `Phone: ${docData.agencyPhone}` : (docData.paymentReference ? `Ref: ${docData.paymentReference}` : 'Verified Ledger Record'));
-      const accNumW = fontRegular.widthOfTextAtSize(accNumStr, 9);
-      page.drawText(accNumStr, {
-        x: rightEdgeX - accNumW,
-        y: toPdfY(1375),
-        size: 9,
-        font: fontRegular,
-        color: darkColor
-      });
-
-      // Table Row
-      const items = (docData.items && docData.items.length > 0) ? docData.items : [{
-        description: docData.serviceName || docData.itemDesc || 'Professional Retainer Services',
-        quantity: docData.itemQty || 1,
-        unitPriceCents: isReceipt ? (docData.amountPaidCents || Number(docData.itemRate || 0)*100) : (docData.totalCents || Number(docData.itemRate || 0)*100),
-        totalCents: isReceipt ? (docData.amountPaidCents || Number(docData.itemAmount || 0)*100) : (docData.totalCents || Number(docData.itemAmount || 0)*100)
-      }];
-      const firstItem = items[0];
-      const itemDescLines = wrapAddress(firstItem.description || 'Agency Retainer', 35);
-      let descY = 1850;
-      itemDescLines.slice(0, 2).forEach(line => {
-        page.drawText(line, {
-          x: toPdfX(289),
-          y: toPdfY(descY),
-          size: 9.5,
-          font: fontRegular,
-          color: darkColor
-        });
-        descY += 50;
-      });
-
-      const qtyStr = String(firstItem.quantity || 1);
-      const qtyW = fontRegular.widthOfTextAtSize(qtyStr, 9.5);
-      page.drawText(qtyStr, {
-        x: toPdfX(1236) - qtyW / 2,
-        y: toPdfY(1875),
-        size: 9.5,
-        font: fontRegular,
-        color: darkColor
-      });
-
-      const rateVal = ((firstItem.unitPriceCents || firstItem.totalCents || 0) / 100).toFixed(2);
-      const rateW = fontRegular.widthOfTextAtSize(rateVal, 9.5);
-      page.drawText(rateVal, {
-        x: toPdfX(1614) - rateW / 2,
-        y: toPdfY(1875),
-        size: 9.5,
-        font: fontRegular,
-        color: darkColor
-      });
-
-      const lineTotalVal = ((firstItem.totalCents || 0) / 100).toFixed(2);
-      const lineTotalW = fontRegular.widthOfTextAtSize(lineTotalVal, 9.5);
-      page.drawText(lineTotalVal, {
-        x: toPdfX(2100) - lineTotalW,
-        y: toPdfY(1875),
-        size: 9.5,
-        font: fontRegular,
-        color: darkColor
-      });
-
-      // TOTAL
-      const grandTotalCents = isReceipt ? (docData.amountPaidCents || Number(docData.totalAmount || 0)*100) : (docData.totalCents || Number(docData.totalAmount || 0)*100);
-      const curr = docData.currency || 'USD';
-      const totalFormatted = `${curr} ${(grandTotalCents / 100).toFixed(2)}`;
-      const totalFormattedW = fontBold.widthOfTextAtSize(totalFormatted, 11);
-      page.drawText(totalFormatted, {
-        x: toPdfX(2100) - totalFormattedW,
-        y: toPdfY(2090),
-        size: 11,
-        font: fontBold,
-        color: tealColor
-      });
-
-      const pdfBytes = await pdfDoc.save();
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-      const downloadUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = downloadUrl;
-      a.download = `WhizStudio_${isReceipt ? 'Receipt' : 'Invoice'}_${docNum}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(downloadUrl);
-
-      showToast(`Official ${isReceipt ? 'Receipt' : 'Invoice'} downloaded successfully!`, 'success');
-    } catch (err) {
-      console.error('PDF error:', err);
-      showToast(err.message || 'Failed to generate PDF.', 'error');
-    }
-  }
-
-  async function generateReceiptPdfInBrowser(data) {
-    return generateOfficialDocumentPdf({ ...data, documentType: 'receipt' });
-  }
+  // Admin Panel: Pure ledger data-entry and management interface. Zero admin PDF generation.
 
   // Finance Subtab Loaders
   async function loadInvoicesData() {
@@ -4211,25 +3887,11 @@
                 </span>
               </td>
               <td class="px-6 py-4 text-right">
-                <button type="button" class="btn-download-invoice-admin px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer shadow-xs" data-number="${inv.invoice_number}">
-                  <i class="fa-solid fa-file-pdf mr-1 text-[#147D64]"></i> PDF Invoice
-                </button>
+                <span class="text-xs font-mono text-slate-400 font-semibold">Recorded</span>
               </td>
             </tr>
           `;
         }).join('');
-
-        tbody.querySelectorAll('.btn-download-invoice-admin').forEach(btn => {
-          btn.addEventListener('click', async () => {
-            const num = btn.dataset.number;
-            const res = await apiFetch(`/pdf/data/invoice/${encodeURIComponent(num)}`);
-            if (res.ok && res.data && res.data.data) {
-              await generateOfficialDocumentPdf(res.data.data);
-            } else {
-              showToast('Failed to fetch invoice data.', 'error');
-            }
-          });
-        });
       }
     } catch (e) {
       console.warn('Error loading invoices:', e);
@@ -4981,6 +4643,32 @@
     });
 
     // Edit Client Profile & Authoritative CIF Modal
+    // Reset Client Receipt Download Limit (Phase 1 Flexibility Control)
+    document.getElementById('btnResetClientReceiptLimit')?.addEventListener('click', async () => {
+      const clientId = state.selectedClientId;
+      if (!clientId) {
+        showToast('Please select a client first.', 'error');
+        return;
+      }
+      if (!confirm("Reset this client's daily receipt download limit back to 0/2?")) {
+        return;
+      }
+      const btn = document.getElementById('btnResetClientReceiptLimit');
+      setBtnLoading(btn, true, 'Resetting...');
+      try {
+        const res = await apiFetch(`/pdf/quota/reset/${clientId}`, { method: 'POST' });
+        setBtnLoading(btn, false);
+        if (res.ok && res.data && res.data.success) {
+          showToast(res.data.message || "Client's daily receipt download limit has been reset.", 'success');
+        } else {
+          showToast(res.data?.error || 'Failed to reset download limit.', 'error');
+        }
+      } catch (err) {
+        setBtnLoading(btn, false);
+        showToast('Network error while resetting quota.', 'error');
+      }
+    });
+
     document.getElementById('btnOpenEditClientModal')?.addEventListener('click', async () => {
       const clientId = state.selectedClientId;
       if (!clientId) return;
@@ -5671,24 +5359,44 @@
           <option value="${c.organization_id || c.id}">${escapeHtml(c.company_name || c.full_name)} (${escapeHtml(c.email)})</option>
         `).join('');
 
-        // Populate custom glass select menu
+        // Populate custom searchable glass select menu
         if (clientMenu) {
           clientMenu.innerHTML = `
-            <button type="button" class="glass-select-option selected" data-value="" role="option" aria-selected="true">
-              <i class="fa-solid fa-building text-slate-400 text-xs shrink-0 option-icon"></i>
-              <span class="select-opt-text truncate font-sans font-medium text-slate-500">Select client...</span>
-              <i class="fa-solid fa-check check-icon"></i>
-            </button>
-          ` + state.clientsCache.map(c => `
-            <button type="button" class="glass-select-option" data-value="${escapeHtml(c.organization_id || c.id)}" role="option" aria-selected="false">
-              <i class="fa-solid fa-building text-[#087F70] text-xs shrink-0 option-icon"></i>
-              <div class="flex-1 min-w-0 text-left">
-                <span class="select-opt-text truncate block font-sans font-medium text-[#172B36]">${escapeHtml(c.company_name || c.full_name)}</span>
-                <span class="text-[11px] text-slate-400 truncate block">${escapeHtml(c.email)}</span>
+            <div class="p-2 border-b border-[#E3E9EF] sticky top-0 bg-white z-10" onclick="event.stopPropagation()">
+              <div class="relative">
+                <i class="fa-solid fa-magnifying-glass text-slate-400 text-xs absolute left-2.5 top-1/2 -translate-y-1/2"></i>
+                <input type="text" id="paymentClientSearchInput" placeholder="Search client by name or email..." class="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-[#E3E9EF] bg-slate-50 focus:bg-white focus:outline-none font-sans text-[#172B36]">
               </div>
-              <i class="fa-solid fa-check check-icon"></i>
-            </button>
-          `).join('');
+            </div>
+            <div id="paymentClientOptionsList" class="max-h-60 overflow-y-auto">
+              <button type="button" class="glass-select-option selected" data-value="" role="option" aria-selected="true">
+                <i class="fa-solid fa-building text-slate-400 text-xs shrink-0 option-icon"></i>
+                <span class="select-opt-text truncate font-sans font-medium text-slate-500">Select client...</span>
+                <i class="fa-solid fa-check check-icon"></i>
+              </button>
+              ${state.clientsCache.map(c => `
+                <button type="button" class="glass-select-option" data-value="${escapeHtml(c.organization_id || c.id)}" role="option" aria-selected="false">
+                  <i class="fa-solid fa-building text-[#087F70] text-xs shrink-0 option-icon"></i>
+                  <div class="flex-1 min-w-0 text-left">
+                    <span class="select-opt-text truncate block font-sans font-medium text-[#172B36]">${escapeHtml(c.company_name || c.full_name)}</span>
+                    <span class="text-[11px] text-slate-400 truncate block">${escapeHtml(c.email)}</span>
+                  </div>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+              `).join('')}
+            </div>
+          `;
+
+          const searchInput = clientMenu.querySelector('#paymentClientSearchInput');
+          searchInput?.addEventListener('input', (e) => {
+            const q = e.target.value.toLowerCase().trim();
+            clientMenu.querySelectorAll('#paymentClientOptionsList .glass-select-option').forEach(opt => {
+              if (!opt.dataset.value) return; // Keep "Select client..."
+              const text = opt.textContent.toLowerCase();
+              opt.style.display = text.includes(q) ? '' : 'none';
+            });
+          });
+          searchInput?.addEventListener('keydown', (e) => e.stopPropagation());
         }
 
         if (invSelect) {
@@ -6148,49 +5856,7 @@
       updateTemplateStudioPreview();
     });
 
-    ['tplDocNumber', 'tplDocDate', 'tplClientName', 'tplClientAddress', 'tplClientPhone', 'tplPaymentType', 'tplPaymentMethod', 'tplAccountDetails', 'tplAgencyPhone', 'tplItemDesc', 'tplItemQty', 'tplItemRate'].forEach(id => {
-      document.getElementById(id)?.addEventListener('input', updateTemplateStudioPreview);
-    });
-
-    document.getElementById('btnDownloadTemplatePdf')?.addEventListener('click', () => {
-      const isInvoice = tplStudioMode === 'invoice';
-      const qty = parseFloat(document.getElementById('tplItemQty')?.value || '1');
-      const rate = parseFloat(document.getElementById('tplItemRate')?.value || '0');
-      const amount = Math.round(qty * rate);
-
-      const docData = {
-        type: isInvoice ? 'invoice' : 'receipt',
-        docNumber: document.getElementById('tplDocNumber')?.value || '829926',
-        docDate: document.getElementById('tplDocDate')?.value || '29 September, 2026',
-        clientName: document.getElementById('tplClientName')?.value || 'Pholl Bihar',
-        clientAddress: document.getElementById('tplClientAddress')?.value || 'Dhaka, Bangladesh',
-        clientPhone: document.getElementById('tplClientPhone')?.value || '+880 1624644435',
-        paymentType: document.getElementById('tplPaymentType')?.value || 'Facebook Ads',
-        paymentMethod: document.getElementById('tplPaymentMethod')?.value || 'Bkash',
-        accountDetails: document.getElementById('tplAccountDetails')?.value || 'Md Kazi Abdur Rahim Emon',
-        agencyPhone: document.getElementById('tplAgencyPhone')?.value || '+880 1560066374',
-        itemDesc: document.getElementById('tplItemDesc')?.value || 'Facebook Ads Expenses & Service Change',
-        itemQty: qty.toString(),
-        itemRate: rate.toString(),
-        itemAmount: amount.toString(),
-        totalAmount: amount.toString()
-      };
-      generateOfficialDocumentPdf(docData);
-    });
-
-    // Close Modals
-    document.querySelectorAll('.btn-close-modal').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const modalId = btn.dataset.modal;
-        const m = document.getElementById(modalId);
-        if (m) m.classList.add('hidden');
-      });
-    });
-
-    // Test Generate Receipt PDF
-    document.getElementById('btnTestGenerateReceipt')?.addEventListener('click', () => {
-      document.getElementById('btnDownloadTemplatePdf')?.click();
-    });
+    
   }
 
   function initPasswordToggles() {
@@ -6260,7 +5926,7 @@
       if (mainLayout) mainLayout.classList.remove('hidden');
 
       const hash = (window.location.hash || '').replace('#', '');
-      const validTabs = ['overview', 'clients', 'services', 'projects', 'tasks', 'finance', 'receipt_template', 'team', 'support', 'history', 'security'];
+      const validTabs = ['overview', 'clients', 'services', 'projects', 'tasks', 'finance', 'team', 'support', 'history', 'security'];
       const initialTab = validTabs.includes(hash) ? hash : 'overview';
       switchTab(initialTab, false);
 
@@ -6379,7 +6045,7 @@
         const sId = hash.replace('service-tasks-', '');
         openServiceTasksWorkspace(sId);
       } else {
-        const validTabs = ['overview', 'clients', 'services', 'projects', 'tasks', 'finance', 'receipt_template', 'team', 'support', 'history', 'security', 'settings'];
+        const validTabs = ['overview', 'clients', 'services', 'projects', 'tasks', 'finance', 'team', 'support', 'history', 'security', 'settings'];
         const initialTab = validTabs.includes(hash) ? hash : 'overview';
         switchTab(initialTab);
       }
