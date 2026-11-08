@@ -835,7 +835,7 @@
             </button>
 
             <!-- 3. Service Management -->
-            <button type="button" data-dash-tab="services" class="whiz-dock-item" aria-label="Service Management">
+            <button type="button" id="sidebarNavServices" data-dash-tab="services" class="role-operational-nav whiz-dock-item" aria-label="Service Management">
               <div class="w-5 h-5 flex items-center justify-center shrink-0">
                 <i class="fa-solid fa-layer-group text-sm dock-icon"></i>
               </div>
@@ -850,7 +850,7 @@
             </button>
 
             <!-- 4. Service Projects -->
-            <button type="button" data-dash-tab="projects" class="whiz-dock-item" aria-label="Service Projects">
+            <button type="button" id="sidebarNavProjects" data-dash-tab="projects" class="role-operational-nav whiz-dock-item" aria-label="Service Projects">
               <div class="w-5 h-5 flex items-center justify-center shrink-0">
                 <i class="fa-solid fa-folder-tree text-sm dock-icon"></i>
               </div>
@@ -861,7 +861,7 @@
             </button>
 
             <!-- 5. Live Tasks (SOPs) -->
-            <button type="button" data-dash-tab="tasks" class="whiz-dock-item" aria-label="Live Tasks (SOPs)">
+            <button type="button" id="sidebarNavTasks" data-dash-tab="tasks" class="role-operational-nav whiz-dock-item" aria-label="Live Tasks (SOPs)">
               <div class="w-5 h-5 flex items-center justify-center shrink-0">
                 <i class="fa-solid fa-list-check text-sm dock-icon"></i>
               </div>
@@ -942,7 +942,7 @@
             </button>
 
             <!-- 10. Audit & History -->
-            <button type="button" data-dash-tab="history" class="whiz-dock-item" aria-label="Audit & History">
+            <button type="button" id="sidebarNavHistory" data-dash-tab="history" class="role-admin-only whiz-dock-item" aria-label="Audit & History">
               <div class="w-5 h-5 flex items-center justify-center shrink-0">
                 <i class="fa-solid fa-clock-rotate-left text-sm dock-icon"></i>
               </div>
@@ -1016,7 +1016,7 @@
                 <p class="text-xs font-semibold truncate admin-display-name leading-tight">Administrator</p>
                 <div class="flex items-center gap-1 mt-0.5 text-[#087F70]">
                   <i class="fa-solid fa-shield-halved text-[9px] shrink-0"></i>
-                  <span class="text-[10px] font-medium leading-none">Super Admin</span>
+                  <span class="text-[10px] font-medium leading-none" id="drawerRoleBadge">Super Admin</span>
                 </div>
               </div>
             </div>
@@ -1060,16 +1060,16 @@
               <i class="fa-solid fa-users text-xs w-4 dock-icon"></i>
               <span class="flex-1">Client Directory</span>
             </button>
-            <button type="button" data-dash-tab="services" class="whiz-dock-item w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-semibold transition-all text-left touch-manipulation cursor-pointer">
+            <button type="button" id="drawerNavServices" data-dash-tab="services" class="role-operational-nav whiz-dock-item w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-semibold transition-all text-left touch-manipulation cursor-pointer">
               <i class="fa-solid fa-layer-group text-xs w-4 dock-icon"></i>
               <span class="flex-1">Service Management</span>
               <span class="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-md bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20">12 Srv</span>
             </button>
-            <button type="button" data-dash-tab="projects" class="whiz-dock-item w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-semibold transition-all text-left touch-manipulation cursor-pointer">
+            <button type="button" id="drawerNavProjects" data-dash-tab="projects" class="role-operational-nav whiz-dock-item w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-semibold transition-all text-left touch-manipulation cursor-pointer">
               <i class="fa-solid fa-folder-tree text-xs w-4 dock-icon"></i>
               <span class="flex-1">Service Projects</span>
             </button>
-            <button type="button" data-dash-tab="tasks" class="whiz-dock-item w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-semibold transition-all text-left touch-manipulation cursor-pointer">
+            <button type="button" id="drawerNavTasks" data-dash-tab="tasks" class="role-operational-nav whiz-dock-item w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-semibold transition-all text-left touch-manipulation cursor-pointer">
               <i class="fa-solid fa-list-check text-xs w-4 dock-icon"></i>
               <span class="flex-1">Live Tasks (SOPs)</span>
             </button>
@@ -1105,7 +1105,7 @@
               <i class="fa-solid fa-inbox text-xs w-4 dock-icon"></i>
               <span class="flex-1">Support Requests</span>
             </button>
-            <button type="button" data-dash-tab="history" class="whiz-dock-item w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-semibold transition-all text-left touch-manipulation cursor-pointer">
+            <button type="button" id="drawerNavHistory" data-dash-tab="history" class="role-admin-only whiz-dock-item w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-semibold transition-all text-left touch-manipulation cursor-pointer">
               <i class="fa-solid fa-clock-rotate-left text-xs w-4 dock-icon"></i>
               <span class="flex-1">Audit &amp; History</span>
             </button>
@@ -1285,7 +1285,7 @@
               </div>
 
               <!-- KPI Card 2: Active Projects -->
-              <div id="kpiCardProjects" data-kpi-nav="projects" data-kpi-filter="active" role="button" tabindex="0" aria-label="View Active Projects" class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs hover:border-[#147D64]/40 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 cursor-pointer select-none space-y-1 group relative">
+              <div id="kpiCardProjects" data-kpi-nav="projects" data-kpi-filter="active" role="button" tabindex="0" aria-label="View Active Projects" class="role-operational-only p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs hover:border-[#147D64]/40 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 cursor-pointer select-none space-y-1 group relative">
                 <div class="flex items-center justify-between">
                   <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Active Projects</span>
                   <i class="fa-solid fa-arrow-right text-[10px] text-[#147D64] opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"></i>
@@ -1295,7 +1295,7 @@
               </div>
 
               <!-- KPI Card 3: Active Services -->
-              <div id="kpiCardServices" data-kpi-nav="services" data-kpi-filter="active" role="button" tabindex="0" aria-label="View Active Services" class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs hover:border-[#147D64]/40 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 cursor-pointer select-none space-y-1 group relative">
+              <div id="kpiCardServices" data-kpi-nav="services" data-kpi-filter="active" role="button" tabindex="0" aria-label="View Active Services" class="role-operational-only p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs hover:border-[#147D64]/40 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 cursor-pointer select-none space-y-1 group relative">
                 <div class="flex items-center justify-between">
                   <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Active Services</span>
                   <i class="fa-solid fa-arrow-right text-[10px] text-[#147D64] opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"></i>
@@ -1307,7 +1307,7 @@
               </div>
 
               <!-- KPI Card 4: Completed Tasks -->
-              <div id="kpiCardCompletedTasks" data-kpi-nav="tasks" data-kpi-filter="completed" role="button" tabindex="0" aria-label="View Completed Tasks" class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs hover:border-[#147D64]/40 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 cursor-pointer select-none space-y-1 group relative">
+              <div id="kpiCardCompletedTasks" data-kpi-nav="tasks" data-kpi-filter="completed" role="button" tabindex="0" aria-label="View Completed Tasks" class="role-operational-only p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs hover:border-[#147D64]/40 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 cursor-pointer select-none space-y-1 group relative">
                 <div class="flex items-center justify-between">
                   <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Completed Tasks</span>
                   <i class="fa-solid fa-arrow-right text-[10px] text-[#147D64] opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"></i>
@@ -1317,7 +1317,7 @@
               </div>
 
               <!-- KPI Card 5: Pending Tasks -->
-              <div id="kpiCardPendingTasks" data-kpi-nav="tasks" data-kpi-filter="pending" role="button" tabindex="0" aria-label="View Pending Tasks" class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs hover:border-[#147D64]/40 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 cursor-pointer select-none space-y-1 group relative">
+              <div id="kpiCardPendingTasks" data-kpi-nav="tasks" data-kpi-filter="pending" role="button" tabindex="0" aria-label="View Pending Tasks" class="role-operational-only p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs hover:border-[#147D64]/40 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 cursor-pointer select-none space-y-1 group relative">
                 <div class="flex items-center justify-between">
                   <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Pending Tasks</span>
                   <i class="fa-solid fa-arrow-right text-[10px] text-[#147D64] opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"></i>
@@ -1342,7 +1342,7 @@
             <!-- Visual Analytics & Charts Section (Driven by Live Data) -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               <!-- Chart 1: Service Completion Distribution -->
-              <div class="p-5 sm:p-6 rounded-2xl bg-white border border-[#E3E9EF] shadow-sm space-y-3">
+              <div id="chartServiceDistributionContainer" class="role-operational-only p-5 sm:p-6 rounded-2xl bg-white border border-[#E3E9EF] shadow-sm space-y-3">
                 <div class="pb-2.5 border-b border-[#E3E9EF]">
                   <h3 class="text-xs font-bold uppercase tracking-wider text-[#172B36]">Service Engagement Distribution</h3>
                   <p class="text-[11px] text-slate-400 font-normal leading-normal mt-0.5">Live service contracts breakdown across client base</p>
@@ -1357,7 +1357,7 @@
               </div>
 
               <!-- Chart 2: Project Progress Overview -->
-              <div class="p-5 sm:p-6 rounded-2xl bg-white border border-[#E3E9EF] shadow-sm space-y-3">
+              <div id="chartProjectProgressContainer" class="role-operational-only p-5 sm:p-6 rounded-2xl bg-white border border-[#E3E9EF] shadow-sm space-y-3">
                 <div class="pb-2.5 border-b border-[#E3E9EF]">
                   <h3 class="text-xs font-bold uppercase tracking-wider text-[#172B36]">Active Project Progress</h3>
                   <p class="text-[11px] text-slate-400 font-normal leading-normal mt-0.5">Real-time completion percentage calculated from live tasks</p>
@@ -1372,7 +1372,7 @@
               </div>
 
               <!-- Chart 3: Live Task Status Distribution -->
-              <div class="p-5 sm:p-6 rounded-2xl bg-white border border-[#E3E9EF] shadow-sm space-y-3">
+              <div id="chartTaskStatusContainer" class="role-operational-only p-5 sm:p-6 rounded-2xl bg-white border border-[#E3E9EF] shadow-sm space-y-3">
                 <div class="pb-2.5 border-b border-[#E3E9EF]">
                   <h3 class="text-xs font-bold uppercase tracking-wider text-[#172B36]">Live Task Pipeline</h3>
                   <p class="text-[11px] text-slate-400 font-normal leading-normal mt-0.5">Breakdown of operational tasks across sprints</p>
@@ -1548,7 +1548,7 @@
                     <i class="fa-solid fa-pen-to-square text-xs text-[#087F70]"></i>
                     <span class="truncate">Edit Profile</span>
                   </button>
-                  <button type="button" id="btnOpenAssignServiceClientModal" class="h-10 px-3.5 rounded-xl text-xs font-semibold bg-[#087F70] hover:bg-[#066559] active:bg-[#055046] text-white shadow-2xs hover:shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer w-full select-none">
+                  <button type="button" id="btnOpenAssignServiceClientModal" class="role-service-provisioning h-10 px-3.5 rounded-xl text-xs font-semibold bg-[#087F70] hover:bg-[#066559] active:bg-[#055046] text-white shadow-2xs hover:shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer w-full select-none">
                     <i class="fa-solid fa-plus text-xs"></i>
                     <span class="truncate">Assign Service</span>
                   </button>
@@ -1743,7 +1743,7 @@
               <!-- Right 2 Columns: Assigned Services & Service Projects -->
               <div class="lg:col-span-2 space-y-4 sm:space-y-6">
                 <!-- Section B: Assigned Services -->
-                <div class="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white border border-[#E6ECE9] shadow-xs hover:border-[#087F70]/20 transition-all space-y-4">
+                <div id="clientAssignedServicesCard" class="role-operational-only p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white border border-[#E6ECE9] shadow-xs hover:border-[#087F70]/20 transition-all space-y-4">
                   <div class="flex items-center justify-between pb-3 border-b border-[#E6ECE9]">
                     <h3 class="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-2">
                       <i class="fa-solid fa-layer-group text-[#087F70]"></i>
@@ -1757,7 +1757,7 @@
                 </div>
 
                 <!-- Section C: Projects with Real-time Progress -->
-                <div class="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white border border-[#E6ECE9] shadow-xs hover:border-[#087F70]/20 transition-all space-y-4">
+                <div id="clientProjectsCard" class="role-operational-only p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white border border-[#E6ECE9] shadow-xs hover:border-[#087F70]/20 transition-all space-y-4">
                   <div class="flex items-center justify-between pb-3 border-b border-[#E6ECE9]">
                     <h3 class="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-2">
                       <i class="fa-solid fa-folder-tree text-[#087F70]"></i>
@@ -1771,7 +1771,7 @@
                 </div>
 
                 <!-- Recent Client Activity History -->
-                <div class="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white border border-[#E6ECE9] shadow-xs hover:border-[#087F70]/20 transition-all space-y-3.5 overflow-hidden">
+                <div id="clientAuditHistoryCard" class="role-admin-only p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white border border-[#E6ECE9] shadow-xs hover:border-[#087F70]/20 transition-all space-y-3.5 overflow-hidden">
                   <div class="flex items-center justify-between pb-2.5 border-b border-[#E6ECE9]">
                     <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                       <i class="fa-solid fa-clock-rotate-left text-[#087F70]"></i>
@@ -2579,7 +2579,7 @@
                   <div class="glass-select-wrapper" data-glass-select="inviteRole">
                     <select id="inviteRole" name="role" class="sr-only" tabindex="-1" aria-hidden="true">
                       <option value="admin" selected>Admin (Operational Authority)</option>
-                      <option value="accounts">Accounts (Billing & Finance)</option>
+                      <option value="accountant">Accountant (Billing & Finance)</option>
                       <option value="employee">Employee (Operational Tasks)</option>
                     </select>
                     <button type="button" class="glass-select-trigger" id="inviteRoleTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="inviteRoleMenu">
@@ -2595,9 +2595,9 @@
                         <span class="truncate">Admin (Operational Authority)</span>
                         <i class="fa-solid fa-check check-icon"></i>
                       </button>
-                      <button type="button" class="glass-select-option" data-value="accounts" role="option" aria-selected="false">
+                      <button type="button" class="glass-select-option" data-value="accountant" role="option" aria-selected="false">
                         <i class="fa-solid fa-calculator text-purple-600 text-xs shrink-0 option-icon"></i>
-                        <span class="truncate">Accounts (Billing & Finance)</span>
+                        <span class="truncate">Accountant (Billing & Finance)</span>
                         <i class="fa-solid fa-check check-icon"></i>
                       </button>
                       <button type="button" class="glass-select-option" data-value="employee" role="option" aria-selected="false">
@@ -3263,13 +3263,13 @@
         </button>
 
         <!-- 3. Services -->
-        <button type="button" data-dash-tab="services" class="flex-1 min-w-0 py-1.5 px-2 rounded-xl flex flex-col items-center justify-center gap-1 transition-all duration-200 select-none touch-manipulation cursor-pointer group text-[#74817D] hover:text-[#202D2A] border border-transparent font-semibold" aria-label="Services Management">
+        <button type="button" id="bottomNavServices" data-dash-tab="services" class="role-operational-nav flex-1 min-w-0 py-1.5 px-2 rounded-xl flex flex-col items-center justify-center gap-1 transition-all duration-200 select-none touch-manipulation cursor-pointer group text-[#74817D] hover:text-[#202D2A] border border-transparent font-semibold" aria-label="Services Management">
           <i class="fa-solid fa-layer-group text-sm transition-transform duration-200 group-hover:scale-105"></i>
           <span class="dash-bottom-label text-[10px] font-semibold tracking-tight truncate leading-none">Services</span>
         </button>
 
         <!-- 4. Tasks -->
-        <button type="button" data-dash-tab="tasks" class="flex-1 min-w-0 py-1.5 px-2 rounded-xl flex flex-col items-center justify-center gap-1 transition-all duration-200 select-none touch-manipulation cursor-pointer group text-[#74817D] hover:text-[#202D2A] border border-transparent font-semibold" aria-label="Tasks & SOPs">
+        <button type="button" id="bottomNavTasks" data-dash-tab="tasks" class="role-operational-nav flex-1 min-w-0 py-1.5 px-2 rounded-xl flex flex-col items-center justify-center gap-1 transition-all duration-200 select-none touch-manipulation cursor-pointer group text-[#74817D] hover:text-[#202D2A] border border-transparent font-semibold" aria-label="Tasks & SOPs">
           <i class="fa-solid fa-list-check text-sm transition-transform duration-200 group-hover:scale-105"></i>
           <span class="dash-bottom-label text-[10px] font-semibold tracking-tight truncate leading-none">Tasks</span>
         </button>
@@ -5357,7 +5357,7 @@
             <select id="roleChangeNewRole" name="newRole" class="sr-only" tabindex="-1" aria-hidden="true">
               <option value="client" selected>Client (Standard Access)</option>
               <option value="admin">Admin (Operational Authority)</option>
-              <option value="accounts">Accounts (Billing & Finance)</option>
+              <option value="accountant">Accountant (Billing & Finance)</option>
               <option value="employee">Employee (Operational Tasks)</option>
             </select>
             <button type="button" class="glass-select-trigger" id="roleChangeNewRoleTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="roleChangeNewRoleMenu">

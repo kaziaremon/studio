@@ -192,7 +192,7 @@
     team: [
       { id: 'usr_01', fullName: 'Kazi Emon', full_name: 'Kazi Emon', email: 'kaziaremon@gmail.com', role: 'owner', isSuperAdmin: true, status: 'active', designation: 'Founder & Principal Consultant', created_at: '2026-01-01' },
       { id: 'usr_02', fullName: 'Sazzad Kabir', full_name: 'Sazzad Kabir', email: 'sazzad@whizstudio.io', role: 'admin', isSuperAdmin: false, status: 'active', designation: 'Operations Administrator', created_at: '2026-02-15' },
-      { id: 'usr_03', fullName: 'Farhan Ahmed', full_name: 'Farhan Ahmed', email: 'farhan@whizstudio.io', role: 'accounts', isSuperAdmin: false, status: 'active', designation: 'Accounts & Billing Manager', created_at: '2026-03-01' },
+      { id: 'usr_03', fullName: 'Farhan Ahmed', full_name: 'Farhan Ahmed', email: 'farhan@whizstudio.io', role: 'accountant', isSuperAdmin: false, status: 'active', designation: 'Accounts & Billing Manager', created_at: '2026-03-01' },
       { id: 'usr_04', fullName: 'Ayesha Siddiqa', full_name: 'Ayesha Siddiqa', email: 'ayesha@whizstudio.io', role: 'employee', isSuperAdmin: false, status: 'active', designation: 'Senior Marketing Strategist', created_at: '2026-04-10' },
       { id: 'usr_05', fullName: 'Naimur Rahman', full_name: 'Naimur Rahman', email: 'naimur@whizstudio.io', role: 'employee', isSuperAdmin: false, status: 'active', designation: 'Lead Creative Copywriter', created_at: '2026-05-20' }
     ],
@@ -234,7 +234,7 @@
 
       // 1. Current Profile
       if (ep === '/portal/me') {
-        const role = (state.adminProfile && state.adminProfile.role) || 'owner';
+        const role = (state.adminProfile && state.adminProfile.role) || (state.currentUser && state.currentUser.role) || 'owner';
         const userObj = Object.assign({}, mockAdminData.user, { role: role });
         return Promise.resolve({ ok: true, status: 200, data: { success: true, data: { user: userObj } } });
       }

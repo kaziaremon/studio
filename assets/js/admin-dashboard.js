@@ -73,108 +73,276 @@
     currentTaskStatus: 'all'
   };
 
+  // =========================================================================
+  // ROLE-BASED ACCESS CONTROL (RBAC) & PERMISSION ENGINE
+  // =========================================================================
+  function normalizeRole(role) {
+    if (!role) return 'client';
+    const r = String(role).trim().toLowerCase();
+    if (r === 'owner' || r === 'super_admin' || r === 'superadmin') return 'super_admin';
+    if (r === 'admin' || r === 'administrator') return 'admin';
+    if (r === 'accountant' || r === 'accounts' || r === 'finance' || r === 'billing') return 'accountant';
+    if (r === 'employee' || r === 'staff' || r === 'project_manager' || r === 'operations') return 'employee';
+    return 'client';
+  }
+
+  function formatRoleName(role) {
+    const norm = normalizeRole(role);
+    if (norm === 'super_admin') return 'Super Admin';
+    if (norm === 'admin') return 'Admin';
+    if (norm === 'accountant') return 'Accountant';
+    if (norm === 'employee') return 'Employee';
+    return 'Client';
+  }
+
   function isCurrentUserOwner() {
     if (!state.adminProfile) return false;
+    const role = (state.adminProfile.role || '').toLowerCase();
+    // Non-owner roles are NEVER elevated regardless of email or flags
+    if (role === 'accountant' || role === 'accounts' || role === 'employee' || role === 'client') {
+      return false;
+    }
     const email = (state.adminProfile.email || '').toLowerCase();
-    return email === 'kaziaremon@gmail.com' || state.adminProfile.role === 'owner' || Boolean(state.adminProfile.isSuperAdmin);
+    if (email === 'kaziaremon@gmail.com') return true;
+    if (role === 'owner' || role === 'super_admin' || role === 'superadmin') return true;
+    const isa = state.adminProfile.isSuperAdmin ?? state.adminProfile.is_super_admin;
+    return isa === true || isa === 1 || isa === 'true' || isa === '1';
+  }
+
+  function getRoleBadgeForRole(rawRole, isOwner = false) {
+    const norm = normalizeRole(rawRole);
+    if ((isOwner && norm !== 'accountant' && norm !== 'employee' && norm !== 'client') || norm === 'super_admin') {
+      return '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-xs"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Super Admin</span>';
+    } else if (norm === 'admin') {
+      return '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200 shadow-xs"><i class="fa-solid fa-shield-halved text-[9px]"></i> Admin</span>';
+    } else if (norm === 'accountant') {
+      return '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200 shadow-xs"><i class="fa-solid fa-calculator text-[9px]"></i> Accountant</span>';
+    } else if (norm === 'employee') {
+      return '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-teal-50 text-teal-700 border border-teal-200 shadow-xs"><i class="fa-solid fa-briefcase text-[9px]"></i> Employee</span>';
+    } else {
+      return '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200 shadow-xs"><i class="fa-solid fa-user text-[9px]"></i> Client</span>';
+    }
   }
 
   function applyRoleAdaptiveUI(profile) {
     if (!profile) return;
-    const role = profile.role || (isCurrentUserOwner() ? 'owner' : 'client');
     const isOwner = isCurrentUserOwner();
-    // Update header role label
+    const normRole = isOwner ? 'super_admin' : normalizeRole(profile.role);
+    const displayRole = isOwner ? 'Super Admin' : formatRoleName(profile.role);
+
+    // 1. Update Header Role Label
     const headerRoleEl = document.getElementById('adminHeaderRoleLabel');
     if (headerRoleEl) {
-      if (isOwner || role === 'owner' || role === 'super_admin') {
+      if (normRole === 'super_admin') {
         headerRoleEl.textContent = 'Super Admin Console';
-      } else if (role === 'admin') {
+      } else if (normRole === 'admin') {
         headerRoleEl.textContent = 'Admin Workspace';
-      } else if (role === 'accounts') {
-        headerRoleEl.textContent = 'Accounts Portal';
-      } else if (role === 'employee') {
+      } else if (normRole === 'accountant') {
+        headerRoleEl.textContent = 'Accountant Portal';
+      } else if (normRole === 'employee') {
         headerRoleEl.textContent = 'Employee Workspace';
+      } else {
+        headerRoleEl.textContent = 'Management Console';
       }
     }
-    const secRoleHeader = document.getElementById('secRoleBadgeHeader');
-    if (secRoleHeader) {
-      secRoleHeader.innerHTML = `<i class="fa-solid fa-shield-halved text-[9px]"></i> ${role.toUpperCase()}`;
-    }
 
-    // 1. Update dropdown role badge
+    // 2. Update Profile & Security Badges
     const badge = document.getElementById('dropdownRoleBadge');
     const sidebarRoleBadge = document.getElementById('sidebarRoleBadge');
-    const updateRoleText = (txt) => {
-      if (sidebarRoleBadge) sidebarRoleBadge.textContent = txt;
-    };
+    const drawerRoleBadge = document.getElementById('drawerRoleBadge');
+    const secRoleHeader = document.getElementById('secRoleBadgeHeader');
+    const secRoleBadge = document.getElementById('secRoleBadge');
+
+    if (sidebarRoleBadge) sidebarRoleBadge.textContent = displayRole;
+    if (drawerRoleBadge) drawerRoleBadge.textContent = displayRole;
+    if (secRoleHeader) {
+      secRoleHeader.innerHTML = `<i class="fa-solid fa-shield-halved text-[9px]"></i> ${displayRole.toUpperCase()}`;
+    }
+
     if (badge) {
-      if (isOwner || role === 'owner' || role === 'super_admin') {
-        badge.textContent = 'Super Admin'; updateRoleText('Super Admin');
+      badge.textContent = displayRole;
+      if (normRole === 'super_admin') {
         badge.className = 'font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-[#147D64] border border-emerald-200 text-[10px] uppercase';
-      } else if (role === 'admin') {
-        badge.textContent = 'Admin'; updateRoleText('Admin');
+      } else if (normRole === 'admin') {
         badge.className = 'font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 text-[10px] uppercase';
-      } else if (role === 'accounts') {
-        badge.textContent = 'Accounts'; updateRoleText('Accounts');
+      } else if (normRole === 'accountant') {
         badge.className = 'font-bold px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200 text-[10px] uppercase';
-      } else if (role === 'employee') {
-        badge.textContent = 'Employee'; updateRoleText('Employee');
+      } else if (normRole === 'employee') {
         badge.className = 'font-bold px-2 py-0.5 rounded-md bg-teal-50 text-teal-700 border border-teal-200 text-[10px] uppercase';
+      } else {
+        badge.className = 'font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 text-[10px] uppercase';
       }
     }
 
-    // 2. Hide / Show elements based on role
+    if (secRoleBadge) {
+      secRoleBadge.innerHTML = isOwner
+        ? '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Founding Owner</span>'
+        : getRoleBadgeForRole(profile.role, false);
+    }
+
+    // 3. Strict Navigation & UI Element RBAC Visibility Constraints
     const sidebarFinance = document.getElementById('sidebarSectionFinance');
     const drawerFinance = document.getElementById('drawerSectionFinance');
+    const bottomNavFinance = document.getElementById('bottomNavFinance');
     const sidebarTeam = document.getElementById('sidebarNavTeam');
     const drawerTeam = document.getElementById('drawerNavTeam');
+    const sidebarHistory = document.getElementById('sidebarNavHistory');
+    const drawerHistory = document.getElementById('drawerNavHistory');
+
+    const sidebarServices = document.getElementById('sidebarNavServices');
+    const sidebarProjects = document.getElementById('sidebarNavProjects');
+    const sidebarTasks = document.getElementById('sidebarNavTasks');
+    const drawerServices = document.getElementById('drawerNavServices');
+    const drawerProjects = document.getElementById('drawerNavProjects');
+    const drawerTasks = document.getElementById('drawerNavTasks');
+    const bottomNavServices = document.getElementById('bottomNavServices');
+    const bottomNavTasks = document.getElementById('bottomNavTasks');
+
     const kpiRevenue = document.getElementById('kpiCardRevenue');
     const chartRev = document.getElementById('chartRevenueContainer');
+    const kpiProjects = document.getElementById('kpiCardProjects');
+    const kpiServices = document.getElementById('kpiCardServices');
+    const kpiTasksComp = document.getElementById('kpiCardCompletedTasks');
+    const kpiTasksPend = document.getElementById('kpiCardPendingTasks');
+
+    const chartServices = document.getElementById('chartServiceDistributionContainer');
+    const chartProjects = document.getElementById('chartProjectProgressContainer');
+    const chartTasks = document.getElementById('chartTaskStatusContainer');
+
     const clientFinSummary = document.getElementById('clientFinancialSummaryCard');
     const clientFinPrefs = document.getElementById('clientFinancialPreferencesCard');
-    const bottomNavFinance = document.getElementById('bottomNavFinance');
+    const btnAssignService = document.getElementById('btnOpenAssignServiceClientModal');
+    const clientAssignedServices = document.getElementById('clientAssignedServicesCard');
+    const clientProjects = document.getElementById('clientProjectsCard');
+    const clientAuditCard = document.getElementById('clientAuditHistoryCard');
 
-    if (role === 'employee') {
-      if (bottomNavFinance) bottomNavFinance.classList.add('hidden');
-      // Strict Financial & Team Privacy for Employees
+    // Rule A: Audit & Operational History is STRICTLY PRIVATE to Admin and Super Admin
+    const canAccessAudit = normRole === 'super_admin' || normRole === 'admin';
+    if (sidebarHistory) sidebarHistory.classList.toggle('hidden', !canAccessAudit);
+    if (drawerHistory) drawerHistory.classList.toggle('hidden', !canAccessAudit);
+    if (clientAuditCard) clientAuditCard.classList.toggle('hidden', !canAccessAudit);
+
+    // Rule B: Team Governance is restricted to Admin & Super Admin
+    const canAccessTeam = normRole === 'super_admin' || normRole === 'admin';
+    if (sidebarTeam) sidebarTeam.classList.toggle('hidden', !canAccessTeam);
+    if (drawerTeam) drawerTeam.classList.toggle('hidden', !canAccessTeam);
+
+    // Rule C: Accountant Dashboard Constraints (Financial-Only Mode)
+    if (normRole === 'accountant') {
+      // STRICTLY HIDE all Service provisioning, Task pipelines, and Project management modules
+      if (sidebarServices) sidebarServices.classList.add('hidden');
+      if (sidebarProjects) sidebarProjects.classList.add('hidden');
+      if (sidebarTasks) sidebarTasks.classList.add('hidden');
+      if (drawerServices) drawerServices.classList.add('hidden');
+      if (drawerProjects) drawerProjects.classList.add('hidden');
+      if (drawerTasks) drawerTasks.classList.add('hidden');
+      if (bottomNavServices) bottomNavServices.classList.add('hidden');
+      if (bottomNavTasks) bottomNavTasks.classList.add('hidden');
+
+      if (kpiProjects) kpiProjects.classList.add('hidden');
+      if (kpiServices) kpiServices.classList.add('hidden');
+      if (kpiTasksComp) kpiTasksComp.classList.add('hidden');
+      if (kpiTasksPend) kpiTasksPend.classList.add('hidden');
+
+      if (chartServices) chartServices.classList.add('hidden');
+      if (chartProjects) chartProjects.classList.add('hidden');
+      if (chartTasks) chartTasks.classList.add('hidden');
+
+      if (btnAssignService) btnAssignService.classList.add('hidden');
+      if (clientProjects) clientProjects.classList.add('hidden');
+      if (clientAssignedServices) clientAssignedServices.classList.add('hidden');
+
+      // EXCLUSIVELY DISPLAY financial, billing, invoicing, and ledger modules
+      if (sidebarFinance) sidebarFinance.classList.remove('hidden');
+      if (drawerFinance) drawerFinance.classList.remove('hidden');
+      if (bottomNavFinance) bottomNavFinance.classList.remove('hidden');
+      if (kpiRevenue) kpiRevenue.classList.remove('hidden');
+      if (chartRev) chartRev.classList.remove('hidden');
+      if (clientFinSummary) clientFinSummary.classList.remove('hidden');
+      if (clientFinPrefs) clientFinPrefs.classList.remove('hidden');
+
+      document.querySelectorAll('.role-operational-nav').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.role-operational-only').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.role-financial-only').forEach(el => el.classList.remove('hidden'));
+    }
+    // Rule D: Employee Dashboard Constraints (Operational-Only Mode, Zero Financial Access)
+    else if (normRole === 'employee') {
+      // STRICTLY HIDE all accounting, revenue, billing, and financial preference modules
       if (sidebarFinance) sidebarFinance.classList.add('hidden');
       if (drawerFinance) drawerFinance.classList.add('hidden');
-      if (sidebarTeam) sidebarTeam.classList.add('hidden');
-      if (drawerTeam) drawerTeam.classList.add('hidden');
+      if (bottomNavFinance) bottomNavFinance.classList.add('hidden');
       if (kpiRevenue) kpiRevenue.classList.add('hidden');
       if (chartRev) chartRev.classList.add('hidden');
       if (clientFinSummary) clientFinSummary.classList.add('hidden');
       if (clientFinPrefs) clientFinPrefs.classList.add('hidden');
       document.querySelectorAll('.role-financial-only').forEach(el => el.classList.add('hidden'));
-    } else if (role === 'accounts') {
-      // Accounts users can access finance, but NOT team governance
-      if (bottomNavFinance) bottomNavFinance.classList.remove('hidden');
+
+      // DISPLAY assigned operational tasks, SOPs, and project workflows
+      if (sidebarServices) sidebarServices.classList.remove('hidden');
+      if (sidebarProjects) sidebarProjects.classList.remove('hidden');
+      if (sidebarTasks) sidebarTasks.classList.remove('hidden');
+      if (drawerServices) drawerServices.classList.remove('hidden');
+      if (drawerProjects) drawerProjects.classList.remove('hidden');
+      if (drawerTasks) drawerTasks.classList.remove('hidden');
+      if (bottomNavServices) bottomNavServices.classList.remove('hidden');
+      if (bottomNavTasks) bottomNavTasks.classList.remove('hidden');
+
+      if (kpiProjects) kpiProjects.classList.remove('hidden');
+      if (kpiServices) kpiServices.classList.remove('hidden');
+      if (kpiTasksComp) kpiTasksComp.classList.remove('hidden');
+      if (kpiTasksPend) kpiTasksPend.classList.remove('hidden');
+
+      if (chartServices) chartServices.classList.remove('hidden');
+      if (chartProjects) chartProjects.classList.remove('hidden');
+      if (chartTasks) chartTasks.classList.remove('hidden');
+
+      if (clientProjects) clientProjects.classList.remove('hidden');
+      if (clientAssignedServices) clientAssignedServices.classList.remove('hidden');
+
+      document.querySelectorAll('.role-operational-nav').forEach(el => el.classList.remove('hidden'));
+      document.querySelectorAll('.role-operational-only').forEach(el => el.classList.remove('hidden'));
+    }
+    // Rule E: Admin and Super Admin (Full operational & financial access)
+    else {
       if (sidebarFinance) sidebarFinance.classList.remove('hidden');
       if (drawerFinance) drawerFinance.classList.remove('hidden');
-      if (sidebarTeam) sidebarTeam.classList.add('hidden');
-      if (drawerTeam) drawerTeam.classList.add('hidden');
-      if (kpiRevenue) kpiRevenue.classList.remove('hidden');
-      if (chartRev) chartRev.classList.remove('hidden');
-      if (clientFinSummary) clientFinSummary.classList.remove('hidden');
-      if (clientFinPrefs) clientFinPrefs.classList.remove('hidden');
-    } else {
-      // Super Admin and Admin have access to all operational & team sections
       if (bottomNavFinance) bottomNavFinance.classList.remove('hidden');
-      if (sidebarFinance) sidebarFinance.classList.remove('hidden');
-      if (drawerFinance) drawerFinance.classList.remove('hidden');
-      if (sidebarTeam) sidebarTeam.classList.remove('hidden');
-      if (drawerTeam) drawerTeam.classList.remove('hidden');
+      if (sidebarServices) sidebarServices.classList.remove('hidden');
+      if (sidebarProjects) sidebarProjects.classList.remove('hidden');
+      if (sidebarTasks) sidebarTasks.classList.remove('hidden');
+      if (drawerServices) drawerServices.classList.remove('hidden');
+      if (drawerProjects) drawerProjects.classList.remove('hidden');
+      if (drawerTasks) drawerTasks.classList.remove('hidden');
+      if (bottomNavServices) bottomNavServices.classList.remove('hidden');
+      if (bottomNavTasks) bottomNavTasks.classList.remove('hidden');
+
       if (kpiRevenue) kpiRevenue.classList.remove('hidden');
       if (chartRev) chartRev.classList.remove('hidden');
+      if (kpiProjects) kpiProjects.classList.remove('hidden');
+      if (kpiServices) kpiServices.classList.remove('hidden');
+      if (kpiTasksComp) kpiTasksComp.classList.remove('hidden');
+      if (kpiTasksPend) kpiTasksPend.classList.remove('hidden');
+
+      if (chartServices) chartServices.classList.remove('hidden');
+      if (chartProjects) chartProjects.classList.remove('hidden');
+      if (chartTasks) chartTasks.classList.remove('hidden');
+
       if (clientFinSummary) clientFinSummary.classList.remove('hidden');
       if (clientFinPrefs) clientFinPrefs.classList.remove('hidden');
+      if (btnAssignService) btnAssignService.classList.remove('hidden');
+      if (clientProjects) clientProjects.classList.remove('hidden');
+      if (clientAssignedServices) clientAssignedServices.classList.remove('hidden');
+
+      document.querySelectorAll('.role-operational-nav').forEach(el => el.classList.remove('hidden'));
+      document.querySelectorAll('.role-operational-only').forEach(el => el.classList.remove('hidden'));
+      document.querySelectorAll('.role-financial-only').forEach(el => el.classList.remove('hidden'));
     }
 
-    // 3. Configure Staff Invite Form role options
+    // 4. Configure Staff Invite Form role options
     const inviteRoleSelect = document.getElementById('inviteRole');
     if (inviteRoleSelect) {
-      if (role === 'admin' && !isOwner) {
-        // Admins can only invite Accounts or Employee
+      if (normRole === 'admin' && !isOwner) {
+        // Admins can only invite Accountant or Employee
         const adminOption = inviteRoleSelect.querySelector('option[value="admin"]');
         if (adminOption) adminOption.remove();
       }
@@ -390,14 +558,25 @@
     if (typeof closeActiveGlassMenu === "function") closeActiveGlassMenu();
     if (tabId === 'settings') tabId = 'security';
 
-    // RBAC Route Guard
+    // Strict RBAC Route Guard
     const userRole = state.adminProfile?.role || '';
-    if (userRole === 'employee' && ['finance', 'receipt_template', 'team'].includes(tabId)) {
-      showToast('Access Denied: Financial and governance sections are restricted for employee accounts.', 'warning');
-      tabId = 'overview';
-    } else if (userRole === 'accounts' && tabId === 'team') {
-      showToast('Access Denied: User governance is restricted to Administrators.', 'warning');
-      tabId = 'overview';
+    const normRole = typeof normalizeRole === 'function' ? normalizeRole(userRole) : userRole.toLowerCase();
+    const isOwner = typeof isCurrentUserOwner === 'function' ? isCurrentUserOwner() : false;
+
+    // Hard Rule 1: Audit & Operational History is strictly restricted to Admin and Super Admin
+    if (tabId === 'history' && !isOwner && normRole !== 'admin' && normRole !== 'super_admin') {
+      showToast('Access Denied: Audit & Operational History is strictly restricted to Administrators.', 'error');
+      tabId = normRole === 'accountant' ? 'finance' : (normRole === 'employee' ? 'tasks' : 'overview');
+    }
+    // Hard Rule 2: Accountant Dashboard Constraints (Financial only)
+    else if (normRole === 'accountant' && ['services', 'service_tasks', 'projects', 'tasks', 'team', 'history'].includes(tabId)) {
+      showToast('Access Denied: Operational pipelines and user governance are restricted for accountant accounts.', 'warning');
+      tabId = 'finance';
+    }
+    // Hard Rule 3: Employee Dashboard Constraints (Operational only)
+    else if (normRole === 'employee' && ['finance', 'receipt_template', 'team', 'history'].includes(tabId)) {
+      showToast('Access Denied: Financial and administrative modules are strictly restricted for employee accounts.', 'warning');
+      tabId = 'tasks';
     }
 
     state.activeTab = tabId;
@@ -3335,9 +3514,10 @@
     } else {
       if (pendingTbody) {
         pendingTbody.innerHTML = pendingList.map(p => {
-          const name = p.full_name || 'Approved Administrator';
+          const name = p.full_name || 'Approved Staff Member';
           const email = p.email || p.approved_email || '';
-          const role = p.role === 'super_admin' ? 'Super Admin' : 'Admin';
+          const roleName = typeof formatRoleName === 'function' ? formatRoleName(p.role) : (p.role || 'Staff');
+          const roleBadge = typeof getRoleBadgeForRole === 'function' ? getRoleBadgeForRole(p.role, false) : `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-50 text-slate-700 border border-slate-200 uppercase">${escapeHtml(roleName)}</span>`;
           const createdAt = p.created_at ? new Date(p.created_at).toLocaleDateString() : 'N/A';
           const actionCol = isOwnerActor
             ? `<button type="button" class="btn-revoke-invitation px-2.5 py-1 rounded-lg text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 cursor-pointer transition-all" data-id="${p.id}" data-email="${escapeHtml(email)}">
@@ -3349,7 +3529,7 @@
             <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
               <td class="px-6 py-4 font-bold text-[#172B36]">${escapeHtml(name)}</td>
               <td class="px-6 py-4 font-mono text-xs text-slate-600">${escapeHtml(email)}</td>
-              <td class="px-6 py-4"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 uppercase">${escapeHtml(role)}</span></td>
+              <td class="px-6 py-4">${roleBadge}</td>
               <td class="px-6 py-4 font-mono text-xs text-slate-500">${escapeHtml(createdAt)}</td>
               <td class="px-6 py-4"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 uppercase">Pending Verification</span></td>
               <td class="px-6 py-4 text-right">${actionCol}</td>
@@ -3362,7 +3542,7 @@
         pendingCards.innerHTML = pendingList.map(p => {
           const name = p.full_name || 'Approved Administrator';
           const email = p.email || p.approved_email || '';
-          const role = p.role === 'super_admin' ? 'Super Admin' : 'Admin';
+          const roleName = typeof formatRoleName === 'function' ? formatRoleName(p.role) : (p.role || 'Staff');
           const createdAt = p.created_at ? new Date(p.created_at).toLocaleDateString() : 'N/A';
           return `
             <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E6ECE9] shadow-xs space-y-3">
@@ -3372,7 +3552,7 @@
               </div>
               <div class="font-mono text-xs text-slate-500 break-all">${escapeHtml(email)}</div>
               <div class="p-2.5 rounded-xl bg-slate-50/80 border border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                <span>Role: <strong class="text-slate-700">${escapeHtml(role)}</strong></span>
+                <span>Role: <strong class="text-slate-700">${escapeHtml(roleName)}</strong></span>
                 <span class="font-mono text-[11px]">${escapeHtml(createdAt)}</span>
               </div>
               ${isOwnerActor ? `
@@ -3401,9 +3581,8 @@
           const clerkId = a.clerk_user_id || '—';
           const isSelf = isCurrentAdminSelf(a);
 
-          const roleBadge = isOwner
-            ? '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Owner</span>'
-            : '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-blue-50 text-blue-700 border border-blue-200"><i class="fa-solid fa-shield-halved text-[9px]"></i> Admin</span>';
+          const isActualOwner = email.toLowerCase() === 'kaziaremon@gmail.com' || a.role === 'owner' || a.role === 'super_admin';
+          const roleBadge = typeof getRoleBadgeForRole === 'function' ? getRoleBadgeForRole(a.role, isActualOwner) : (isActualOwner ? '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Owner</span>' : '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-blue-50 text-blue-700 border border-blue-200"><i class="fa-solid fa-shield-halved text-[9px]"></i> Admin</span>');
           const activatedAt = a.activated_at ? new Date(a.activated_at).toLocaleDateString() : (a.created_at ? new Date(a.created_at).toLocaleDateString() : 'N/A');
 
           let actionHtml = '';
@@ -3454,10 +3633,7 @@
             <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E6ECE9] shadow-xs space-y-3">
               <div class="flex items-center justify-between gap-2">
                 <span class="font-bold text-[#172B36] text-sm truncate">${escapeHtml(name)}</span>
-                ${isOwner
-                  ? '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-xs"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Super Admin</span>'
-                  : '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200 shadow-xs"><i class="fa-solid fa-shield-halved text-[9px]"></i> Admin</span>'
-                }
+                ${typeof getRoleBadgeForRole === 'function' ? getRoleBadgeForRole(a.role, isOwner) : (isOwner ? '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-xs"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Super Admin</span>' : '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200 shadow-xs"><i class="fa-solid fa-shield-halved text-[9px]"></i> Admin</span>')}
               </div>
               <div class="font-mono text-xs text-slate-500 break-all">${escapeHtml(email)}</div>
               <div class="p-2.5 rounded-xl bg-slate-50/80 border border-slate-100 flex items-center justify-between text-xs text-slate-500">
@@ -3545,6 +3721,21 @@
   async function loadHistoryData() {
     const container = document.getElementById('adminFullHistoryList');
     if (!container) return;
+
+    // Strict RBAC Guard: Audit & Operational History is strictly restricted to Admin and Super Admin
+    const userRole = state.adminProfile?.role || '';
+    const normRole = typeof normalizeRole === 'function' ? normalizeRole(userRole) : userRole.toLowerCase();
+    const isOwner = typeof isCurrentUserOwner === 'function' ? isCurrentUserOwner() : false;
+    if (!isOwner && normRole !== 'admin' && normRole !== 'super_admin') {
+      console.warn('[RBAC Guard] Unauthorized attempt to load Audit & History by role:', userRole);
+      container.innerHTML = `
+        <div class="p-8 rounded-2xl bg-white border border-rose-200 text-center text-rose-600 font-semibold shadow-xs">
+          <i class="fa-solid fa-shield-halved text-2xl mb-2 text-rose-500 block"></i>
+          Access Restricted: Audit & Operational History is strictly restricted to Administrators.
+        </div>
+      `;
+      return;
+    }
 
     container.innerHTML = `
       <div class="p-8 rounded-2xl bg-white border border-[#E3E9EF] text-center text-slate-500 italic shadow-xs">
@@ -4562,7 +4753,7 @@
     if (roleBadgeEl) {
       roleBadgeEl.innerHTML = isOwner
         ? '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Founding Owner</span>'
-        : '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-blue-50 text-blue-700 border border-blue-200"><i class="fa-solid fa-shield-halved text-[9px]"></i> Administrator</span>';
+        : (typeof getRoleBadgeForRole === 'function' ? getRoleBadgeForRole(profile.role, false) : '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-blue-50 text-blue-700 border border-blue-200"><i class="fa-solid fa-shield-halved text-[9px]"></i> ' + escapeHtml(profile.role || 'Staff') + '</span>');
     }
 
     const hasGoogle = user?.externalAccounts?.some(a => a.provider === 'google');
@@ -5973,7 +6164,7 @@
         id: 'usr_super_admin_01',
         fullName: 'Kazi Emon',
         full_name: 'Kazi Emon',
-        email: 'kaziaremon@gmail.com',
+        email: (roleName === 'super_admin' || roleName === 'owner') ? 'kaziaremon@gmail.com' : `${roleName}@whizstudio.io`,
         username: 'kaziaremon',
         role: roleName === 'super_admin' ? 'owner' : roleName,
         isSuperAdmin: roleName === 'super_admin' || roleName === 'owner'

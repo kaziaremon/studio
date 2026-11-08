@@ -54,3 +54,6 @@ scripts/
 .google-oauth.json
 *.oauth.json
 .tmp_patch_*
+backups/
+preview/screenshots/
+
