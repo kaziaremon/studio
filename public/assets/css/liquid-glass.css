@@ -519,211 +519,98 @@ select.glass-input option:hover {
 }
 
 /* =========================================================================
-   UNIVERSAL SCROLLBAR CONTAINMENT & ANTI-CLIPPING RULES
-   Guarantees zero corner clipping, tracks inset safely from rounded radii
+   UNIVERSAL MODERN SCROLLBAR MASTER SYSTEM (GLOBAL ANTI-CLIPPING)
+   Applies sleek, non-intrusive 6px brand scrollbars across all viewports
+   and guarantees thumbs stay strictly inside container bounding boxes.
    ========================================================================= */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(8, 127, 112, 0.3) transparent;
+
+/* 1. Standards-compliant engines (Firefox & modern browsers) */
+:root,
+html,
+body,
+*,
+*::before,
+*::after {
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(8, 127, 112, 0.32) transparent !important;
 }
 
+/* 2. WebKit / Blink engines (Chrome, Edge, Safari, iOS/Android WebViews) */
+::-webkit-scrollbar,
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
 *::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 6px !important;
+  height: 6px !important;
 }
 
+::-webkit-scrollbar-track,
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track,
 *::-webkit-scrollbar-track {
   background: transparent !important;
-  margin-block: 10px !important; /* Insets track away from curved corners (top/bottom or left/right) */
-  border-radius: 9999px !important;
+  border-radius: 10px !important;
 }
 
+::-webkit-scrollbar-track-piece,
+html::-webkit-scrollbar-track-piece,
+body::-webkit-scrollbar-track-piece,
 *::-webkit-scrollbar-track-piece {
   background: transparent !important;
 }
 
+::-webkit-scrollbar-thumb,
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb,
 *::-webkit-scrollbar-thumb {
-  background: rgba(8, 127, 112, 0.28) !important;
-  border-radius: 9999px !important;
-  border: 1px solid transparent;
-  background-clip: padding-box;
+  background-color: rgba(8, 127, 112, 0.32) !important;
+  border-radius: 10px !important;
+  border: 1px solid transparent !important;
+  background-clip: padding-box !important;
+  min-height: 24px !important;
+  transition: background-color 0.15s ease-in-out !important;
 }
 
+::-webkit-scrollbar-thumb:hover,
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover,
 *::-webkit-scrollbar-thumb:hover {
-  background: rgba(8, 127, 112, 0.6) !important;
+  background-color: rgba(8, 127, 112, 0.65) !important;
 }
 
+::-webkit-scrollbar-thumb:active,
+html::-webkit-scrollbar-thumb:active,
+body::-webkit-scrollbar-thumb:active,
+*::-webkit-scrollbar-thumb:active {
+  background-color: rgba(8, 127, 112, 0.85) !important;
+}
+
+::-webkit-scrollbar-corner,
+html::-webkit-scrollbar-corner,
+body::-webkit-scrollbar-corner,
 *::-webkit-scrollbar-corner {
   background: transparent !important;
 }
 
-/* Custom Modal Internal Scrollbar (Thin, Elegant, Respects Rounded Borders) */
-.custom-modal-scroll {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(8, 127, 112, 0.35) transparent;
-  -webkit-overflow-scrolling: touch;
-}
-
-.custom-modal-scroll::-webkit-scrollbar {
-  width: 6px;
-}
-
-.custom-modal-scroll::-webkit-scrollbar-track {
-  background: transparent !important;
-  margin: 12px 0 !important;
-}
-
-.custom-modal-scroll::-webkit-scrollbar-thumb {
-  background: rgba(8, 127, 112, 0.35) !important;
-  border-radius: 9999px !important;
-}
-
-.custom-modal-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(8, 127, 112, 0.7) !important;
-}
-
-/* =========================================================================
-   NESTED SCROLLBAR CONTAINMENT & INSET STYLING (LOCALIZED FIXES)
-   Targeted exclusively to inner lists, dropdowns, and modal scroll bodies
-   Strictly preserves global body, html, page wrappers, and nav layouts
-   ========================================================================= */
+/* 3. Universal Scroll Container Bounding Box & Anti-Protrusion Guarantees */
+.overflow-y-auto,
+.overflow-y-scroll,
 .whiz-nested-scroll,
 .whiz-modal-scroll-body,
 .custom-modal-scroll,
 .custom-dropdown-scroll,
 .glass-select-menu,
+.whiz-dock-scroll,
 #clientCurrencyDropdownMenu,
 #assignServiceMenu,
 #assignCurrencyMenu,
 #auditCategoryDropdownMenu,
 #addClientServicesCheckboxes,
 #modalSupportMessage {
-  overflow-y: auto !important;
+  box-sizing: border-box !important;
   overflow-x: hidden !important;
-  scrollbar-width: thin !important;
-  scrollbar-color: rgba(8, 127, 112, 0.35) transparent !important;
   -webkit-overflow-scrolling: touch;
-  box-sizing: border-box;
-}
-
-.whiz-nested-scroll::-webkit-scrollbar,
-.whiz-modal-scroll-body::-webkit-scrollbar,
-.custom-modal-scroll::-webkit-scrollbar,
-.custom-dropdown-scroll::-webkit-scrollbar,
-.glass-select-menu::-webkit-scrollbar,
-#clientCurrencyDropdownMenu::-webkit-scrollbar,
-#assignServiceMenu::-webkit-scrollbar,
-#assignCurrencyMenu::-webkit-scrollbar,
-#auditCategoryDropdownMenu::-webkit-scrollbar,
-#addClientServicesCheckboxes::-webkit-scrollbar,
-#modalSupportMessage::-webkit-scrollbar {
-  width: 6px !important;
-  height: 6px !important;
-}
-
-.whiz-nested-scroll::-webkit-scrollbar-track,
-.whiz-modal-scroll-body::-webkit-scrollbar-track,
-.custom-modal-scroll::-webkit-scrollbar-track,
-.custom-dropdown-scroll::-webkit-scrollbar-track,
-.glass-select-menu::-webkit-scrollbar-track,
-#clientCurrencyDropdownMenu::-webkit-scrollbar-track,
-#assignServiceMenu::-webkit-scrollbar-track,
-#assignCurrencyMenu::-webkit-scrollbar-track,
-#auditCategoryDropdownMenu::-webkit-scrollbar-track,
-#addClientServicesCheckboxes::-webkit-scrollbar-track,
-#modalSupportMessage::-webkit-scrollbar-track {
-  background: transparent !important;
-  margin-top: 10px !important;
-  margin-bottom: 10px !important;
-  margin-block: 10px !important;
-  border-radius: 9999px !important;
-}
-
-.whiz-nested-scroll::-webkit-scrollbar-track-piece,
-.whiz-modal-scroll-body::-webkit-scrollbar-track-piece,
-.custom-modal-scroll::-webkit-scrollbar-track-piece,
-.custom-dropdown-scroll::-webkit-scrollbar-track-piece,
-.glass-select-menu::-webkit-scrollbar-track-piece,
-#clientCurrencyDropdownMenu::-webkit-scrollbar-track-piece,
-#assignServiceMenu::-webkit-scrollbar-track-piece,
-#assignCurrencyMenu::-webkit-scrollbar-track-piece,
-#auditCategoryDropdownMenu::-webkit-scrollbar-track-piece,
-#addClientServicesCheckboxes::-webkit-scrollbar-track-piece,
-#modalSupportMessage::-webkit-scrollbar-track-piece {
-  background: transparent !important;
-}
-
-.whiz-nested-scroll::-webkit-scrollbar-thumb,
-.whiz-modal-scroll-body::-webkit-scrollbar-thumb,
-.custom-modal-scroll::-webkit-scrollbar-thumb,
-.custom-dropdown-scroll::-webkit-scrollbar-thumb,
-.glass-select-menu::-webkit-scrollbar-thumb,
-#clientCurrencyDropdownMenu::-webkit-scrollbar-thumb,
-#assignServiceMenu::-webkit-scrollbar-thumb,
-#assignCurrencyMenu::-webkit-scrollbar-thumb,
-#auditCategoryDropdownMenu::-webkit-scrollbar-thumb,
-#addClientServicesCheckboxes::-webkit-scrollbar-thumb,
-#modalSupportMessage::-webkit-scrollbar-thumb {
-  background: rgba(8, 127, 112, 0.3) !important;
-  border-radius: 9999px !important;
-  border: 1px solid transparent !important;
-  background-clip: padding-box !important;
-}
-
-.whiz-nested-scroll::-webkit-scrollbar-thumb:hover,
-.whiz-modal-scroll-body::-webkit-scrollbar-thumb:hover,
-.custom-modal-scroll::-webkit-scrollbar-thumb:hover,
-.custom-dropdown-scroll::-webkit-scrollbar-thumb:hover,
-.glass-select-menu::-webkit-scrollbar-thumb:hover,
-#clientCurrencyDropdownMenu::-webkit-scrollbar-thumb:hover,
-#assignServiceMenu::-webkit-scrollbar-thumb:hover,
-#assignCurrencyMenu::-webkit-scrollbar-thumb:hover,
-#auditCategoryDropdownMenu::-webkit-scrollbar-thumb:hover,
-#addClientServicesCheckboxes::-webkit-scrollbar-thumb:hover,
-#modalSupportMessage::-webkit-scrollbar-thumb:hover {
-  background: rgba(8, 127, 112, 0.6) !important;
-  background-clip: padding-box !important;
-}
-
-.whiz-nested-scroll::-webkit-scrollbar-corner,
-.whiz-modal-scroll-body::-webkit-scrollbar-corner,
-.custom-modal-scroll::-webkit-scrollbar-corner,
-.custom-dropdown-scroll::-webkit-scrollbar-corner,
-.glass-select-menu::-webkit-scrollbar-corner,
-#clientCurrencyDropdownMenu::-webkit-scrollbar-corner,
-#assignServiceMenu::-webkit-scrollbar-corner,
-#assignCurrencyMenu::-webkit-scrollbar-corner,
-#auditCategoryDropdownMenu::-webkit-scrollbar-corner,
-#addClientServicesCheckboxes::-webkit-scrollbar-corner,
-#modalSupportMessage::-webkit-scrollbar-corner {
-  background: transparent !important;
-}
-
-/* Custom Dropdown Internal Scrollbar (Inset, Rounded, Zero Border Clipping) */
-.custom-dropdown-scroll {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(8, 127, 112, 0.4) transparent;
-  -webkit-overflow-scrolling: touch;
-  box-sizing: border-box;
-}
-
-.custom-dropdown-scroll::-webkit-scrollbar {
-  width: 5px;
-}
-
-.custom-dropdown-scroll::-webkit-scrollbar-track {
-  background: transparent !important;
-  margin-top: 10px !important;
-  margin-bottom: 10px !important;
-}
-
-.custom-dropdown-scroll::-webkit-scrollbar-thumb {
-  background: rgba(8, 127, 112, 0.35) !important;
-  border-radius: 9999px !important;
-}
-
-.custom-dropdown-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(8, 127, 112, 0.7) !important;
+  border-radius: inherit;
 }
 
 /* Global Floating Modal Card Architecture */
@@ -737,34 +624,6 @@ select.glass-input option:hover {
   .whiz-floating-modal-card {
     max-height: calc(100dvh - 4.5rem) !important;
   }
-}
-
-.whiz-modal-scroll-body {
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin !important;
-  scrollbar-color: rgba(8, 127, 112, 0.35) transparent !important;
-  border-radius: inherit;
-}
-
-.whiz-modal-scroll-body::-webkit-scrollbar {
-  width: 6px;
-}
-
-.whiz-modal-scroll-body::-webkit-scrollbar-track {
-  background: transparent !important;
-  margin: 12px 0 !important;
-  border-radius: 9999px !important;
-}
-
-.whiz-modal-scroll-body::-webkit-scrollbar-thumb {
-  background: rgba(8, 127, 112, 0.35) !important;
-  border-radius: 9999px !important;
-}
-
-.whiz-modal-scroll-body::-webkit-scrollbar-thumb:hover {
-  background: rgba(8, 127, 112, 0.7) !important;
 }
 
 /* Eradicate default OS select styling & dark-mode cursive menus globally */

@@ -96,15 +96,28 @@
       --dock-duration: 200ms;
     }
 
-    /* Universal Containment & Anti-Clipping Scrollbar */
-    * {
-      scrollbar-width: thin;
-      scrollbar-color: rgba(8, 127, 112, 0.3) transparent;
+    /* Universal Modern Scrollbar Master System */
+    :root, html, body, * {
+      scrollbar-width: thin !important;
+      scrollbar-color: rgba(8, 127, 112, 0.32) transparent !important;
     }
-    *::-webkit-scrollbar { width: 6px; height: 6px; }
-    *::-webkit-scrollbar-track { background: transparent !important; margin-block: 10px !important; border-radius: 9999px !important; }
-    *::-webkit-scrollbar-thumb { background: rgba(8, 127, 112, 0.28) !important; border-radius: 9999px !important; }
-    *::-webkit-scrollbar-thumb:hover { background: rgba(8, 127, 112, 0.6) !important; }
+    ::-webkit-scrollbar, html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar {
+      width: 6px !important;
+      height: 6px !important;
+    }
+    ::-webkit-scrollbar-track, html::-webkit-scrollbar-track, body::-webkit-scrollbar-track, *::-webkit-scrollbar-track {
+      background: transparent !important;
+      border-radius: 10px !important;
+    }
+    ::-webkit-scrollbar-thumb, html::-webkit-scrollbar-thumb, body::-webkit-scrollbar-thumb, *::-webkit-scrollbar-thumb {
+      background-color: rgba(8, 127, 112, 0.32) !important;
+      border-radius: 10px !important;
+      border: 1px solid transparent !important;
+      background-clip: padding-box !important;
+    }
+    ::-webkit-scrollbar-thumb:hover, html::-webkit-scrollbar-thumb:hover, body::-webkit-scrollbar-thumb:hover, *::-webkit-scrollbar-thumb:hover {
+      background-color: rgba(8, 127, 112, 0.65) !important;
+    }
     select {
       font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
       color-scheme: light !important;
@@ -580,11 +593,11 @@
 }
 .whiz-modal-scroll-body::-webkit-scrollbar-track {
   background: transparent !important;
-  margin: 12px 0 !important; /* Keeps scrollbar safely away from top/bottom rounded corners */
+  border-radius: 10px !important;
 }
 .whiz-modal-scroll-body::-webkit-scrollbar-thumb {
   background: rgba(8, 127, 112, 0.25) !important;
-  border-radius: 9999px !important;
+  border-radius: 10px !important;
 }
 .whiz-modal-scroll-body::-webkit-scrollbar-thumb:hover {
   background: rgba(8, 127, 112, 0.5) !important;
@@ -632,10 +645,7 @@
 #addClientServicesCheckboxes::-webkit-scrollbar-track,
 #modalSupportMessage::-webkit-scrollbar-track {
   background: transparent !important;
-  margin-top: 10px !important;
-  margin-bottom: 10px !important;
-  margin-block: 10px !important;
-  border-radius: 9999px !important;
+  border-radius: 10px !important;
 }
 
 .whiz-nested-scroll::-webkit-scrollbar-thumb,
@@ -647,7 +657,7 @@
 #addClientServicesCheckboxes::-webkit-scrollbar-thumb,
 #modalSupportMessage::-webkit-scrollbar-thumb {
   background: rgba(8, 127, 112, 0.3) !important;
-  border-radius: 9999px !important;
+  border-radius: 10px !important;
   border: 1px solid transparent !important;
   background-clip: padding-box !important;
 }
@@ -1098,25 +1108,9 @@
         </div>
       </div>
 
-      <!-- Drawer Footer (Premium Compact Profile) -->
-      <div class="p-3 border-t border-[#E6ECE9] shrink-0 bg-white space-y-2 safe-bottom">
-        <!-- Row 1: Account Identity -->
-        <div class="flex items-center gap-2.5 p-2 rounded-xl bg-[#F7FAF9] border border-[#E6ECE9]">
-          <div class="w-8 h-8 rounded-lg bg-[#EAF5F1] border border-[#087F70]/25 flex items-center justify-center font-bold text-xs text-[#087F70] uppercase admin-display-initials select-none shrink-0 shadow-2xs">
-            SA
-          </div>
-          <div class="min-w-0 flex-1">
-            <p class="text-xs font-semibold text-[#202D2A] truncate admin-display-name leading-tight">Administrator</p>
-            <div class="flex items-center gap-1 mt-0.5 text-[#087F70]">
-              <i class="fa-solid fa-shield-halved text-[9px] shrink-0"></i>
-              <span class="text-[10px] font-medium leading-none">Super Admin</span>
-            </div>
-          </div>
-          <i class="fa-solid fa-chevron-right text-[10px] text-[#74817D]/50 shrink-0"></i>
-        </div>
-
-        <!-- Row 2: Sign Out Button -->
-        <button type="button" class="btn-admin-signout w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-medium text-rose-600 bg-rose-50/80 hover:bg-rose-100 active:bg-rose-200/60 border border-rose-200/60 transition-colors cursor-pointer touch-manipulation">
+      <!-- Drawer Footer: Clean Sign Out Action (Redundant Profile Badge Removed) -->
+      <div class="p-3 border-t border-[#E6ECE9] shrink-0 bg-white safe-bottom">
+        <button type="button" class="btn-admin-signout w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-semibold text-rose-600 bg-rose-50/80 hover:bg-rose-100 active:bg-rose-200/60 border border-rose-200/60 transition-colors cursor-pointer touch-manipulation">
           <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i>
           <span>Sign Out</span>
         </button>
