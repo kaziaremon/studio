@@ -443,20 +443,26 @@
     const user = window.Clerk.user;
     state.currentUser = user;
 
-    const navBtns = [
-      document.getElementById('myAccountNavBtn'),
-      document.getElementById('myAccountMobileNavBtn')
-    ].filter(Boolean);
+    const mainNavBtn = document.getElementById('myAccountNavBtn');
+    const mobileNavBtn = document.getElementById('myAccountMobileNavBtn');
 
     if (!user) {
       state.userRole = 'guest';
       state.backendProfile = null;
-      navBtns.forEach(btn => {
-        const span = btn.querySelector('span');
+      if (mainNavBtn) {
+        mainNavBtn.className = "inline-flex items-center gap-1.5 h-10 px-3 sm:px-3.5 rounded-full text-xs sm:text-sm font-bold text-[#172B36] hover:text-[#087F70] bg-white/40 hover:bg-white/80 border border-white/60 hover:border-[#087F70]/30 transition-all duration-200 shadow-2xs hover:shadow-xs focus:outline-none focus:ring-2 focus:ring-[#087F70]/30 active:scale-95 cursor-pointer select-none";
+        mainNavBtn.title = "My Account";
+        mainNavBtn.innerHTML = `
+          <i class="fa-solid fa-circle-user text-sm text-[#087F70] shrink-0"></i>
+          <span class="truncate max-w-[80px] sm:max-w-[120px] whitespace-nowrap">My Account</span>
+        `;
+      }
+      if (mobileNavBtn) {
+        const span = mobileNavBtn.querySelector('span');
         if (span) span.textContent = 'My Account';
-        const icon = btn.querySelector('i');
-        if (icon) icon.className = 'fa-solid fa-circle-user text-xs sm:text-sm mr-1.5 text-brand-whiz';
-      });
+        const icon = mobileNavBtn.querySelector('i');
+        if (icon) icon.className = 'fa-solid fa-circle-user text-xs mr-2 text-brand-whiz';
+      }
       return;
     }
 
@@ -484,22 +490,59 @@
       state.userRole = 'unresolved';
     }
 
-    // Update Nav buttons to show Name & Role
-    const displayName = user.firstName || user.username || (user.primaryEmailAddress ? user.primaryEmailAddress.emailAddress.split('@')[0] : 'User');
-    navBtns.forEach(btn => {
-      const span = btn.querySelector('span');
-      if (span) {
-        span.textContent = displayName;
-      }
-      const icon = btn.querySelector('i');
+    // Resolve user's clean first name (e.g. 'MD KAZI ABDUR RAHIM' -> 'Kazi')
+    const rawFullName = user.firstName || 
+                        user.fullName || 
+                        state.backendProfile?.full_name || 
+                        state.backendProfile?.fullName || 
+                        user.username || 
+                        (user.primaryEmailAddress ? user.primaryEmailAddress.emailAddress.split('@')[0] : 'User');
+
+    const parts = rawFullName.trim().split(/\s+/).filter(Boolean);
+    let firstName = parts[0] || 'User';
+    if (['md', 'md.', 'mr', 'mr.', 'ms', 'ms.', 'dr', 'dr.'].includes(firstName.toLowerCase()) && parts.length > 1) {
+      firstName = parts[1];
+    }
+    const cleanFirstName = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
+
+    // Determine initials (e.g. 'MK')
+    let initials = 'U';
+    if (parts.length >= 2) {
+      initials = (parts[0][0] + parts[1][0]).toUpperCase();
+    } else if (cleanFirstName.length >= 2) {
+      initials = cleanFirstName.slice(0, 2).toUpperCase();
+    } else {
+      initials = cleanFirstName[0].toUpperCase();
+    }
+
+    const isStaff = state.userRole === 'super_admin' || state.userRole === 'admin';
+
+    // Update Desktop Nav Button with sleek minimalist circular avatar & clean first name (Never wraps)
+    if (mainNavBtn) {
+      mainNavBtn.className = "inline-flex items-center gap-2 h-10 p-1 pr-2.5 sm:pr-3 rounded-full bg-white/40 hover:bg-white/80 border border-white/50 hover:border-[#087F70]/30 transition-all duration-200 shadow-2xs hover:shadow-xs focus:outline-none focus:ring-2 focus:ring-[#087F70]/30 active:scale-95 cursor-pointer select-none";
+      mainNavBtn.title = `${cleanFirstName} (${isStaff ? 'Admin Workspace' : 'Client Workspace'})`;
+      mainNavBtn.innerHTML = `
+        <div class="w-8 h-8 rounded-full bg-[#087F70] text-white flex items-center justify-center font-bold text-xs shrink-0 select-none shadow-2xs tracking-tight">
+          ${initials}
+        </div>
+        <div class="flex items-center gap-1 min-w-0">
+          ${isStaff ? '<i class="fa-solid fa-shield-halved text-[10px] text-[#087F70] shrink-0"></i>' : ''}
+          <span class="truncate max-w-[65px] sm:max-w-[100px] whitespace-nowrap text-xs sm:text-sm font-bold text-[#172B36]">${cleanFirstName}</span>
+        </div>
+      `;
+    }
+
+    // Update Mobile Nav Button in Dropdown Menu
+    if (mobileNavBtn) {
+      const span = mobileNavBtn.querySelector('span');
+      if (span) span.textContent = `${cleanFirstName} (${isStaff ? 'Admin' : 'Client'})`;
+      const icon = mobileNavBtn.querySelector('i');
       if (icon) {
-        if (state.userRole === 'super_admin' || state.userRole === 'admin') {
-          icon.className = 'fa-solid fa-shield-halved text-xs sm:text-sm mr-1.5 text-slate-800';
-        } else {
-          icon.className = 'fa-solid fa-circle-user text-xs sm:text-sm mr-1.5 text-brand-whiz';
-        }
+        icon.className = isStaff 
+          ? 'fa-solid fa-shield-halved text-xs mr-2 text-[#087F70]' 
+          : 'fa-solid fa-circle-user text-xs mr-2 text-brand-whiz';
       }
-    });
+    }
   }
 
   // Open Current Dashboard based on Role
