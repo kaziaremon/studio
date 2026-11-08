@@ -6102,7 +6102,7 @@
       // Populate user info in UI
       const name = profile.fullName || profile.full_name || user.fullName || 'Super Admin';
       const email = profile.email || (user.primaryEmailAddress ? user.primaryEmailAddress.emailAddress : '');
-      const username = user.username ? `@${user.username}` : (user.id.slice(0, 12) + '...');
+      const username = user.username ? `@${user.username}` : (email ? `@${email.split('@')[0]}` : '@admin');
       const initials = (name || 'SA').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
       document.querySelectorAll('.admin-display-name').forEach(el => el.textContent = name);

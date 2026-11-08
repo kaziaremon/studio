@@ -420,6 +420,7 @@
       populateProfileForm(state.cif || state.clientProfile);
     }
     if (tabId === 'support') loadClientSupportTickets();
+    if (tabId === 'overview') updateClientOverviewGreeting();
   }
 
   // Load All Workspace Data
@@ -476,8 +477,69 @@
     }
   }
 
+  
+  // Dynamic Time-Aware Personalized Greeting & Rotating Customer-Friendly Subtext
+  function updateClientOverviewGreeting() {
+    const greetingEl = document.getElementById('clientOverviewGreetingTitle');
+    const subtextEl = document.getElementById('clientOverviewGreetingSubtext');
+    if (!greetingEl && !subtextEl) return;
+
+    // Time-aware dynamic greeting based on client local time
+    const hour = new Date().getHours();
+    let timeGreeting = 'Good Morning';
+    if (hour >= 12 && hour < 17) {
+      timeGreeting = 'Good Afternoon';
+    } else if (hour >= 17 || hour < 4) {
+      timeGreeting = 'Good Evening';
+    }
+
+    // Resolve client's authenticated first name
+    const rawFullName = state.clientProfile?.fullName || 
+                        state.clientProfile?.full_name || 
+                        state.cif?.fullName ||
+                        state.currentUser?.firstName || 
+                        state.currentUser?.fullName || 
+                        window.Clerk?.user?.firstName || 
+                        window.Clerk?.user?.fullName || 
+                        '';
+    let firstName = '';
+    if (rawFullName) {
+      const parts = rawFullName.trim().split(/\s+/);
+      firstName = parts[0];
+      if (['md', 'md.', 'mr', 'mr.', 'ms', 'ms.', 'dr', 'dr.'].includes(firstName.toLowerCase()) && parts.length > 1) {
+        firstName = parts[1];
+      }
+    } else {
+      firstName = 'Client';
+    }
+
+    if (firstName) {
+      firstName = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
+    }
+
+    if (greetingEl) {
+      greetingEl.textContent = `${timeGreeting}, ${firstName}!`;
+    }
+
+    // Rotating customer-friendly welcoming subtext
+    const customerQuotes = [
+      "Welcome back! Let’s achieve great things today.",
+      "Here is the latest snapshot of your project's progress.",
+      "Ready to see your business grow?",
+      "Your campaigns and operational deliverables are running smoothly.",
+      "Review your live milestones, verified deliverables, and invoices below.",
+      "Empowering your brand with dedicated digital growth and execution."
+    ];
+
+    if (subtextEl) {
+      const randomQuote = customerQuotes[Math.floor(Math.random() * customerQuotes.length)];
+      subtextEl.textContent = randomQuote;
+    }
+  }
+
   // 1. Render Overview
   function renderClientOverview() {
+    updateClientOverviewGreeting();
     const statActive = document.getElementById('statActiveServices');
     const statTasks = document.getElementById('statCompletedTasks');
     const statInv = document.getElementById('statInvoicesCount');
@@ -1725,6 +1787,7 @@
       document.querySelectorAll('.client-greeting-name').forEach(el => el.textContent = name);
       document.querySelectorAll('.clientDisplayName').forEach(el => el.textContent = name);
       document.querySelectorAll('.clientDisplayEmail').forEach(el => el.textContent = email);
+      updateClientOverviewGreeting();
 
       const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'SJ';
       document.querySelectorAll('.userAvatarText').forEach(el => el.textContent = initials);
@@ -1806,6 +1869,7 @@
       document.querySelectorAll('.client-greeting-name').forEach(el => el.textContent = name);
       document.querySelectorAll('.clientDisplayName').forEach(el => el.textContent = name);
       document.querySelectorAll('.clientDisplayEmail').forEach(el => el.textContent = email);
+      updateClientOverviewGreeting();
 
       const setMail = document.getElementById('settingsEmail');
       if (setMail) setMail.textContent = email;
