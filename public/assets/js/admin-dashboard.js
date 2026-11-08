@@ -4546,7 +4546,7 @@
           const cat = escapeHtml(s.category || '');
           const id = escapeHtml(s.id || '');
           return `
-            <label class="service-checkbox-card group flex items-start gap-3 p-3 rounded-2xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
+            <label class="service-checkbox-card group flex items-start gap-2.5 p-2.5 rounded-xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
               <input type="checkbox" name="services" value="${id}" class="service-checkbox-input mt-0.5 w-4 h-4 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] focus:ring-offset-0 cursor-pointer shrink-0">
               <div class="flex-1 min-w-0">
                 <div class="flex items-center justify-between gap-2">
