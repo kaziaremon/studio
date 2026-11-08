@@ -505,6 +505,34 @@
   bottom: auto !important;
 }
 
+/* ==========================================================================
+   SERVICE CHECKBOX CARDS (LIGHT & BRAND-ALIGNED)
+   ========================================================================== */
+.service-checkbox-card {
+  transition: all 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.service-checkbox-card:hover {
+  border-color: rgba(8, 127, 112, 0.45);
+  background-color: #FAFCFB;
+}
+.service-checkbox-card:has(input:checked),
+.service-checkbox-card.is-checked {
+  background-color: #EAF5F1 !important;
+  border-color: #087F70 !important;
+  box-shadow: 0 0 0 1px rgba(8, 127, 112, 0.3), 0 2px 6px rgba(8, 127, 112, 0.08);
+}
+.service-checkbox-card:has(input:checked) .service-card-title,
+.service-checkbox-card.is-checked .service-card-title {
+  color: #087F70;
+  font-weight: 700;
+}
+.service-checkbox-card:has(input:checked) .service-card-badge,
+.service-checkbox-card.is-checked .service-card-badge {
+  background-color: #087F70;
+  color: #FFFFFF;
+  border-color: #087F70;
+}
+
   </style>
 </head>
 <body class="h-full bg-[#F8FAFC] text-slate-800 flex flex-col font-sans antialiased selection:bg-[#147D64] selection:text-white">
@@ -3036,14 +3064,14 @@
        MODAL 1: ADD CLIENT WITH SERVICE SELECTION & AUTO-TASK PROVISIONING
        ========================================================================= -->
   <div id="modalAddClient" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
-    <div class="bg-white border border-[#E3E9EF] rounded-3xl max-w-2xl w-full p-5 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
-      <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
-        <h3 class="text-lg font-bold text-[#172B36] flex items-center gap-2">
-          <i class="fa-solid fa-user-plus text-brand-whiz text-sm"></i>
-          <span>Add New Client & Provision Services</span>
+    <div class="relative bg-white border border-[#E3E9EF] rounded-3xl max-w-2xl w-full p-5 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF] pr-10 sm:pr-12">
+        <h3 class="text-base sm:text-lg font-bold text-[#172B36] flex items-center gap-2 min-w-0">
+          <i class="fa-solid fa-user-plus text-[#087F70] text-sm shrink-0"></i>
+          <span class="truncate">Add New Client & Provision Services</span>
         </h3>
-        <button type="button" class="btn-close-modal text-slate-500 hover:text-[#172B36] cursor-pointer" data-modal="modalAddClient">
-          <i class="fa-solid fa-xmark text-lg"></i>
+        <button type="button" class="btn-close-modal absolute top-4 right-4 sm:top-6 sm:right-6 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-100/90 hover:bg-slate-200 text-slate-500 hover:text-[#172B36] flex items-center justify-center transition-all cursor-pointer shadow-2xs z-10" data-modal="modalAddClient" aria-label="Close modal">
+          <i class="fa-solid fa-xmark text-sm sm:text-base"></i>
         </button>
       </div>
 
@@ -3081,20 +3109,91 @@
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Billing Currency *</label>
-            <select name="currency" id="addClientCurrency" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:border-brand-whiz">
-              <option value="BDT" selected>BDT — ৳ (Bangladeshi Taka)</option>
-              <option value="USD">USD — $ (US Dollar)</option>
-              <option value="GBP">GBP — £ (British Pound)</option>
-              <option value="EUR">EUR — € (Euro)</option>
-              <option value="AED">AED — د.إ (UAE Dirham)</option>
-              <option value="SAR">SAR — ر.س (Saudi Riyal)</option>
-              <option value="CAD">CAD — CA$ (Canadian Dollar)</option>
-              <option value="AUD">AUD — A$ (Australian Dollar)</option>
-              <option value="SGD">SGD — S$ (Singapore Dollar)</option>
-              <option value="INR">INR — ₹ (Indian Rupee)</option>
-              <option value="JPY">JPY — ¥ (Japanese Yen)</option>
-              <option value="MYR">MYR — RM (Malaysian Ringgit)</option>
-            </select>
+            <div class="glass-select-wrapper" data-glass-select="addClientCurrency">
+              <select name="currency" id="addClientCurrency" class="sr-only" tabindex="-1" aria-hidden="true">
+                <option value="BDT" selected>BDT — ৳ (Bangladeshi Taka)</option>
+                <option value="USD">USD — $ (US Dollar)</option>
+                <option value="GBP">GBP — £ (British Pound)</option>
+                <option value="EUR">EUR — € (Euro)</option>
+                <option value="AED">AED — د.إ (UAE Dirham)</option>
+                <option value="SAR">SAR — ر.س (Saudi Riyal)</option>
+                <option value="CAD">CAD — CA$ (Canadian Dollar)</option>
+                <option value="AUD">AUD — A$ (Australian Dollar)</option>
+                <option value="SGD">SGD — S$ (Singapore Dollar)</option>
+                <option value="INR">INR — ₹ (Indian Rupee)</option>
+                <option value="JPY">JPY — ¥ (Japanese Yen)</option>
+                <option value="MYR">MYR — RM (Malaysian Ringgit)</option>
+              </select>
+              <button type="button" class="glass-select-trigger" id="addClientCurrencyTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="addClientCurrencyMenu">
+                <span class="flex items-center gap-2 min-w-0">
+                  <span class="w-6 h-6 rounded-lg bg-[#EAF5F1] text-[#087F70] flex items-center justify-center font-bold text-xs shrink-0 select-currency-symbol">৳</span>
+                  <span class="select-label truncate font-sans text-xs font-semibold text-[#172B36]">BDT — ৳ (Bangladeshi Taka)</span>
+                </span>
+                <i class="fa-solid fa-chevron-down chevron-icon shrink-0"></i>
+              </button>
+              <div class="glass-select-menu" id="addClientCurrencyMenu" role="listbox" aria-label="Billing Currency">
+                <button type="button" class="glass-select-option selected" data-value="BDT" data-symbol="৳" role="option" aria-selected="true">
+                  <span class="currency-badge w-6 h-6 rounded-lg bg-[#EAF5F1] text-[#087F70] flex items-center justify-center font-bold text-xs shrink-0">৳</span>
+                  <span class="select-opt-text truncate font-sans font-medium">BDT — ৳ (Bangladeshi Taka)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="USD" data-symbol="$" role="option" aria-selected="false">
+                  <span class="currency-badge w-6 h-6 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0">$</span>
+                  <span class="select-opt-text truncate font-sans font-medium">USD — $ (US Dollar)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="GBP" data-symbol="£" role="option" aria-selected="false">
+                  <span class="currency-badge w-6 h-6 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0">£</span>
+                  <span class="select-opt-text truncate font-sans font-medium">GBP — £ (British Pound)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="EUR" data-symbol="€" role="option" aria-selected="false">
+                  <span class="currency-badge w-6 h-6 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0">€</span>
+                  <span class="select-opt-text truncate font-sans font-medium">EUR — € (Euro)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="AED" data-symbol="د.إ" role="option" aria-selected="false">
+                  <span class="currency-badge w-6 h-6 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0">د.إ</span>
+                  <span class="select-opt-text truncate font-sans font-medium">AED — د.إ (UAE Dirham)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="SAR" data-symbol="ر.س" role="option" aria-selected="false">
+                  <span class="currency-badge w-6 h-6 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0">ر.س</span>
+                  <span class="select-opt-text truncate font-sans font-medium">SAR — ر.س (Saudi Riyal)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="CAD" data-symbol="CA$" role="option" aria-selected="false">
+                  <span class="currency-badge w-6 h-6 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0">CA$</span>
+                  <span class="select-opt-text truncate font-sans font-medium">CAD — CA$ (Canadian Dollar)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="AUD" data-symbol="A$" role="option" aria-selected="false">
+                  <span class="currency-badge w-6 h-6 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0">A$</span>
+                  <span class="select-opt-text truncate font-sans font-medium">AUD — A$ (Australian Dollar)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="SGD" data-symbol="S$" role="option" aria-selected="false">
+                  <span class="currency-badge w-6 h-6 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0">S$</span>
+                  <span class="select-opt-text truncate font-sans font-medium">SGD — S$ (Singapore Dollar)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="INR" data-symbol="₹" role="option" aria-selected="false">
+                  <span class="currency-badge w-6 h-6 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0">₹</span>
+                  <span class="select-opt-text truncate font-sans font-medium">INR — ₹ (Indian Rupee)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="JPY" data-symbol="¥" role="option" aria-selected="false">
+                  <span class="currency-badge w-6 h-6 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0">¥</span>
+                  <span class="select-opt-text truncate font-sans font-medium">JPY — ¥ (Japanese Yen)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="MYR" data-symbol="RM" role="option" aria-selected="false">
+                  <span class="currency-badge w-6 h-6 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0">RM</span>
+                  <span class="select-opt-text truncate font-sans font-medium">MYR — RM (Malaysian Ringgit)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -3106,8 +3205,139 @@
         <!-- Service Selection Checkboxes -->
         <div>
           <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Select Services to Provision (Auto-generates 20 SOP tasks each)</label>
-          <div id="addClientServicesCheckboxes" class="max-h-48 overflow-y-auto p-3 rounded-2xl bg-slate-50 border border-[#E3E9EF] space-y-2">
-            <!-- Dynamically populated -->
+          <div id="addClientServicesCheckboxes" class="max-h-56 overflow-y-auto p-3 rounded-2xl bg-[#FAFCFB] border border-[#E3E9EF] space-y-2">
+            <!-- 1. WhatsApp CRM -->
+            <label class="service-checkbox-card group flex items-start gap-3 p-3 rounded-2xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
+              <input type="checkbox" name="services" value="srv_wa_crm" class="service-checkbox-input mt-0.5 w-4 h-4 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] focus:ring-offset-0 cursor-pointer shrink-0">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">WhatsApp Business CRM & Sales Funnels</span>
+                  <span class="service-card-badge text-[10px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-2 py-0.5 rounded-md border border-[#087F70]/20 shrink-0">COMM-WA</span>
+                </div>
+                <p class="service-card-cat text-[11px] text-slate-500 font-normal truncate mt-0.5">Conversational Commerce</p>
+              </div>
+            </label>
+            <!-- 2. LinkedIn B2B -->
+            <label class="service-checkbox-card group flex items-start gap-3 p-3 rounded-2xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
+              <input type="checkbox" name="services" value="srv_li_b2b" class="service-checkbox-input mt-0.5 w-4 h-4 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] focus:ring-offset-0 cursor-pointer shrink-0">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">LinkedIn B2B Lead Generation & Account-Based Marketing</span>
+                  <span class="service-card-badge text-[10px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-2 py-0.5 rounded-md border border-[#087F70]/20 shrink-0">B2B-LI</span>
+                </div>
+                <p class="service-card-cat text-[11px] text-slate-500 font-normal truncate mt-0.5">Enterprise Growth</p>
+              </div>
+            </label>
+            <!-- 3. Facebook Marketing -->
+            <label class="service-checkbox-card group flex items-start gap-3 p-3 rounded-2xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
+              <input type="checkbox" name="services" value="srv_fb_mktg" class="service-checkbox-input mt-0.5 w-4 h-4 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] focus:ring-offset-0 cursor-pointer shrink-0">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">Facebook Marketing & Community Building</span>
+                  <span class="service-card-badge text-[10px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-2 py-0.5 rounded-md border border-[#087F70]/20 shrink-0">META-MKTG</span>
+                </div>
+                <p class="service-card-cat text-[11px] text-slate-500 font-normal truncate mt-0.5">Organic Community</p>
+              </div>
+            </label>
+            <!-- 4. Instagram Marketing -->
+            <label class="service-checkbox-card group flex items-start gap-3 p-3 rounded-2xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
+              <input type="checkbox" name="services" value="srv_ig_growth" class="service-checkbox-input mt-0.5 w-4 h-4 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] focus:ring-offset-0 cursor-pointer shrink-0">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">Instagram Marketing & Reels Scaling</span>
+                  <span class="service-card-badge text-[10px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-2 py-0.5 rounded-md border border-[#087F70]/20 shrink-0">META-IG</span>
+                </div>
+                <p class="service-card-cat text-[11px] text-slate-500 font-normal truncate mt-0.5">Paid & Organic Social Media</p>
+              </div>
+            </label>
+            <!-- 5. Facebook Ads -->
+            <label class="service-checkbox-card group flex items-start gap-3 p-3 rounded-2xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
+              <input type="checkbox" name="services" value="srv_fb_ads" class="service-checkbox-input mt-0.5 w-4 h-4 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] focus:ring-offset-0 cursor-pointer shrink-0">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">Facebook Ads Management</span>
+                  <span class="service-card-badge text-[10px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-2 py-0.5 rounded-md border border-[#087F70]/20 shrink-0">META-FB</span>
+                </div>
+                <p class="service-card-cat text-[11px] text-slate-500 font-normal truncate mt-0.5">Paid Advertising</p>
+              </div>
+            </label>
+            <!-- 6. Google Ads -->
+            <label class="service-checkbox-card group flex items-start gap-3 p-3 rounded-2xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
+              <input type="checkbox" name="services" value="srv_google_ads" class="service-checkbox-input mt-0.5 w-4 h-4 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] focus:ring-offset-0 cursor-pointer shrink-0">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">Google Ads & Performance Max</span>
+                  <span class="service-card-badge text-[10px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-2 py-0.5 rounded-md border border-[#087F70]/20 shrink-0">SEARCH-GADS</span>
+                </div>
+                <p class="service-card-cat text-[11px] text-slate-500 font-normal truncate mt-0.5">Paid Search</p>
+              </div>
+            </label>
+            <!-- 7. Creative Mitigation -->
+            <label class="service-checkbox-card group flex items-start gap-3 p-3 rounded-2xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
+              <input type="checkbox" name="services" value="srv_creative_mitigation" class="service-checkbox-input mt-0.5 w-4 h-4 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] focus:ring-offset-0 cursor-pointer shrink-0">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">Creative Fatigue & Ad Burnout Mitigation</span>
+                  <span class="service-card-badge text-[10px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-2 py-0.5 rounded-md border border-[#087F70]/20 shrink-0">CREATIVE-OPS</span>
+                </div>
+                <p class="service-card-cat text-[11px] text-slate-500 font-normal truncate mt-0.5">Performance Media Engineering</p>
+              </div>
+            </label>
+            <!-- 8. YouTube Ads -->
+            <label class="service-checkbox-card group flex items-start gap-3 p-3 rounded-2xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
+              <input type="checkbox" name="services" value="srv_yt_ads" class="service-checkbox-input mt-0.5 w-4 h-4 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] focus:ring-offset-0 cursor-pointer shrink-0">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">YouTube Ads & In-Stream Funnels</span>
+                  <span class="service-card-badge text-[10px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-2 py-0.5 rounded-md border border-[#087F70]/20 shrink-0">VIDEO-ADS</span>
+                </div>
+                <p class="service-card-cat text-[11px] text-slate-500 font-normal truncate mt-0.5">Performance Video</p>
+              </div>
+            </label>
+            <!-- 9. LinkedIn Optimization -->
+            <label class="service-checkbox-card group flex items-start gap-3 p-3 rounded-2xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
+              <input type="checkbox" name="services" value="srv_li_opt" class="service-checkbox-input mt-0.5 w-4 h-4 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] focus:ring-offset-0 cursor-pointer shrink-0">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">LinkedIn Optimization & Executive Presence</span>
+                  <span class="service-card-badge text-[10px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-2 py-0.5 rounded-md border border-[#087F70]/20 shrink-0">LI-OPT</span>
+                </div>
+                <p class="service-card-cat text-[11px] text-slate-500 font-normal truncate mt-0.5">Professional Branding</p>
+              </div>
+            </label>
+            <!-- 10. Social Media Optimization -->
+            <label class="service-checkbox-card group flex items-start gap-3 p-3 rounded-2xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
+              <input type="checkbox" name="services" value="srv_smo" class="service-checkbox-input mt-0.5 w-4 h-4 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] focus:ring-offset-0 cursor-pointer shrink-0">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">Social Media Optimization & Brand Positioning</span>
+                  <span class="service-card-badge text-[10px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-2 py-0.5 rounded-md border border-[#087F70]/20 shrink-0">SMO</span>
+                </div>
+                <p class="service-card-cat text-[11px] text-slate-500 font-normal truncate mt-0.5">Social Media Growth</p>
+              </div>
+            </label>
+            <!-- 11. YouTube Organic Marketing -->
+            <label class="service-checkbox-card group flex items-start gap-3 p-3 rounded-2xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
+              <input type="checkbox" name="services" value="srv_yt_mktg" class="service-checkbox-input mt-0.5 w-4 h-4 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] focus:ring-offset-0 cursor-pointer shrink-0">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">YouTube Organic Marketing & Search SEO</span>
+                  <span class="service-card-badge text-[10px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-2 py-0.5 rounded-md border border-[#087F70]/20 shrink-0">VIDEO-YT</span>
+                </div>
+                <p class="service-card-cat text-[11px] text-slate-500 font-normal truncate mt-0.5">Video Media</p>
+              </div>
+            </label>
+            <!-- 12. Pinterest Marketing -->
+            <label class="service-checkbox-card group flex items-start gap-3 p-3 rounded-2xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
+              <input type="checkbox" name="services" value="srv_pin_mktg" class="service-checkbox-input mt-0.5 w-4 h-4 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] focus:ring-offset-0 cursor-pointer shrink-0">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">Pinterest Marketing & Evergreen Traffic</span>
+                  <span class="service-card-badge text-[10px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-2 py-0.5 rounded-md border border-[#087F70]/20 shrink-0">VISUAL-PIN</span>
+                </div>
+                <p class="service-card-cat text-[11px] text-slate-500 font-normal truncate mt-0.5">Visual Search & SEO</p>
+              </div>
+            </label>
           </div>
         </div>
 

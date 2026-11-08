@@ -2469,11 +2469,16 @@
         // Sync trigger display with current select value
         const currentOpt = menuEl.querySelector('.glass-select-option[data-value="' + (selectEl?.value || '') + '"]');
         if (currentOpt && labelSpan) {
-          const optText = currentOpt.querySelector('span')?.textContent || currentOpt.textContent.trim();
+          const optText = currentOpt.querySelector('.select-opt-text')?.textContent || currentOpt.querySelector('span:not(.currency-badge)')?.textContent || currentOpt.querySelector('span')?.textContent || currentOpt.textContent.trim();
           labelSpan.textContent = optText;
           const optIcon = currentOpt.querySelector('.option-icon');
           if (optIcon && iconEl) {
             iconEl.className = optIcon.className.replace('option-icon', 'select-icon');
+          }
+          const symbolBadge = triggerBtn.querySelector('.select-currency-symbol');
+          const optBadge = currentOpt.querySelector('.currency-badge');
+          if (symbolBadge && optBadge) {
+            symbolBadge.textContent = optBadge.textContent;
           }
         }
         return;
@@ -2492,7 +2497,7 @@
           opt.setAttribute('aria-selected', isMatch ? 'true' : 'false');
           if (isMatch) {
             if (labelSpan) {
-              const optText = opt.querySelector('span')?.textContent || opt.textContent.trim();
+              const optText = opt.querySelector('.select-opt-text')?.textContent || opt.querySelector('span:not(.currency-badge)')?.textContent || opt.querySelector('span')?.textContent || opt.textContent.trim();
               labelSpan.textContent = optText;
             }
             if (iconEl) {
@@ -2500,6 +2505,11 @@
               if (optIcon) {
                 iconEl.className = optIcon.className.replace('option-icon', 'select-icon');
               }
+            }
+            const symbolBadge = triggerBtn.querySelector('.select-currency-symbol');
+            const optBadge = opt.querySelector('.currency-badge');
+            if (symbolBadge && optBadge) {
+              symbolBadge.textContent = optBadge.textContent;
             }
           }
         });
@@ -4647,20 +4657,48 @@
   // =========================================================================
   function initModals() {
     // 1. Open Add Client Modal
+    const renderAddClientServices = () => {
+      const box = document.getElementById('addClientServicesCheckboxes');
+      if (!box) return;
+      if (state.servicesCache && state.servicesCache.length > 0) {
+        box.innerHTML = state.servicesCache.map(s => {
+          const code = escapeHtml(s.code || (s.id || '').toUpperCase());
+          const name = escapeHtml(s.name || '');
+          const cat = escapeHtml(s.category || '');
+          const id = escapeHtml(s.id || '');
+          return `
+            <label class="service-checkbox-card group flex items-start gap-3 p-3 rounded-2xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
+              <input type="checkbox" name="services" value="${id}" class="service-checkbox-input mt-0.5 w-4 h-4 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] focus:ring-offset-0 cursor-pointer shrink-0">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">${name}</span>
+                  <span class="service-card-badge text-[10px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-2 py-0.5 rounded-md border border-[#087F70]/20 shrink-0">${code}</span>
+                </div>
+                ${cat ? `<p class="service-card-cat text-[11px] text-slate-500 font-normal truncate mt-0.5">${cat}</p>` : ''}
+              </div>
+            </label>
+          `;
+        }).join('');
+      }
+    };
+
+    // Wire up live service card highlight sync
+    const serviceBox = document.getElementById('addClientServicesCheckboxes');
+    serviceBox?.addEventListener('change', (e) => {
+      if (e.target && e.target.name === 'services') {
+        const card = e.target.closest('.service-checkbox-card');
+        if (card) {
+          card.classList.toggle('is-checked', e.target.checked);
+        }
+      }
+    });
+
     const openAddClient = () => {
       const modal = document.getElementById('modalAddClient');
-      const box = document.getElementById('addClientServicesCheckboxes');
-      if (modal && box) {
+      if (modal) {
         modal.classList.remove('hidden');
-        if (state.servicesCache.length > 0) {
-          box.innerHTML = state.servicesCache.map(s => `
-            <label class="flex items-center space-x-2.5 p-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-brand-whiz/50 cursor-pointer">
-              <input type="checkbox" name="services" value="${s.id}" class="w-4 h-4 rounded text-brand-whiz bg-slate-950 border-slate-700">
-              <span class="text-xs font-semibold text-white flex-1">${s.name}</span>
-              <span class="text-[10px] text-brand-whiz font-bold uppercase">${s.code}</span>
-            </label>
-          `).join('');
-        }
+        renderAddClientServices();
+        initGlassSelects();
       }
     };
 
@@ -4682,6 +4720,7 @@
         city: f.city.value,
         country: f.country.value,
         address: f.address.value,
+        currency: f.currency ? f.currency.value : 'BDT',
         selectedServiceIds: selectedServices
       };
 
@@ -4697,6 +4736,8 @@
       if (res.ok && res.data && res.data.success) {
         showToast(res.data.message || 'Client created successfully!', 'success');
         f.reset();
+        initGlassSelects();
+        document.querySelectorAll('#addClientServicesCheckboxes .service-checkbox-card').forEach(c => c.classList.remove('is-checked'));
         document.getElementById('modalAddClient')?.classList.add('hidden');
         loadClientsData();
         loadProjectsData();
