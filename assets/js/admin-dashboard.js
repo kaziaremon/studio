@@ -4657,13 +4657,14 @@
       try {
         const payload = {
           clientId,
+          daily_pdf_downloads: 0,
           organizationId: state.selectedClient?.organization_id || null,
           userId: state.selectedClient?.id || null,
           clerkUserId: state.selectedClient?.clerk_user_id || null,
           email: state.selectedClient?.email || null
         };
         const res = await apiFetch(`/pdf/quota/reset/${encodeURIComponent(clientId)}`, {
-          method: 'POST',
+          method: 'PATCH',
           body: JSON.stringify(payload)
         });
         setBtnLoading(btn, false);

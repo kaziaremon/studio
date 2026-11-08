@@ -1,20 +1,19 @@
 /**
  * WHIZ STUDIO — OFFICIAL CORPORATE PDF INVOICE ENGINE
- * "Standard Minimalist Corporate A4 Stationery"
+ * "Modern Card-Based Architecture Reference"
  *
  * Design Architecture:
  * - Standard A4 (210 x 297 mm = 595.28 x 841.89 pt)
- * - Minimalist, Human-Designed Corporate Financial Layout (Zero AI-Style UI Boxes)
- * - Brand Palette: Deep Emerald (#087F70), Warm Gold (#C69A40), Dark Slate (#172B36), Charcoal (#20312E)
- * - Top & Bottom Framing Accents: Slim dual-tone brand bars (Deep Green & Gold) at very top and very bottom
- * - Crisp High-Resolution Official Logo Rendering (preserves exact aspect ratio, no distortion)
- * - Deduplicated Single-Occurrence Header: Logo + Company Contact Details only once at top left
- * - Document Title strictly 'INVOICE' with Gold hairline accent
- * - Clean Typography Grid: BILLED TO (Left) & PAYMENT DETAILS (Right) with zero button/pill styling
- * - Clean Accounting Data Table (DESCRIPTION, QTY, UNIT PRICE, TOTAL) with subtle divider rules
- * - Clean Right-Aligned Financial Totals with classic accounting hairlines
- * - Minimal System-Generated Compliance Footer without jargon or physical signature boxes
- * - Pure Client-Side Vector Execution via pdf-lib in browser memory (Zero server storage)
+ * - Brand Palette: Deep Green Primary (#087F70), Warm Gold Accent (#C69A40), Dark Charcoal (#172B36), Slate (#5F7180)
+ * - Top & Bottom Framing Accents: Slim dual-tone brand bars (Deep Green & Gold)
+ * - Watermark: Large, centralized, low-opacity (6%, strictly between 5% and 8%) watermark of official company logo
+ * - Header: Company Logo at top-left, title strictly 'Invoice' at top-right in bold, subtle horizontal divider line below
+ * - Meta Section: 'Billed to:' (Client CIF data) on the left, Invoice No. & Dynamic Date on the right
+ * - Main Data Card: Sleek, rounded white card container with subtle border for itemized table (Description, Amount)
+ * - Total Block: Solid block of the brand's primary Deep Green (#087F70) at bottom of rounded card, displaying 'Total Amount' and value in crisp white text
+ * - Information Logic: NO duplicate addresses; company contact info displayed neatly at bottom ('Payment Info' & 'Issued by')
+ * - Footer: System-generated compliance notice centered at very bottom, zero physical signature blocks
+ * - Engine: Pure Client-Side Zero-Storage Vector Execution in browser memory (Zero server storage)
  */
 
 (function (global) {
@@ -26,7 +25,6 @@
     if (cachedLogoBytes) return cachedLogoBytes;
     try {
       if (typeof window !== 'undefined' && window.location) {
-        // Fetch official company logo without changing the file
         const candidates = [
           '/assets/images/logo.png',
           '/public/assets/images/logo.png',
@@ -102,6 +100,52 @@
     return lines;
   }
 
+  // Draw full rounded card container with border and fill
+  function drawRoundedCard(page, x, y, width, height, radius, options = {}) {
+    const { fillColor, borderColor, borderWidth } = options;
+    const r = Math.min(radius, width / 2, height / 2);
+    const path = `M ${x + r} ${y} ` +
+                 `L ${x + width - r} ${y} ` +
+                 `Q ${x + width} ${y} ${x + width} ${y + r} ` +
+                 `L ${x + width} ${y + height - r} ` +
+                 `Q ${x + width} ${y + height} ${x + width - r} ${y + height} ` +
+                 `L ${x + r} ${y + height} ` +
+                 `Q ${x} ${y + height} ${x} ${y + height - r} ` +
+                 `L ${x} ${y + r} ` +
+                 `Q ${x} ${y} ${x + r} ${y} Z`;
+    page.drawSvgPath(path, {
+      color: fillColor,
+      borderColor: borderColor,
+      borderWidth: borderWidth || 1
+    });
+  }
+
+  // Draw top-rounded table header background inside card
+  function drawTopRoundedHeader(page, x, y, width, height, radius, fillColor) {
+    const r = Math.min(radius, width / 2, height);
+    const path = `M ${x} ${y} ` +
+                 `L ${x + width} ${y} ` +
+                 `L ${x + width} ${y + height - r} ` +
+                 `Q ${x + width} ${y + height} ${x + width - r} ${y + height} ` +
+                 `L ${x + r} ${y + height} ` +
+                 `Q ${x} ${y + height} ${x} ${y + height - r} ` +
+                 `L ${x} ${y} Z`;
+    page.drawSvgPath(path, { color: fillColor });
+  }
+
+  // Draw bottom-rounded solid total block inside card
+  function drawBottomRoundedTotalBlock(page, x, y, width, height, radius, fillColor) {
+    const r = Math.min(radius, width / 2, height);
+    const path = `M ${x + r} ${y} ` +
+                 `L ${x + width - r} ${y} ` +
+                 `Q ${x + width} ${y} ${x + width} ${y + r} ` +
+                 `L ${x + width} ${y + height} ` +
+                 `L ${x} ${y + height} ` +
+                 `L ${x} ${y + r} ` +
+                 `Q ${x} ${y} ${x + r} ${y} Z`;
+    page.drawSvgPath(path, { color: fillColor });
+  }
+
   async function compileWhizDocumentPdf(docData, options = {}) {
     let PDFLib = global.PDFLib || (typeof globalThis !== 'undefined' ? globalThis.PDFLib : null);
     if (!PDFLib && typeof require !== 'undefined') {
@@ -126,9 +170,9 @@
     const page = pdfDoc.addPage([A4_WIDTH, A4_HEIGHT]);
     const { width, height } = page.getSize();
 
-    const marginX = 42;
-    const contentWidth = width - (marginX * 2); // 511.28 pt
-    const rightAlignX = width - marginX;        // 553.28 pt
+    const marginX = 40;
+    const contentWidth = width - (marginX * 2);
+    const rightAlignX = width - marginX;
 
     // Corporate Typography
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
@@ -142,184 +186,98 @@
     const cCharcoal = rgb(23 / 255, 43 / 255, 54 / 255);         // #172B36 (Dark Slate Primary Text)
     const cMuted = rgb(95 / 255, 113 / 255, 128 / 255);          // #5F7180 (Secondary Text)
     const cMutedLight = rgb(148 / 255, 163 / 255, 184 / 255);    // #94A3B8 (Legal/Subtle)
-    const cTableHeadBg = rgb(248 / 255, 250 / 255, 252 / 255);    // #F8FAFC (Subtle Table Header Tint)
-    const cRowAltBg = rgb(253 / 255, 254 / 255, 254 / 255);      // #FDFEFE
-    const cBorder = rgb(226 / 255, 232 / 255, 240 / 255);        // #E2E8F0 (Subtle Hairline)
-    const cBorderDark = rgb(203 / 255, 213 / 255, 225 / 255);    // #CBD5E1
+    const cTableHeadBg = rgb(244 / 255, 247 / 255, 246 / 255);    // #F4F7F6 (Table Header Tint)
+    const cBorder = rgb(226 / 255, 232 / 255, 240 / 255);        // #E2E8F0 (Subtle Border)
     const cWhite = rgb(1, 1, 1);
 
-    // 1. Crisp White Page Canvas
+    // 1. Page Background Canvas
     page.drawRectangle({ x: 0, y: 0, width, height, color: cWhite });
 
-    // 2. Top Framing Accent (Slim horizontal bar: 70% Deep Green, 30% Gold)
-    const accentBarH = 4.5;
-    page.drawRectangle({ x: 0, y: height - accentBarH, width: width * 0.70, height: accentBarH, color: cEmerald });
-    page.drawRectangle({ x: width * 0.70, y: height - accentBarH, width: width * 0.30, height: accentBarH, color: cGold });
+    // 2. Framing Accent Bars (Top & Bottom: 70% Deep Green, 30% Gold)
+    const barH = 4.5;
+    page.drawRectangle({ x: 0, y: height - barH, width: width * 0.70, height: barH, color: cEmerald });
+    page.drawRectangle({ x: width * 0.70, y: height - barH, width: width * 0.30, height: barH, color: cGold });
+    page.drawRectangle({ x: 0, y: 0, width: width * 0.70, height: barH, color: cEmerald });
+    page.drawRectangle({ x: width * 0.70, y: 0, width: width * 0.30, height: barH, color: cGold });
 
-    // 3. Bottom Framing Accent (Matching slim bar at very bottom)
-    page.drawRectangle({ x: 0, y: 0, width: width * 0.70, height: accentBarH, color: cEmerald });
-    page.drawRectangle({ x: width * 0.70, y: 0, width: width * 0.30, height: accentBarH, color: cGold });
-
-    // =========================================================================
-    // 4. CONSOLIDATED MINIMALIST HEADER (Strictly Deduplicated)
-    // Left: Crisp Logo + Single Company Contact Block
-    // Right: Document Title 'INVOICE' + Clean Typographic Metadata
-    // =========================================================================
-    const headerTopY = height - 28;
-
-    // A. Official Company Logo Rendering (Clean, High-Quality, Exact Aspect Ratio)
+    // 3. Centralized Logo Watermark (Strictly 5% - 8% low opacity)
     const logoBytes = await getLogoBytes();
-    let logoDrawn = false;
+    let logoImg = null;
     let actualLogoHeight = 44;
 
     if (logoBytes) {
       try {
-        const logoImage = await pdfDoc.embedPng(logoBytes);
-        // Calculate true aspect ratio
-        const logoAspect = logoImage.height / logoImage.width;
-        const targetLogoWidth = 138;
-        actualLogoHeight = targetLogoWidth * logoAspect; // Native proportional height
+        logoImg = await pdfDoc.embedPng(logoBytes);
+        const aspect = logoImg.height / logoImg.width;
 
-        page.drawImage(logoImage, {
-          x: marginX,
-          y: headerTopY - actualLogoHeight,
-          width: targetLogoWidth,
-          height: actualLogoHeight
+        // Watermark: Large, centralized, low-opacity (6%) in the middle of document background
+        const wmW = 320;
+        const wmH = wmW * aspect;
+        const wmX = (width - wmW) / 2;
+        const wmY = (height - wmH) / 2;
+        page.drawImage(logoImg, {
+          x: wmX,
+          y: wmY,
+          width: wmW,
+          height: wmH,
+          opacity: 0.06 // 6% opacity
         });
-        logoDrawn = true;
       } catch (err) {
-        console.warn('Could not embed PNG logo into PDF, falling back to clean brand typography:', err);
+        console.warn('Could not embed PNG watermark into PDF:', err);
       }
     }
 
-    if (!logoDrawn) {
+    // 4. Header Section: Logo at top-left, title strictly 'Invoice' at top-right in bold
+    const headerTopY = height - 32;
+    if (logoImg) {
+      const targetLogoWidth = 105;
+      actualLogoHeight = targetLogoWidth * (logoImg.height / logoImg.width);
+      page.drawImage(logoImg, {
+        x: marginX,
+        y: headerTopY - actualLogoHeight,
+        width: targetLogoWidth,
+        height: actualLogoHeight
+      });
+    } else {
       page.drawText('WHIZ STUDIO', {
         x: marginX,
-        y: headerTopY - 18,
-        size: 18,
+        y: headerTopY - 20,
+        size: 20,
         font: fontBold,
         color: cEmerald
       });
       actualLogoHeight = 24;
     }
 
-    // B. Single Authoritative Company Information Block (Directly beneath logo)
-    const issuer = docData.issuer || docData.agency || {};
-    const issuerY = headerTopY - actualLogoHeight - 12;
-
-    page.drawText(issuer.legalName || 'Whiz Studio', {
-      x: marginX,
-      y: issuerY,
-      size: 9.5,
+    // Document Title: Strictly 'Invoice' at top-right in bold
+    const invoiceTitle = 'Invoice';
+    const titleSize = 28;
+    const titleW = fontBold.widthOfTextAtSize(invoiceTitle, titleSize);
+    page.drawText(invoiceTitle, {
+      x: rightAlignX - titleW,
+      y: headerTopY - 24,
+      size: titleSize,
       font: fontBold,
       color: cCharcoal
     });
-    page.drawText(issuer.tagline || 'Digital Marketing & Growth Agency', {
-      x: marginX,
-      y: issuerY - 11,
-      size: 7.5,
-      font: fontRegular,
-      color: cMuted
-    });
-    page.drawText(issuer.address || 'House 53, Road 7, Block A, Mirpur 12, Dhaka 1216, Bangladesh', {
-      x: marginX,
-      y: issuerY - 21.5,
-      size: 7.5,
-      font: fontRegular,
-      color: cMuted
-    });
-    const issuerContactLine = `Phone: ${issuer.phone || '+880 1815127022'}  •  Email: ${issuer.email || 'info@whizstudio.art'}  •  Web: ${issuer.website ? issuer.website.replace(/^https?:\/\//, '') : 'whizstudio.art'}`;
-    page.drawText(issuerContactLine, {
-      x: marginX,
-      y: issuerY - 32,
-      size: 7.5,
-      font: fontRegular,
-      color: cMuted
-    });
 
-    // C. Header Right: Document Title Strictly 'INVOICE'
-    const docTitle = 'INVOICE';
-    const titleSize = 26;
-    const titleW = fontBold.widthOfTextAtSize(docTitle, titleSize);
-
-    page.drawText(docTitle, {
-      x: rightAlignX - titleW,
-      y: headerTopY - 16,
-      size: titleSize,
-      font: fontBold,
-      color: cEmerald
-    });
-
-    // Subtle Gold Hairline Accent below title
-    page.drawLine({
-      start: { x: rightAlignX - titleW, y: headerTopY - 22 },
-      end: { x: rightAlignX, y: headerTopY - 22 },
-      thickness: 1.5,
-      color: cGold
-    });
-
-    // Clean Typographic Metadata (No Button/Pill UI Boxes)
-    const docNumber = docData.invoiceNumber || docData.receiptNumber || 'WHIZ-INV-2026-0001';
-    const issueDate = docData.issueDate || docData.paymentDate || '08 November, 2026';
-    const curr = (docData.currency || 'USD').toUpperCase();
-    const rawStatus = (docData.status || 'PAID').toUpperCase().replace(/_/g, ' ');
-    const isPaid = rawStatus === 'PAID' || rawStatus === 'CONFIRMED' || rawStatus === 'PAID IN FULL';
-    const isPartial = rawStatus === 'PARTIALLY PAID' || rawStatus === 'PARTIAL';
-    const statusText = isPaid ? 'PAID' : (isPartial ? 'PARTIALLY PAID' : 'PAYMENT DUE');
-
-    let metaY = headerTopY - 38;
-    const metaLineGap = 13;
-
-    function drawHeaderMeta(label, value, isBoldVal = false, valColor = cCharcoal) {
-      const valW = (isBoldVal ? fontBold : fontRegular).widthOfTextAtSize(value, 8.5);
-      const labelW = fontBold.widthOfTextAtSize(label + '  ', 8.5);
-      page.drawText(label, {
-        x: rightAlignX - valW - labelW,
-        y: metaY,
-        size: 8.5,
-        font: fontBold,
-        color: cMuted
-      });
-      page.drawText(value, {
-        x: rightAlignX - valW,
-        y: metaY,
-        size: 8.5,
-        font: isBoldVal ? fontBold : fontRegular,
-        color: valColor
-      });
-      metaY -= metaLineGap;
-    }
-
-    drawHeaderMeta('Invoice Number:', docNumber, true, cCharcoal);
-    drawHeaderMeta('Invoice Date:', issueDate);
-    if (docData.dueDate) {
-      drawHeaderMeta('Due Date:', docData.dueDate);
-    }
-    // Clean Typographic Status (No Pill/Web Button Outline)
-    drawHeaderMeta('Payment Status:', statusText, true, isPaid ? cEmerald : (isPartial ? cGold : cCharcoal));
-    drawHeaderMeta('Currency:', curr);
-
-    // D. Header Horizontal Divider Rule
-    const headerDividerY = headerTopY - 105;
+    // Subtle horizontal divider line below header
+    const headerDividerY = headerTopY - actualLogoHeight - 12;
     page.drawLine({
       start: { x: marginX, y: headerDividerY },
       end: { x: rightAlignX, y: headerDividerY },
-      thickness: 0.75,
+      thickness: 1,
       color: cBorder
     });
 
-    // =========================================================================
-    // 5. BILLED TO & PAYMENT DETAILS (Clean Typographic 2-Column Section)
-    // Completely removed AI-style boxed cards, outlines, and badges
-    // =========================================================================
-    const sectionTopY = headerDividerY - 18;
-    const col2X = marginX + (contentWidth / 2) + 12;
+    // 5. Meta Section: 'Billed to:' (Client CIF data) on left, Invoice No. & Dynamic Date on right
+    const metaTopY = headerDividerY - 20;
 
-    // Left Column: BILLED TO
-    page.drawText('BILLED TO:', {
+    // Left Column: 'Billed to:' (Client CIF data)
+    page.drawText('Billed to:', {
       x: marginX,
-      y: sectionTopY,
-      size: 8,
+      y: metaTopY,
+      size: 9.5,
       font: fontBold,
       color: cEmerald
     });
@@ -329,406 +287,369 @@
     const companyName = client.companyName || '';
     const clientAddr = client.billingAddress || client.address || docData.clientAddress || 'Dhaka, Bangladesh';
     const clientCityCountry = [client.city, client.country, client.postalCode].filter(Boolean).join(', ');
-    const clientPhone = client.phone || docData.clientPhone || '';
-    const clientEmail = client.email || docData.clientEmail || '';
+    const clientContact = [client.phone, client.email].filter(Boolean).join('  •  ');
 
-    let clientCurY = sectionTopY - 14;
+    let curClientY = metaTopY - 14;
     page.drawText(clientName, {
       x: marginX,
-      y: clientCurY,
-      size: 10.5,
+      y: curClientY,
+      size: 11,
       font: fontBold,
       color: cCharcoal
     });
-    clientCurY -= 12;
+    curClientY -= 12;
 
     if (companyName && companyName.toLowerCase() !== clientName.toLowerCase()) {
       page.drawText(companyName, {
         x: marginX,
-        y: clientCurY,
-        size: 8.5,
+        y: curClientY,
+        size: 9,
         font: fontBold,
         color: cEmeraldDark
       });
-      clientCurY -= 11;
+      curClientY -= 11;
     }
 
-    const wrappedAddr = wrapText(clientAddr, 42);
-    wrappedAddr.slice(0, 2).forEach(line => {
+    const addrLines = wrapText(clientAddr, 42);
+    addrLines.slice(0, 2).forEach(line => {
       page.drawText(line, {
         x: marginX,
-        y: clientCurY,
-        size: 8,
+        y: curClientY,
+        size: 8.5,
         font: fontRegular,
         color: cMuted
       });
-      clientCurY -= 10.5;
+      curClientY -= 10.5;
     });
 
     if (clientCityCountry) {
       page.drawText(clientCityCountry, {
         x: marginX,
-        y: clientCurY,
-        size: 8,
+        y: curClientY,
+        size: 8.5,
         font: fontRegular,
         color: cMuted
       });
-      clientCurY -= 10.5;
+      curClientY -= 10.5;
     }
 
-    const contactStr = [clientEmail, clientPhone].filter(Boolean).join('  •  ');
-    if (contactStr) {
-      page.drawText(contactStr, {
+    if (clientContact) {
+      page.drawText(clientContact, {
         x: marginX,
-        y: clientCurY,
-        size: 7.5,
+        y: curClientY,
+        size: 8,
         font: fontRegular,
         color: cMuted
       });
+      curClientY -= 10.5;
     }
 
-    // Right Column: PAYMENT & SETTLEMENT DETAILS (Clean Minimalist Typography)
-    page.drawText('PAYMENT DETAILS:', {
-      x: col2X,
-      y: sectionTopY,
-      size: 8,
-      font: fontBold,
-      color: cEmerald
-    });
+    // Right Column: Invoice No. & Dynamic Date (and Payment Status)
+    const curr = (docData.currency || 'USD').toUpperCase();
+    const docNumber = docData.invoiceNumber || docData.receiptNumber || 'WHIZ-INV-2026-0001';
+    const issueDate = docData.issueDate || docData.paymentDate || '08 November, 2026';
+    const rawStatus = (docData.status || 'PAID').toUpperCase().replace(/_/g, ' ');
+    const isPaid = rawStatus === 'PAID' || rawStatus === 'CONFIRMED' || rawStatus === 'PAID IN FULL';
+    const isPartial = rawStatus === 'PARTIALLY PAID' || rawStatus === 'PARTIAL';
+    const statusLabel = isPaid ? 'PAID' : (isPartial ? 'PARTIALLY PAID' : 'PAYMENT DUE');
 
-    const paymentMethodRaw = docData.paymentMethod || 'Bank Transfer / Wire';
-    const paymentRef = docData.paymentReference || 'TXN-CONFIRMED';
-    const serviceName = docData.serviceName || docData.description || 'Digital Retainer Service';
-
-    let rightCurY = sectionTopY - 14;
-    function drawDetailRow(lbl, val, isBoldVal = false) {
-      page.drawText(lbl, {
-        x: col2X,
-        y: rightCurY,
-        size: 8,
+    let curMetaY = metaTopY;
+    function drawMetaLine(label, value, isBoldVal = false, valColor = cCharcoal) {
+      const valW = (isBoldVal ? fontBold : fontRegular).widthOfTextAtSize(value, 9);
+      const labelW = fontBold.widthOfTextAtSize(label + '  ', 9);
+      page.drawText(label, {
+        x: rightAlignX - valW - labelW,
+        y: curMetaY,
+        size: 9,
         font: fontBold,
         color: cMuted
       });
-      page.drawText(val, {
-        x: col2X + 96,
-        y: rightCurY,
-        size: 8,
+      page.drawText(value, {
+        x: rightAlignX - valW,
+        y: curMetaY,
+        size: 9,
         font: isBoldVal ? fontBold : fontRegular,
-        color: cCharcoal
+        color: valColor
       });
-      rightCurY -= 12;
+      curMetaY -= 14;
     }
 
-    drawDetailRow('Payment Method:', paymentMethodRaw);
-    drawDetailRow('Transaction Ref:', paymentRef, true);
-    drawDetailRow('Payment Date:', issueDate);
-    drawDetailRow('Settlement:', 'Cleared & Reconciled');
-
-    const acctDetails = docData.paymentAccountDetails;
-    if (acctDetails && (acctDetails.accountName || acctDetails.providerName)) {
-      const acctStr = `${acctDetails.providerName || 'Account'}: ${acctDetails.accountNumber || acctDetails.accountName || ''}`;
-      drawDetailRow('Settlement Acct:', acctStr);
+    drawMetaLine('Invoice No:', docNumber, true, cCharcoal);
+    drawMetaLine('Invoice Date:', issueDate);
+    if (docData.dueDate) {
+      drawMetaLine('Due Date:', docData.dueDate);
     }
+    drawMetaLine('Payment Status:', statusLabel, true, isPaid ? cEmerald : (isPartial ? cGold : cCharcoal));
+    drawMetaLine('Currency:', curr, true);
 
-    // =========================================================================
-    // 6. ITEMIZED ACCOUNTING DATA TABLE
-    // Clean subtle borders, light gray header row, clear typography
-    // =========================================================================
-    const tableTopY = sectionTopY - 78;
-    const thHeight = 22;
-
-    // Shaded Header Row Background
-    page.drawRectangle({
-      x: marginX,
-      y: tableTopY - thHeight,
-      width: contentWidth,
-      height: thHeight,
-      color: cTableHeadBg
-    });
-
-    // Top and Bottom Subtle Table Dividers
-    page.drawLine({
-      start: { x: marginX, y: tableTopY },
-      end: { x: rightAlignX, y: tableTopY },
-      thickness: 1,
-      color: cBorderDark
-    });
-    page.drawLine({
-      start: { x: marginX, y: tableTopY - thHeight },
-      end: { x: rightAlignX, y: tableTopY - thHeight },
-      thickness: 0.8,
-      color: cBorderDark
-    });
-
-    const colDescX = marginX + 8;
-    const colQtyX = marginX + 310;
-    const colRateX = marginX + 380;
-    const colTotalX = rightAlignX - 8;
-
-    page.drawText('DESCRIPTION', {
-      x: colDescX,
-      y: tableTopY - 14.5,
-      size: 7.5,
-      font: fontBold,
-      color: cCharcoal
-    });
-    page.drawText('QTY', {
-      x: colQtyX,
-      y: tableTopY - 14.5,
-      size: 7.5,
-      font: fontBold,
-      color: cCharcoal
-    });
-    page.drawText('UNIT PRICE', {
-      x: colRateX,
-      y: tableTopY - 14.5,
-      size: 7.5,
-      font: fontBold,
-      color: cCharcoal
-    });
-    const colTotalLabel = 'TOTAL';
-    const colTotalW = fontBold.widthOfTextAtSize(colTotalLabel, 7.5);
-    page.drawText(colTotalLabel, {
-      x: colTotalX - colTotalW,
-      y: tableTopY - 14.5,
-      size: 7.5,
-      font: fontBold,
-      color: cCharcoal
-    });
-
-    // Populate Itemized Rows
+    // 6. Main Data Card: Itemized table inside a sleek rounded white card container
     const items = (docData.items && docData.items.length > 0) ? docData.items : [{
-      description: serviceName,
+      description: docData.serviceName || 'Full-Service Digital Retainer',
       quantity: 1,
       unitPriceCents: docData.amountPaidCents || docData.totalCents || 0,
       totalCents: docData.amountPaidCents || docData.totalCents || 0
     }];
 
-    let rowY = tableTopY - thHeight;
-    const rowHeight = 30;
+    const cardTopY = Math.min(curClientY, curMetaY) - 18;
+    const thHeight = 28;
+    const rowHeight = 32;
+    const totalBlockH = 44;
+    const cardRadius = 10;
+    const cardHeight = thHeight + (items.length * rowHeight) + totalBlockH;
+    const cardY = cardTopY - cardHeight;
 
-    items.forEach((item, index) => {
-      if (index % 2 === 1) {
-        page.drawRectangle({
-          x: marginX,
-          y: rowY - rowHeight,
-          width: contentWidth,
-          height: rowHeight,
-          color: cRowAltBg
-        });
-      }
-
-      // Subtle hairline row divider
-      page.drawLine({
-        start: { x: marginX, y: rowY - rowHeight },
-        end: { x: rightAlignX, y: rowY - rowHeight },
-        thickness: 0.5,
-        color: cBorder
-      });
-
-      // Description
-      const itemDesc = item.description || 'Professional Marketing Retainer';
-      page.drawText(itemDesc, {
-        x: colDescX,
-        y: rowY - 14,
-        size: 8.5,
-        font: fontBold,
-        color: cCharcoal
-      });
-
-      // Sub-package/category if present
-      const subInfo = [docData.servicePackage, docData.serviceCategory].filter(Boolean).join('  •  ');
-      if (subInfo) {
-        page.drawText(subInfo, {
-          x: colDescX,
-          y: rowY - 23,
-          size: 7,
-          font: fontRegular,
-          color: cMuted
-        });
-      }
-
-      // Qty
-      const qtyStr = String(item.quantity || 1);
-      page.drawText(qtyStr, {
-        x: colQtyX + 4,
-        y: rowY - 15,
-        size: 8.5,
-        font: fontRegular,
-        color: cCharcoal
-      });
-
-      // Unit Price
-      const itemUnitCents = item.unitPriceCents ?? item.unit_price_cents ?? (item.unitPrice ? Math.round(item.unitPrice * 100) : 0);
-      const itemTotalCents = item.totalCents ?? item.total_cents ?? (item.amount ? Math.round(item.amount * 100) : (itemUnitCents * (item.quantity || 1)));
-
-      page.drawText(formatMoney(itemUnitCents, curr), {
-        x: colRateX,
-        y: rowY - 15,
-        size: 8.5,
-        font: fontRegular,
-        color: cCharcoal
-      });
-
-      // Line Total
-      const totalStr = formatMoney(itemTotalCents, curr);
-      const totalStrW = fontBold.widthOfTextAtSize(totalStr, 8.5);
-      page.drawText(totalStr, {
-        x: colTotalX - totalStrW,
-        y: rowY - 15,
-        size: 8.5,
-        font: fontBold,
-        color: cCharcoal
-      });
-
-      rowY -= rowHeight;
+    // Draw full card border & white fill
+    drawRoundedCard(page, marginX, cardY, contentWidth, cardHeight, cardRadius, {
+      fillColor: cWhite,
+      borderColor: cBorder,
+      borderWidth: 1.2
     });
 
-    // =========================================================================
-    // 7. FINANCIAL TOTALS SECTION (Clean Right-Aligned Typography)
-    // Strictly removed tinted AI-style UI boxes around amounts
-    // =========================================================================
-    const totalsTopY = rowY - 16;
-    const totalsWidth = 220;
-    const totalsX = rightAlignX - totalsWidth;
+    // Draw top-rounded header row inside card
+    drawTopRoundedHeader(page, marginX, cardTopY - thHeight, contentWidth, thHeight, cardRadius, cTableHeadBg);
 
-    const subtotalCents = docData.subtotalCents ?? docData.subtotal_cents ?? (docData.subtotal ? Math.round(docData.subtotal * 100) : 0);
-    const taxCents = docData.taxCents ?? docData.tax_cents ?? (docData.vatAmount ? Math.round(docData.vatAmount * 100) : 0);
-    const totalCents = docData.totalInvoiceAmountCents ?? docData.totalCents ?? docData.total_cents ?? (docData.total ? Math.round(docData.total * 100) : (subtotalCents + taxCents));
-    const amountPaidCents = docData.amountPaidCents ?? docData.amount_paid_cents ?? (docData.amountPaid ? Math.round(docData.amountPaid * 100) : totalCents);
-    const balanceCents = docData.remainingBalanceCents !== undefined
-      ? docData.remainingBalanceCents
-      : (docData.outstandingBalanceCents !== undefined
-        ? docData.outstandingBalanceCents
-        : Math.max(0, totalCents - amountPaidCents));
-
-    // Optional Clean Notes on Left (No Fluff/Jargon)
-    if (docData.notes) {
-      const notesLeftWidth = contentWidth - totalsWidth - 24;
-      page.drawText('Notes:', {
-        x: marginX,
-        y: totalsTopY - 4,
-        size: 8,
-        font: fontBold,
-        color: cEmerald
-      });
-      const cleanNoteLines = wrapText(docData.notes, 52);
-      cleanNoteLines.slice(0, 3).forEach((line, idx) => {
-        page.drawText(line, {
-          x: marginX,
-          y: totalsTopY - 16 - (idx * 10.5),
-          size: 7.5,
-          font: fontRegular,
-          color: cMuted
-        });
-      });
-    }
-
-    // Right-Aligned Accounting Totals (Clean Lines & Fonts)
-    let curTotalY = totalsTopY;
-    function drawAccountingRow(label, amtStr, isBold = false, isAccent = false) {
-      const sz = isBold ? 9.5 : 8.5;
-      page.drawText(label, {
-        x: totalsX,
-        y: curTotalY - 8,
-        size: sz,
-        font: isBold ? fontBold : fontRegular,
-        color: isAccent ? cEmerald : cCharcoal
-      });
-      const amtW = (isBold ? fontBold : fontRegular).widthOfTextAtSize(amtStr, sz);
-      page.drawText(amtStr, {
-        x: rightAlignX - amtW,
-        y: curTotalY - 8,
-        size: sz,
-        font: isBold ? fontBold : fontRegular,
-        color: isAccent ? cEmerald : cCharcoal
-      });
-      curTotalY -= 15;
-    }
-
-    drawAccountingRow('Subtotal:', formatMoney(totalCents, curr));
-    drawAccountingRow('Amount Paid:', formatMoney(amountPaidCents, curr), true, isPaid);
-
-    // Subtle divider above Total Due
+    // Divider below table header
     page.drawLine({
-      start: { x: totalsX, y: curTotalY - 2 },
-      end: { x: rightAlignX, y: curTotalY - 2 },
-      thickness: 0.8,
-      color: cBorderDark
+      start: { x: marginX, y: cardTopY - thHeight },
+      end: { x: rightAlignX, y: cardTopY - thHeight },
+      thickness: 1,
+      color: cBorder
     });
-    curTotalY -= 4;
 
-    // Total Due
-    const balanceStr = formatMoney(balanceCents, curr);
-    const balW = fontBold.widthOfTextAtSize(balanceStr, 11);
-    page.drawText('TOTAL DUE:', {
-      x: totalsX,
-      y: curTotalY - 10,
-      size: 11,
+    // Table Column Headers
+    const colDescX = marginX + 16;
+    const colQtyX = marginX + 300;
+    const colRateX = marginX + 365;
+    const colTotalX = rightAlignX - 16;
+
+    page.drawText('Description', {
+      x: colDescX,
+      y: cardTopY - 18,
+      size: 9,
       font: fontBold,
       color: cCharcoal
     });
-    page.drawText(balanceStr, {
-      x: rightAlignX - balW,
-      y: curTotalY - 10,
-      size: 11,
+    page.drawText('Qty', {
+      x: colQtyX,
+      y: cardTopY - 18,
+      size: 9,
       font: fontBold,
-      color: balanceCents > 0 ? cGold : cCharcoal
+      color: cCharcoal
+    });
+    page.drawText('Unit Price', {
+      x: colRateX,
+      y: cardTopY - 18,
+      size: 9,
+      font: fontBold,
+      color: cCharcoal
+    });
+    const amtLabel = 'Amount';
+    const amtW = fontBold.widthOfTextAtSize(amtLabel, 9);
+    page.drawText(amtLabel, {
+      x: colTotalX - amtW,
+      y: cardTopY - 18,
+      size: 9,
+      font: fontBold,
+      color: cCharcoal
     });
 
-    // Double bottom accounting underline under Total Due
-    page.drawLine({
-      start: { x: totalsX, y: curTotalY - 16 },
-      end: { x: rightAlignX, y: curTotalY - 16 },
-      thickness: 0.6,
-      color: cBorderDark
-    });
-    page.drawLine({
-      start: { x: totalsX, y: curTotalY - 18.5 },
-      end: { x: rightAlignX, y: curTotalY - 18.5 },
-      thickness: 0.6,
-      color: cBorderDark
+    // Itemized Table Rows
+    let curRowY = cardTopY - thHeight;
+    items.forEach((item, idx) => {
+      // Divider line between items
+      if (idx > 0) {
+        page.drawLine({
+          start: { x: marginX, y: curRowY },
+          end: { x: rightAlignX, y: curRowY },
+          thickness: 0.6,
+          color: cBorder
+        });
+      }
+
+      const itemDesc = item.description || 'Digital Retainer';
+      page.drawText(itemDesc, {
+        x: colDescX,
+        y: curRowY - 17,
+        size: 9.5,
+        font: fontBold,
+        color: cCharcoal
+      });
+
+      const qtyStr = String(item.quantity || 1);
+      page.drawText(qtyStr, {
+        x: colQtyX + 4,
+        y: curRowY - 17,
+        size: 9,
+        font: fontRegular,
+        color: cCharcoal
+      });
+
+      const unitCents = item.unitPriceCents ?? item.unit_price_cents ?? (item.unitPrice ? Math.round(item.unitPrice * 100) : 0);
+      const lineTotalCents = item.totalCents ?? item.total_cents ?? (item.amount ? Math.round(item.amount * 100) : (unitCents * (item.quantity || 1)));
+
+      page.drawText(formatMoney(unitCents, curr), {
+        x: colRateX,
+        y: curRowY - 17,
+        size: 9,
+        font: fontRegular,
+        color: cCharcoal
+      });
+
+      const lineTotalStr = formatMoney(lineTotalCents, curr);
+      const lineW = fontBold.widthOfTextAtSize(lineTotalStr, 9.5);
+      page.drawText(lineTotalStr, {
+        x: colTotalX - lineW,
+        y: curRowY - 17,
+        size: 9.5,
+        font: fontBold,
+        color: cCharcoal
+      });
+
+      curRowY -= rowHeight;
     });
 
-    // =========================================================================
-    // 8. MINIMAL SYSTEM-GENERATED COMPLIANCE FOOTER
-    // Clean, professional, zero redundant address or jargon
-    // =========================================================================
-    const footerY = 32;
+    // 7. Total Block: Solid block of the brand's primary color (Deep Green) at bottom of rounded card
+    const subtotalCents = docData.subtotalCents ?? docData.subtotal_cents ?? (docData.subtotal ? Math.round(docData.subtotal * 100) : 0);
+    const taxCents = docData.taxCents ?? docData.tax_cents ?? 0;
+    const totalCents = docData.totalInvoiceAmountCents ?? docData.totalCents ?? docData.total_cents ?? (docData.total ? Math.round(docData.total * 100) : (subtotalCents + taxCents || items.reduce((s, i) => s + (i.totalCents || 0), 0)));
+    const totalFormatted = formatMoney(totalCents, curr);
 
-    // Footer Divider Line
-    page.drawLine({
-      start: { x: marginX, y: footerY + 18 },
-      end: { x: rightAlignX, y: footerY + 18 },
-      thickness: 0.75,
-      color: cBorder
-    });
-    // Centered Gold Hairline Notch
-    page.drawLine({
-      start: { x: width / 2 - 28, y: footerY + 18 },
-      end: { x: width / 2 + 28, y: footerY + 18 },
-      thickness: 1.5,
-      color: cGold
+    drawBottomRoundedTotalBlock(page, marginX, cardY, contentWidth, totalBlockH, cardRadius, cEmerald);
+
+    // Crisp White Text: 'Total Amount' on left, Value on right
+    page.drawText('Total Amount', {
+      x: marginX + 18,
+      y: cardY + (totalBlockH / 2) - 4,
+      size: 11.5,
+      font: fontBold,
+      color: cWhite
     });
 
-    const disclaimerText = 'This is a system-generated online invoice. No physical signature or seal is required.';
-    const discW = fontRegular.widthOfTextAtSize(disclaimerText, 7.5);
-    page.drawText(disclaimerText, {
-      x: (width - discW) / 2,
-      y: footerY + 6,
-      size: 7.5,
-      font: fontOblique,
+    const totValW = fontBold.widthOfTextAtSize(totalFormatted, 13.5);
+    page.drawText(totalFormatted, {
+      x: rightAlignX - 18 - totValW,
+      y: cardY + (totalBlockH / 2) - 5,
+      size: 13.5,
+      font: fontBold,
+      color: cWhite
+    });
+
+    // 8. Payment Info & Agency Details (Bottom section, NO duplicate address)
+    const bottomSecY = cardY - 26;
+
+    // Left: 'Payment Info:'
+    page.drawText('Payment Info:', {
+      x: marginX,
+      y: bottomSecY,
+      size: 9,
+      font: fontBold,
+      color: cEmerald
+    });
+
+    const acctDetails = docData.paymentAccountDetails || {
+      providerName: 'Bkash / Bank Transfer',
+      accountName: 'Md Kazi Abdur Rahim Emon',
+      accountNumber: '+880 1560066374'
+    };
+
+    let curPayY = bottomSecY - 13;
+    function drawPayInfoRow(lbl, val) {
+      page.drawText(lbl, {
+        x: marginX,
+        y: curPayY,
+        size: 8,
+        font: fontBold,
+        color: cMuted
+      });
+      page.drawText(val, {
+        x: marginX + 80,
+        y: curPayY,
+        size: 8,
+        font: fontRegular,
+        color: cCharcoal
+      });
+      curPayY -= 11.5;
+    }
+
+    drawPayInfoRow('Payment Method:', docData.paymentMethod || 'Mobile Banking (MFS) / Bank Wire');
+    drawPayInfoRow('Account Name:', acctDetails.accountName || 'Md Kazi Abdur Rahim Emon');
+    drawPayInfoRow('Account Number:', acctDetails.accountNumber || '+880 1560066374');
+    if (acctDetails.bankName) {
+      drawPayInfoRow('Bank / Branch:', `${acctDetails.bankName}${acctDetails.branchName ? ' (' + acctDetails.branchName + ')' : ''}`);
+    }
+
+    // Right: Agency Contact & Address (Single authoritative occurrence, NO duplication)
+    const issuer = docData.issuer || docData.agency || {
+      name: 'Whiz Studio',
+      address: 'House 53, Road 7, Block A, Mirpur 12, Dhaka 1216, Bangladesh',
+      phone: '+880 1815127022',
+      email: 'info@whizstudio.art',
+      website: 'whizstudio.art'
+    };
+
+    const agencyColX = marginX + (contentWidth / 2) + 20;
+    page.drawText('Issued by:', {
+      x: agencyColX,
+      y: bottomSecY,
+      size: 9,
+      font: fontBold,
+      color: cEmerald
+    });
+
+    let curAgencyY = bottomSecY - 13;
+    page.drawText(issuer.name || 'Whiz Studio', {
+      x: agencyColX,
+      y: curAgencyY,
+      size: 9,
+      font: fontBold,
+      color: cCharcoal
+    });
+    curAgencyY -= 11.5;
+
+    page.drawText(issuer.address || 'House 53, Road 7, Block A, Mirpur 12, Dhaka 1216, Bangladesh', {
+      x: agencyColX,
+      y: curAgencyY,
+      size: 7.8,
+      font: fontRegular,
+      color: cMuted
+    });
+    curAgencyY -= 10.5;
+
+    const agencyContact = `Phone: ${issuer.phone || '+880 1815127022'}  •  Email: ${issuer.email || 'info@whizstudio.art'}`;
+    page.drawText(agencyContact, {
+      x: agencyColX,
+      y: curAgencyY,
+      size: 7.8,
+      font: fontRegular,
+      color: cMuted
+    });
+    curAgencyY -= 10.5;
+
+    page.drawText(`Website: ${issuer.website ? issuer.website.replace(/^https?:\/\//, '') : 'whizstudio.art'}`, {
+      x: agencyColX,
+      y: curAgencyY,
+      size: 7.8,
+      font: fontRegular,
       color: cMuted
     });
 
-    const footerBottom = 'Whiz Studio  •  House 53, Road 7, Block A, Mirpur 12, Dhaka 1216, Bangladesh  •  https://whizstudio.art';
-    const fBottomW = fontRegular.widthOfTextAtSize(footerBottom, 6.8);
-    page.drawText(footerBottom, {
-      x: (width - fBottomW) / 2,
-      y: footerY - 4,
-      size: 6.8,
-      font: fontRegular,
-      color: cMutedLight
+    // 9. Mandatory Footer (Centered, system-generated notice, zero physical signature block)
+    const footerY = 28;
+    page.drawLine({
+      start: { x: marginX, y: footerY + 16 },
+      end: { x: rightAlignX, y: footerY + 16 },
+      thickness: 0.8,
+      color: cBorder
+    });
+
+    const disclaimerText = 'This is a system-generated online invoice. No physical signature or seal is required.';
+    const discW = fontRegular.widthOfTextAtSize(disclaimerText, 8);
+    page.drawText(disclaimerText, {
+      x: (width - discW) / 2,
+      y: footerY + 4,
+      size: 8,
+      font: fontOblique,
+      color: cMuted
     });
 
     return pdfDoc.save();
