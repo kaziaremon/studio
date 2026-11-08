@@ -4663,8 +4663,9 @@
           clerkUserId: state.selectedClient?.clerk_user_id || null,
           email: state.selectedClient?.email || null
         };
+        // Use POST for universal preflight and proxy compatibility
         const res = await apiFetch(`/pdf/quota/reset/${encodeURIComponent(clientId)}`, {
-          method: 'PATCH',
+          method: 'POST',
           body: JSON.stringify(payload)
         });
         setBtnLoading(btn, false);
