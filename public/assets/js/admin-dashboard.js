@@ -4546,15 +4546,12 @@
           const cat = escapeHtml(s.category || '');
           const id = escapeHtml(s.id || '');
           return `
-            <label class="service-checkbox-card group flex items-start gap-2.5 p-2.5 rounded-xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
-              <input type="checkbox" name="services" value="${id}" class="service-checkbox-input mt-0.5 w-4 h-4 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] focus:ring-offset-0 cursor-pointer shrink-0">
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center justify-between gap-2">
-                  <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">${name}</span>
-                  <span class="service-card-badge text-[10px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-2 py-0.5 rounded-md border border-[#087F70]/20 shrink-0">${code}</span>
-                </div>
-                ${cat ? `<p class="service-card-cat text-[11px] text-slate-500 font-normal truncate mt-0.5">${cat}</p>` : ''}
+            <label class="service-checkbox-card group flex items-center justify-between gap-1.5 px-2.5 py-1.5 rounded-xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
+              <div class="flex items-center gap-2 min-w-0">
+                <input type="checkbox" name="services" value="${id}" class="service-checkbox-input w-3.5 h-3.5 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] cursor-pointer shrink-0">
+                <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">${name}</span>
               </div>
+              <span class="service-card-badge text-[9px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-1.5 py-0.5 rounded border border-[#087F70]/20 shrink-0">${code}</span>
             </label>
           `;
         }).join('');

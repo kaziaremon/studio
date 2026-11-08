@@ -2968,55 +2968,55 @@
        MODAL 1: ADD CLIENT WITH SERVICE SELECTION & AUTO-TASK PROVISIONING
        ========================================================================= -->
   <div id="modalAddClient" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
-    <div class="whiz-floating-modal-card relative bg-white border border-[#E3E9EF] rounded-3xl max-w-2xl w-full shadow-2xl flex flex-col my-auto max-h-[90vh] sm:max-h-[88vh] overflow-hidden">
+    <div class="whiz-floating-modal-card relative bg-white border border-[#E3E9EF] rounded-3xl max-w-2xl w-full shadow-2xl flex flex-col my-auto max-h-[85vh] overflow-hidden">
       <!-- Fixed Header (Always visible) -->
-      <div class="relative flex items-center justify-between p-4 sm:px-6 sm:py-3.5 border-b border-[#E3E9EF] shrink-0 pr-14 sm:pr-16 bg-white z-10">
+      <div class="relative flex items-center justify-between p-3.5 sm:px-6 sm:py-3 border-b border-[#E3E9EF] shrink-0 pr-14 sm:pr-16 bg-white z-10">
         <h3 class="text-base sm:text-lg font-bold text-[#172B36] flex items-center gap-2 min-w-0">
           <i class="fa-solid fa-user-plus text-[#087F70] text-sm shrink-0"></i>
           <span class="truncate">Add New Client & Provision Services</span>
         </h3>
-        <button type="button" class="btn-close-modal whiz-modal-close-btn absolute top-3.5 right-4 sm:top-3.5 sm:right-6" data-modal="modalAddClient" aria-label="Close modal">
+        <button type="button" class="btn-close-modal whiz-modal-close-btn absolute top-3 right-4 sm:top-3 sm:right-6" data-modal="modalAddClient" aria-label="Close modal">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
 
       <!-- Form encompassing scrollable body + pinned footer -->
       <form id="formAddClient" class="flex flex-col flex-1 min-h-0 overflow-hidden m-0">
-        <!-- Scrollable Body with Compact Spacing -->
-        <div class="whiz-modal-scroll-body p-4 sm:p-5 sm:px-6 flex-1 min-h-0 space-y-2.5 sm:space-y-3">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+        <!-- Scrollable Body with Ultra-Compact Spacing (Fits screen cleanly) -->
+        <div class="whiz-modal-scroll-body p-3.5 sm:p-4 sm:px-6 flex-1 min-h-0 space-y-2 sm:space-y-2.5">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5">
             <div>
-              <label class="block text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Client Full Name *</label>
-              <input type="text" name="fullName" required placeholder="John Doe" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
+              <label class="block text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 mb-0.5 sm:mb-1">Client Full Name *</label>
+              <input type="text" name="fullName" required placeholder="John Doe" class="w-full h-9 px-3 py-1.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
             </div>
             <div>
-              <label class="block text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Company / Brand Name *</label>
-              <input type="text" name="companyName" required placeholder="Acme Inc." class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
-            <div>
-              <label class="block text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Email Address *</label>
-              <input type="email" name="email" required placeholder="client@example.com" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
-            </div>
-            <div>
-              <label class="block text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Phone Number</label>
-              <input type="text" name="phone" placeholder="+1234567890" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
+              <label class="block text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 mb-0.5 sm:mb-1">Company / Brand Name *</label>
+              <input type="text" name="companyName" required placeholder="Acme Inc." class="w-full h-9 px-3 py-1.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
             </div>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5">
             <div>
-              <label class="block text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">City</label>
-              <input type="text" name="city" id="addClientCity" placeholder="Dhaka" value="Dhaka" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
+              <label class="block text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 mb-0.5 sm:mb-1">Email Address *</label>
+              <input type="email" name="email" required placeholder="client@example.com" class="w-full h-9 px-3 py-1.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
             </div>
             <div>
-              <label class="block text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Country</label>
-              <input type="text" name="country" id="addClientCountry" placeholder="Bangladesh" value="Bangladesh" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
+              <label class="block text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 mb-0.5 sm:mb-1">Phone Number</label>
+              <input type="text" name="phone" placeholder="+1234567890" class="w-full h-9 px-3 py-1.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-2.5">
+            <div>
+              <label class="block text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 mb-0.5 sm:mb-1">City</label>
+              <input type="text" name="city" id="addClientCity" placeholder="Dhaka" value="Dhaka" class="w-full h-9 px-3 py-1.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
             </div>
             <div>
-              <label class="block text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Billing Currency *</label>
+              <label class="block text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 mb-0.5 sm:mb-1">Country</label>
+              <input type="text" name="country" id="addClientCountry" placeholder="Bangladesh" value="Bangladesh" class="w-full h-9 px-3 py-1.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
+            </div>
+            <div>
+              <label class="block text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 mb-0.5 sm:mb-1">Billing Currency *</label>
               <div class="glass-select-wrapper" data-glass-select="addClientCurrency">
                 <select name="currency" id="addClientCurrency" class="sr-only" tabindex="-1" aria-hidden="true">
                   <option value="BDT" selected>BDT — ৳ (Bangladeshi Taka)</option>
@@ -3032,10 +3032,10 @@
                   <option value="JPY">JPY — ¥ (Japanese Yen)</option>
                   <option value="MYR">MYR — RM (Malaysian Ringgit)</option>
                 </select>
-                <button type="button" class="glass-select-trigger" id="addClientCurrencyTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="addClientCurrencyMenu">
+                <button type="button" class="glass-select-trigger h-9" id="addClientCurrencyTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="addClientCurrencyMenu">
                   <span class="flex items-center gap-2 min-w-0">
-                    <span class="w-6 h-6 rounded-lg bg-[#EAF5F1] text-[#087F70] flex items-center justify-center font-bold text-xs shrink-0 select-currency-symbol">৳</span>
-                    <span class="select-label truncate font-sans text-xs font-semibold text-[#172B36]">BDT — ৳ (Bangladeshi Taka)</span>
+                    <span class="w-5 h-5 rounded-md bg-[#EAF5F1] text-[#087F70] flex items-center justify-center font-bold text-xs shrink-0 select-currency-symbol">৳</span>
+                    <span class="select-label truncate font-sans text-xs font-semibold text-[#172B36]">BDT — ৳</span>
                   </span>
                   <i class="fa-solid fa-chevron-down chevron-icon shrink-0"></i>
                 </button>
@@ -3106,146 +3106,110 @@
           </div>
 
           <div>
-            <label class="block text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Street Address / Headquarters</label>
-            <input type="text" name="address" placeholder="e.g. House 12, Road 4, Banani" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
+            <label class="block text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 mb-0.5 sm:mb-1">Street Address / Headquarters</label>
+            <input type="text" name="address" placeholder="e.g. House 12, Road 4, Banani" class="w-full h-9 px-3 py-1.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
           </div>
 
           <!-- Service Selection Checkboxes -->
           <div>
-            <label class="block text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">Select Services to Provision (Auto-generates 20 SOP tasks each)</label>
+            <label class="block text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Select Services to Provision (Auto-generates 20 SOP tasks each)</label>
             <div class="rounded-2xl border border-[#E3E9EF] bg-[#FAFCFB] overflow-hidden p-1 shadow-2xs">
-              <div id="addClientServicesCheckboxes" class="whiz-nested-scroll max-h-36 sm:max-h-40 overflow-y-auto p-2 space-y-1.5">
+              <div id="addClientServicesCheckboxes" class="whiz-nested-scroll max-h-28 sm:max-h-32 overflow-y-auto p-1.5 space-y-1 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-1.5">
                 <!-- 1. WhatsApp CRM -->
-                <label class="service-checkbox-card group flex items-start gap-2.5 p-2.5 rounded-xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
-                  <input type="checkbox" name="services" value="srv_wa_crm" class="service-checkbox-input mt-0.5 w-4 h-4 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] focus:ring-offset-0 cursor-pointer shrink-0">
-                  <div class="flex-1 min-w-0">
-                    <div class="flex items-center justify-between gap-2">
-                      <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">WhatsApp Business CRM & Sales Funnels</span>
-                      <span class="service-card-badge text-[10px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-2 py-0.5 rounded-md border border-[#087F70]/20 shrink-0">COMM-WA</span>
-                    </div>
-                    <p class="service-card-cat text-[11px] text-slate-500 font-normal truncate mt-0.5">Conversational Commerce</p>
+                <label class="service-checkbox-card group flex items-center justify-between gap-1.5 px-2.5 py-1.5 rounded-xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <input type="checkbox" name="services" value="srv_wa_crm" class="service-checkbox-input w-3.5 h-3.5 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] cursor-pointer shrink-0">
+                    <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">WhatsApp Business CRM</span>
                   </div>
+                  <span class="service-card-badge text-[9px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-1.5 py-0.5 rounded border border-[#087F70]/20 shrink-0">COMM-WA</span>
                 </label>
                 <!-- 2. LinkedIn B2B -->
-                <label class="service-checkbox-card group flex items-start gap-2.5 p-2.5 rounded-xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
-                  <input type="checkbox" name="services" value="srv_li_b2b" class="service-checkbox-input mt-0.5 w-4 h-4 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] focus:ring-offset-0 cursor-pointer shrink-0">
-                  <div class="flex-1 min-w-0">
-                    <div class="flex items-center justify-between gap-2">
-                      <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">LinkedIn B2B Lead Generation & Account-Based Marketing</span>
-                      <span class="service-card-badge text-[10px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-2 py-0.5 rounded-md border border-[#087F70]/20 shrink-0">B2B-LI</span>
-                    </div>
-                    <p class="service-card-cat text-[11px] text-slate-500 font-normal truncate mt-0.5">Enterprise Growth</p>
+                <label class="service-checkbox-card group flex items-center justify-between gap-1.5 px-2.5 py-1.5 rounded-xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <input type="checkbox" name="services" value="srv_li_b2b" class="service-checkbox-input w-3.5 h-3.5 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] cursor-pointer shrink-0">
+                    <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">LinkedIn B2B Lead Gen</span>
                   </div>
+                  <span class="service-card-badge text-[9px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-1.5 py-0.5 rounded border border-[#087F70]/20 shrink-0">B2B-LI</span>
                 </label>
                 <!-- 3. Facebook Marketing -->
-                <label class="service-checkbox-card group flex items-start gap-2.5 p-2.5 rounded-xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
-                  <input type="checkbox" name="services" value="srv_fb_mktg" class="service-checkbox-input mt-0.5 w-4 h-4 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] focus:ring-offset-0 cursor-pointer shrink-0">
-                  <div class="flex-1 min-w-0">
-                    <div class="flex items-center justify-between gap-2">
-                      <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">Facebook Marketing & Community Building</span>
-                      <span class="service-card-badge text-[10px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-2 py-0.5 rounded-md border border-[#087F70]/20 shrink-0">META-MKTG</span>
-                    </div>
-                    <p class="service-card-cat text-[11px] text-slate-500 font-normal truncate mt-0.5">Organic Community</p>
+                <label class="service-checkbox-card group flex items-center justify-between gap-1.5 px-2.5 py-1.5 rounded-xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <input type="checkbox" name="services" value="srv_fb_mktg" class="service-checkbox-input w-3.5 h-3.5 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] cursor-pointer shrink-0">
+                    <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">Facebook Community</span>
                   </div>
+                  <span class="service-card-badge text-[9px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-1.5 py-0.5 rounded border border-[#087F70]/20 shrink-0">META-MKTG</span>
                 </label>
                 <!-- 4. Instagram Marketing -->
-                <label class="service-checkbox-card group flex items-start gap-2.5 p-2.5 rounded-xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
-                  <input type="checkbox" name="services" value="srv_ig_growth" class="service-checkbox-input mt-0.5 w-4 h-4 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] focus:ring-offset-0 cursor-pointer shrink-0">
-                  <div class="flex-1 min-w-0">
-                    <div class="flex items-center justify-between gap-2">
-                      <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">Instagram Marketing & Reels Scaling</span>
-                      <span class="service-card-badge text-[10px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-2 py-0.5 rounded-md border border-[#087F70]/20 shrink-0">META-IG</span>
-                    </div>
-                    <p class="service-card-cat text-[11px] text-slate-500 font-normal truncate mt-0.5">Paid & Organic Social Media</p>
+                <label class="service-checkbox-card group flex items-center justify-between gap-1.5 px-2.5 py-1.5 rounded-xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <input type="checkbox" name="services" value="srv_ig_growth" class="service-checkbox-input w-3.5 h-3.5 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] cursor-pointer shrink-0">
+                    <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">Instagram Reels & Growth</span>
                   </div>
+                  <span class="service-card-badge text-[9px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-2 py-0.5 rounded border border-[#087F70]/20 shrink-0">META-IG</span>
                 </label>
                 <!-- 5. Facebook Ads -->
-                <label class="service-checkbox-card group flex items-start gap-2.5 p-2.5 rounded-xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
-                  <input type="checkbox" name="services" value="srv_fb_ads" class="service-checkbox-input mt-0.5 w-4 h-4 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] focus:ring-offset-0 cursor-pointer shrink-0">
-                  <div class="flex-1 min-w-0">
-                    <div class="flex items-center justify-between gap-2">
-                      <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">Facebook Ads Management</span>
-                      <span class="service-card-badge text-[10px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-2 py-0.5 rounded-md border border-[#087F70]/20 shrink-0">META-FB</span>
-                    </div>
-                    <p class="service-card-cat text-[11px] text-slate-500 font-normal truncate mt-0.5">Paid Advertising</p>
+                <label class="service-checkbox-card group flex items-center justify-between gap-1.5 px-2.5 py-1.5 rounded-xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <input type="checkbox" name="services" value="srv_fb_ads" class="service-checkbox-input w-3.5 h-3.5 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] cursor-pointer shrink-0">
+                    <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">Facebook Ads Scaling</span>
                   </div>
+                  <span class="service-card-badge text-[9px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-1.5 py-0.5 rounded border border-[#087F70]/20 shrink-0">META-FB</span>
                 </label>
                 <!-- 6. Google Ads -->
-                <label class="service-checkbox-card group flex items-start gap-2.5 p-2.5 rounded-xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
-                  <input type="checkbox" name="services" value="srv_google_ads" class="service-checkbox-input mt-0.5 w-4 h-4 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] focus:ring-offset-0 cursor-pointer shrink-0">
-                  <div class="flex-1 min-w-0">
-                    <div class="flex items-center justify-between gap-2">
-                      <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">Google Ads & Performance Max</span>
-                      <span class="service-card-badge text-[10px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-2 py-0.5 rounded-md border border-[#087F70]/20 shrink-0">SEARCH-GADS</span>
-                    </div>
-                    <p class="service-card-cat text-[11px] text-slate-500 font-normal truncate mt-0.5">Paid Search</p>
+                <label class="service-checkbox-card group flex items-center justify-between gap-1.5 px-2.5 py-1.5 rounded-xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <input type="checkbox" name="services" value="srv_google_ads" class="service-checkbox-input w-3.5 h-3.5 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] cursor-pointer shrink-0">
+                    <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">Google Ads & P-Max</span>
                   </div>
+                  <span class="service-card-badge text-[9px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-1.5 py-0.5 rounded border border-[#087F70]/20 shrink-0">SEARCH-GADS</span>
                 </label>
                 <!-- 7. Creative Mitigation -->
-                <label class="service-checkbox-card group flex items-start gap-2.5 p-2.5 rounded-xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
-                  <input type="checkbox" name="services" value="srv_creative_mitigation" class="service-checkbox-input mt-0.5 w-4 h-4 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] focus:ring-offset-0 cursor-pointer shrink-0">
-                  <div class="flex-1 min-w-0">
-                    <div class="flex items-center justify-between gap-2">
-                      <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">Creative Fatigue & Ad Burnout Mitigation</span>
-                      <span class="service-card-badge text-[10px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-2 py-0.5 rounded-md border border-[#087F70]/20 shrink-0">CREATIVE-OPS</span>
-                    </div>
-                    <p class="service-card-cat text-[11px] text-slate-500 font-normal truncate mt-0.5">Performance Media Engineering</p>
+                <label class="service-checkbox-card group flex items-center justify-between gap-1.5 px-2.5 py-1.5 rounded-xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <input type="checkbox" name="services" value="srv_creative_mitigation" class="service-checkbox-input w-3.5 h-3.5 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] cursor-pointer shrink-0">
+                    <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">Creative Fatigue Ops</span>
                   </div>
+                  <span class="service-card-badge text-[9px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-1.5 py-0.5 rounded border border-[#087F70]/20 shrink-0">CREATIVE-OPS</span>
                 </label>
                 <!-- 8. YouTube Ads -->
-                <label class="service-checkbox-card group flex items-start gap-2.5 p-2.5 rounded-xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
-                  <input type="checkbox" name="services" value="srv_yt_ads" class="service-checkbox-input mt-0.5 w-4 h-4 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] focus:ring-offset-0 cursor-pointer shrink-0">
-                  <div class="flex-1 min-w-0">
-                    <div class="flex items-center justify-between gap-2">
-                      <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">YouTube Ads & In-Stream Funnels</span>
-                      <span class="service-card-badge text-[10px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-2 py-0.5 rounded-md border border-[#087F70]/20 shrink-0">VIDEO-ADS</span>
-                    </div>
-                    <p class="service-card-cat text-[11px] text-slate-500 font-normal truncate mt-0.5">Performance Video</p>
+                <label class="service-checkbox-card group flex items-center justify-between gap-1.5 px-2.5 py-1.5 rounded-xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <input type="checkbox" name="services" value="srv_yt_ads" class="service-checkbox-input w-3.5 h-3.5 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] cursor-pointer shrink-0">
+                    <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">YouTube In-Stream Funnels</span>
                   </div>
+                  <span class="service-card-badge text-[9px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-1.5 py-0.5 rounded border border-[#087F70]/20 shrink-0">VIDEO-ADS</span>
                 </label>
                 <!-- 9. LinkedIn Optimization -->
-                <label class="service-checkbox-card group flex items-start gap-2.5 p-2.5 rounded-xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
-                  <input type="checkbox" name="services" value="srv_li_opt" class="service-checkbox-input mt-0.5 w-4 h-4 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] focus:ring-offset-0 cursor-pointer shrink-0">
-                  <div class="flex-1 min-w-0">
-                    <div class="flex items-center justify-between gap-2">
-                      <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">LinkedIn Optimization & Executive Presence</span>
-                      <span class="service-card-badge text-[10px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-2 py-0.5 rounded-md border border-[#087F70]/20 shrink-0">LI-OPT</span>
-                    </div>
-                    <p class="service-card-cat text-[11px] text-slate-500 font-normal truncate mt-0.5">Professional Branding</p>
+                <label class="service-checkbox-card group flex items-center justify-between gap-1.5 px-2.5 py-1.5 rounded-xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <input type="checkbox" name="services" value="srv_li_opt" class="service-checkbox-input w-3.5 h-3.5 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] cursor-pointer shrink-0">
+                    <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">LinkedIn Exec Optimization</span>
                   </div>
+                  <span class="service-card-badge text-[9px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-1.5 py-0.5 rounded border border-[#087F70]/20 shrink-0">LI-OPT</span>
                 </label>
                 <!-- 10. Social Media Optimization -->
-                <label class="service-checkbox-card group flex items-start gap-2.5 p-2.5 rounded-xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
-                  <input type="checkbox" name="services" value="srv_smo" class="service-checkbox-input mt-0.5 w-4 h-4 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] focus:ring-offset-0 cursor-pointer shrink-0">
-                  <div class="flex-1 min-w-0">
-                    <div class="flex items-center justify-between gap-2">
-                      <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">Social Media Optimization & Brand Positioning</span>
-                      <span class="service-card-badge text-[10px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-2 py-0.5 rounded-md border border-[#087F70]/20 shrink-0">SMO</span>
-                    </div>
-                    <p class="service-card-cat text-[11px] text-slate-500 font-normal truncate mt-0.5">Social Media Growth</p>
+                <label class="service-checkbox-card group flex items-center justify-between gap-1.5 px-2.5 py-1.5 rounded-xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <input type="checkbox" name="services" value="srv_smo" class="service-checkbox-input w-3.5 h-3.5 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] cursor-pointer shrink-0">
+                    <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">Social Media Positioning</span>
                   </div>
+                  <span class="service-card-badge text-[9px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-1.5 py-0.5 rounded border border-[#087F70]/20 shrink-0">SMO</span>
                 </label>
                 <!-- 11. YouTube Organic Marketing -->
-                <label class="service-checkbox-card group flex items-start gap-2.5 p-2.5 rounded-xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
-                  <input type="checkbox" name="services" value="srv_yt_mktg" class="service-checkbox-input mt-0.5 w-4 h-4 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] focus:ring-offset-0 cursor-pointer shrink-0">
-                  <div class="flex-1 min-w-0">
-                    <div class="flex items-center justify-between gap-2">
-                      <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">YouTube Organic Marketing & Search SEO</span>
-                      <span class="service-card-badge text-[10px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-2 py-0.5 rounded-md border border-[#087F70]/20 shrink-0">VIDEO-YT</span>
-                    </div>
-                    <p class="service-card-cat text-[11px] text-slate-500 font-normal truncate mt-0.5">Video Media</p>
+                <label class="service-checkbox-card group flex items-center justify-between gap-1.5 px-2.5 py-1.5 rounded-xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <input type="checkbox" name="services" value="srv_yt_mktg" class="service-checkbox-input w-3.5 h-3.5 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] cursor-pointer shrink-0">
+                    <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">YouTube SEO & Organic</span>
                   </div>
+                  <span class="service-card-badge text-[9px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-1.5 py-0.5 rounded border border-[#087F70]/20 shrink-0">VIDEO-YT</span>
                 </label>
                 <!-- 12. Pinterest Marketing -->
-                <label class="service-checkbox-card group flex items-start gap-2.5 p-2.5 rounded-xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
-                  <input type="checkbox" name="services" value="srv_pin_mktg" class="service-checkbox-input mt-0.5 w-4 h-4 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] focus:ring-offset-0 cursor-pointer shrink-0">
-                  <div class="flex-1 min-w-0">
-                    <div class="flex items-center justify-between gap-2">
-                      <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">Pinterest Marketing & Evergreen Traffic</span>
-                      <span class="service-card-badge text-[10px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-2 py-0.5 rounded-md border border-[#087F70]/20 shrink-0">VISUAL-PIN</span>
-                    </div>
-                    <p class="service-card-cat text-[11px] text-slate-500 font-normal truncate mt-0.5">Visual Search & SEO</p>
+                <label class="service-checkbox-card group flex items-center justify-between gap-1.5 px-2.5 py-1.5 rounded-xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <input type="checkbox" name="services" value="srv_pin_mktg" class="service-checkbox-input w-3.5 h-3.5 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] cursor-pointer shrink-0">
+                    <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">Pinterest Traffic Engine</span>
                   </div>
+                  <span class="service-card-badge text-[9px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-1.5 py-0.5 rounded border border-[#087F70]/20 shrink-0">VISUAL-PIN</span>
                 </label>
               </div>
             </div>
@@ -3253,9 +3217,9 @@
         </div>
 
         <!-- Pinned Modal Footer: Always fully visible without scrolling -->
-        <div class="flex items-center justify-end space-x-3 p-3.5 sm:px-6 sm:py-3 border-t border-[#E3E9EF] bg-slate-50/80 shrink-0 z-10">
+        <div class="flex items-center justify-end space-x-3 p-3 sm:px-6 sm:py-2.5 border-t border-[#E3E9EF] bg-slate-50/80 shrink-0 z-10">
           <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36] cursor-pointer" data-modal="modalAddClient">Cancel</button>
-          <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center gap-1.5 cursor-pointer">
+          <button type="submit" class="px-5 py-2 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center gap-1.5 cursor-pointer">
             <i class="fa-solid fa-bolt text-xs"></i>
             <span>Create Client & Auto-Provision Tasks</span>
           </button>
@@ -3268,240 +3232,240 @@
        MODAL: EDIT CLIENT PROFILE
        ========================================================================= -->
   <div id="modalEditClient" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
-    <div class="whiz-floating-modal-card relative bg-white border border-[#E3E9EF] rounded-3xl max-w-xl w-full shadow-2xl flex flex-col my-auto">
-      <div class="relative flex items-center justify-between p-5 sm:p-7 pb-4 sm:pb-5 border-b border-[#E3E9EF] shrink-0 pr-14 sm:pr-16 bg-white z-10">
+    <div class="whiz-floating-modal-card relative bg-white border border-[#E3E9EF] rounded-3xl max-w-xl w-full shadow-2xl flex flex-col my-auto max-h-[85vh] overflow-hidden">
+      <!-- Fixed Header (Always visible) -->
+      <div class="relative flex items-center justify-between p-3.5 sm:px-6 sm:py-3 border-b border-[#E3E9EF] shrink-0 pr-14 sm:pr-16 bg-white z-10">
         <h3 class="text-base sm:text-lg font-bold text-[#172B36] flex items-center gap-2 min-w-0">
           <i class="fa-solid fa-user-pen text-[#087F70] text-sm shrink-0"></i>
           <span class="truncate">Edit Client Business Profile</span>
         </h3>
-        <button type="button" class="btn-close-modal whiz-modal-close-btn absolute top-4 right-4 sm:top-5 sm:right-6" data-modal="modalEditClient" aria-label="Close modal">
+        <button type="button" class="btn-close-modal whiz-modal-close-btn absolute top-3 right-4 sm:top-3 sm:right-6" data-modal="modalEditClient" aria-label="Close modal">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
 
-      <div class="whiz-modal-scroll-body p-5 sm:p-8 flex-1 min-h-0">
-        <form id="formEditClient" class="space-y-4">
+      <!-- Form encompassing scrollable body + pinned footer -->
+      <form id="formEditClient" class="flex flex-col flex-1 min-h-0 overflow-hidden m-0">
         <input type="hidden" name="clientId" id="editClientId">
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Full Legal Name *</label>
-            <input type="text" name="fullName" id="editClientFullName" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
-          </div>
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Billing Entity Name *</label>
-            <input type="text" name="billingName" id="editClientBillingName" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
-          </div>
-        </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Company / Brand Name</label>
-            <input type="text" name="companyName" id="editClientCompanyName" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
-          </div>
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Phone Number *</label>
-            <input type="text" name="phone" id="editClientPhone" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Verified Email (Clerk SSO)</label>
-            <input type="email" name="email" id="editClientEmail" readonly disabled class="w-full px-3.5 py-2 rounded-xl bg-slate-100 text-xs text-slate-500 cursor-not-allowed select-none">
-            <span class="text-[10px] text-slate-400">Managed via Clerk SSO. Direct edits blocked.</span>
-          </div>
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Tax ID / VAT Registration</label>
-            <input type="text" name="taxId" id="editClientTaxId" placeholder="Optional Tax/VAT ID" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Full Billing Address *</label>
-          <input type="text" name="address" id="editClientAddress" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">City *</label>
-            <input type="text" name="city" id="editClientCity" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
-          </div>
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Country *</label>
-            <input type="text" name="country" id="editClientCountry" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
-          </div>
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Postal Code</label>
-            <input type="text" name="postalCode" id="editClientPostalCode" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <!-- Account Status Glass Dropdown -->
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Account Status</label>
-            <div class="glass-select-wrapper" data-glass-select="editClientStatus">
-              <select name="status" id="editClientStatus" class="sr-only" tabindex="-1" aria-hidden="true">
-                <option value="active" selected>Active</option>
-                <option value="suspended">Suspended</option>
-              </select>
-              <button type="button" class="glass-select-trigger" id="editClientStatusTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="editClientStatusMenu">
-                <span class="flex items-center gap-2 min-w-0">
-                  <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0 select-icon"></span>
-                  <span class="select-label truncate">Active</span>
-                </span>
-                <i class="fa-solid fa-chevron-down chevron-icon shrink-0"></i>
-              </button>
-              <div class="glass-select-menu" id="editClientStatusMenu" role="listbox" aria-label="Account Status">
-                <button type="button" class="glass-select-option selected" data-value="active" role="option" aria-selected="true">
-                  <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0 option-icon"></span>
-                  <span class="truncate select-opt-text">Active</span>
-                  <i class="fa-solid fa-check check-icon"></i>
-                </button>
-                <button type="button" class="glass-select-option" data-value="suspended" role="option" aria-selected="false">
-                  <span class="w-2 h-2 rounded-full bg-rose-500 shrink-0 option-icon"></span>
-                  <span class="truncate select-opt-text">Suspended</span>
-                  <i class="fa-solid fa-check check-icon"></i>
-                </button>
-              </div>
+        <!-- Scrollable Body with Compact Spacing & Reduced Top Gap -->
+        <div class="whiz-modal-scroll-body p-3.5 sm:px-6 sm:py-3 flex-1 min-h-0 space-y-2 sm:space-y-2.5">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5">
+            <div>
+              <label class="block text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 mb-0.5 sm:mb-1">Full Legal Name *</label>
+              <input type="text" name="fullName" id="editClientFullName" required class="w-full h-9 px-3.5 py-1.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
+            </div>
+            <div>
+              <label class="block text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 mb-0.5 sm:mb-1">Billing Entity Name *</label>
+              <input type="text" name="billingName" id="editClientBillingName" required class="w-full h-9 px-3.5 py-1.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
             </div>
           </div>
 
-          <!-- Preferred Currency Glass Dropdown -->
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Preferred Currency *</label>
-            <div class="glass-select-wrapper" data-glass-select="editClientCurrency">
-              <select name="currency" id="editClientCurrency" class="sr-only" tabindex="-1" aria-hidden="true">
-                <option value="USD" selected>USD — $ (US Dollar)</option>
-                <option value="BDT">BDT — ৳ (Bangladeshi Taka)</option>
-                <option value="GBP">GBP — £ (British Pound)</option>
-                <option value="EUR">EUR — € (Euro)</option>
-                <option value="AED">AED — د.إ (UAE Dirham)</option>
-                <option value="SAR">SAR — ر.س (Saudi Riyal)</option>
-                <option value="CAD">CAD — CA$ (Canadian Dollar)</option>
-                <option value="AUD">AUD — A$ (Australian Dollar)</option>
-                <option value="SGD">SGD — S$ (Singapore Dollar)</option>
-                <option value="INR">INR — ₹ (Indian Rupee)</option>
-                <option value="JPY">JPY — ¥ (Japanese Yen)</option>
-                <option value="MYR">MYR — RM (Malaysian Ringgit)</option>
-              </select>
-              <button type="button" class="glass-select-trigger" id="editClientCurrencyTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="editClientCurrencyMenu">
-                <span class="flex items-center gap-2 min-w-0">
-                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[10px] font-bold flex items-center justify-center border border-emerald-200/60 select-currency-symbol shrink-0">$</span>
-                  <span class="select-label truncate">USD — $ (US Dollar)</span>
-                </span>
-                <i class="fa-solid fa-chevron-down chevron-icon shrink-0"></i>
-              </button>
-              <div class="glass-select-menu" id="editClientCurrencyMenu" role="listbox" aria-label="Preferred Currency">
-                <button type="button" class="glass-select-option selected" data-value="USD" role="option" aria-selected="true">
-                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[10px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">$</span>
-                  <span class="truncate select-opt-text">USD — $ (US Dollar)</span>
-                  <i class="fa-solid fa-check check-icon"></i>
-                </button>
-                <button type="button" class="glass-select-option" data-value="BDT" role="option" aria-selected="false">
-                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[10px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">৳</span>
-                  <span class="truncate select-opt-text">BDT — ৳ (Bangladeshi Taka)</span>
-                  <i class="fa-solid fa-check check-icon"></i>
-                </button>
-                <button type="button" class="glass-select-option" data-value="GBP" role="option" aria-selected="false">
-                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[10px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">£</span>
-                  <span class="truncate select-opt-text">GBP — £ (British Pound)</span>
-                  <i class="fa-solid fa-check check-icon"></i>
-                </button>
-                <button type="button" class="glass-select-option" data-value="EUR" role="option" aria-selected="false">
-                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[10px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">€</span>
-                  <span class="truncate select-opt-text">EUR — € (Euro)</span>
-                  <i class="fa-solid fa-check check-icon"></i>
-                </button>
-                <button type="button" class="glass-select-option" data-value="AED" role="option" aria-selected="false">
-                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[9px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">د.إ</span>
-                  <span class="truncate select-opt-text">AED — د.إ (UAE Dirham)</span>
-                  <i class="fa-solid fa-check check-icon"></i>
-                </button>
-                <button type="button" class="glass-select-option" data-value="SAR" role="option" aria-selected="false">
-                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[9px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">ر.س</span>
-                  <span class="truncate select-opt-text">SAR — ر.س (Saudi Riyal)</span>
-                  <i class="fa-solid fa-check check-icon"></i>
-                </button>
-                <button type="button" class="glass-select-option" data-value="CAD" role="option" aria-selected="false">
-                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[9px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">CA$</span>
-                  <span class="truncate select-opt-text">CAD — CA$ (Canadian Dollar)</span>
-                  <i class="fa-solid fa-check check-icon"></i>
-                </button>
-                <button type="button" class="glass-select-option" data-value="AUD" role="option" aria-selected="false">
-                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[9px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">A$</span>
-                  <span class="truncate select-opt-text">AUD — A$ (Australian Dollar)</span>
-                  <i class="fa-solid fa-check check-icon"></i>
-                </button>
-                <button type="button" class="glass-select-option" data-value="SGD" role="option" aria-selected="false">
-                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[9px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">S$</span>
-                  <span class="truncate select-opt-text">SGD — S$ (Singapore Dollar)</span>
-                  <i class="fa-solid fa-check check-icon"></i>
-                </button>
-                <button type="button" class="glass-select-option" data-value="INR" role="option" aria-selected="false">
-                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[10px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">₹</span>
-                  <span class="truncate select-opt-text">INR — ₹ (Indian Rupee)</span>
-                  <i class="fa-solid fa-check check-icon"></i>
-                </button>
-                <button type="button" class="glass-select-option" data-value="JPY" role="option" aria-selected="false">
-                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[10px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">¥</span>
-                  <span class="truncate select-opt-text">JPY — ¥ (Japanese Yen)</span>
-                  <i class="fa-solid fa-check check-icon"></i>
-                </button>
-                <button type="button" class="glass-select-option" data-value="MYR" role="option" aria-selected="false">
-                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[9px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">RM</span>
-                  <span class="truncate select-opt-text">MYR — RM (Malaysian Ringgit)</span>
-                  <i class="fa-solid fa-check check-icon"></i>
-                </button>
-              </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5">
+            <div>
+              <label class="block text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 mb-0.5 sm:mb-1">Company / Brand Name</label>
+              <input type="text" name="companyName" id="editClientCompanyName" class="w-full h-9 px-3.5 py-1.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
+            </div>
+            <div>
+              <label class="block text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 mb-0.5 sm:mb-1">Phone Number *</label>
+              <input type="text" name="phone" id="editClientPhone" required class="w-full h-9 px-3.5 py-1.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
             </div>
           </div>
 
-          <!-- CIF Lock Status Glass Dropdown -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5">
+            <div>
+              <label class="block text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 mb-0.5 sm:mb-1">Verified Email (Clerk SSO)</label>
+              <input type="email" name="email" id="editClientEmail" readonly disabled class="w-full h-9 px-3.5 py-1.5 rounded-xl bg-slate-100 text-xs text-slate-500 cursor-not-allowed select-none">
+              <span class="text-[10px] text-slate-400">Managed via Clerk SSO. Direct edits blocked.</span>
+            </div>
+            <div>
+              <label class="block text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 mb-0.5 sm:mb-1">Tax ID / VAT Registration</label>
+              <input type="text" name="taxId" id="editClientTaxId" placeholder="Optional Tax/VAT ID" class="w-full h-9 px-3.5 py-1.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
+            </div>
+          </div>
+
           <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">CIF Lock Status *</label>
-            <div class="glass-select-wrapper" data-glass-select="editClientIsLocked">
-              <select name="isLocked" id="editClientIsLocked" class="sr-only" tabindex="-1" aria-hidden="true">
-                <option value="1">Locked (Verified & Protected)</option>
-                <option value="0" selected>Unlocked (Client Can Edit)</option>
-              </select>
-              <button type="button" class="glass-select-trigger" id="editClientIsLockedTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="editClientIsLockedMenu">
-                <span class="flex items-center gap-2 min-w-0">
-                  <i class="fa-solid fa-lock-open text-amber-500 text-xs shrink-0 select-icon"></i>
-                  <span class="select-label truncate">Unlocked (Client Can Edit)</span>
-                </span>
-                <i class="fa-solid fa-chevron-down chevron-icon shrink-0"></i>
-              </button>
-              <div class="glass-select-menu" id="editClientIsLockedMenu" role="listbox" aria-label="CIF Lock Status">
-                <button type="button" class="glass-select-option" data-value="1" role="option" aria-selected="false">
-                  <i class="fa-solid fa-lock text-emerald-600 text-xs shrink-0 option-icon"></i>
-                  <span class="truncate select-opt-text">Locked (Verified & Protected)</span>
-                  <i class="fa-solid fa-check check-icon"></i>
+            <label class="block text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 mb-0.5 sm:mb-1">Full Billing Address *</label>
+            <input type="text" name="address" id="editClientAddress" required class="w-full h-9 px-3.5 py-1.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-2.5">
+            <div>
+              <label class="block text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 mb-0.5 sm:mb-1">City *</label>
+              <input type="text" name="city" id="editClientCity" required class="w-full h-9 px-3.5 py-1.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
+            </div>
+            <div>
+              <label class="block text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 mb-0.5 sm:mb-1">Country *</label>
+              <input type="text" name="country" id="editClientCountry" required class="w-full h-9 px-3.5 py-1.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
+            </div>
+            <div>
+              <label class="block text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 mb-0.5 sm:mb-1">Postal Code</label>
+              <input type="text" name="postalCode" id="editClientPostalCode" class="w-full h-9 px-3.5 py-1.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-2.5">
+            <!-- Account Status Glass Dropdown -->
+            <div>
+              <label class="block text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 mb-0.5 sm:mb-1">Account Status</label>
+              <div class="glass-select-wrapper" data-glass-select="editClientStatus">
+                <select name="status" id="editClientStatus" class="sr-only" tabindex="-1" aria-hidden="true">
+                  <option value="active" selected>Active</option>
+                  <option value="suspended">Suspended</option>
+                </select>
+                <button type="button" class="glass-select-trigger h-9" id="editClientStatusTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="editClientStatusMenu">
+                  <span class="flex items-center gap-2 min-w-0">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0 select-icon"></span>
+                    <span class="select-label truncate text-xs">Active</span>
+                  </span>
+                  <i class="fa-solid fa-chevron-down chevron-icon shrink-0"></i>
                 </button>
-                <button type="button" class="glass-select-option selected" data-value="0" role="option" aria-selected="true">
-                  <i class="fa-solid fa-lock-open text-amber-500 text-xs shrink-0 option-icon"></i>
-                  <span class="truncate select-opt-text">Unlocked (Client Can Edit)</span>
-                  <i class="fa-solid fa-check check-icon"></i>
+                <div class="glass-select-menu" id="editClientStatusMenu" role="listbox" aria-label="Account Status">
+                  <button type="button" class="glass-select-option selected" data-value="active" role="option" aria-selected="true">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0 option-icon"></span>
+                    <span class="truncate select-opt-text">Active</span>
+                    <i class="fa-solid fa-check check-icon"></i>
+                  </button>
+                  <button type="button" class="glass-select-option" data-value="suspended" role="option" aria-selected="false">
+                    <span class="w-2 h-2 rounded-full bg-rose-500 shrink-0 option-icon"></span>
+                    <span class="truncate select-opt-text">Suspended</span>
+                    <i class="fa-solid fa-check check-icon"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Preferred Currency Glass Dropdown -->
+            <div>
+              <label class="block text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 mb-0.5 sm:mb-1">Preferred Currency *</label>
+              <div class="glass-select-wrapper" data-glass-select="editClientCurrency">
+                <select name="currency" id="editClientCurrency" class="sr-only" tabindex="-1" aria-hidden="true">
+                  <option value="USD" selected>USD — $ (US Dollar)</option>
+                  <option value="BDT">BDT — ৳ (Bangladeshi Taka)</option>
+                  <option value="GBP">GBP — £ (British Pound)</option>
+                  <option value="EUR">EUR — € (Euro)</option>
+                  <option value="AED">AED — د.إ (UAE Dirham)</option>
+                  <option value="SAR">SAR — ر.س (Saudi Riyal)</option>
+                  <option value="CAD">CAD — CA$ (Canadian Dollar)</option>
+                  <option value="AUD">AUD — A$ (Australian Dollar)</option>
+                  <option value="SGD">SGD — S$ (Singapore Dollar)</option>
+                  <option value="INR">INR — ₹ (Indian Rupee)</option>
+                  <option value="JPY">JPY — ¥ (Japanese Yen)</option>
+                  <option value="MYR">MYR — RM (Malaysian Ringgit)</option>
+                </select>
+                <button type="button" class="glass-select-trigger h-9" id="editClientCurrencyTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="editClientCurrencyMenu">
+                  <span class="flex items-center gap-2 min-w-0">
+                    <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[10px] font-bold flex items-center justify-center border border-emerald-200/60 select-currency-symbol shrink-0">$</span>
+                    <span class="select-label truncate text-xs">USD — $ (US Dollar)</span>
+                  </span>
+                  <i class="fa-solid fa-chevron-down chevron-icon shrink-0"></i>
                 </button>
+                <div class="glass-select-menu" id="editClientCurrencyMenu" role="listbox" aria-label="Preferred Currency">
+                  <button type="button" class="glass-select-option selected" data-value="USD" role="option" aria-selected="true">
+                    <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[10px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">$</span>
+                    <span class="truncate select-opt-text">USD — $ (US Dollar)</span>
+                    <i class="fa-solid fa-check check-icon"></i>
+                  </button>
+                  <button type="button" class="glass-select-option" data-value="BDT" role="option" aria-selected="false">
+                    <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[10px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">৳</span>
+                    <span class="truncate select-opt-text">BDT — ৳ (Bangladeshi Taka)</span>
+                    <i class="fa-solid fa-check check-icon"></i>
+                  </button>
+                  <button type="button" class="glass-select-option" data-value="GBP" role="option" aria-selected="false">
+                    <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[10px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">£</span>
+                    <span class="truncate select-opt-text">GBP — £ (British Pound)</span>
+                    <i class="fa-solid fa-check check-icon"></i>
+                  </button>
+                  <button type="button" class="glass-select-option" data-value="EUR" role="option" aria-selected="false">
+                    <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[10px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">€</span>
+                    <span class="truncate select-opt-text">EUR — € (Euro)</span>
+                    <i class="fa-solid fa-check check-icon"></i>
+                  </button>
+                  <button type="button" class="glass-select-option" data-value="AED" role="option" aria-selected="false">
+                    <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[9px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">د.إ</span>
+                    <span class="truncate select-opt-text">AED — د.إ (UAE Dirham)</span>
+                    <i class="fa-solid fa-check check-icon"></i>
+                  </button>
+                  <button type="button" class="glass-select-option" data-value="SAR" role="option" aria-selected="false">
+                    <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[9px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">ر.س</span>
+                    <span class="truncate select-opt-text">SAR — ر.س (Saudi Riyal)</span>
+                    <i class="fa-solid fa-check check-icon"></i>
+                  </button>
+                  <button type="button" class="glass-select-option" data-value="CAD" role="option" aria-selected="false">
+                    <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[9px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">CA$</span>
+                    <span class="truncate select-opt-text">CAD — CA$ (Canadian Dollar)</span>
+                    <i class="fa-solid fa-check check-icon"></i>
+                  </button>
+                  <button type="button" class="glass-select-option" data-value="AUD" role="option" aria-selected="false">
+                    <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[9px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">A$</span>
+                    <span class="truncate select-opt-text">AUD — A$ (Australian Dollar)</span>
+                    <i class="fa-solid fa-check check-icon"></i>
+                  </button>
+                  <button type="button" class="glass-select-option" data-value="SGD" role="option" aria-selected="false">
+                    <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[9px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">S$</span>
+                    <span class="truncate select-opt-text">SGD — S$ (Singapore Dollar)</span>
+                    <i class="fa-solid fa-check check-icon"></i>
+                  </button>
+                  <button type="button" class="glass-select-option" data-value="INR" role="option" aria-selected="false">
+                    <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[10px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">₹</span>
+                    <span class="truncate select-opt-text">INR — ₹ (Indian Rupee)</span>
+                    <i class="fa-solid fa-check check-icon"></i>
+                  </button>
+                  <button type="button" class="glass-select-option" data-value="JPY" role="option" aria-selected="false">
+                    <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[10px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">¥</span>
+                    <span class="truncate select-opt-text">JPY — ¥ (Japanese Yen)</span>
+                    <i class="fa-solid fa-check check-icon"></i>
+                  </button>
+                  <button type="button" class="glass-select-option" data-value="MYR" role="option" aria-selected="false">
+                    <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[9px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">RM</span>
+                    <span class="truncate select-opt-text">MYR — RM (Malaysian Ringgit)</span>
+                    <i class="fa-solid fa-check check-icon"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- CIF Lock Status Glass Dropdown -->
+            <div>
+              <label class="block text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 mb-0.5 sm:mb-1">CIF Lock Status *</label>
+              <div class="glass-select-wrapper" data-glass-select="editClientIsLocked">
+                <select name="isLocked" id="editClientIsLocked" class="sr-only" tabindex="-1" aria-hidden="true">
+                  <option value="1">Locked (Verified & Protected)</option>
+                  <option value="0" selected>Unlocked (Client Can Edit)</option>
+                </select>
+                <button type="button" class="glass-select-trigger h-9" id="editClientIsLockedTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="editClientIsLockedMenu">
+                  <span class="flex items-center gap-2 min-w-0">
+                    <i class="fa-solid fa-lock-open text-amber-500 text-xs shrink-0 select-icon"></i>
+                    <span class="select-label truncate text-xs">Unlocked (Client Can Edit)</span>
+                  </span>
+                  <i class="fa-solid fa-chevron-down chevron-icon shrink-0"></i>
+                </button>
+                <div class="glass-select-menu" id="editClientIsLockedMenu" role="listbox" aria-label="CIF Lock Status">
+                  <button type="button" class="glass-select-option" data-value="1" role="option" aria-selected="false">
+                    <i class="fa-solid fa-lock text-emerald-600 text-xs shrink-0 option-icon"></i>
+                    <span class="truncate select-opt-text">Locked (Verified & Protected)</span>
+                    <i class="fa-solid fa-check check-icon"></i>
+                  </button>
+                  <button type="button" class="glass-select-option selected" data-value="0" role="option" aria-selected="true">
+                    <i class="fa-solid fa-lock-open text-amber-500 text-xs shrink-0 option-icon"></i>
+                    <span class="truncate select-opt-text">Unlocked (Client Can Edit)</span>
+                    <i class="fa-solid fa-check check-icon"></i>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div id="editClientAuditNote" class="text-[11px] text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-200 flex items-center justify-between">
-          <span id="editClientAuditText">Authoritative verified CIF record</span>
-          <span id="editClientCompletionBadge" class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">100% Complete</span>
-        </div>
-
-        <div class="flex items-center justify-end space-x-3 pt-3 border-t border-[#E3E9EF]">
-          <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36]" data-modal="modalEditClient">Cancel</button>
+        <!-- Pinned Modal Footer: Always fully visible without scrolling -->
+        <div class="flex items-center justify-end space-x-3 p-3.5 sm:px-6 sm:py-3 border-t border-[#E3E9EF] bg-slate-50/80 shrink-0 z-10">
+          <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36] cursor-pointer" data-modal="modalEditClient">Cancel</button>
           <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center gap-1.5 cursor-pointer">
             <i class="fa-solid fa-floppy-disk text-xs"></i>
             <span>Save Profile Changes</span>
           </button>
         </div>
-        </form>
-      </div>
+      </form>
     </div>
   </div>
 
