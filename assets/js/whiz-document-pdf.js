@@ -19,7 +19,7 @@
   async function getLogoBytes() {
     try {
       if (typeof window !== 'undefined' && window.location) {
-        const res = await fetch('/assets/images/logo.png?v=20261105');
+        const res = await fetch('/assets/images/logo.png');
         if (res.ok) return await res.arrayBuffer();
       }
       if (typeof process !== 'undefined') {

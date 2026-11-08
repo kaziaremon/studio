@@ -5657,7 +5657,9 @@
 
       if (dateInput) {
         dateInput.value = new Date().toISOString().split('T')[0];
-        if (typeof updateDatePickerTrigger === 'function') updateDatePickerTrigger(dateInput);
+        if (typeof updateDatePickerTrigger === 'function') {
+          updateDatePickerTrigger(dateInput);
+        }
       }
       if (refInput && !refInput.value) refInput.value = 'TXN-' + Math.floor(100000 + Math.random() * 900000);
 
@@ -5772,40 +5774,56 @@
       e.preventDefault();
       const f = e.target;
       const submitBtn = f.querySelector('button[type="submit"]');
-      const orgId = f.organizationId.value;
+      const orgId = f.organizationId ? f.organizationId.value : '';
       const serviceProvided = (f.serviceProvided ? f.serviceProvided.value.trim() : '') || 'Whiz Studio Retainer Service';
       const amountDollars = parseFloat(f.amount.value) || 0;
       const currency = f.currency ? f.currency.value : 'USD';
-      const paymentDate = f.paymentDate && f.paymentDate.value ? f.paymentDate.value : new Date().toISOString().split('T')[0];
+      const rawPaymentDate = f.paymentDate ? f.paymentDate.value.trim() : '';
       const paymentMethod = f.paymentMethod ? f.paymentMethod.value : 'bank_transfer';
       const paymentReference = f.paymentReference ? f.paymentReference.value : ('TXN-' + Math.floor(100000 + Math.random() * 900000));
       const financialNotes = f.financialNotes ? f.financialNotes.value.trim() : null;
-      let selectedInvoiceId = f.invoiceId ? f.invoiceId.value : '';
+      let selectedInvoiceId = f.invoiceId ? f.invoiceId.value.trim() : '';
+
+      // Strict Frontend Validations
+      if (!orgId) {
+        showToast('Please select a client organization.', 'error');
+        return;
+      }
+
+      if (!rawPaymentDate || !/^\d{4}-\d{2}-\d{2}$/.test(rawPaymentDate) || isNaN(Date.parse(rawPaymentDate))) {
+        showToast('Please select a valid payment date.', 'error');
+        const dateTrigger = document.querySelector('[data-datepicker-target="paymentDateInput"] .custom-datepicker-trigger');
+        if (dateTrigger) {
+          dateTrigger.classList.add('ring-2', 'ring-rose-500', 'border-rose-400');
+          dateTrigger.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          setTimeout(() => dateTrigger.classList.remove('ring-2', 'ring-rose-500', 'border-rose-400'), 3000);
+        }
+        return;
+      }
+      const paymentDate = rawPaymentDate;
+
+      if (amountDollars <= 0) {
+        showToast('Please enter a valid payment amount greater than zero.', 'error');
+        f.amount?.focus();
+        return;
+      }
+
+      if (!f.serviceProvided || !f.serviceProvided.value.trim()) {
+        showToast('Please specify the service provided for this ledger entry.', 'error');
+        f.serviceProvided?.focus();
+        return;
+      }
 
       setBtnLoading(submitBtn, true, 'Recording payment to ledger...');
 
-      if (!selectedInvoiceId) {
-        const invRes = await apiFetch('/finance/invoices', {
-          method: 'POST',
-          body: JSON.stringify({
-            organizationId: orgId,
-            issueDate: paymentDate,
-            dueDate: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
-            currency,
-            items: [{ description: serviceProvided, quantity: 1, unitPriceCents: Math.round(amountDollars * 100) }]
-          })
-        });
-
-        selectedInvoiceId = invRes.data?.data?.invoiceId || invRes.data?.data?.id;
-        if (!selectedInvoiceId) {
-          selectedInvoiceId = 'INV-' + Date.now().toString().slice(-4);
-        }
-      }
+      // Determine if Auto-Create is selected or needed
+      const isAutoCreate = !selectedInvoiceId || selectedInvoiceId === 'auto' || selectedInvoiceId.toLowerCase().includes('auto');
 
       const payRes = await apiFetch('/finance/payments', {
         method: 'POST',
         body: JSON.stringify({
-          invoiceId: selectedInvoiceId,
+          invoiceId: isAutoCreate ? null : selectedInvoiceId,
+          autoCreate: isAutoCreate,
           organizationId: orgId,
           serviceProvided,
           amountCents: Math.round(amountDollars * 100),
@@ -5826,11 +5844,12 @@
           const clientOption = document.querySelector(`#paymentClientSelect option[value="${orgId}"]`);
           const clientName = clientOption ? clientOption.textContent.split('(')[0].trim() : (state.clients.find(c => c.id === orgId)?.name || 'Valued Client');
           const receiptNumber = payRes.data.data?.receiptNumber || payRes.data.data?.receipt_no || `RCPT-2026-${Math.floor(100 + Math.random() * 900)}`;
-          const invoiceNumber = (typeof selectedInvoiceId === 'string' && selectedInvoiceId.startsWith('INV-')) ? selectedInvoiceId : `INV-2026-${Math.floor(100 + Math.random() * 900)}`;
+          const invoiceNumber = payRes.data.data?.invoiceNumber || payRes.data.data?.invoice_no || `INV-2026-${Math.floor(100 + Math.random() * 900)}`;
+          const realInvoiceId = payRes.data.data?.invoiceId || selectedInvoiceId || ('inv_' + Date.now());
 
           const newLedgerItem = {
             id: payRes.data.data?.id || `pay_${Date.now()}`,
-            invoice_id: selectedInvoiceId,
+            invoice_id: realInvoiceId,
             invoice_no: invoiceNumber,
             invoice_number: invoiceNumber,
             receipt_number: receiptNumber,
