@@ -1722,7 +1722,7 @@
     if (buttonEl) {
       buttonEl.disabled = true;
       buttonEl.setAttribute('data-loading', 'true');
-      buttonEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-xs mr-1.5"></i><span>Preparing Receipt...</span>';
+      buttonEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-xs mr-1.5"></i><span>Preparing Invoice...</span>';
     }
 
     try {
@@ -1746,10 +1746,10 @@
         }
         if (authRes.data?.code === 'CIF_INCOMPLETE') {
           switchTab('profile');
-          showToast(authRes.data.error || 'Please complete your Profile before downloading receipts.', 'error');
+          showToast(authRes.data.error || 'Please complete your Profile before downloading invoices.', 'error');
           return;
         }
-        throw new Error(authRes.data?.error || 'Failed to authorize receipt download.');
+        throw new Error(authRes.data?.error || 'Failed to authorize invoice download.');
       }
 
       if (authRes.data.quota) {
@@ -1770,7 +1770,8 @@
       }
 
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-      const filename = `WhizStudio_Receipt_${receiptNumber || 'OFFICIAL'}.pdf`;
+      const invoiceLabel = docData.invoiceNumber || receiptNumber || 'OFFICIAL';
+      const filename = `WhizStudio_Invoice_${invoiceLabel}.pdf`;
 
       const downloadUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -1781,7 +1782,7 @@
       a.remove();
       URL.revokeObjectURL(downloadUrl);
 
-      showToast(`Receipt ${receiptNumber} generated and downloaded successfully!`, 'success');
+      showToast(`Invoice ${invoiceLabel} generated and downloaded successfully!`, 'success');
     } catch (err) {
       console.error('Receipt download error:', err);
       showToast(err.message || 'Failed to generate receipt PDF.', 'error');
