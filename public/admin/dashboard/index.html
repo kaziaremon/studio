@@ -962,64 +962,24 @@
 
       </div>
 
-      <!-- 3. ACCESSIBLE PROFILE FOOTER (Premium Compact Profile) -->
+      <!-- 3. ACCESSIBLE SIDEBAR FOOTER (Clean Sign Out Action - Profile Badge Removed) -->
       <div class="p-3 border-t border-[#E6ECE9] shrink-0 bg-white">
         <!-- Expanded Footer View -->
-        <div class="dock-expanded-only flex-col space-y-2 w-full">
-          <!-- Row 1: Account Identity -->
-          <div class="flex items-center gap-2.5 p-1.5 rounded-xl transition-colors hover:bg-[#F7FAF9] group select-none">
-            <!-- Left: Rounded-square avatar with initials -->
-            <div class="w-8 h-8 rounded-lg bg-[#EAF5F1] border border-[#087F70]/25 flex items-center justify-center font-bold text-xs text-[#087F70] uppercase admin-display-initials select-none shrink-0 shadow-2xs">
-              SA
-            </div>
-            <!-- Center: Display Name + Role Label with Shield Icon -->
-            <div class="min-w-0 flex-1">
-              <p class="text-xs font-semibold text-[#202D2A] truncate admin-display-name leading-tight">Administrator</p>
-              <div class="flex items-center gap-1 mt-0.5 text-[#087F70]">
-                <i class="fa-solid fa-shield-halved text-[9px] shrink-0"></i>
-                <span class="text-[10px] font-medium leading-none" id="sidebarRoleBadge">Super Admin</span>
-              </div>
-            </div>
-            <!-- Right: Subtle chevron for optional expansion -->
-            <div class="text-[#74817D]/50 group-hover:text-[#74817D] transition-colors shrink-0">
-              <i class="fa-solid fa-chevron-right text-[10px]"></i>
-            </div>
-          </div>
-
-          <!-- Subtle Divider -->
-          <div class="h-px bg-[#E6ECE9] w-full"></div>
-
-          <!-- Row 2: Sign Out Button -->
-          <button type="button" class="btn-admin-signout w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#74817D] hover:text-rose-600 hover:bg-rose-50/80 active:bg-rose-100/60 transition-colors cursor-pointer touch-manipulation text-left group" title="Sign Out of Console" aria-label="Sign Out">
-            <i class="fa-solid fa-arrow-right-from-bracket text-[11px] text-[#74817D] group-hover:text-rose-600 transition-colors shrink-0"></i>
+        <div class="dock-expanded-only w-full">
+          <button type="button" class="btn-admin-signout w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-semibold text-rose-600 bg-rose-50/80 hover:bg-rose-100 active:bg-rose-200/60 border border-rose-200/60 transition-colors cursor-pointer touch-manipulation select-none" title="Sign Out of Console" aria-label="Sign Out">
+            <i class="fa-solid fa-arrow-right-from-bracket text-xs shrink-0"></i>
             <span>Sign Out</span>
           </button>
         </div>
 
         <!-- Collapsed Footer View (72px Dock Mode) -->
-        <div class="dock-collapsed-only hidden justify-center py-1 relative footer-avatar-trigger">
-          <div class="w-9 h-9 rounded-lg bg-[#EAF5F1] border border-[#087F70]/25 flex items-center justify-center font-bold text-xs text-[#087F70] uppercase admin-display-initials select-none cursor-pointer shadow-2xs hover:border-[#087F70]/50 transition-colors" tabindex="0" role="button" aria-label="User Account Options">
-            SA
-          </div>
-          <!-- Collapsed Floating Profile Flyout Card -->
-          <div class="footer-floating-card absolute left-[calc(100%+12px)] top-1/2 -translate-y-1/2 z-50 p-3 rounded-xl bg-white text-[#202D2A] border border-[#E6ECE9] shadow-xl min-w-[190px]">
-            <div class="flex items-center gap-2.5">
-              <div class="w-7 h-7 rounded-lg bg-[#EAF5F1] border border-[#087F70]/25 flex items-center justify-center font-bold text-[10px] text-[#087F70] uppercase admin-display-initials select-none shrink-0">
-                SA
-              </div>
-              <div class="min-w-0 flex-1">
-                <p class="text-xs font-semibold truncate admin-display-name leading-tight">Administrator</p>
-                <div class="flex items-center gap-1 mt-0.5 text-[#087F70]">
-                  <i class="fa-solid fa-shield-halved text-[9px] shrink-0"></i>
-                  <span class="text-[10px] font-medium leading-none" id="drawerRoleBadge">Super Admin</span>
-                </div>
-              </div>
-            </div>
-            <div class="h-px bg-[#E6ECE9] w-full my-2"></div>
-            <button type="button" class="btn-admin-signout w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-medium text-rose-600 hover:bg-rose-50 cursor-pointer transition-colors text-left">
-              <i class="fa-solid fa-arrow-right-from-bracket text-[11px]"></i>
-              <span>Sign Out</span>
-            </button>
+        <div class="dock-collapsed-only hidden justify-center py-0.5 relative group">
+          <button type="button" class="btn-admin-signout w-9 h-9 rounded-xl flex items-center justify-center text-rose-600 bg-rose-50/80 hover:bg-rose-100 active:bg-rose-200/60 border border-rose-200/60 transition-colors cursor-pointer touch-manipulation select-none" title="Sign Out of Console" aria-label="Sign Out">
+            <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i>
+          </button>
+          <!-- Floating Tooltip in Collapsed Mode -->
+          <div class="dock-floating-tooltip" role="tooltip">
+            <span>Sign Out</span>
           </div>
         </div>
       </div>
@@ -1215,7 +1175,7 @@
       </header>
 
       <!-- MAIN CONTENT WORKSPACE CANVAS -->
-      <main class="flex-1 overflow-y-auto px-3 sm:px-6 pt-2 sm:pt-4 md:pt-6 pb-24 sm:pb-32 md:pb-8 lg:p-8 bg-[#F8FAFC]">
+      <main class="flex-1 overflow-y-auto px-3 sm:px-6 lg:px-8 pt-3 sm:pt-4 lg:pt-4 pb-20 sm:pb-24 lg:pb-12 bg-[#F8FAFC]">
         <div class="max-w-7xl mx-auto space-y-3.5 sm:space-y-6">
 
           <!-- =================================================================
@@ -2129,7 +2089,7 @@
           <!-- =================================================================
                TAB 8: TEAM & ACCESS (STAFF / ADMINS)
                ================================================================= -->
-          <div id="view_team" class="hidden space-y-6 pb-28 sm:pb-32">
+          <div id="view_team" class="hidden space-y-6">
             <div class="flex flex-col sm:flex-row sm:items-start sm:items-center justify-between gap-4 pb-2">
               <div class="min-w-0 flex-1">
                 <h2 class="text-2xl sm:text-3xl font-black text-[#172B36] tracking-tight break-words whitespace-normal">User &amp; Access Management</h2>
@@ -2435,7 +2395,7 @@
           <!-- =================================================================
                TAB 9: SUPPORT REQUESTS (CLIENT SUPPORT DESK)
                ================================================================= -->
-          <div id="view_support" class="hidden space-y-5 sm:space-y-6 pb-28 sm:pb-32">
+          <div id="view_support" class="hidden space-y-5 sm:space-y-6">
             <!-- 1. Header (WHIZ Premium Support Command Center) -->
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 pb-1">
               <div class="min-w-0 flex-1">
