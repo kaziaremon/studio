@@ -138,6 +138,24 @@
 
       if (!triggerBtn || !menuEl) return;
 
+      // Smart scrollbar containment: Ensure options live inside .glass-select-menu-inner
+      const directOptions = Array.from(menuEl.children).filter(c => c.classList && c.classList.contains('glass-select-option'));
+      if (directOptions.length > 0) {
+        let innerEl = menuEl.querySelector('.glass-select-menu-inner');
+        if (!innerEl) {
+          innerEl = document.createElement('div');
+          innerEl.className = 'glass-select-menu-inner';
+          menuEl.appendChild(innerEl);
+        }
+        directOptions.forEach(opt => innerEl.appendChild(opt));
+      } else if (!menuEl.querySelector('.glass-select-menu-inner') && menuEl.children.length > 0) {
+        const innerEl = document.createElement('div');
+        innerEl.className = 'glass-select-menu-inner';
+        const children = Array.from(menuEl.children);
+        children.forEach(child => innerEl.appendChild(child));
+        menuEl.appendChild(innerEl);
+      }
+
       const getOptions = () => Array.from(menuEl.querySelectorAll('.glass-select-option'));
 
       if (wrapper.dataset.glassInitialized === 'true') {

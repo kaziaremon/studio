@@ -97,8 +97,52 @@
     .pb-safe { padding-bottom: env(safe-area-inset-bottom, 1rem); }
 
     /* Master Nested Scrollbar Inset & Anti-Clipping */
-    .whiz-nested-scroll,
+    /* Smart Contained Dropdown Architecture */
+    .whiz-dropdown-panel,
     .glass-select-menu {
+      overflow: hidden !important;
+      clip-path: inset(0 round 1rem) !important;
+      border-radius: 1rem !important;
+      padding: 0 !important;
+      box-sizing: border-box !important;
+    }
+    .whiz-dropdown-inner,
+    .glass-select-menu-inner {
+      max-height: 250px !important;
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      box-sizing: border-box !important;
+      -webkit-overflow-scrolling: touch;
+      padding: 6px 8px 6px 6px !important;
+      scrollbar-width: thin !important;
+      scrollbar-color: rgba(8, 127, 112, 0.35) transparent !important;
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+    .whiz-dropdown-inner::-webkit-scrollbar,
+    .glass-select-menu-inner::-webkit-scrollbar {
+      width: 5px !important;
+      height: 5px !important;
+    }
+    .whiz-dropdown-inner::-webkit-scrollbar-track,
+    .glass-select-menu-inner::-webkit-scrollbar-track {
+      background: transparent !important;
+      border-radius: 10px !important;
+    }
+    .whiz-dropdown-inner::-webkit-scrollbar-thumb,
+    .glass-select-menu-inner::-webkit-scrollbar-thumb {
+      background: rgba(8, 127, 112, 0.35) !important;
+      border-radius: 10px !important;
+      border: 1px solid transparent !important;
+      background-clip: padding-box !important;
+    }
+    .whiz-dropdown-inner::-webkit-scrollbar-thumb:hover,
+    .glass-select-menu-inner::-webkit-scrollbar-thumb:hover {
+      background: rgba(8, 127, 112, 0.65) !important;
+      background-clip: padding-box !important;
+    }
+
+    .whiz-nested-scroll {
       overflow-y: auto !important;
       overflow-x: hidden !important;
       scrollbar-width: thin !important;
