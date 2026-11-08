@@ -81,6 +81,42 @@
     }
     .pb-safe { padding-bottom: env(safe-area-inset-bottom, 1rem); }
 
+    /* Master Nested Scrollbar Inset & Anti-Clipping */
+    .whiz-nested-scroll,
+    .glass-select-menu {
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      scrollbar-width: thin !important;
+      scrollbar-color: rgba(8, 127, 112, 0.35) transparent !important;
+      -webkit-overflow-scrolling: touch;
+      box-sizing: border-box;
+    }
+    .whiz-nested-scroll::-webkit-scrollbar,
+    .glass-select-menu::-webkit-scrollbar {
+      width: 6px !important;
+      height: 6px !important;
+    }
+    .whiz-nested-scroll::-webkit-scrollbar-track,
+    .glass-select-menu::-webkit-scrollbar-track {
+      background: transparent !important;
+      margin-top: 10px !important;
+      margin-bottom: 10px !important;
+      margin-block: 10px !important;
+      border-radius: 9999px !important;
+    }
+    .whiz-nested-scroll::-webkit-scrollbar-thumb,
+    .glass-select-menu::-webkit-scrollbar-thumb {
+      background: rgba(8, 127, 112, 0.3) !important;
+      border-radius: 9999px !important;
+      border: 1px solid transparent !important;
+      background-clip: padding-box !important;
+    }
+    .whiz-nested-scroll::-webkit-scrollbar-thumb:hover,
+    .glass-select-menu::-webkit-scrollbar-thumb:hover {
+      background: rgba(8, 127, 112, 0.6) !important;
+      background-clip: padding-box !important;
+    }
+
     /* Master Universal 32px Circular Close Button */
     .whiz-modal-close-btn {
       display: inline-flex !important;
@@ -455,10 +491,6 @@
               <div class="absolute -right-8 -bottom-8 w-48 h-48 rounded-full bg-[#087F70]/5 blur-2xl pointer-events-none"></div>
               <div class="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20 mb-1.5">
-                    <span class="w-1.5 h-1.5 rounded-full bg-[#087F70] animate-pulse"></span>
-                    <span>Client Workspace</span>
-                  </div>
                   <h1 class="text-xl sm:text-2xl font-black text-[#172B36] tracking-tight" id="clientOverviewGreetingTitle">Overview</h1>
                   <p class="text-xs sm:text-sm text-slate-500 mt-0.5 max-w-xl" id="clientOverviewGreetingSubtext">
                     Welcome back! Let's achieve great things today.

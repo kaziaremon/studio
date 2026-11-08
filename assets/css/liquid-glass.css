@@ -582,6 +582,123 @@ select.glass-input option:hover {
   background: rgba(8, 127, 112, 0.7) !important;
 }
 
+/* =========================================================================
+   NESTED SCROLLBAR CONTAINMENT & INSET STYLING (LOCALIZED FIXES)
+   Targeted exclusively to inner lists, dropdowns, and modal scroll bodies
+   Strictly preserves global body, html, page wrappers, and nav layouts
+   ========================================================================= */
+.whiz-nested-scroll,
+.whiz-modal-scroll-body,
+.custom-modal-scroll,
+.custom-dropdown-scroll,
+.glass-select-menu,
+#clientCurrencyDropdownMenu,
+#assignServiceMenu,
+#assignCurrencyMenu,
+#auditCategoryDropdownMenu,
+#addClientServicesCheckboxes,
+#modalSupportMessage {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(8, 127, 112, 0.35) transparent !important;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
+}
+
+.whiz-nested-scroll::-webkit-scrollbar,
+.whiz-modal-scroll-body::-webkit-scrollbar,
+.custom-modal-scroll::-webkit-scrollbar,
+.custom-dropdown-scroll::-webkit-scrollbar,
+.glass-select-menu::-webkit-scrollbar,
+#clientCurrencyDropdownMenu::-webkit-scrollbar,
+#assignServiceMenu::-webkit-scrollbar,
+#assignCurrencyMenu::-webkit-scrollbar,
+#auditCategoryDropdownMenu::-webkit-scrollbar,
+#addClientServicesCheckboxes::-webkit-scrollbar,
+#modalSupportMessage::-webkit-scrollbar {
+  width: 6px !important;
+  height: 6px !important;
+}
+
+.whiz-nested-scroll::-webkit-scrollbar-track,
+.whiz-modal-scroll-body::-webkit-scrollbar-track,
+.custom-modal-scroll::-webkit-scrollbar-track,
+.custom-dropdown-scroll::-webkit-scrollbar-track,
+.glass-select-menu::-webkit-scrollbar-track,
+#clientCurrencyDropdownMenu::-webkit-scrollbar-track,
+#assignServiceMenu::-webkit-scrollbar-track,
+#assignCurrencyMenu::-webkit-scrollbar-track,
+#auditCategoryDropdownMenu::-webkit-scrollbar-track,
+#addClientServicesCheckboxes::-webkit-scrollbar-track,
+#modalSupportMessage::-webkit-scrollbar-track {
+  background: transparent !important;
+  margin-top: 10px !important;
+  margin-bottom: 10px !important;
+  margin-block: 10px !important;
+  border-radius: 9999px !important;
+}
+
+.whiz-nested-scroll::-webkit-scrollbar-track-piece,
+.whiz-modal-scroll-body::-webkit-scrollbar-track-piece,
+.custom-modal-scroll::-webkit-scrollbar-track-piece,
+.custom-dropdown-scroll::-webkit-scrollbar-track-piece,
+.glass-select-menu::-webkit-scrollbar-track-piece,
+#clientCurrencyDropdownMenu::-webkit-scrollbar-track-piece,
+#assignServiceMenu::-webkit-scrollbar-track-piece,
+#assignCurrencyMenu::-webkit-scrollbar-track-piece,
+#auditCategoryDropdownMenu::-webkit-scrollbar-track-piece,
+#addClientServicesCheckboxes::-webkit-scrollbar-track-piece,
+#modalSupportMessage::-webkit-scrollbar-track-piece {
+  background: transparent !important;
+}
+
+.whiz-nested-scroll::-webkit-scrollbar-thumb,
+.whiz-modal-scroll-body::-webkit-scrollbar-thumb,
+.custom-modal-scroll::-webkit-scrollbar-thumb,
+.custom-dropdown-scroll::-webkit-scrollbar-thumb,
+.glass-select-menu::-webkit-scrollbar-thumb,
+#clientCurrencyDropdownMenu::-webkit-scrollbar-thumb,
+#assignServiceMenu::-webkit-scrollbar-thumb,
+#assignCurrencyMenu::-webkit-scrollbar-thumb,
+#auditCategoryDropdownMenu::-webkit-scrollbar-thumb,
+#addClientServicesCheckboxes::-webkit-scrollbar-thumb,
+#modalSupportMessage::-webkit-scrollbar-thumb {
+  background: rgba(8, 127, 112, 0.3) !important;
+  border-radius: 9999px !important;
+  border: 1px solid transparent !important;
+  background-clip: padding-box !important;
+}
+
+.whiz-nested-scroll::-webkit-scrollbar-thumb:hover,
+.whiz-modal-scroll-body::-webkit-scrollbar-thumb:hover,
+.custom-modal-scroll::-webkit-scrollbar-thumb:hover,
+.custom-dropdown-scroll::-webkit-scrollbar-thumb:hover,
+.glass-select-menu::-webkit-scrollbar-thumb:hover,
+#clientCurrencyDropdownMenu::-webkit-scrollbar-thumb:hover,
+#assignServiceMenu::-webkit-scrollbar-thumb:hover,
+#assignCurrencyMenu::-webkit-scrollbar-thumb:hover,
+#auditCategoryDropdownMenu::-webkit-scrollbar-thumb:hover,
+#addClientServicesCheckboxes::-webkit-scrollbar-thumb:hover,
+#modalSupportMessage::-webkit-scrollbar-thumb:hover {
+  background: rgba(8, 127, 112, 0.6) !important;
+  background-clip: padding-box !important;
+}
+
+.whiz-nested-scroll::-webkit-scrollbar-corner,
+.whiz-modal-scroll-body::-webkit-scrollbar-corner,
+.custom-modal-scroll::-webkit-scrollbar-corner,
+.custom-dropdown-scroll::-webkit-scrollbar-corner,
+.glass-select-menu::-webkit-scrollbar-corner,
+#clientCurrencyDropdownMenu::-webkit-scrollbar-corner,
+#assignServiceMenu::-webkit-scrollbar-corner,
+#assignCurrencyMenu::-webkit-scrollbar-corner,
+#auditCategoryDropdownMenu::-webkit-scrollbar-corner,
+#addClientServicesCheckboxes::-webkit-scrollbar-corner,
+#modalSupportMessage::-webkit-scrollbar-corner {
+  background: transparent !important;
+}
+
 /* Custom Dropdown Internal Scrollbar (Inset, Rounded, Zero Border Clipping) */
 .custom-dropdown-scroll {
   scrollbar-width: thin;

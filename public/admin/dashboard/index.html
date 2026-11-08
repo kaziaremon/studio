@@ -592,6 +592,80 @@
   background: rgba(8, 127, 112, 0.5) !important;
 }
 
+/* =========================================================================
+   NESTED SCROLLBAR CONTAINMENT & INSET STYLING (LOCALIZED FIXES)
+   Targeted exclusively to inner lists, dropdowns, and modal scroll bodies
+   Strictly preserves global body, html, page wrappers, and nav layouts
+   ========================================================================= */
+.whiz-nested-scroll,
+.glass-select-menu,
+#clientCurrencyDropdownMenu,
+#assignServiceMenu,
+#assignCurrencyMenu,
+#auditCategoryDropdownMenu,
+#addClientServicesCheckboxes,
+#modalSupportMessage {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(8, 127, 112, 0.35) transparent !important;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
+}
+
+.whiz-nested-scroll::-webkit-scrollbar,
+.glass-select-menu::-webkit-scrollbar,
+#clientCurrencyDropdownMenu::-webkit-scrollbar,
+#assignServiceMenu::-webkit-scrollbar,
+#assignCurrencyMenu::-webkit-scrollbar,
+#auditCategoryDropdownMenu::-webkit-scrollbar,
+#addClientServicesCheckboxes::-webkit-scrollbar,
+#modalSupportMessage::-webkit-scrollbar {
+  width: 6px !important;
+  height: 6px !important;
+}
+
+.whiz-nested-scroll::-webkit-scrollbar-track,
+.glass-select-menu::-webkit-scrollbar-track,
+#clientCurrencyDropdownMenu::-webkit-scrollbar-track,
+#assignServiceMenu::-webkit-scrollbar-track,
+#assignCurrencyMenu::-webkit-scrollbar-track,
+#auditCategoryDropdownMenu::-webkit-scrollbar-track,
+#addClientServicesCheckboxes::-webkit-scrollbar-track,
+#modalSupportMessage::-webkit-scrollbar-track {
+  background: transparent !important;
+  margin-top: 10px !important;
+  margin-bottom: 10px !important;
+  margin-block: 10px !important;
+  border-radius: 9999px !important;
+}
+
+.whiz-nested-scroll::-webkit-scrollbar-thumb,
+.glass-select-menu::-webkit-scrollbar-thumb,
+#clientCurrencyDropdownMenu::-webkit-scrollbar-thumb,
+#assignServiceMenu::-webkit-scrollbar-thumb,
+#assignCurrencyMenu::-webkit-scrollbar-thumb,
+#auditCategoryDropdownMenu::-webkit-scrollbar-thumb,
+#addClientServicesCheckboxes::-webkit-scrollbar-thumb,
+#modalSupportMessage::-webkit-scrollbar-thumb {
+  background: rgba(8, 127, 112, 0.3) !important;
+  border-radius: 9999px !important;
+  border: 1px solid transparent !important;
+  background-clip: padding-box !important;
+}
+
+.whiz-nested-scroll::-webkit-scrollbar-thumb:hover,
+.glass-select-menu::-webkit-scrollbar-thumb:hover,
+#clientCurrencyDropdownMenu::-webkit-scrollbar-thumb:hover,
+#assignServiceMenu::-webkit-scrollbar-thumb:hover,
+#assignCurrencyMenu::-webkit-scrollbar-thumb:hover,
+#auditCategoryDropdownMenu::-webkit-scrollbar-thumb:hover,
+#addClientServicesCheckboxes::-webkit-scrollbar-thumb:hover,
+#modalSupportMessage::-webkit-scrollbar-thumb:hover {
+  background: rgba(8, 127, 112, 0.6) !important;
+  background-clip: padding-box !important;
+}
+
 /* Master Universal 32px Circular Close Button */
 .whiz-modal-close-btn {
   display: inline-flex !important;
@@ -1593,7 +1667,7 @@
 
                         <!-- Custom Floating Popover Menu -->
                         <div id="clientCurrencyDropdownMenu" 
-                          class="hidden absolute left-0 right-0 mt-1.5 max-h-56 overflow-y-auto rounded-2xl bg-white/95 backdrop-blur-xl border border-[#E3E9EF] shadow-xl p-1.5 z-50 space-y-0.5 animate-in fade-in zoom-in-95 duration-150 font-sans"
+                          class="whiz-nested-scroll hidden absolute left-0 right-0 mt-1.5 max-h-56 overflow-y-auto rounded-2xl bg-white/95 backdrop-blur-xl border border-[#E3E9EF] shadow-xl p-1.5 z-50 space-y-0.5 animate-in fade-in zoom-in-95 duration-150 font-sans"
                           role="listbox" 
                           tabindex="-1">
                           
@@ -2862,7 +2936,7 @@
 
                   <!-- Custom Dropdown Menu (Crisp White / Glassmorphic) -->
                   <div id="auditCategoryDropdownMenu" 
-                    class="hidden absolute left-0 right-auto mt-1.5 w-56 max-w-[calc(100vw-2rem)] rounded-2xl bg-white/95 backdrop-blur-xl border border-[#E3E9EF] shadow-xl p-1.5 z-50 space-y-0.5 animate-in fade-in zoom-in-95 duration-150 font-sans origin-top-left"
+                    class="whiz-nested-scroll hidden absolute left-0 right-auto mt-1.5 w-56 max-w-[calc(100vw-2rem)] rounded-2xl bg-white/95 backdrop-blur-xl border border-[#E3E9EF] shadow-xl p-1.5 z-50 space-y-0.5 animate-in fade-in zoom-in-95 duration-150 font-sans origin-top-left"
                     role="listbox" 
                     tabindex="-1">
                     
@@ -3355,7 +3429,8 @@
         <!-- Service Selection Checkboxes -->
         <div>
           <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Select Services to Provision (Auto-generates 20 SOP tasks each)</label>
-          <div id="addClientServicesCheckboxes" class="max-h-56 overflow-y-auto p-3 rounded-2xl bg-[#FAFCFB] border border-[#E3E9EF] space-y-2">
+          <div class="rounded-2xl border border-[#E3E9EF] bg-[#FAFCFB] overflow-hidden p-1 shadow-2xs">
+          <div id="addClientServicesCheckboxes" class="whiz-nested-scroll max-h-56 overflow-y-auto p-2.5 space-y-2">
             <!-- 1. WhatsApp CRM -->
             <label class="service-checkbox-card group flex items-start gap-3 p-3 rounded-2xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
               <input type="checkbox" name="services" value="srv_wa_crm" class="service-checkbox-input mt-0.5 w-4 h-4 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] focus:ring-offset-0 cursor-pointer shrink-0">
@@ -3490,6 +3565,7 @@
             </label>
           </div>
         </div>
+      </div>
 
         <div class="flex items-center justify-end space-x-3 pt-3 border-t border-[#E3E9EF]">
           <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36]" data-modal="modalAddClient">Cancel</button>
@@ -3783,7 +3859,7 @@
             </button>
             <!-- Custom Dropdown Menu -->
             <div id="assignServiceMenu" 
-              class="hidden absolute left-0 right-0 mt-1.5 max-h-56 overflow-y-auto rounded-2xl bg-white/95 backdrop-blur-xl border border-[#E3E9EF] shadow-2xl p-1.5 z-50 space-y-0.5 animate-in fade-in zoom-in-95 duration-150 font-sans"
+              class="whiz-nested-scroll hidden absolute left-0 right-0 mt-1.5 max-h-56 overflow-y-auto rounded-2xl bg-white/95 backdrop-blur-xl border border-[#E3E9EF] shadow-2xl p-1.5 z-50 space-y-0.5 animate-in fade-in zoom-in-95 duration-150 font-sans"
               role="listbox" 
               tabindex="-1">
               <div class="p-3 text-center text-xs text-slate-400 italic">Loading services...</div>
@@ -3829,7 +3905,7 @@
               </button>
               <!-- Custom Dropdown Menu -->
               <div id="assignCurrencyMenu" 
-                class="hidden absolute right-0 w-48 mt-1.5 max-h-52 overflow-y-auto rounded-2xl bg-white/95 backdrop-blur-xl border border-[#E3E9EF] shadow-2xl p-1.5 z-50 space-y-0.5 animate-in fade-in zoom-in-95 duration-150 font-sans"
+                class="whiz-nested-scroll hidden absolute right-0 w-48 mt-1.5 max-h-52 overflow-y-auto rounded-2xl bg-white/95 backdrop-blur-xl border border-[#E3E9EF] shadow-2xl p-1.5 z-50 space-y-0.5 animate-in fade-in zoom-in-95 duration-150 font-sans"
                 role="listbox" 
                 tabindex="-1">
                 <button type="button" class="custom-assign-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left" data-value="BDT" role="option">
@@ -5380,7 +5456,9 @@
 
       <div class="space-y-2">
         <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500">Message Content</label>
-        <div class="p-4 rounded-xl bg-white border border-[#E3E9EF] text-xs text-slate-700 whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto" id="modalSupportMessage">—</div>
+        <div class="rounded-xl border border-[#E3E9EF] bg-white overflow-hidden p-1 shadow-2xs">
+          <div class="whiz-nested-scroll p-3 text-xs text-slate-700 whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto" id="modalSupportMessage">—</div>
+        </div>
       </div>
 
       <!-- Status Update Form -->
