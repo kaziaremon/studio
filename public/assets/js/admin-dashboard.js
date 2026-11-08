@@ -5792,68 +5792,81 @@
       }
     });
 
-    // Template Studio State & Event Handlers
-    let tplStudioMode = 'invoice';
-
-    function updateTemplateStudioPreview() {
-      const isInvoice = tplStudioMode === 'invoice';
-      const docTypeEl = document.getElementById('previewDocType');
-      const docNumLabel = document.getElementById('previewDocNumberLabel');
-      
-      if (docTypeEl) docTypeEl.textContent = isInvoice ? 'INVOICE' : 'RECEIPT';
-      if (docNumLabel) docNumLabel.innerHTML = (isInvoice ? 'INVOICE NO: ' : 'RECEIPT NO: ') + `<span class="font-black text-slate-900 text-sm font-mono" id="previewDocNumber">${document.getElementById('tplDocNumber')?.value || '829926'}</span>`;
-
-      const map = [
-        ['tplDocDate', 'previewDocDate'],
-        ['tplClientName', 'previewClientName'],
-        ['tplClientAddress', 'previewClientAddress'],
-        ['tplClientPhone', 'previewClientPhone'],
-        ['tplPaymentType', 'previewPaymentType'],
-        ['tplPaymentMethod', 'previewPaymentMethod'],
-        ['tplAccountDetails', 'previewAccountDetails'],
-        ['tplAgencyPhone', 'previewAgencyPhone'],
-        ['tplItemDesc', 'previewItemDesc'],
-        ['tplItemQty', 'previewItemQty']
-      ];
-      map.forEach(([inpId, prevId]) => {
-        const val = document.getElementById(inpId)?.value;
-        const prev = document.getElementById(prevId);
-        if (prev && val !== undefined) prev.textContent = val;
+    // =========================================================================
+    // STANDARDIZED MODAL DISMISSAL & CLOSE EVENT HANDLERS
+    // =========================================================================
+    // 1. Direct Binding for Record Payment Modal 'X' Close Button
+    const btnCloseRecordPayment = document.getElementById('btnCloseRecordPaymentModal');
+    if (btnCloseRecordPayment) {
+      btnCloseRecordPayment.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const m = document.getElementById('modalRecordPayment');
+        if (m) m.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
       });
-
-      const qty = parseFloat(document.getElementById('tplItemQty')?.value || '1');
-      const rate = parseFloat(document.getElementById('tplItemRate')?.value || '0');
-      const amount = Math.round(qty * rate);
-
-      const itemRateEl = document.getElementById('previewItemRate');
-      if (itemRateEl) itemRateEl.textContent = rate.toString();
-
-      const itemAmountInput = document.getElementById('tplItemAmount');
-      if (itemAmountInput) itemAmountInput.value = amount.toString();
-
-      const itemRowAmount = document.getElementById('previewItemRowAmount');
-      if (itemRowAmount) itemRowAmount.textContent = amount.toString();
-
-      const totalAmount = document.getElementById('previewTotalAmount');
-      if (totalAmount) totalAmount.textContent = amount.toString();
     }
 
-    document.getElementById('btnTplModeInvoice')?.addEventListener('click', () => {
-      tplStudioMode = 'invoice';
-      const invBtn = document.getElementById('btnTplModeInvoice');
-      const recBtn = document.getElementById('btnTplModeReceipt');
-      if (invBtn) invBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all bg-white text-[#172B36] shadow-sm cursor-pointer';
-      if (recBtn) recBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-500 hover:text-[#172B36] cursor-pointer';
-      updateTemplateStudioPreview();
+    // 2. Direct Binding for Record Payment Modal 'Cancel' Button
+    const btnCancelRecordPayment = document.getElementById('btnCancelRecordPaymentModal');
+    if (btnCancelRecordPayment) {
+      btnCancelRecordPayment.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const m = document.getElementById('modalRecordPayment');
+        if (m) m.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+      });
+    }
+
+    // 3. Global Event Delegation for ALL .btn-close-modal & [data-modal] buttons
+    document.addEventListener('click', (e) => {
+      const closeBtn = e.target.closest('.btn-close-modal, .whiz-modal-close-btn, [data-modal]');
+      if (!closeBtn) return;
+      
+      const modalId = closeBtn.dataset.modal || closeBtn.getAttribute('data-modal');
+      const isCloseAction = closeBtn.classList.contains('btn-close-modal') ||
+                            closeBtn.classList.contains('whiz-modal-close-btn') ||
+                            closeBtn.textContent.trim().toLowerCase() === 'cancel' ||
+                            closeBtn.textContent.trim().toLowerCase() === 'close';
+      
+      if (isCloseAction) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (modalId) {
+          const m = document.getElementById(modalId);
+          if (m) {
+            m.classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
+          }
+        } else {
+          const parentModal = closeBtn.closest('.fixed[id^="modal"], [id^="modal"]');
+          if (parentModal) {
+            parentModal.classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
+          }
+        }
+      }
     });
 
-    document.getElementById('btnTplModeReceipt')?.addEventListener('click', () => {
-      tplStudioMode = 'receipt';
-      const invBtn = document.getElementById('btnTplModeInvoice');
-      const recBtn = document.getElementById('btnTplModeReceipt');
-      if (recBtn) recBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all bg-white text-[#172B36] shadow-sm cursor-pointer';
-      if (invBtn) invBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-500 hover:text-[#172B36] cursor-pointer';
-      updateTemplateStudioPreview();
+    // 4. Backdrop Click Dismissal on all Modal Overlays
+    document.querySelectorAll('.fixed[id^="modal"], [id^="modal"]').forEach(modalEl => {
+      modalEl.addEventListener('click', (e) => {
+        if (e.target === modalEl) {
+          modalEl.classList.add('hidden');
+          document.body.classList.remove('overflow-hidden');
+        }
+      });
+    });
+
+    // 5. Global Keyboard ESC Dismissal
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        document.querySelectorAll('.fixed[id^="modal"]:not(.hidden), [id^="modal"]:not(.hidden)').forEach(modalEl => {
+          modalEl.classList.add('hidden');
+        });
+        document.body.classList.remove('overflow-hidden');
+      }
     });
 
     
