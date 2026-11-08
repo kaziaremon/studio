@@ -1094,21 +1094,18 @@ button {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid #E6ECE9;
-  border-radius: 18px !important;
-  clip-path: inset(0 round 18px) !important;
-  padding: 0 !important;
-  overflow: hidden !important;
+  border-radius: 18px;
+  padding: 6px;
   box-shadow: 0 16px 40px -8px rgba(8, 127, 112, 0.16), 0 6px 16px -4px rgba(23, 43, 54, 0.08);
   max-height: 270px;
+  overflow-y: auto;
   opacity: 0;
   transform: scale(0.97) translateY(-4px);
   pointer-events: none;
   transition: opacity 150ms ease, transform 150ms cubic-bezier(0.16, 1, 0.3, 1);
-  box-sizing: border-box !important;
 }
 .glass-select-menu.open {
-  display: flex !important;
-  flex-direction: column !important;
+  display: block !important;
   opacity: 1 !important;
   transform: scale(1) translateY(0) !important;
   pointer-events: auto !important;
@@ -1119,8 +1116,7 @@ button {
   transform: scale(0.97) translateY(4px);
 }
 .glass-select-menu.dropup.open {
-  display: flex !important;
-  flex-direction: column !important;
+  display: block !important;
   opacity: 1 !important;
   transform: scale(1) translateY(0) !important;
   pointer-events: auto !important;
@@ -1190,8 +1186,7 @@ button {
   z-index: 10010 !important;
 }
 .whiz-glass-portal-root .glass-select-menu.open {
-  display: flex !important;
-  flex-direction: column !important;
+  display: block !important;
   pointer-events: auto !important;
 }
 .whiz-glass-portal-root .glass-select-menu.dropup {
@@ -1433,71 +1428,4 @@ button {
     min-width: 0 !important;
     flex: 1 1 0% !important;
   }
-}
-
-
-/* ==========================================================================
-   SMART CONTAINED DROPDOWN SCROLLBAR ARCHITECTURE
-   Strictly confines scrollbar within rounded bounding boxes with 8px gutter
-   ========================================================================== */
-
-/* Outer Dropdown Panel Container Constraint */
-.whiz-dropdown-panel,
-#clientCurrencyDropdownMenu,
-#assignCurrencyMenu,
-#clientStatusDropdownMenu,
-#auditCategoryDropdownMenu,
-#assignServiceMenu {
-  overflow: hidden !important;
-  clip-path: inset(0 round 1rem) !important;
-  border-radius: 1rem !important;
-  padding: 0 !important;
-  box-sizing: border-box !important;
-}
-
-/* Inner Scrollable Area Constraint with 8px Safety Gutter */
-.whiz-dropdown-inner,
-.glass-select-menu-inner,
-#paymentClientOptionsList {
-  max-height: 250px !important;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-  box-sizing: border-box !important;
-  -webkit-overflow-scrolling: touch;
-  padding: 6px 8px 6px 6px !important;
-  scrollbar-width: thin !important;
-  scrollbar-color: rgba(8, 127, 112, 0.35) transparent !important;
-  flex: 1 1 auto;
-  min-height: 0;
-}
-
-/* Scrollbar Pseudo-Elements Applied Strictly to Inner Scroll Containers */
-.whiz-dropdown-inner::-webkit-scrollbar,
-.glass-select-menu-inner::-webkit-scrollbar,
-#paymentClientOptionsList::-webkit-scrollbar {
-  width: 5px !important;
-  height: 5px !important;
-}
-
-.whiz-dropdown-inner::-webkit-scrollbar-track,
-.glass-select-menu-inner::-webkit-scrollbar-track,
-#paymentClientOptionsList::-webkit-scrollbar-track {
-  background: transparent !important;
-  border-radius: 10px !important;
-}
-
-.whiz-dropdown-inner::-webkit-scrollbar-thumb,
-.glass-select-menu-inner::-webkit-scrollbar-thumb,
-#paymentClientOptionsList::-webkit-scrollbar-thumb {
-  background: rgba(8, 127, 112, 0.35) !important;
-  border-radius: 10px !important;
-  border: 1px solid transparent !important;
-  background-clip: padding-box !important;
-}
-
-.whiz-dropdown-inner::-webkit-scrollbar-thumb:hover,
-.glass-select-menu-inner::-webkit-scrollbar-thumb:hover,
-#paymentClientOptionsList::-webkit-scrollbar-thumb:hover {
-  background: rgba(8, 127, 112, 0.65) !important;
-  background-clip: padding-box !important;
 }

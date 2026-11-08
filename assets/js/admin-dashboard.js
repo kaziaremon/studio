@@ -2632,34 +2632,6 @@
 
       if (!triggerBtn || !menuEl) return;
 
-      // Smart scrollbar containment: Ensure options live inside .glass-select-menu-inner
-      const directOptions = Array.from(menuEl.children).filter(c => c.classList && c.classList.contains('glass-select-option'));
-      if (directOptions.length > 0) {
-        let innerEl = menuEl.querySelector('.glass-select-menu-inner');
-        if (!innerEl) {
-          innerEl = document.createElement('div');
-          innerEl.className = 'glass-select-menu-inner';
-          menuEl.appendChild(innerEl);
-        }
-        directOptions.forEach(opt => innerEl.appendChild(opt));
-      } else if (!menuEl.querySelector('.glass-select-menu-inner')) {
-        const searchBar = menuEl.querySelector('#paymentClientSearchInput')?.closest('.sticky') || menuEl.querySelector('.sticky');
-        const existingList = menuEl.querySelector('#paymentClientOptionsList');
-        if (existingList) {
-          existingList.classList.add('glass-select-menu-inner');
-        } else if (menuEl.children.length > 0) {
-          const innerEl = document.createElement('div');
-          innerEl.className = 'glass-select-menu-inner';
-          const children = Array.from(menuEl.children);
-          children.forEach(child => {
-            if (child !== searchBar) {
-              innerEl.appendChild(child);
-            }
-          });
-          menuEl.appendChild(innerEl);
-        }
-      }
-
       const getOptions = () => Array.from(menuEl.querySelectorAll('.glass-select-option'));
 
       if (wrapper.dataset.glassInitialized === 'true') {
@@ -4842,8 +4814,7 @@
 
       if (triggerLabel) triggerLabel.textContent = 'Choose a service...';
       if (menu) {
-        menu.innerHTML = '<div class="whiz-dropdown-inner max-h-56 overflow-y-auto overflow-x-hidden p-1.5 pr-2.5 space-y-0.5">' +
-          '<button type="button" class="custom-assign-service-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-500 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left" data-value="" data-label="Choose a service..."><span>Choose a service...</span></button>' + state.servicesCache.map(s => `
+        menu.innerHTML = '<button type="button" class="custom-assign-service-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-500 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left" data-value="" data-label="Choose a service..."><span>Choose a service...</span></button>' + state.servicesCache.map(s => `
           <button type="button" class="custom-assign-service-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left" data-value="${s.id}" data-price="${(s.standard_price_cents || 100000) / 100}" data-pkg="${escapeHtml(s.default_package || 'Standard Retainer')}" data-label="[${s.code}] ${escapeHtml(s.name)}">
             <div class="flex items-center gap-2 min-w-0">
               <span class="w-1.5 h-1.5 rounded-full bg-[#087F70]"></span>
@@ -4851,7 +4822,7 @@
             </div>
             <span class="font-mono text-[11px] text-slate-400 group-hover:text-[#087F70] shrink-0">$${((s.standard_price_cents || 100000) / 100).toFixed(2)}</span>
           </button>
-        `).join('') + '</div>';
+        `).join('');
 
         menu.querySelectorAll('.custom-assign-service-option').forEach(btn => {
           btn.addEventListener('click', (e) => {
