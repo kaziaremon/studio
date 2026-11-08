@@ -394,10 +394,16 @@
       border-color: #087F70;
       box-shadow: 0 0 0 3px rgba(8, 127, 112, 0.12), 0 2px 6px rgba(0, 0, 0, 0.04);
     }
+    .glass-select-trigger {
+      pointer-events: auto !important;
+    }
+    .glass-select-trigger * {
+      pointer-events: none;
+    }
     .glass-select-trigger:disabled {
       opacity: 0.55;
       cursor: not-allowed;
-      pointer-events: none;
+      pointer-events: none !important;
       background-color: #F8FAFC;
     }
     .glass-select-trigger .chevron-icon {
@@ -410,12 +416,13 @@
       color: #087F70;
     }
     .glass-select-menu {
+      display: none;
       position: absolute;
       left: 0;
       right: 0;
       top: calc(100% + 6px);
-      z-index: 45;
-      background: rgba(255, 255, 255, 0.96);
+      z-index: 10010;
+      background: rgba(255, 255, 255, 0.98);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       border: 1px solid #E6ECE9;
@@ -430,9 +437,10 @@
       transition: opacity 150ms ease, transform 150ms cubic-bezier(0.16, 1, 0.3, 1);
     }
     .glass-select-menu.open {
-      opacity: 1;
-      transform: scale(1) translateY(0);
-      pointer-events: auto;
+      display: block !important;
+      opacity: 1 !important;
+      transform: scale(1) translateY(0) !important;
+      pointer-events: auto !important;
     }
     .glass-select-menu.dropup {
       top: auto;
@@ -440,7 +448,10 @@
       transform: scale(0.97) translateY(4px);
     }
     .glass-select-menu.dropup.open {
-      transform: scale(1) translateY(0);
+      display: block !important;
+      opacity: 1 !important;
+      transform: scale(1) translateY(0) !important;
+      pointer-events: auto !important;
     }
     .glass-select-option {
       width: 100%;
@@ -459,6 +470,7 @@
       text-align: left;
       transition: all 120ms ease;
       user-select: none;
+      pointer-events: auto !important;
     }
     .glass-select-option:hover,
     .glass-select-option:focus-visible {
@@ -487,14 +499,14 @@
    WHIZ LIQUID GLASS PORTAL POPOVER SYSTEM
    ========================================================================== */
 .whiz-glass-portal-root {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 0;
-  overflow: visible;
-  pointer-events: none;
-  z-index: 95;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 0 !important;
+  overflow: visible !important;
+  pointer-events: none !important;
+  z-index: 10005 !important;
 }
 .whiz-glass-portal-root .glass-select-menu {
   position: fixed !important;
@@ -502,6 +514,11 @@
   bottom: auto !important;
   margin: 0 !important;
   box-sizing: border-box !important;
+  z-index: 10010 !important;
+}
+.whiz-glass-portal-root .glass-select-menu.open {
+  display: block !important;
+  pointer-events: auto !important;
 }
 .whiz-glass-portal-root .glass-select-menu.dropup {
   bottom: auto !important;
@@ -1289,7 +1306,7 @@
 
                 <!-- Custom Dropdown Menu (Crisp White / Glassmorphic Floating Popover) -->
                 <div id="clientStatusDropdownMenu" 
-                  class="hidden absolute right-0 mt-1.5 w-full min-w-full sm:w-64 rounded-2xl bg-white/95 backdrop-blur-xl border border-[#E3E9EF] shadow-xl p-1.5 z-40 space-y-0.5 animate-in fade-in zoom-in-95 duration-150 font-sans"
+                  class="hidden absolute right-0 mt-1.5 w-full min-w-full sm:w-64 rounded-2xl bg-white/95 backdrop-blur-xl border border-[#E3E9EF] shadow-xl p-1.5 z-50 space-y-0.5 animate-in fade-in zoom-in-95 duration-150 font-sans"
                   role="listbox" 
                   tabindex="-1">
                   
@@ -1506,7 +1523,7 @@
 
                         <!-- Custom Floating Popover Menu -->
                         <div id="clientCurrencyDropdownMenu" 
-                          class="hidden absolute left-0 right-0 mt-1.5 max-h-56 overflow-y-auto rounded-2xl bg-white/95 backdrop-blur-xl border border-[#E3E9EF] shadow-xl p-1.5 z-40 space-y-0.5 animate-in fade-in zoom-in-95 duration-150 font-sans"
+                          class="hidden absolute left-0 right-0 mt-1.5 max-h-56 overflow-y-auto rounded-2xl bg-white/95 backdrop-blur-xl border border-[#E3E9EF] shadow-xl p-1.5 z-50 space-y-0.5 animate-in fade-in zoom-in-95 duration-150 font-sans"
                           role="listbox" 
                           tabindex="-1">
                           
@@ -2286,14 +2303,14 @@
                       <option value="employee">Employees Only</option>
                       <option value="owner">Owners / Super Admin</option>
                     </select>
-                    <button type="button" class="glass-select-trigger" id="userDirectoryRoleTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="userDirectoryRoleMenu">
+                    <button type="button" class="glass-select-trigger" id="userDirectoryRoleTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="userDirectoryRoleFilterMenu">
                       <span class="flex items-center gap-2 min-w-0">
                         <i class="fa-solid fa-layer-group text-slate-400 text-xs shrink-0 select-icon"></i>
                         <span class="select-label truncate">All Roles</span>
                       </span>
                       <i class="fa-solid fa-chevron-down chevron-icon shrink-0"></i>
                     </button>
-                    <div class="glass-select-menu" id="userDirectoryRoleMenu" role="listbox" aria-label="Filter by Role">
+                    <div class="glass-select-menu" id="userDirectoryRoleFilterMenu" role="listbox" aria-label="Filter by Role">
                       <button type="button" class="glass-select-option selected" data-value="all" role="option" aria-selected="true">
                         <i class="fa-solid fa-layer-group text-slate-400 text-xs shrink-0 option-icon"></i>
                         <span class="truncate">All Roles</span>
@@ -2336,14 +2353,14 @@
                       <option value="active">Active Accounts</option>
                       <option value="suspended">Suspended Accounts</option>
                     </select>
-                    <button type="button" class="glass-select-trigger" id="userDirectoryStatusTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="userDirectoryStatusMenu">
+                    <button type="button" class="glass-select-trigger" id="userDirectoryStatusTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="userDirectoryStatusFilterMenu">
                       <span class="flex items-center gap-2 min-w-0">
                         <i class="fa-solid fa-sliders text-slate-400 text-xs shrink-0 select-icon"></i>
                         <span class="select-label truncate">All Statuses</span>
                       </span>
                       <i class="fa-solid fa-chevron-down chevron-icon shrink-0"></i>
                     </button>
-                    <div class="glass-select-menu" id="userDirectoryStatusMenu" role="listbox" aria-label="Filter by Status">
+                    <div class="glass-select-menu" id="userDirectoryStatusFilterMenu" role="listbox" aria-label="Filter by Status">
                       <button type="button" class="glass-select-option selected" data-value="all" role="option" aria-selected="true">
                         <i class="fa-solid fa-sliders text-slate-400 text-xs shrink-0 option-icon"></i>
                         <span class="truncate">All Statuses</span>
@@ -2655,14 +2672,14 @@
                     <option value="in_progress">In Progress</option>
                     <option value="resolved">Resolved</option>
                   </select>
-                  <button type="button" class="glass-select-trigger" id="supportStatusTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="supportStatusMenu">
+                  <button type="button" class="glass-select-trigger" id="supportStatusTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="supportStatusFilterMenu">
                     <span class="flex items-center gap-2 min-w-0">
                       <i class="fa-solid fa-layer-group text-slate-400 text-xs shrink-0 select-icon"></i>
                       <span class="select-label truncate">All Statuses</span>
                     </span>
                     <i class="fa-solid fa-chevron-down chevron-icon shrink-0"></i>
                   </button>
-                  <div class="glass-select-menu" id="supportStatusMenu" role="listbox" aria-label="Filter Support Status">
+                  <div class="glass-select-menu" id="supportStatusFilterMenu" role="listbox" aria-label="Filter Support Status">
                     <button type="button" class="glass-select-option selected" data-value="all" role="option" aria-selected="true">
                       <i class="fa-solid fa-layer-group text-slate-400 text-xs shrink-0 option-icon"></i>
                       <span class="truncate">All Statuses</span>
@@ -2774,7 +2791,7 @@
 
                   <!-- Custom Dropdown Menu (Crisp White / Glassmorphic) -->
                   <div id="auditCategoryDropdownMenu" 
-                    class="hidden absolute right-0 sm:left-0 sm:right-auto mt-1.5 w-56 rounded-2xl bg-white/95 backdrop-blur-xl border border-[#E3E9EF] shadow-xl p-1.5 z-40 space-y-0.5 animate-in fade-in zoom-in-95 duration-150 font-sans"
+                    class="hidden absolute right-0 sm:left-0 sm:right-auto mt-1.5 w-56 rounded-2xl bg-white/95 backdrop-blur-xl border border-[#E3E9EF] shadow-xl p-1.5 z-50 space-y-0.5 animate-in fade-in zoom-in-95 duration-150 font-sans"
                     role="listbox" 
                     tabindex="-1">
                     
@@ -5470,7 +5487,7 @@
   </div>
 
   <!-- Reusable Liquid Glass Popover Portal Root -->
-  <div id="whizGlassSelectPortal" class="whiz-glass-portal-root" aria-hidden="true" style="position:fixed;top:0;left:0;width:100%;height:0;overflow:visible;pointer-events:none;z-index:95;"></div>
+  <div id="whizGlassSelectPortal" class="whiz-glass-portal-root" aria-hidden="true" style="position:fixed;top:0;left:0;width:100%;height:0;overflow:visible;pointer-events:none;z-index:10005;"></div>
 
 </body>
 </html>

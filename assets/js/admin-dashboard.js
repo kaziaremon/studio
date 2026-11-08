@@ -499,6 +499,8 @@
     else if (tabId === 'support') loadSupportData();
     else if (tabId === 'history') loadHistoryData();
     else if (tabId === 'security') loadSecurityData();
+
+    if (typeof initGlassSelects === 'function') initGlassSelects();
   }
 
   // =========================================================================
@@ -2358,8 +2360,11 @@
         _glassPortalElement.id = 'whizGlassSelectPortal';
         _glassPortalElement.className = 'whiz-glass-portal-root';
         _glassPortalElement.setAttribute('aria-hidden', 'false');
-        _glassPortalElement.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:0;overflow:visible;pointer-events:none;z-index:95;';
+        _glassPortalElement.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:0;overflow:visible;pointer-events:none;z-index:10005;';
         document.body.appendChild(_glassPortalElement);
+      } else {
+        _glassPortalElement.style.zIndex = '10005';
+        _glassPortalElement.style.pointerEvents = 'none';
       }
     }
     return _glassPortalElement;
@@ -2382,7 +2387,7 @@
     const topMargin = 12;
 
     // Estimate or measure menu height
-    const menuHeight = menuEl.offsetHeight || menuEl.scrollHeight || 155;
+    const menuHeight = menuEl.offsetHeight || menuEl.scrollHeight || 180;
     const spaceBelow = vh - rect.bottom - bottomNavReserve;
     const spaceAbove = rect.top - topMargin;
 
@@ -2402,7 +2407,7 @@
     }
 
     let left = rect.left;
-    let width = rect.width;
+    let width = rect.width || triggerBtn.offsetWidth || 240;
 
     // Clamping for narrow mobile viewports (320px - 430px)
     const maxAllowedWidth = vw - 16;
@@ -2415,17 +2420,13 @@
       left = 8;
     }
 
-    // Modal awareness: if dropdown is located inside an active modal dialog (z-50)
-    const isInModal = triggerBtn.closest('.fixed.z-50') || triggerBtn.closest('[class*="z-50"]');
-    const zIndex = isInModal ? 9999 : 95;
-
     menuEl.classList.toggle('dropup', isDropup);
     menuEl.style.position = 'fixed';
     menuEl.style.top = Math.round(top) + 'px';
     menuEl.style.left = Math.round(left) + 'px';
     menuEl.style.width = Math.round(width) + 'px';
     menuEl.style.maxHeight = Math.round(maxHeight) + 'px';
-    menuEl.style.zIndex = zIndex.toString();
+    menuEl.style.zIndex = '10010';
     menuEl.style.pointerEvents = 'auto';
   }
 
@@ -2436,6 +2437,7 @@
     const wrapper = _activeGlassWrapper;
 
     menuEl.classList.remove('open', 'dropup');
+    menuEl.style.display = 'none';
     triggerBtn?.classList.remove('active');
     triggerBtn?.setAttribute('aria-expanded', 'false');
 
@@ -2469,11 +2471,13 @@
 
       if (!triggerBtn || !menuEl) return;
 
+      const getOptions = () => Array.from(menuEl.querySelectorAll('.glass-select-option'));
+
       if (wrapper.dataset.glassInitialized === 'true') {
         // Sync trigger display and option highlights with current select value
         const val = selectEl?.value || '';
-        const currentOptions = menuEl.querySelectorAll('.glass-select-option');
-        currentOptions.forEach(opt => {
+        const opts = getOptions();
+        opts.forEach(opt => {
           const isMatch = opt.dataset.value === val;
           opt.classList.toggle('selected', isMatch);
           opt.setAttribute('aria-selected', isMatch ? 'true' : 'false');
@@ -2497,26 +2501,12 @@
       }
       wrapper.dataset.glassInitialized = 'true';
 
-      if (!menuEl.dataset.delegated) {
-        menuEl.dataset.delegated = 'true';
-        menuEl.addEventListener('click', (e) => {
-          const opt = e.target.closest('.glass-select-option');
-          if (opt) {
-            e.preventDefault();
-            e.stopPropagation();
-            setSelected(opt.dataset.value, true);
-            closeActiveGlassMenu();
-            triggerBtn.focus();
-          }
-        });
-      }
-
       function setSelected(val, triggerChangeEvent = true) {
         if (selectEl) {
           selectEl.value = val;
         }
-        const currentOptions = menuEl.querySelectorAll('.glass-select-option');
-        currentOptions.forEach(opt => {
+        const opts = getOptions();
+        opts.forEach(opt => {
           const isMatch = opt.dataset.value === val;
           opt.classList.toggle('selected', isMatch);
           opt.setAttribute('aria-selected', isMatch ? 'true' : 'false');
@@ -2557,6 +2547,7 @@
           // Teleport to portal on body
           const portal = getGlassPortal();
           portal.appendChild(menuEl);
+          menuEl.style.display = 'block';
 
           // Position anchored to trigger
           positionGlassMenu(triggerBtn, menuEl);
@@ -2566,7 +2557,8 @@
             triggerBtn.classList.add('active');
             triggerBtn.setAttribute('aria-expanded', 'true');
             positionGlassMenu(triggerBtn, menuEl);
-            const currentSelected = menuEl.querySelector('.glass-select-option.selected') || options[0];
+            const opts = getOptions();
+            const currentSelected = menuEl.querySelector('.glass-select-option.selected') || opts[0];
             currentSelected?.focus();
           });
         } else {
@@ -2589,37 +2581,45 @@
         }
       });
 
-      options.forEach((opt, idx) => {
-        opt.addEventListener('click', (e) => {
+      // Delegated click on menu options (handles dynamically injected options)
+      menuEl.addEventListener('click', (e) => {
+        const opt = e.target.closest('.glass-select-option');
+        if (opt) {
           e.preventDefault();
           e.stopPropagation();
           setSelected(opt.dataset.value, true);
           closeActiveGlassMenu();
           triggerBtn.focus();
-        });
+        }
+      });
 
-        opt.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            setSelected(opt.dataset.value, true);
-            closeActiveGlassMenu();
-            triggerBtn.focus();
-          } else if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            const next = options[idx + 1] || options[0];
-            next?.focus();
-          } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            const prev = options[idx - 1] || options[options.length - 1];
-            prev?.focus();
-          } else if (e.key === 'Escape') {
-            e.preventDefault();
-            closeActiveGlassMenu();
-            triggerBtn.focus();
-          } else if (e.key === 'Tab') {
-            closeActiveGlassMenu();
-          }
-        });
+      // Keydown navigation on menu
+      menuEl.addEventListener('keydown', (e) => {
+        const opt = e.target.closest('.glass-select-option');
+        if (!opt) return;
+        const opts = getOptions();
+        const idx = opts.indexOf(opt);
+
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          setSelected(opt.dataset.value, true);
+          closeActiveGlassMenu();
+          triggerBtn.focus();
+        } else if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          const next = opts[idx + 1] || opts[0];
+          next?.focus();
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          const prev = opts[idx - 1] || opts[opts.length - 1];
+          prev?.focus();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          closeActiveGlassMenu();
+          triggerBtn.focus();
+        } else if (e.key === 'Tab') {
+          closeActiveGlassMenu();
+        }
       });
 
       if (selectEl) {
@@ -6118,6 +6118,7 @@
       if (authGuard) authGuard.classList.add('hidden');
       if (accessDenied) accessDenied.classList.add('hidden');
       if (mainLayout) mainLayout.classList.remove('hidden');
+      if (typeof initGlassSelects === 'function') initGlassSelects();
 
       // Initialize initial tab or deep-linked view
       const hash = (window.location.hash || '').replace('#', '');
@@ -7180,6 +7181,7 @@
 
     initPasswordToggles();
     initModals();
+    if (typeof initGlassSelects === 'function') initGlassSelects();
 
     // Start Auth check
     checkAuthAndInit();

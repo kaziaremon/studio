@@ -65,8 +65,11 @@
       p.id = 'whizGlassSelectPortal';
       p.className = 'whiz-glass-portal-root';
       p.setAttribute('aria-hidden', 'true');
-      p.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:0;overflow:visible;pointer-events:none;z-index:95;';
+      p.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:0;overflow:visible;pointer-events:none;z-index:10005;';
       document.body.appendChild(p);
+    } else {
+      p.style.zIndex = '10005';
+      p.style.pointerEvents = 'none';
     }
     return p;
   }
@@ -81,8 +84,8 @@
     const shouldDropup = spaceBelow < menuHeight && spaceAbove > spaceBelow;
 
     let top = shouldDropup ? rect.top - menuHeight - 6 : rect.bottom + 6;
-    let left = Math.max(8, Math.min(rect.left, window.innerWidth - rect.width - 8));
-    let width = Math.min(rect.width, window.innerWidth - 16);
+    let width = rect.width || triggerBtn.offsetWidth || 240;
+    let left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
     let maxHeight = shouldDropup ? Math.max(160, Math.min(280, spaceAbove)) : Math.max(160, Math.min(280, spaceBelow));
 
     menuEl.classList.toggle('dropup', shouldDropup);
@@ -91,7 +94,7 @@
     menuEl.style.left = Math.round(left) + 'px';
     menuEl.style.width = Math.round(width) + 'px';
     menuEl.style.maxHeight = Math.round(maxHeight) + 'px';
-    menuEl.style.zIndex = '9999';
+    menuEl.style.zIndex = '10010';
     menuEl.style.pointerEvents = 'auto';
   }
 
@@ -102,6 +105,7 @@
     const wrapper = _activeGlassWrapper;
 
     menuEl.classList.remove('open', 'dropup');
+    menuEl.style.display = 'none';
     triggerBtn?.classList.remove('active');
     triggerBtn?.setAttribute('aria-expanded', 'false');
 
@@ -134,10 +138,12 @@
 
       if (!triggerBtn || !menuEl) return;
 
+      const getOptions = () => Array.from(menuEl.querySelectorAll('.glass-select-option'));
+
       if (wrapper.dataset.glassInitialized === 'true') {
         const val = selectEl?.value || '';
-        const currentOptions = menuEl.querySelectorAll('.glass-select-option');
-        currentOptions.forEach(opt => {
+        const opts = getOptions();
+        opts.forEach(opt => {
           const isMatch = opt.dataset.value === val;
           opt.classList.toggle('selected', isMatch);
           opt.setAttribute('aria-selected', isMatch ? 'true' : 'false');
@@ -157,13 +163,12 @@
       }
       wrapper.dataset.glassInitialized = 'true';
 
-      const options = menuEl.querySelectorAll('.glass-select-option');
-
       function setSelected(val, triggerChangeEvent = true) {
         if (selectEl) {
           selectEl.value = val;
         }
-        options.forEach(opt => {
+        const opts = getOptions();
+        opts.forEach(opt => {
           const isMatch = opt.dataset.value === val;
           opt.classList.toggle('selected', isMatch);
           opt.setAttribute('aria-selected', isMatch ? 'true' : 'false');
@@ -196,6 +201,7 @@
 
           const portal = getGlassPortal();
           portal.appendChild(menuEl);
+          menuEl.style.display = 'block';
           positionGlassMenu(triggerBtn, menuEl);
 
           requestAnimationFrame(() => {
@@ -203,7 +209,8 @@
             triggerBtn.classList.add('active');
             triggerBtn.setAttribute('aria-expanded', 'true');
             positionGlassMenu(triggerBtn, menuEl);
-            const currentSelected = menuEl.querySelector('.glass-select-option.selected') || options[0];
+            const opts = getOptions();
+            const currentSelected = menuEl.querySelector('.glass-select-option.selected') || opts[0];
             currentSelected?.focus();
           });
         } else {
@@ -217,14 +224,16 @@
         toggleMenu();
       });
 
-      options.forEach(opt => {
-        opt.addEventListener('click', (e) => {
+      // Delegated click
+      menuEl.addEventListener('click', (e) => {
+        const opt = e.target.closest('.glass-select-option');
+        if (opt) {
           e.preventDefault();
           e.stopPropagation();
           setSelected(opt.dataset.value, true);
           closeActiveGlassMenu();
           triggerBtn.focus();
-        });
+        }
       });
 
       if (selectEl) {
@@ -249,6 +258,12 @@
       positionGlassMenu(_activeGlassTrigger, _activeGlassMenu);
     }
   });
+
+  window.addEventListener('scroll', () => {
+    if (_activeGlassMenu && _activeGlassTrigger) {
+      positionGlassMenu(_activeGlassTrigger, _activeGlassMenu);
+    }
+  }, { passive: true, capture: true });
 
   let clientChart = null;
 
