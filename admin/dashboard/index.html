@@ -533,6 +533,46 @@
   border-color: #087F70;
 }
 
+/* ==========================================================================
+   SYMMETRICAL FLOATING MODALS & INTERNAL SCROLLBAR CONTAINMENT
+   ========================================================================== */
+.whiz-floating-modal-card {
+  border-radius: 1.5rem !important; /* rounded-3xl (24px) */
+  overflow: hidden !important;
+  max-height: calc(100dvh - 3rem) !important;
+  margin-top: auto !important;
+  margin-bottom: auto !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(227, 233, 239, 0.8) !important;
+}
+@media (min-width: 640px) {
+  .whiz-floating-modal-card {
+    max-height: calc(100dvh - 4.5rem) !important;
+    border-radius: 1.75rem !important;
+  }
+}
+
+.whiz-modal-scroll-body {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(8, 127, 112, 0.35) transparent !important;
+  -webkit-overflow-scrolling: touch;
+}
+.whiz-modal-scroll-body::-webkit-scrollbar {
+  width: 6px !important;
+}
+.whiz-modal-scroll-body::-webkit-scrollbar-track {
+  background: transparent !important;
+  margin: 12px 0 !important; /* Keeps scrollbar safely away from top/bottom rounded corners */
+}
+.whiz-modal-scroll-body::-webkit-scrollbar-thumb {
+  background: rgba(8, 127, 112, 0.25) !important;
+  border-radius: 9999px !important;
+}
+.whiz-modal-scroll-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(8, 127, 112, 0.5) !important;
+}
+
   </style>
 </head>
 <body class="h-full bg-[#F8FAFC] text-slate-800 flex flex-col font-sans antialiased selection:bg-[#147D64] selection:text-white">
@@ -3063,19 +3103,20 @@
   <!-- =========================================================================
        MODAL 1: ADD CLIENT WITH SERVICE SELECTION & AUTO-TASK PROVISIONING
        ========================================================================= -->
-  <div id="modalAddClient" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
-    <div class="relative bg-white border border-[#E3E9EF] rounded-3xl max-w-2xl w-full p-5 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
-      <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF] pr-10 sm:pr-12">
+  <div id="modalAddClient" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 md:p-8 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
+    <div class="whiz-floating-modal-card relative bg-white border border-[#E3E9EF] rounded-3xl max-w-2xl w-full shadow-2xl flex flex-col my-auto">
+      <div class="relative flex items-center justify-between p-5 sm:p-7 pb-4 sm:pb-5 border-b border-[#E3E9EF] shrink-0 pr-14 sm:pr-16 bg-white z-10">
         <h3 class="text-base sm:text-lg font-bold text-[#172B36] flex items-center gap-2 min-w-0">
           <i class="fa-solid fa-user-plus text-[#087F70] text-sm shrink-0"></i>
           <span class="truncate">Add New Client & Provision Services</span>
         </h3>
-        <button type="button" class="btn-close-modal absolute top-4 right-4 sm:top-6 sm:right-6 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-100/90 hover:bg-slate-200 text-slate-500 hover:text-[#172B36] flex items-center justify-center transition-all cursor-pointer shadow-2xs z-10" data-modal="modalAddClient" aria-label="Close modal">
+        <button type="button" class="btn-close-modal absolute top-4 right-4 sm:top-5 sm:right-6 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#172B36] flex items-center justify-center transition-all cursor-pointer shadow-2xs z-20" data-modal="modalAddClient" aria-label="Close modal">
           <i class="fa-solid fa-xmark text-sm sm:text-base"></i>
         </button>
       </div>
 
-      <form id="formAddClient" class="space-y-4">
+      <div class="whiz-modal-scroll-body p-5 sm:p-8 flex-1 min-h-0">
+        <form id="formAddClient" class="space-y-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Client Full Name *</label>
@@ -3349,6 +3390,7 @@
           </button>
         </div>
       </form>
+      </div>
     </div>
   </div>
 
@@ -4221,101 +4263,250 @@
   <!-- =========================================================================
        MODAL: RECORD PAYMENT
        ========================================================================= -->
-  <div id="modalRecordPayment" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
-    <div class="bg-white border border-[#E3E9EF] rounded-3xl max-w-xl w-full p-5 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
-      <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
-        <h3 class="text-lg font-bold text-[#172B36] flex items-center gap-2">
-          <i class="fa-solid fa-receipt text-brand-whiz text-sm"></i>
-          <span>Record Confirmed Payment</span>
+  <div id="modalRecordPayment" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 md:p-8 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
+    <div class="whiz-floating-modal-card relative bg-white border border-[#E3E9EF] rounded-3xl max-w-xl w-full shadow-2xl flex flex-col my-auto">
+      <!-- Fixed Header with perfectly inset close button -->
+      <div class="relative flex items-center justify-between p-5 sm:p-7 pb-4 sm:pb-5 border-b border-[#E3E9EF] shrink-0 pr-14 sm:pr-16 bg-white z-10">
+        <h3 class="text-base sm:text-lg font-bold text-[#172B36] flex items-center gap-2 min-w-0">
+          <i class="fa-solid fa-receipt text-[#087F70] text-sm shrink-0"></i>
+          <span class="truncate">Record Confirmed Payment</span>
         </h3>
-        <button type="button" class="btn-close-modal text-slate-500 hover:text-[#172B36] cursor-pointer" data-modal="modalRecordPayment">
-          <i class="fa-solid fa-xmark text-lg"></i>
+        <button type="button" class="btn-close-modal absolute top-4 right-4 sm:top-5 sm:right-6 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#172B36] flex items-center justify-center transition-all cursor-pointer shadow-2xs z-20" data-modal="modalRecordPayment" aria-label="Close modal">
+          <i class="fa-solid fa-xmark text-sm sm:text-base"></i>
         </button>
       </div>
 
-      <form id="formRecordPayment" class="space-y-4">
-        <div>
-          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Client Organization *</label>
-          <select name="organizationId" id="paymentClientSelect" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:border-brand-whiz">
-            <option value="">Select client...</option>
-          </select>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <!-- Contained Scrollable Body -->
+      <div class="whiz-modal-scroll-body p-5 sm:p-8 flex-1 min-h-0">
+        <form id="formRecordPayment" class="space-y-4">
+          <!-- 1. Client Organization Custom Glass Dropdown -->
           <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Amount *</label>
-            <input type="number" step="0.01" name="amount" id="paymentAmountInput" required placeholder="1000.00" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-mono focus:border-brand-whiz">
-          </div>
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Currency *</label>
-            <select name="currency" id="paymentCurrencySelect" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:border-brand-whiz">
-              <option value="BDT">BDT — ৳ (Bangladeshi Taka)</option>
-              <option value="USD" selected>USD — $ (US Dollar)</option>
-              <option value="GBP">GBP — £ (British Pound)</option>
-              <option value="EUR">EUR — € (Euro)</option>
-              <option value="AED">AED — د.إ (UAE Dirham)</option>
-              <option value="SAR">SAR — ر.س (Saudi Riyal)</option>
-              <option value="CAD">CAD — CA$ (Canadian Dollar)</option>
-              <option value="AUD">AUD — A$ (Australian Dollar)</option>
-              <option value="SGD">SGD — S$ (Singapore Dollar)</option>
-              <option value="INR">INR — ₹ (Indian Rupee)</option>
-              <option value="JPY">JPY — ¥ (Japanese Yen)</option>
-              <option value="MYR">MYR — RM (Malaysian Ringgit)</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Payment Method *</label>
-            <select name="paymentMethod" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:border-brand-whiz">
-              <option value="bank_transfer">Bank Transfer / Wire Transfer</option>
-              <option value="card">Credit / Debit Card</option>
-              <option value="cash_cheque">Cash / Cheque</option>
-              <option value="online_banking">Online Banking</option>
-              <option value="mobile_banking">Mobile Banking / MFS</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Payment Date *</label>
-            <div class="custom-datepicker-wrapper relative font-sans" data-datepicker-target="paymentDateInput">
-              <input type="text" name="paymentDate" id="paymentDateInput" required class="hidden" aria-hidden="true">
-              <button type="button" class="custom-datepicker-trigger w-full h-11 px-3.5 rounded-xl bg-white hover:bg-slate-50 active:bg-slate-100 border border-[#E3E9EF] hover:border-[#087F70]/40 shadow-2xs text-xs font-semibold text-[#172B36] flex items-center justify-between cursor-pointer select-none transition-all focus:outline-none focus:ring-2 focus:ring-[#087F70]/20 font-sans" aria-label="Select payment date">
-                <span class="flex items-center gap-2 truncate">
-                  <i class="fa-regular fa-calendar text-[#087F70] text-xs shrink-0"></i>
-                  <span class="datepicker-label truncate">Nov 7, 2026</span>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Client Organization *</label>
+            <div class="glass-select-wrapper" data-glass-select="paymentClientSelect">
+              <select name="organizationId" id="paymentClientSelect" required class="sr-only" tabindex="-1" aria-hidden="true">
+                <option value="">Select client...</option>
+              </select>
+              <button type="button" class="glass-select-trigger" id="paymentClientSelectTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="paymentClientSelectMenu">
+                <span class="flex items-center gap-2 min-w-0">
+                  <i class="fa-solid fa-building text-[#087F70] text-xs shrink-0 select-icon"></i>
+                  <span class="select-label truncate font-sans text-xs font-semibold text-[#172B36]">Select client...</span>
                 </span>
-                <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 chevron-icon shrink-0"></i>
+                <i class="fa-solid fa-chevron-down chevron-icon shrink-0"></i>
               </button>
+              <div class="glass-select-menu" id="paymentClientSelectMenu" role="listbox" aria-label="Client Organization">
+                <button type="button" class="glass-select-option selected" data-value="" role="option" aria-selected="true">
+                  <i class="fa-solid fa-building text-slate-400 text-xs shrink-0 option-icon"></i>
+                  <span class="select-opt-text truncate font-sans font-medium text-slate-500">Select client...</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div>
-          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Relevant Service or Existing Invoice (Optional)</label>
-          <select name="invoiceId" id="paymentInvoiceSelect" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:border-brand-whiz">
-            <option value="">Auto-create or match client contract...</option>
-          </select>
-        </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Amount *</label>
+              <input type="number" step="0.01" name="amount" id="paymentAmountInput" required placeholder="1000.00" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-mono focus:border-brand-whiz">
+            </div>
+            <!-- 2. Currency Custom Glass Dropdown -->
+            <div>
+              <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Currency *</label>
+              <div class="glass-select-wrapper" data-glass-select="paymentCurrencySelect">
+                <select name="currency" id="paymentCurrencySelect" class="sr-only" tabindex="-1" aria-hidden="true">
+                  <option value="USD" selected>USD — $ (US Dollar)</option>
+                  <option value="BDT">BDT — ৳ (Bangladeshi Taka)</option>
+                  <option value="GBP">GBP — £ (British Pound)</option>
+                  <option value="EUR">EUR — € (Euro)</option>
+                  <option value="AED">AED — د.إ (UAE Dirham)</option>
+                  <option value="SAR">SAR — ر.س (Saudi Riyal)</option>
+                  <option value="CAD">CAD — CA$ (Canadian Dollar)</option>
+                  <option value="AUD">AUD — A$ (Australian Dollar)</option>
+                  <option value="SGD">SGD — S$ (Singapore Dollar)</option>
+                  <option value="INR">INR — ₹ (Indian Rupee)</option>
+                  <option value="JPY">JPY — ¥ (Japanese Yen)</option>
+                  <option value="MYR">MYR — RM (Malaysian Ringgit)</option>
+                </select>
+                <button type="button" class="glass-select-trigger" id="paymentCurrencySelectTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="paymentCurrencySelectMenu">
+                  <span class="flex items-center gap-2 min-w-0">
+                    <span class="w-6 h-6 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0 select-currency-symbol">$</span>
+                    <span class="select-label truncate font-sans text-xs font-semibold text-[#172B36]">USD — $ (US Dollar)</span>
+                  </span>
+                  <i class="fa-solid fa-chevron-down chevron-icon shrink-0"></i>
+                </button>
+                <div class="glass-select-menu" id="paymentCurrencySelectMenu" role="listbox" aria-label="Currency">
+                  <button type="button" class="glass-select-option selected" data-value="USD" data-symbol="$" role="option" aria-selected="true">
+                    <span class="currency-badge w-6 h-6 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0">$</span>
+                    <span class="select-opt-text truncate font-sans font-medium">USD — $ (US Dollar)</span>
+                    <i class="fa-solid fa-check check-icon"></i>
+                  </button>
+                  <button type="button" class="glass-select-option" data-value="BDT" data-symbol="৳" role="option" aria-selected="false">
+                    <span class="currency-badge w-6 h-6 rounded-lg bg-[#EAF5F1] text-[#087F70] flex items-center justify-center font-bold text-xs shrink-0">৳</span>
+                    <span class="select-opt-text truncate font-sans font-medium">BDT — ৳ (Bangladeshi Taka)</span>
+                    <i class="fa-solid fa-check check-icon"></i>
+                  </button>
+                  <button type="button" class="glass-select-option" data-value="GBP" data-symbol="£" role="option" aria-selected="false">
+                    <span class="currency-badge w-6 h-6 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0">£</span>
+                    <span class="select-opt-text truncate font-sans font-medium">GBP — £ (British Pound)</span>
+                    <i class="fa-solid fa-check check-icon"></i>
+                  </button>
+                  <button type="button" class="glass-select-option" data-value="EUR" data-symbol="€" role="option" aria-selected="false">
+                    <span class="currency-badge w-6 h-6 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0">€</span>
+                    <span class="select-opt-text truncate font-sans font-medium">EUR — € (Euro)</span>
+                    <i class="fa-solid fa-check check-icon"></i>
+                  </button>
+                  <button type="button" class="glass-select-option" data-value="AED" data-symbol="د.إ" role="option" aria-selected="false">
+                    <span class="currency-badge w-6 h-6 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0">د.إ</span>
+                    <span class="select-opt-text truncate font-sans font-medium">AED — د.إ (UAE Dirham)</span>
+                    <i class="fa-solid fa-check check-icon"></i>
+                  </button>
+                  <button type="button" class="glass-select-option" data-value="SAR" data-symbol="ر.س" role="option" aria-selected="false">
+                    <span class="currency-badge w-6 h-6 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0">ر.س</span>
+                    <span class="select-opt-text truncate font-sans font-medium">SAR — ر.س (Saudi Riyal)</span>
+                    <i class="fa-solid fa-check check-icon"></i>
+                  </button>
+                  <button type="button" class="glass-select-option" data-value="CAD" data-symbol="CA$" role="option" aria-selected="false">
+                    <span class="currency-badge w-6 h-6 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0">CA$</span>
+                    <span class="select-opt-text truncate font-sans font-medium">CAD — CA$ (Canadian Dollar)</span>
+                    <i class="fa-solid fa-check check-icon"></i>
+                  </button>
+                  <button type="button" class="glass-select-option" data-value="AUD" data-symbol="A$" role="option" aria-selected="false">
+                    <span class="currency-badge w-6 h-6 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0">A$</span>
+                    <span class="select-opt-text truncate font-sans font-medium">AUD — A$ (Australian Dollar)</span>
+                    <i class="fa-solid fa-check check-icon"></i>
+                  </button>
+                  <button type="button" class="glass-select-option" data-value="SGD" data-symbol="S$" role="option" aria-selected="false">
+                    <span class="currency-badge w-6 h-6 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0">S$</span>
+                    <span class="select-opt-text truncate font-sans font-medium">SGD — S$ (Singapore Dollar)</span>
+                    <i class="fa-solid fa-check check-icon"></i>
+                  </button>
+                  <button type="button" class="glass-select-option" data-value="INR" data-symbol="₹" role="option" aria-selected="false">
+                    <span class="currency-badge w-6 h-6 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0">₹</span>
+                    <span class="select-opt-text truncate font-sans font-medium">INR — ₹ (Indian Rupee)</span>
+                    <i class="fa-solid fa-check check-icon"></i>
+                  </button>
+                  <button type="button" class="glass-select-option" data-value="JPY" data-symbol="¥" role="option" aria-selected="false">
+                    <span class="currency-badge w-6 h-6 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0">¥</span>
+                    <span class="select-opt-text truncate font-sans font-medium">JPY — ¥ (Japanese Yen)</span>
+                    <i class="fa-solid fa-check check-icon"></i>
+                  </button>
+                  <button type="button" class="glass-select-option" data-value="MYR" data-symbol="RM" role="option" aria-selected="false">
+                    <span class="currency-badge w-6 h-6 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0">RM</span>
+                    <span class="select-opt-text truncate font-sans font-medium">MYR — RM (Malaysian Ringgit)</span>
+                    <i class="fa-solid fa-check check-icon"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
 
-        <div>
-          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Transaction Reference / TxID *</label>
-          <input type="text" name="paymentReference" id="paymentReferenceInput" required placeholder="TXN-98472948" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-mono focus:border-brand-whiz">
-        </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <!-- 3. Payment Method Custom Glass Dropdown -->
+            <div>
+              <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Payment Method *</label>
+              <div class="glass-select-wrapper" data-glass-select="paymentMethodSelect">
+                <select name="paymentMethod" id="paymentMethodSelect" required class="sr-only" tabindex="-1" aria-hidden="true">
+                  <option value="bank_transfer" selected>Bank Transfer / Wire Transfer</option>
+                  <option value="card">Credit / Debit Card</option>
+                  <option value="cash_cheque">Cash / Cheque</option>
+                  <option value="online_banking">Online Banking</option>
+                  <option value="mobile_banking">Mobile Banking / MFS</option>
+                </select>
+                <button type="button" class="glass-select-trigger" id="paymentMethodSelectTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="paymentMethodSelectMenu">
+                  <span class="flex items-center gap-2 min-w-0">
+                    <i class="fa-solid fa-building-columns text-[#087F70] text-xs shrink-0 select-icon"></i>
+                    <span class="select-label truncate font-sans text-xs font-semibold text-[#172B36]">Bank Transfer / Wire Transfer</span>
+                  </span>
+                  <i class="fa-solid fa-chevron-down chevron-icon shrink-0"></i>
+                </button>
+                <div class="glass-select-menu" id="paymentMethodSelectMenu" role="listbox" aria-label="Payment Method">
+                  <button type="button" class="glass-select-option selected" data-value="bank_transfer" role="option" aria-selected="true">
+                    <i class="fa-solid fa-building-columns text-[#087F70] text-xs shrink-0 option-icon"></i>
+                    <span class="select-opt-text truncate font-sans font-medium">Bank Transfer / Wire Transfer</span>
+                    <i class="fa-solid fa-check check-icon"></i>
+                  </button>
+                  <button type="button" class="glass-select-option" data-value="card" role="option" aria-selected="false">
+                    <i class="fa-solid fa-credit-card text-blue-600 text-xs shrink-0 option-icon"></i>
+                    <span class="select-opt-text truncate font-sans font-medium">Credit / Debit Card</span>
+                    <i class="fa-solid fa-check check-icon"></i>
+                  </button>
+                  <button type="button" class="glass-select-option" data-value="cash_cheque" role="option" aria-selected="false">
+                    <i class="fa-solid fa-money-bill-1-wave text-amber-600 text-xs shrink-0 option-icon"></i>
+                    <span class="select-opt-text truncate font-sans font-medium">Cash / Cheque</span>
+                    <i class="fa-solid fa-check check-icon"></i>
+                  </button>
+                  <button type="button" class="glass-select-option" data-value="online_banking" role="option" aria-selected="false">
+                    <i class="fa-solid fa-globe text-indigo-600 text-xs shrink-0 option-icon"></i>
+                    <span class="select-opt-text truncate font-sans font-medium">Online Banking</span>
+                    <i class="fa-solid fa-check check-icon"></i>
+                  </button>
+                  <button type="button" class="glass-select-option" data-value="mobile_banking" role="option" aria-selected="false">
+                    <i class="fa-solid fa-mobile-screen-button text-teal-600 text-xs shrink-0 option-icon"></i>
+                    <span class="select-opt-text truncate font-sans font-medium">Mobile Banking / MFS (bKash / Nagad)</span>
+                    <i class="fa-solid fa-check check-icon"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
 
-        <div>
-          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Payment Notes (Optional)</label>
-          <textarea name="financialNotes" id="paymentNotesInput" rows="2" placeholder="e.g. Bank slip verified, full milestone clearance..." class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:border-brand-whiz resize-none"></textarea>
-        </div>
+            <!-- Date Picker -->
+            <div>
+              <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Payment Date *</label>
+              <div class="custom-datepicker-wrapper relative font-sans" data-datepicker-target="paymentDateInput">
+                <input type="text" name="paymentDate" id="paymentDateInput" required class="hidden" aria-hidden="true">
+                <button type="button" class="custom-datepicker-trigger w-full h-11 px-3.5 rounded-xl bg-white hover:bg-slate-50 active:bg-slate-100 border border-[#E3E9EF] hover:border-[#087F70]/40 shadow-2xs text-xs font-semibold text-[#172B36] flex items-center justify-between cursor-pointer select-none transition-all focus:outline-none focus:ring-2 focus:ring-[#087F70]/20 font-sans" aria-label="Select payment date">
+                  <span class="flex items-center gap-2 truncate">
+                    <i class="fa-regular fa-calendar text-[#087F70] text-xs shrink-0"></i>
+                    <span class="datepicker-label truncate">Nov 7, 2026</span>
+                  </span>
+                  <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 chevron-icon shrink-0"></i>
+                </button>
+              </div>
+            </div>
+          </div>
 
-        <div class="flex items-center justify-end space-x-3 pt-3 border-t border-[#E3E9EF]">
-          <button type="button" class="btn-close-modal px-4 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36]" data-modal="modalRecordPayment">Cancel</button>
-          <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center gap-1.5 cursor-pointer">
-            <i class="fa-solid fa-check text-xs"></i>
-            <span>Commit Payment to Ledger</span>
-          </button>
-        </div>
-      </form>
+          <!-- 4. Relevant Service / Existing Invoice Custom Glass Dropdown -->
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Relevant Service or Existing Invoice (Optional)</label>
+            <div class="glass-select-wrapper" data-glass-select="paymentInvoiceSelect">
+              <select name="invoiceId" id="paymentInvoiceSelect" class="sr-only" tabindex="-1" aria-hidden="true">
+                <option value="">Auto-create or match client contract...</option>
+              </select>
+              <button type="button" class="glass-select-trigger" id="paymentInvoiceSelectTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="paymentInvoiceSelectMenu">
+                <span class="flex items-center gap-2 min-w-0">
+                  <i class="fa-solid fa-file-invoice-dollar text-[#087F70] text-xs shrink-0 select-icon"></i>
+                  <span class="select-label truncate font-sans text-xs font-semibold text-[#172B36]">Auto-create or match client contract...</span>
+                </span>
+                <i class="fa-solid fa-chevron-down chevron-icon shrink-0"></i>
+              </button>
+              <div class="glass-select-menu" id="paymentInvoiceSelectMenu" role="listbox" aria-label="Invoice Reference">
+                <button type="button" class="glass-select-option selected" data-value="" role="option" aria-selected="true">
+                  <i class="fa-solid fa-file-invoice-dollar text-[#087F70] text-xs shrink-0 option-icon"></i>
+                  <span class="select-opt-text truncate font-sans font-medium text-slate-500">Auto-create or match client contract...</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Transaction Reference / TxID *</label>
+            <input type="text" name="paymentReference" id="paymentReferenceInput" required placeholder="TXN-98472948" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-mono focus:border-brand-whiz">
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Payment Notes (Optional)</label>
+            <textarea name="financialNotes" id="paymentNotesInput" rows="2" placeholder="e.g. Bank slip verified, full milestone clearance..." class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:border-brand-whiz resize-none"></textarea>
+          </div>
+
+          <div class="flex items-center justify-end space-x-3 pt-3 border-t border-[#E3E9EF]">
+            <button type="button" class="btn-close-modal px-4 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-[#172B36]" data-modal="modalRecordPayment">Cancel</button>
+            <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center gap-1.5 cursor-pointer">
+              <i class="fa-solid fa-check text-xs"></i>
+              <span>Commit Payment to Ledger</span>
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 
@@ -4725,7 +4916,7 @@
 
   <!-- Reusable Custom Glassmorphic Date Picker Popover Component -->
   <div id="whizCustomDatePickerPopover" 
-    class="hidden fixed z-[99] w-72 rounded-2xl bg-white/95 backdrop-blur-xl border border-[#E3E9EF] shadow-2xl p-3.5 space-y-3 font-sans select-none animate-in fade-in zoom-in-95 duration-150" 
+    class="hidden fixed z-[10000] w-[288px] sm:w-[308px] max-w-[calc(100vw-24px)] rounded-2xl bg-white/98 backdrop-blur-xl border border-[#E3E9EF] shadow-2xl p-3.5 space-y-3 font-sans select-none animate-in fade-in zoom-in-95 duration-150" 
     role="dialog" 
     aria-label="Choose Date"
     tabindex="-1">

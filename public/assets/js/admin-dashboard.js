@@ -2467,7 +2467,7 @@
 
       if (wrapper.dataset.glassInitialized === 'true') {
         // Sync trigger display with current select value
-        const currentOpt = menuEl.querySelector('.glass-select-option[data-value="' + (selectEl?.value || '') + '"]');
+        const currentOpt = menuEl.querySelector('.glass-select-option[data-value="' + (selectEl?.value || '') + '"]') || menuEl.querySelector('.glass-select-option.selected');
         if (currentOpt && labelSpan) {
           const optText = currentOpt.querySelector('.select-opt-text')?.textContent || currentOpt.querySelector('span:not(.currency-badge)')?.textContent || currentOpt.querySelector('span')?.textContent || currentOpt.textContent.trim();
           labelSpan.textContent = optText;
@@ -2485,13 +2485,26 @@
       }
       wrapper.dataset.glassInitialized = 'true';
 
-      const options = menuEl.querySelectorAll('.glass-select-option');
+      if (!menuEl.dataset.delegated) {
+        menuEl.dataset.delegated = 'true';
+        menuEl.addEventListener('click', (e) => {
+          const opt = e.target.closest('.glass-select-option');
+          if (opt) {
+            e.preventDefault();
+            e.stopPropagation();
+            setSelected(opt.dataset.value, true);
+            closeActiveGlassMenu();
+            triggerBtn.focus();
+          }
+        });
+      }
 
       function setSelected(val, triggerChangeEvent = true) {
         if (selectEl) {
           selectEl.value = val;
         }
-        options.forEach(opt => {
+        const currentOptions = menuEl.querySelectorAll('.glass-select-option');
+        currentOptions.forEach(opt => {
           const isMatch = opt.dataset.value === val;
           opt.classList.toggle('selected', isMatch);
           opt.setAttribute('aria-selected', isMatch ? 'true' : 'false');
@@ -5429,7 +5442,9 @@
     const openRecordPayment = () => {
       const modal = document.getElementById('modalRecordPayment');
       const select = document.getElementById('paymentClientSelect');
+      const clientMenu = document.getElementById('paymentClientSelectMenu') || document.querySelector('#whizGlassSelectPortal #paymentClientSelectMenu');
       const invSelect = document.getElementById('paymentInvoiceSelect');
+      const invMenu = document.getElementById('paymentInvoiceSelectMenu') || document.querySelector('#whizGlassSelectPortal #paymentInvoiceSelectMenu');
       const dateInput = document.getElementById('paymentDateInput');
       const refInput = document.getElementById('paymentReferenceInput');
 
@@ -5441,30 +5456,94 @@
 
       if (modal && select) {
         modal.classList.remove('hidden');
+
+        // Populate native select
         select.innerHTML = '<option value="">Select client...</option>' + state.clientsCache.map(c => `
-          <option value="${c.organization_id || c.id}">${c.company_name || c.full_name} (${c.email})</option>
+          <option value="${c.organization_id || c.id}">${escapeHtml(c.company_name || c.full_name)} (${escapeHtml(c.email)})</option>
         `).join('');
+
+        // Populate custom glass select menu
+        if (clientMenu) {
+          clientMenu.innerHTML = `
+            <button type="button" class="glass-select-option selected" data-value="" role="option" aria-selected="true">
+              <i class="fa-solid fa-building text-slate-400 text-xs shrink-0 option-icon"></i>
+              <span class="select-opt-text truncate font-sans font-medium text-slate-500">Select client...</span>
+              <i class="fa-solid fa-check check-icon"></i>
+            </button>
+          ` + state.clientsCache.map(c => `
+            <button type="button" class="glass-select-option" data-value="${escapeHtml(c.organization_id || c.id)}" role="option" aria-selected="false">
+              <i class="fa-solid fa-building text-[#087F70] text-xs shrink-0 option-icon"></i>
+              <div class="flex-1 min-w-0 text-left">
+                <span class="select-opt-text truncate block font-sans font-medium text-[#172B36]">${escapeHtml(c.company_name || c.full_name)}</span>
+                <span class="text-[11px] text-slate-400 truncate block">${escapeHtml(c.email)}</span>
+              </div>
+              <i class="fa-solid fa-check check-icon"></i>
+            </button>
+          `).join('');
+        }
 
         if (invSelect) {
           invSelect.innerHTML = '<option value="">Auto-create or match client contract...</option>';
         }
+        if (invMenu) {
+          invMenu.innerHTML = `
+            <button type="button" class="glass-select-option selected" data-value="" role="option" aria-selected="true">
+              <i class="fa-solid fa-file-invoice-dollar text-[#087F70] text-xs shrink-0 option-icon"></i>
+              <span class="select-opt-text truncate font-sans font-medium text-slate-500">Auto-create or match client contract...</span>
+              <i class="fa-solid fa-check check-icon"></i>
+            </button>
+          `;
+        }
+
+        initGlassSelects();
 
         if (!select.dataset.bound) {
           select.dataset.bound = 'true';
           select.addEventListener('change', async () => {
             const orgId = select.value;
+            const targetInvMenu = document.getElementById('paymentInvoiceSelectMenu') || document.querySelector('#whizGlassSelectPortal #paymentInvoiceSelectMenu');
             if (!orgId || !invSelect) return;
             invSelect.innerHTML = '<option value="">Loading client invoices...</option>';
+            if (targetInvMenu) {
+              targetInvMenu.innerHTML = '<div class="p-2.5 text-xs text-slate-400 italic">Loading client invoices...</div>';
+            }
             try {
               const res = await apiFetch(`/finance/invoices?organizationId=${orgId}`);
               if (res.ok && res.data && res.data.data) {
                 const invs = res.data.data;
                 if (invs.length === 0) {
                   invSelect.innerHTML = '<option value="">Auto-create new invoice on commitment</option>';
+                  if (targetInvMenu) {
+                    targetInvMenu.innerHTML = `
+                      <button type="button" class="glass-select-option selected" data-value="" role="option" aria-selected="true">
+                        <i class="fa-solid fa-file-invoice text-slate-400 text-xs shrink-0 option-icon"></i>
+                        <span class="select-opt-text truncate font-sans font-medium">Auto-create new invoice on commitment</span>
+                        <i class="fa-solid fa-check check-icon"></i>
+                      </button>
+                    `;
+                  }
                 } else {
                   invSelect.innerHTML = '<option value="">Auto-create new invoice on commitment</option>' + invs.map(i => `
                     <option value="${i.id}">${i.invoice_number} — Due: ${formatCurrency(i.outstanding_balance_cents || 0, i.currency || 'USD')}</option>
                   `).join('');
+                  if (targetInvMenu) {
+                    targetInvMenu.innerHTML = `
+                      <button type="button" class="glass-select-option selected" data-value="" role="option" aria-selected="true">
+                        <i class="fa-solid fa-file-invoice text-slate-400 text-xs shrink-0 option-icon"></i>
+                        <span class="select-opt-text truncate font-sans font-medium">Auto-create new invoice on commitment</span>
+                        <i class="fa-solid fa-check check-icon"></i>
+                      </button>
+                    ` + invs.map(i => `
+                      <button type="button" class="glass-select-option" data-value="${escapeHtml(i.id)}" role="option" aria-selected="false">
+                        <i class="fa-solid fa-file-invoice-dollar text-[#087F70] text-xs shrink-0 option-icon"></i>
+                        <div class="flex-1 min-w-0 text-left">
+                          <span class="select-opt-text truncate block font-sans font-medium text-[#172B36]">${escapeHtml(i.invoice_number)}</span>
+                          <span class="text-[11px] text-[#087F70] font-mono block">Due: ${formatCurrency(i.outstanding_balance_cents || 0, i.currency || 'USD')}</span>
+                        </div>
+                        <i class="fa-solid fa-check check-icon"></i>
+                      </button>
+                    `).join('');
+                  }
                 }
               } else {
                 invSelect.innerHTML = '<option value="">Auto-create new invoice on commitment</option>';
@@ -5472,6 +5551,7 @@
             } catch (e) {
               invSelect.innerHTML = '<option value="">Auto-create new invoice on commitment</option>';
             }
+            initGlassSelects();
           });
         }
       }
@@ -5536,6 +5616,7 @@
       if (payRes.ok && payRes.data && payRes.data.success) {
         showToast(`Payment of ${formatCurrency(amountDollars * 100, currency)} committed! Receipt ${payRes.data.data.receiptNumber} issued.`, 'success');
         f.reset();
+        initGlassSelects();
         document.getElementById('modalRecordPayment')?.classList.add('hidden');
         loadFinanceData();
         loadInvoicesData();
@@ -6527,21 +6608,28 @@
     function positionDatePicker(triggerEl, popoverEl) {
       if (!triggerEl || !popoverEl) return;
       const rect = triggerEl.getBoundingClientRect();
-      const popoverWidth = 288;
-      const popoverHeight = 310;
+      const popoverWidth = Math.min(300, window.innerWidth - 24);
+      popoverEl.style.width = `${popoverWidth}px`;
+      const popoverHeight = 330;
 
       let left = rect.left;
       if (left + popoverWidth > window.innerWidth - 12) {
         left = Math.max(12, window.innerWidth - popoverWidth - 12);
       }
+      if (left < 12) left = 12;
 
       let top = rect.bottom + 6;
-      if (top + popoverHeight > window.innerHeight - 12 && rect.top > popoverHeight) {
-        top = Math.max(12, rect.top - popoverHeight - 6);
+      if (top + popoverHeight > window.innerHeight - 12) {
+        if (rect.top - popoverHeight - 6 >= 12) {
+          top = rect.top - popoverHeight - 6; // Flip above trigger
+        } else {
+          top = Math.max(12, window.innerHeight - popoverHeight - 12);
+        }
       }
 
       popoverEl.style.left = `${Math.round(left)}px`;
       popoverEl.style.top = `${Math.round(top)}px`;
+      popoverEl.style.zIndex = '10000';
     }
 
     function renderCalendarGrid() {
@@ -6642,8 +6730,22 @@
       positionDatePicker(triggerBtn, popover);
       popover.classList.remove('hidden');
       renderCalendarGrid();
+      positionDatePicker(triggerBtn, popover);
       triggerBtn?.classList.add('border-[#087F70]', 'ring-2', 'ring-[#087F70]/20');
     }
+
+    window.addEventListener('resize', () => {
+      const popover = document.getElementById('whizCustomDatePickerPopover');
+      if (_activeDatePickerTrigger && popover && !popover.classList.contains('hidden')) {
+        positionDatePicker(_activeDatePickerTrigger, popover);
+      }
+    });
+    window.addEventListener('scroll', () => {
+      const popover = document.getElementById('whizCustomDatePickerPopover');
+      if (_activeDatePickerTrigger && popover && !popover.classList.contains('hidden')) {
+        positionDatePicker(_activeDatePickerTrigger, popover);
+      }
+    }, true);
 
     function closeDatePicker() {
       const popover = document.getElementById('whizCustomDatePickerPopover');
