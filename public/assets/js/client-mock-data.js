@@ -44,48 +44,58 @@
       {
         id: 'cs_01',
         name: 'Meta Ads Performance Accelerator',
+        service_name: 'Meta Ads Performance Accelerator',
+        serviceName: 'Meta Ads Performance Accelerator',
+        package_name: 'Standard Retainer',
+        packageName: 'Standard Retainer',
         category: 'Paid Advertising',
         status: 'active',
         billing_cycle: 'Monthly Retainer',
-        price_cents: 450000,
-        currency: 'USD',
         start_date: '2026-08-15',
-        manager: 'Sazzad Kabir',
         progress_percent: 75,
-        deliverables: [
-          { title: 'Custom Conversions API Server Integration', completed: true },
-          { title: 'Dynamic Creative Testing (DCT) Setup', completed: true },
-          { title: 'Creative Testing Matrix (10 Variants)', completed: true },
-          { title: 'Advantage+ Scaling Campaigns', completed: false },
-          { title: 'Executive Weekly ROAS Diagnostic', completed: false }
-        ]
+        progressPercent: 75
       },
       {
         id: 'cs_02',
         name: 'Executive LinkedIn Presence Architecture',
+        service_name: 'Executive LinkedIn Presence Architecture',
+        serviceName: 'Executive LinkedIn Presence Architecture',
+        package_name: 'Standard Retainer',
+        packageName: 'Standard Retainer',
         category: 'Executive Branding',
         status: 'active',
         billing_cycle: 'Monthly Retainer',
-        price_cents: 320000,
-        currency: 'USD',
         start_date: '2026-09-01',
-        manager: 'Naimur Rahman',
         progress_percent: 90,
-        deliverables: [
-          { title: 'Executive Profile Revamp & Banner Architecture', completed: true },
-          { title: 'Thought Leadership Positioning Pillars', completed: true },
-          { title: '12 Ghostwritten Viral Essays', completed: true },
-          { title: 'B2B Founder Network Amplification', completed: false }
-        ]
+        progressPercent: 90
       }
     ],
 
-    tasks: [
-      { id: 'ct_01', title: 'Dynamic Creative Testing Ad Launch', service: 'Meta Ads Performance', phase: 'Phase 2', status: 'completed', delivered_at: '2026-11-01' },
-      { id: 'ct_02', title: 'Week 45 Thought Leadership Articles (3x)', service: 'Executive LinkedIn Presence', phase: 'Phase 3', status: 'completed', delivered_at: '2026-11-02' },
-      { id: 'ct_03', title: 'Black Friday Bundle Creative Matrix', service: 'Meta Ads Performance', phase: 'Phase 2', status: 'in_progress', due_date: '2026-11-05' },
-      { id: 'ct_04', title: 'Mid-Funnel Retargeting Audience Setup', service: 'Meta Ads Performance', phase: 'Phase 2', status: 'in_progress', due_date: '2026-11-08' },
-      { id: 'ct_05', title: 'Weekly Growth & ROAS Diagnostic Briefing', service: 'Executive Growth', phase: 'Phase 3', status: 'upcoming', due_date: '2026-11-10' }
+    projects: [
+      {
+        id: 'prj_01',
+        name: 'Meta Ads Performance Campaign',
+        projectName: 'Meta Ads Performance Campaign',
+        status: 'active',
+        progress_percent: 75,
+        progressPercent: 75,
+        deadline: '2026-11-30',
+        completedTasksCount: 12,
+        totalTasksCount: 16,
+        tasks: []
+      },
+      {
+        id: 'prj_02',
+        name: 'Executive LinkedIn Presence Architecture',
+        projectName: 'Executive LinkedIn Presence Architecture',
+        status: 'active',
+        progress_percent: 90,
+        progressPercent: 90,
+        deadline: '2026-12-15',
+        completedTasksCount: 6,
+        totalTasksCount: 6,
+        tasks: []
+      }
     ],
 
     finance: {
@@ -139,7 +149,7 @@
         const fullOverview = {
           ...mockClientData.overview,
           services: mockClientData.services,
-          projects: mockClientData.tasks,
+          projects: mockClientData.projects || [],
           invoices: mockClientData.finance ? mockClientData.finance.invoices : [],
           payments: mockClientData.finance ? mockClientData.finance.payments : [],
           finance: mockClientData.finance,
@@ -159,7 +169,7 @@
 
       // 4. Tasks & Deliverables
       if (ep === '/projects') {
-        return Promise.resolve({ ok: true, status: 200, data: { success: true, data: mockClientData.tasks } });
+        return Promise.resolve({ ok: true, status: 200, data: { success: true, data: mockClientData.projects } });
       }
 
       // 5. Invoices & Receipts

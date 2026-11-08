@@ -660,7 +660,11 @@
     if (statTasks) {
       const totalCompleted = state.projects.reduce((acc, p) => acc + (p.completedTasksCount || 0), 0);
       const totalTasks = state.projects.reduce((acc, p) => acc + (p.totalTasksCount || 0), 0);
-      statTasks.textContent = totalTasks > 0 ? `${totalCompleted}/${totalTasks}` : `${totalCompleted}`;
+      statTasks.textContent = totalTasks > 0 ? `${totalCompleted} / ${totalTasks}` : `${totalCompleted}`;
+      const statSubtext = document.getElementById('statCompletedTasksSubtext');
+      if (statSubtext) {
+        statSubtext.textContent = totalTasks > 0 ? `Completed / Total Tasks` : `Completed Tasks`;
+      }
     }
     if (statInv) statInv.textContent = state.invoices.length;
 
@@ -759,7 +763,6 @@
     } else {
       list.innerHTML = state.services.map(s => {
         const progress = Math.round(Number(s.progress_percent || s.progressPercent || 0));
-        const price = formatCurrency(s.price_cents || s.priceCents || 0, s.currency || primaryCurr);
         return `
           <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E6ECE9] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3.5 hover:border-[#087F70]/40 hover:shadow-xs transition-all">
             <div class="flex items-start sm:items-center space-x-3.5 min-w-0 w-full sm:w-auto">
@@ -771,14 +774,14 @@
                 <p class="text-[11px] text-[#74817D] flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1">
                   <span>Status: <strong class="text-[#087F70] uppercase font-bold">${escapeHtml(s.status || 'Active')}</strong></span>
                   <span class="text-slate-300">•</span>
-                  <span>Tier: <strong class="text-[#202D2A] font-medium">${escapeHtml(s.package_name || s.packageName || 'Standard Retainer')}</strong></span>
-                  <span class="text-slate-300">•</span>
                   <span>Progress: <strong class="text-[#087F70] font-mono font-bold">${progress}%</strong></span>
                 </p>
               </div>
             </div>
             <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-3 pt-2.5 sm:pt-0 border-t sm:border-t-0 border-[#E6ECE9]">
-              <span class="text-xs sm:text-sm font-mono font-bold text-[#202D2A]">${price}</span>
+              <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
+                ${escapeHtml(s.status || 'Active')}
+              </span>
               <button type="button" data-client-tab="services" class="px-3 py-1.5 rounded-lg bg-[#F7FAF9] hover:bg-[#EAF5F1] text-[#202D2A] hover:text-[#087F70] text-[11px] font-semibold transition-all border border-[#E6ECE9] hover:border-[#087F70]/20 cursor-pointer touch-manipulation">
                 Details
               </button>
@@ -793,7 +796,7 @@
     }
   }
 
-  // 2. Render Services Portfolio
+  // 2. Render Services Portfolio (Service Name & Status Only, No Fixed Pricing)
   function renderServicesPortfolio() {
     const list = document.getElementById('servicesFullList');
     const countEl = document.getElementById('servicesPortfolioCount');
@@ -803,58 +806,40 @@
     if (state.services.length === 0) {
       list.innerHTML = `
         <div class="p-8 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 space-y-2">
-          <i class="fa-solid fa-layer-group text-2xl text-slate-600 block mb-1"></i>
+          <i class="fa-solid fa-layer-group text-2xl text-slate-400 block mb-1"></i>
           <p>No active services provisioned for this account.</p>
-          <a href="/#services" class="inline-block mt-2 px-3.5 py-1.5 rounded-xl bg-brand-whiz text-white font-bold transition-all">
-            Explore Services
-          </a>
         </div>
       `;
       return;
     }
 
     list.innerHTML = state.services.map(s => {
-      const price = formatCurrency(s.price_cents || s.priceCents || 0, s.currency || 'USD');
       const progress = Math.round(Number(s.progress_percent || s.progressPercent || 0));
       return `
-        <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E3E9EF] space-y-4 hover:border-brand-whiz/40 hover:shadow-sm transition-all">
-          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div class="flex items-center space-x-3.5">
-              <div class="w-11 h-11 rounded-2xl bg-brand-whiz/15 text-brand-whiz border border-brand-whiz/30 flex items-center justify-center font-bold text-base shrink-0">
+        <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E3E9EF] space-y-4 hover:border-[#087F70]/40 hover:shadow-xs transition-all">
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center space-x-3.5 min-w-0">
+              <div class="w-11 h-11 rounded-2xl bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/25 flex items-center justify-center font-bold text-base shrink-0">
                 <i class="fa-solid fa-shapes"></i>
               </div>
-              <div>
-                <h4 class="text-sm sm:text-base font-bold text-[#172B36]">${escapeHtml(s.service_name || s.serviceName || s.name || 'Marketing Service')}</h4>
-                <span class="text-xs text-slate-500">${escapeHtml(s.package_name || s.packageName || 'Standard Agency Package')}</span>
+              <div class="min-w-0">
+                <h4 class="text-sm sm:text-base font-bold text-[#172B36] truncate">${escapeHtml(s.service_name || s.serviceName || s.name || 'Marketing Service')}</h4>
+                <p class="text-xs text-slate-500 mt-0.5">Active Service Engagement</p>
               </div>
             </div>
-            <div class="flex items-center gap-2.5">
-              <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
-                ${escapeHtml(s.status || 'Active')}
-              </span>
-              <span class="text-sm font-mono font-black text-[#172B36]">${price}</span>
-            </div>
+            <span class="px-3 py-1 rounded-full text-[11px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+              ${escapeHtml(s.status || 'Active')}
+            </span>
           </div>
 
-          <!-- Progress Bar & Milestone Info -->
+          <!-- Progress Bar & Delivery Status -->
           <div class="space-y-2 bg-slate-50/70 p-4 rounded-2xl border border-[#E3E9EF]">
             <div class="flex items-center justify-between text-xs">
-              <span class="text-slate-600 font-semibold">Service Delivery Milestone Completion</span>
-              <span class="font-mono font-bold text-brand-whiz text-sm">${progress}%</span>
+              <span class="text-slate-600 font-semibold">Service Delivery Progress</span>
+              <span class="font-mono font-bold text-[#087F70] text-sm">${progress}%</span>
             </div>
             <div class="w-full bg-slate-200/70 rounded-full h-2.5 overflow-hidden border border-[#E3E9EF]">
-              <div class="bg-gradient-to-r from-brand-whiz to-emerald-400 h-full rounded-full transition-all duration-500" style="width: ${progress}%"></div>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-white p-4 rounded-2xl border border-[#E3E9EF]">
-            <div>
-              <span class="text-[10px] uppercase font-bold text-slate-500 block">Deliverables Scope</span>
-              <p class="text-slate-600 mt-0.5 leading-relaxed">${escapeHtml(s.deliverables || s.scope || 'Full agency execution and verified milestone handoffs.')}</p>
-            </div>
-            <div>
-              <span class="text-[10px] uppercase font-bold text-slate-500 block">Contract Timeline</span>
-              <p class="text-slate-600 mt-0.5">Start: ${escapeHtml(s.start_date || s.startDate || 'Active')} • Target: ${escapeHtml(s.deadline || 'Ongoing')}</p>
+              <div class="bg-gradient-to-r from-[#087F70] to-emerald-400 h-full rounded-full transition-all duration-500" style="width: ${progress}%"></div>
             </div>
           </div>
         </div>
@@ -862,7 +847,7 @@
     }).join('');
   }
 
-  // 3. Render Deliverables & Project Progress (INTERNAL SOP TASKS REMAIN HIDDEN)
+  // 3. Render Deliverables & Project Progress (Strict Privacy: High-Level Numeric Counters Only, Zero SOP Leakage)
   function renderDeliverablesTasks() {
     const list = document.getElementById('tasksFullList');
     const countEl = document.getElementById('tasksDeliverablesCount');
@@ -877,7 +862,7 @@
           </div>
           <div class="space-y-1">
             <h4 class="font-bold text-sm text-[#172B36]">No active project campaigns provisioned yet</h4>
-            <p class="text-xs text-slate-500 max-w-sm mx-auto">When your service agreement is activated, milestone checkpoints and progress updates will appear here.</p>
+            <p class="text-xs text-slate-500 max-w-sm mx-auto">When your service agreement is activated, milestone progress updates will appear here.</p>
           </div>
         </div>
       `;
@@ -888,17 +873,17 @@
       const progress = Math.min(100, Math.max(0, Math.round(Number(p.progress_percent || p.progressPercent || 0))));
       const completed = Number(p.completedTasksCount || 0);
       const total = Number(p.totalTasksCount || 0);
-      const tasks = Array.isArray(p.tasks) ? p.tasks : [];
+      const remaining = Math.max(0, total - completed);
 
       return `
-        <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E3E9EF] space-y-4 hover:border-brand-whiz/40 hover:shadow-xs transition-all">
+        <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E3E9EF] space-y-4 hover:border-[#087F70]/40 hover:shadow-xs transition-all">
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
             <div>
               <h4 class="text-sm sm:text-base font-bold text-[#172B36] flex items-center gap-2">
-                <i class="fa-solid fa-diagram-project text-brand-whiz text-xs"></i>
+                <i class="fa-solid fa-diagram-project text-[#087F70] text-xs"></i>
                 <span>${escapeHtml(p.name || p.projectName || 'Campaign Execution')}</span>
               </h4>
-              <p class="text-xs text-slate-500 mt-0.5">Target Completion: <strong class="text-slate-600">${escapeHtml(p.deadline || 'Scheduled')}</strong></p>
+              <p class="text-xs text-slate-500 mt-0.5">Campaign Status: <strong class="text-slate-600">${escapeHtml(p.status || 'Active')}</strong></p>
             </div>
             <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
               ${escapeHtml(p.status || 'Active')}
@@ -908,43 +893,29 @@
           <!-- Progress Bar & Percentage -->
           <div class="space-y-2 bg-slate-50/70 p-4 rounded-2xl border border-[#E3E9EF]">
             <div class="flex items-center justify-between text-xs">
-              <span class="text-slate-600 font-semibold">Campaign Deliverables Progress</span>
-              <div class="flex items-center gap-2">
-                ${total > 0 ? `<span class="text-[11px] font-mono text-slate-400">(${completed}/${total} Checkpoints)</span>` : ''}
-                <span class="font-mono font-bold text-brand-whiz text-sm">${progress}%</span>
-              </div>
+              <span class="text-slate-600 font-semibold">Campaign Delivery Progress</span>
+              <span class="font-mono font-bold text-[#087F70] text-sm">${progress}%</span>
             </div>
             <div class="w-full bg-slate-200/70 rounded-full h-2.5 overflow-hidden border border-[#E3E9EF]">
-              <div class="bg-gradient-to-r from-brand-whiz to-emerald-400 h-full rounded-full transition-all duration-500" style="width: ${progress}%"></div>
+              <div class="bg-gradient-to-r from-[#087F70] to-emerald-400 h-full rounded-full transition-all duration-500" style="width: ${progress}%"></div>
             </div>
           </div>
 
-          <!-- Milestone Tasks & Deliverables Checkpoints List -->
-          ${tasks.length > 0 ? `
-            <div class="space-y-2 pt-2 border-t border-slate-100">
-              <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Delivered Milestone Checkpoints</span>
-              <div class="space-y-1.5">
-                ${tasks.map(t => {
-                  const isDone = t.status === 'completed';
-                  const inProg = t.status === 'in_progress';
-                  return `
-                    <div class="p-3 rounded-xl ${isDone ? 'bg-emerald-50/50 border border-emerald-200/50' : (inProg ? 'bg-amber-50/50 border border-amber-200/50' : 'bg-slate-50 border border-slate-100')} flex items-start justify-between gap-3 text-xs">
-                      <div class="flex items-start gap-2.5 min-w-0 flex-1">
-                        <i class="fa-solid ${isDone ? 'fa-circle-check text-emerald-600' : (inProg ? 'fa-circle-notch fa-spin text-amber-600' : 'fa-circle text-slate-300')} mt-0.5 text-xs shrink-0"></i>
-                        <div class="min-w-0">
-                          <p class="font-bold text-[#172B36] truncate">${escapeHtml(t.title)}</p>
-                          ${t.description ? `<p class="text-[11px] text-slate-500 line-clamp-1 mt-0.5">${escapeHtml(t.description)}</p>` : ''}
-                        </div>
-                      </div>
-                      <span class="px-2 py-0.5 rounded text-[9px] font-mono uppercase font-bold ${isDone ? 'bg-emerald-100 text-emerald-800' : (inProg ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600')} shrink-0">
-                        ${isDone ? 'Delivered' : (inProg ? 'In Progress' : 'Queued')}
-                      </span>
-                    </div>
-                  `;
-                }).join('')}
-              </div>
+          <!-- High-Level Aggregate Task Counters (Zero Granular SOP Leakage) -->
+          <div class="grid grid-cols-3 gap-3 pt-2">
+            <div class="p-3 rounded-2xl bg-[#F7F9FC] border border-[#E3E9EF] text-center">
+              <span class="text-[10px] uppercase font-bold text-slate-500 block">Total Tasks</span>
+              <span class="text-base sm:text-lg font-black text-[#172B36] font-mono mt-0.5 block">${total}</span>
             </div>
-          ` : ''}
+            <div class="p-3 rounded-2xl bg-emerald-50/60 border border-emerald-200/60 text-center">
+              <span class="text-[10px] uppercase font-bold text-emerald-700 block">Completed</span>
+              <span class="text-base sm:text-lg font-black text-emerald-700 font-mono mt-0.5 block">${completed}</span>
+            </div>
+            <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-center">
+              <span class="text-[10px] uppercase font-bold text-slate-500 block">In Progress</span>
+              <span class="text-base sm:text-lg font-black text-slate-700 font-mono mt-0.5 block">${remaining}</span>
+            </div>
+          </div>
         </div>
       `;
     }).join('');
