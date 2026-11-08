@@ -1187,7 +1187,7 @@
       if (helpText) {
         helpText.textContent = hasPassword
           ? 'Your account is protected with a password in addition to Google Single Sign-On.'
-          : 'You registered with Google SSO. You can optionally set a password for direct email/password sign-in.';
+          : 'You registered with Google SSO. You can optionally set a permanent password for direct email/password sign-in.';
       }
       if (btnText) btnText.textContent = hasPassword ? 'Change Password' : 'Set Password';
       if (modalTitle) modalTitle.textContent = hasPassword ? 'Change Account Password' : 'Set Account Password';
@@ -1877,7 +1877,7 @@
               <img src="/assets/images/logo.png" alt="Whiz Studio" class="h-12 w-auto object-contain">
             </div>
             <h2 class="text-xl font-bold text-[#172B36] tracking-tight">Authentication Service Unavailable</h2>
-            <p class="text-xs text-rose-500 mt-2 max-w-sm">Unable to connect to Clerk authentication services. Please verify your internet connection or disable tracking blockers.</p>
+            <p class="text-xs text-rose-500 mt-2 max-w-sm">Unable to connect to secure authentication services. Please verify your internet connection or disable tracking blockers.</p>
             <div class="mt-5 flex items-center justify-center gap-3">
               <button onclick="window.location.reload()" class="px-4 py-2 bg-[#147D64] text-white text-xs font-bold rounded-xl hover:bg-[#12694f] cursor-pointer">Retry Connection</button>
               <a href="/?login=client" class="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-200 cursor-pointer">Return to Login</a>

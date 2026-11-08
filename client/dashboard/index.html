@@ -473,7 +473,7 @@
                   <i class="fa-solid fa-shield-halved w-4 text-[#147D64] text-sm"></i>
                   <div class="flex-1">
                     <p class="font-semibold text-[#172B36]">Account Security</p>
-                    <p class="text-[10px] text-[#5F7180]">Clerk sessions &amp; authentication</p>
+                    <p class="text-[10px] text-[#5F7180]">Secure sessions &amp; authentication</p>
                   </div>
                 </button>
               </div>
@@ -814,7 +814,7 @@
                       Verified Email Address <span class="text-emerald-600 font-bold text-[10px] uppercase ml-1"><i class="fa-solid fa-lock text-[9px] mr-1"></i>Verified via SSO</span>
                     </label>
                     <input type="email" id="profileEmail" name="email" readonly disabled class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100/90 border border-slate-200 text-xs text-slate-600 font-mono cursor-not-allowed select-none">
-                    <p class="text-[10px] text-slate-400 mt-1">Bound to your authenticated Clerk identity. Managed in Account Security.</p>
+                    <p class="text-[10px] text-slate-400 mt-1">Bound to your authenticated Secure Identity Provider. Managed in Account Security.</p>
                   </div>
                 </div>
 
@@ -1049,9 +1049,9 @@
               <p class="text-xs text-[#5F7180] mt-0.5">Manage your authenticated credentials, account security, and session preferences.</p>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
               <!-- Account Identity Card -->
-              <div class="p-6 rounded-3xl bg-white border border-[#E3E9EF] shadow-sm space-y-4">
+              <div class="p-6 rounded-3xl bg-white border border-[#E3E9EF] shadow-sm flex flex-col justify-between h-full space-y-5">
                 <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
                   <h3 class="text-xs font-bold uppercase tracking-wider text-[#172B36] flex items-center gap-2">
                     <i class="fa-solid fa-id-badge text-[#147D64]"></i>
@@ -1059,7 +1059,7 @@
                   </h3>
                   <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">Active</span>
                 </div>
-                <div class="space-y-3.5 text-xs">
+                <div class="space-y-3.5 text-xs flex-1 flex flex-col justify-between">
                   <div>
                     <span class="text-[10px] uppercase font-bold text-[#5F7180] block mb-1">Verified Email Address</span>
                     <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-[#E3E9EF]">
@@ -1091,8 +1091,8 @@
                 </div>
               </div>
 
-              <!-- Password & Security Card (Requirement 8) -->
-              <div class="p-6 rounded-3xl bg-white border border-[#E3E9EF] shadow-sm space-y-4">
+              <!-- Password & Security Card -->
+              <div class="p-6 rounded-3xl bg-white border border-[#E3E9EF] shadow-sm flex flex-col justify-between h-full space-y-5">
                 <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
                   <h3 class="text-xs font-bold uppercase tracking-wider text-[#172B36] flex items-center gap-2">
                     <i class="fa-solid fa-lock text-[#147D64]"></i>
@@ -1101,28 +1101,18 @@
                   <span id="settingsPasswordStatusBadge" class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-slate-100 text-slate-600 border border-slate-200">Checking...</span>
                 </div>
 
-                <div class="space-y-4 text-xs">
-                  <p class="text-slate-600 leading-relaxed" id="settingsPasswordHelpText">
-                    You can set an optional password for direct email/password sign-in in addition to Google authentication.
-                  </p>
+                <div class="flex-1 flex flex-col justify-between space-y-6">
+                  <div class="space-y-3">
+                    <p class="text-sm text-slate-600 leading-relaxed font-normal" id="settingsPasswordHelpText">
+                      You registered with Google SSO. You can optionally set a permanent password for direct email/password sign-in.
+                    </p>
+                  </div>
 
-                  <div class="pt-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-                    <button type="button" id="btnOpenPasswordModal" class="px-4 py-2.5 rounded-xl text-xs font-bold bg-[#147D64] hover:bg-[#12694f] text-white transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer">
+                  <div class="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center">
+                    <button type="button" id="btnOpenPasswordModal" class="w-full sm:w-auto px-6 py-3 rounded-xl text-xs font-bold bg-[#147D64] hover:bg-[#12694f] text-white transition-all shadow-sm hover:shadow flex items-center justify-center gap-2 cursor-pointer">
                       <i class="fa-solid fa-key text-xs"></i>
                       <span id="btnOpenPasswordModalText">Set Password</span>
                     </button>
-                    <button type="button" id="btnOpenClerkSecurityProfile" class="px-4 py-2.5 rounded-xl text-xs font-bold bg-white text-slate-700 hover:bg-slate-50 border border-[#E3E9EF] transition-all flex items-center justify-center gap-2 cursor-pointer">
-                      <i class="fa-solid fa-user-shield text-xs text-[#147D64]"></i>
-                      <span>Manage Security in Clerk</span>
-                    </button>
-                  </div>
-
-                  <div class="p-3.5 rounded-2xl bg-slate-50 border border-[#E3E9EF] text-[11px] text-slate-500 space-y-1">
-                    <div class="font-bold text-slate-700 flex items-center gap-1.5">
-                      <i class="fa-solid fa-shield-halved text-[#147D64]"></i>
-                      <span>Enterprise Authentication Standards</span>
-                    </div>
-                    <p>Credentials are cryptographically secured directly by Clerk. Passwords are never sent to or stored in Whiz Studio databases.</p>
                   </div>
                 </div>
               </div>
@@ -1260,7 +1250,7 @@
   <script src="/assets/js/client-mock-data.js?v=4.0"></script>
   <script src="/assets/js/client-dashboard.js?v=20261031_sync_tracking"></script>
 
-  <!-- MODAL: SET / CHANGE PASSWORD (CLERK POWERED) -->
+  <!-- MODAL: SET / CHANGE PASSWORD -->
   <div id="modalClientPassword" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm overflow-y-auto">
     <div class="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-[#E3E9EF] p-6 sm:p-7 space-y-5 animate-in fade-in zoom-in-95 duration-150 my-auto">
       <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
