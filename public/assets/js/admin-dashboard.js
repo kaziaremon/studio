@@ -4643,23 +4643,24 @@
     });
 
     // Edit Client Profile & Authoritative CIF Modal
-    // Reset Client Receipt Download Limit (Phase 1 Flexibility Control)
+    // Reset Client Receipt Download Limit (Phase 1 Flexibility Control & Quota Recovery)
     document.getElementById('btnResetClientReceiptLimit')?.addEventListener('click', async () => {
       const clientId = state.selectedClientId;
       if (!clientId) {
         showToast('Please select a client first.', 'error');
         return;
       }
-      if (!confirm("Reset this client's daily receipt download limit back to 0/2?")) {
-        return;
-      }
+      const clientName = document.getElementById('clientCardFullName')?.textContent?.trim() || 'Client';
       const btn = document.getElementById('btnResetClientReceiptLimit');
-      setBtnLoading(btn, true, 'Resetting...');
+      setBtnLoading(btn, true, 'Restoring limit...');
       try {
-        const res = await apiFetch(`/pdf/quota/reset/${clientId}`, { method: 'POST' });
+        const res = await apiFetch(`/pdf/quota/reset/${encodeURIComponent(clientId)}`, {
+          method: 'POST',
+          body: JSON.stringify({ clientId })
+        });
         setBtnLoading(btn, false);
         if (res.ok && res.data && res.data.success) {
-          showToast(res.data.message || "Client's daily receipt download limit has been reset.", 'success');
+          showToast(`Receipt download limit for ${clientName} has been successfully restored (2/2 allowance available).`, 'success');
         } else {
           showToast(res.data?.error || 'Failed to reset download limit.', 'error');
         }

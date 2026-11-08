@@ -1,35 +1,36 @@
 /**
- * WHIZ STUDIO — OFFICIAL CORPORATE FINANCIAL DOCUMENT & PDF RECEIPT ENGINE
- * "Whiz Emerald & Gold High-Precision Vector Stationery"
+ * WHIZ STUDIO — OFFICIAL CORPORATE PDF INVOICE ENGINE
+ * "Standard Minimalist Corporate A4 Stationery"
  *
- * Architecture Standards:
+ * Design Architecture:
  * - Standard A4 (210 x 297 mm = 595.28 x 841.89 pt)
- * - Strict Proportional Grid & Zero-Waste Vertical Balance
- * - Brand Palette: Deep Emerald (#087F70), Rich Gold (#C69A40), Deep Charcoal (#20312E)
- * - Exclusive New Crisp Brand Logo (/assets/images/whiz-brand-logo-tight.png)
- * - Consolidated Non-Redundant Header: Left (Logo & Issuer) | Right (Document Metadata & Status)
- * - Symmetrical Grid: Client Billed To (Left) & Payment Settlement Details (Right)
- * - Shaded Data Table with Subtle Accounting Borders
- * - Clean Financial Ledger Summary & Balanced Bottom Authentication Banner
- * - Exact Compliance Disclaimer: "This is a system-generated online receipt. No physical signature or seal is required."
- * - Client-Side Memory Compilation via pdf-lib (Zero Backend / Zero R2 Storage)
+ * - Minimalist, Human-Designed Corporate Financial Layout (Zero AI-Style UI Boxes)
+ * - Brand Palette: Deep Emerald (#087F70), Warm Gold (#C69A40), Dark Slate (#172B36), Charcoal (#20312E)
+ * - Top & Bottom Framing Accents: Slim dual-tone brand bars (Deep Green & Gold) at very top and very bottom
+ * - Crisp High-Resolution Official Logo Rendering (preserves exact aspect ratio, no distortion)
+ * - Deduplicated Single-Occurrence Header: Logo + Company Contact Details only once at top left
+ * - Document Title strictly 'INVOICE' with Gold hairline accent
+ * - Clean Typography Grid: BILLED TO (Left) & PAYMENT DETAILS (Right) with zero button/pill styling
+ * - Clean Accounting Data Table (DESCRIPTION, QTY, UNIT PRICE, TOTAL) with subtle divider rules
+ * - Clean Right-Aligned Financial Totals with classic accounting hairlines
+ * - Minimal System-Generated Compliance Footer without jargon or physical signature boxes
+ * - Pure Client-Side Vector Execution via pdf-lib in browser memory (Zero server storage)
  */
 
 (function (global) {
   'use strict';
 
-  // Cached logo array buffer
   let cachedLogoBytes = null;
 
   async function getLogoBytes() {
     if (cachedLogoBytes) return cachedLogoBytes;
     try {
       if (typeof window !== 'undefined' && window.location) {
+        // Fetch official company logo without changing the file
         const candidates = [
-          '/assets/images/whiz-brand-logo-tight.png?v=20261108',
-          '/assets/images/logo.png?v=20261108',
-          '/brand-logo-raw.png',
-          '/brand-logo.png'
+          '/assets/images/logo.png',
+          '/public/assets/images/logo.png',
+          '/logo.png'
         ];
         for (const url of candidates) {
           try {
@@ -45,10 +46,9 @@
         try {
           const fs = await import('fs');
           const paths = [
-            'G:/Whiz Studio/assets/images/whiz-brand-logo-tight.png',
-            'G:/Whiz Studio/public/assets/images/whiz-brand-logo-tight.png',
-            'G:/Whiz Studio/brand-logo-raw.png',
-            'G:/Whiz Studio/assets/images/logo.png'
+            'G:/Whiz Studio/assets/images/logo.png',
+            'G:/Whiz Studio/public/assets/images/logo.png',
+            'G:/Whiz Studio/logo.png'
           ];
           for (const p of paths) {
             if (fs.existsSync(p)) {
@@ -103,7 +103,7 @@
   }
 
   async function compileWhizDocumentPdf(docData, options = {}) {
-    let PDFLib = global.PDFLib;
+    let PDFLib = global.PDFLib || (typeof globalThis !== 'undefined' ? globalThis.PDFLib : null);
     if (!PDFLib && typeof require !== 'undefined') {
       try {
         PDFLib = require('pdf-lib');
@@ -126,91 +126,86 @@
     const page = pdfDoc.addPage([A4_WIDTH, A4_HEIGHT]);
     const { width, height } = page.getSize();
 
-    const marginX = 40;
-    const contentWidth = width - (marginX * 2); // 515.28 pt
-    const rightAlignX = width - marginX;        // 555.28 pt
+    const marginX = 42;
+    const contentWidth = width - (marginX * 2); // 511.28 pt
+    const rightAlignX = width - marginX;        // 553.28 pt
 
-    // Typography
+    // Corporate Typography
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const fontOblique = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
 
-    // Whiz Studio Corporate Color System
-    const cEmerald = rgb(8 / 255, 127 / 255, 112 / 255);        // #087F70 (Brand Primary)
+    // Whiz Studio Refined Corporate Palette
+    const cEmerald = rgb(8 / 255, 127 / 255, 112 / 255);        // #087F70 (Deep Green Brand Primary)
     const cEmeraldDark = rgb(6 / 255, 95 / 255, 70 / 255);       // #065F46
-    const cEmeraldLight = rgb(234 / 255, 245 / 255, 241 / 255);  // #EAF5F1
-    const cGold = rgb(198 / 255, 154 / 255, 64 / 255);           // #C69A40 (Brand Gold)
-    const cGoldLight = rgb(253 / 255, 249 / 255, 238 / 255);     // #FDF9EE
-    const cCharcoal = rgb(23 / 255, 43 / 255, 54 / 255);         // #172B36 (Slate Dark Text)
+    const cGold = rgb(198 / 255, 154 / 255, 64 / 255);           // #C69A40 (Warm Gold Accent)
+    const cCharcoal = rgb(23 / 255, 43 / 255, 54 / 255);         // #172B36 (Dark Slate Primary Text)
     const cMuted = rgb(95 / 255, 113 / 255, 128 / 255);          // #5F7180 (Secondary Text)
-    const cMutedLight = rgb(148 / 255, 163 / 255, 184 / 255);    // #94A3B8 (Tertiary/Legal)
-    const cCardBg = rgb(248 / 255, 250 / 255, 250 / 255);        // #F8FAFA (Soft Card Tint)
-    const cTableHeadBg = rgb(241 / 255, 246 / 255, 244 / 255);        // #F1F6F4 (Table Header Tint)
-    const cRowAltBg = rgb(252 / 255, 253 / 255, 253 / 255);      // #FCFDFD (Alternating Row)
-    const cBorder = rgb(227 / 255, 233 / 255, 239 / 255);        // #E3E9EF (Delicate Border)
-    const cBorderLight = rgb(238 / 255, 242 / 255, 246 / 255);   // #EEF2F6
+    const cMutedLight = rgb(148 / 255, 163 / 255, 184 / 255);    // #94A3B8 (Legal/Subtle)
+    const cTableHeadBg = rgb(248 / 255, 250 / 255, 252 / 255);    // #F8FAFC (Subtle Table Header Tint)
+    const cRowAltBg = rgb(253 / 255, 254 / 255, 254 / 255);      // #FDFEFE
+    const cBorder = rgb(226 / 255, 232 / 255, 240 / 255);        // #E2E8F0 (Subtle Hairline)
+    const cBorderDark = rgb(203 / 255, 213 / 255, 225 / 255);    // #CBD5E1
     const cWhite = rgb(1, 1, 1);
 
-    const isReceipt = (docData.documentType === 'receipt' || docData.type === 'receipt');
-
-    // 1. Crisp White Background
+    // 1. Crisp White Page Canvas
     page.drawRectangle({ x: 0, y: 0, width, height, color: cWhite });
 
-    // 2. Precision Dual Brand Strip (Top Edge: 70% Emerald, 30% Gold)
-    const topBarHeight = 5;
-    page.drawRectangle({ x: 0, y: height - topBarHeight, width: width * 0.70, height: topBarHeight, color: cEmerald });
-    page.drawRectangle({ x: width * 0.70, y: height - topBarHeight, width: width * 0.30, height: topBarHeight, color: cGold });
+    // 2. Top Framing Accent (Slim horizontal bar: 70% Deep Green, 30% Gold)
+    const accentBarH = 4.5;
+    page.drawRectangle({ x: 0, y: height - accentBarH, width: width * 0.70, height: accentBarH, color: cEmerald });
+    page.drawRectangle({ x: width * 0.70, y: height - accentBarH, width: width * 0.30, height: accentBarH, color: cGold });
+
+    // 3. Bottom Framing Accent (Matching slim bar at very bottom)
+    page.drawRectangle({ x: 0, y: 0, width: width * 0.70, height: accentBarH, color: cEmerald });
+    page.drawRectangle({ x: width * 0.70, y: 0, width: width * 0.30, height: accentBarH, color: cGold });
 
     // =========================================================================
-    // 3. CONSOLIDATED UNIFIED HEADER (Eliminating Redundancy)
-    // Left: Newest Crisp Logo + Single Authoritative Issuer Block
-    // Right: Document Title, Meta Grid, and Payment Confirmation Badge
+    // 4. CONSOLIDATED MINIMALIST HEADER (Strictly Deduplicated)
+    // Left: Crisp Logo + Single Company Contact Block
+    // Right: Document Title 'INVOICE' + Clean Typographic Metadata
     // =========================================================================
-    const headerTopY = height - 32;
+    const headerTopY = height - 28;
 
-    // A. Embed Newest Crisp Brand Logo
+    // A. Official Company Logo Rendering (Clean, High-Quality, Exact Aspect Ratio)
     const logoBytes = await getLogoBytes();
     let logoDrawn = false;
-    const targetLogoWidth = 136; // Perfectly scaled corporate proportion
-    const targetLogoHeight = 41; // Aspect ratio ~3.32
+    let actualLogoHeight = 44;
 
     if (logoBytes) {
       try {
         const logoImage = await pdfDoc.embedPng(logoBytes);
-        const calcHeight = (logoImage.height / logoImage.width) * targetLogoWidth;
-        const actualH = Math.min(44, calcHeight);
+        // Calculate true aspect ratio
+        const logoAspect = logoImage.height / logoImage.width;
+        const targetLogoWidth = 138;
+        actualLogoHeight = targetLogoWidth * logoAspect; // Native proportional height
+
         page.drawImage(logoImage, {
           x: marginX,
-          y: headerTopY - actualH,
+          y: headerTopY - actualLogoHeight,
           width: targetLogoWidth,
-          height: actualH
+          height: actualLogoHeight
         });
         logoDrawn = true;
       } catch (err) {
-        console.warn('Could not embed PNG logo into PDF, falling back to brand typography:', err);
+        console.warn('Could not embed PNG logo into PDF, falling back to clean brand typography:', err);
       }
     }
 
     if (!logoDrawn) {
       page.drawText('WHIZ STUDIO', {
         x: marginX,
-        y: headerTopY - 22,
+        y: headerTopY - 18,
         size: 18,
         font: fontBold,
         color: cEmerald
       });
-      page.drawText('GROWTH & MARKETING', {
-        x: marginX,
-        y: headerTopY - 34,
-        size: 7.5,
-        font: fontBold,
-        color: cGold
-      });
+      actualLogoHeight = 24;
     }
 
-    // B. Consolidated Issuer Contact Block (Under Logo, Single Authoritative Occurrence)
+    // B. Single Authoritative Company Information Block (Directly beneath logo)
     const issuer = docData.issuer || docData.agency || {};
-    const issuerY = headerTopY - targetLogoHeight - 12;
+    const issuerY = headerTopY - actualLogoHeight - 12;
 
     page.drawText(issuer.legalName || 'Whiz Studio', {
       x: marginX,
@@ -219,7 +214,7 @@
       font: fontBold,
       color: cCharcoal
     });
-    page.drawText(issuer.tagline || 'Digital Marketing & Growth Engineering Agency', {
+    page.drawText(issuer.tagline || 'Digital Marketing & Growth Agency', {
       x: marginX,
       y: issuerY - 11,
       size: 7.5,
@@ -233,7 +228,7 @@
       font: fontRegular,
       color: cMuted
     });
-    const issuerContactLine = `Tel: ${issuer.phone || '+880 1815127022'}  •  Email: ${issuer.email || 'info@whizstudio.art'}  •  Web: ${issuer.website ? issuer.website.replace(/^https?:\/\//, '') : 'whizstudio.art'}`;
+    const issuerContactLine = `Phone: ${issuer.phone || '+880 1815127022'}  •  Email: ${issuer.email || 'info@whizstudio.art'}  •  Web: ${issuer.website ? issuer.website.replace(/^https?:\/\//, '') : 'whizstudio.art'}`;
     page.drawText(issuerContactLine, {
       x: marginX,
       y: issuerY - 32,
@@ -242,39 +237,41 @@
       color: cMuted
     });
 
-    // C. Header Right: Document Title & Metadata Block
-    const docTitle = isReceipt ? 'PAYMENT RECEIPT' : 'OFFICIAL INVOICE';
-    const titleSize = 22;
+    // C. Header Right: Document Title Strictly 'INVOICE'
+    const docTitle = 'INVOICE';
+    const titleSize = 26;
     const titleW = fontBold.widthOfTextAtSize(docTitle, titleSize);
 
     page.drawText(docTitle, {
       x: rightAlignX - titleW,
-      y: headerTopY - 18,
+      y: headerTopY - 16,
       size: titleSize,
       font: fontBold,
       color: cEmerald
     });
 
-    // Decorative Gold Accent Underline
+    // Subtle Gold Hairline Accent below title
     page.drawLine({
-      start: { x: rightAlignX - titleW, y: headerTopY - 25 },
-      end: { x: rightAlignX, y: headerTopY - 25 },
-      thickness: 2,
+      start: { x: rightAlignX - titleW, y: headerTopY - 22 },
+      end: { x: rightAlignX, y: headerTopY - 22 },
+      thickness: 1.5,
       color: cGold
     });
 
-    // Document Meta Rows
-    const docNumber = isReceipt
-      ? (docData.receiptNumber || 'WHIZ-RCPT-2026-0001')
-      : (docData.invoiceNumber || 'WHIZ-INV-2026-000001');
-    const issueDate = docData.paymentDate || docData.issueDate || '08 November, 2026';
+    // Clean Typographic Metadata (No Button/Pill UI Boxes)
+    const docNumber = docData.invoiceNumber || docData.receiptNumber || 'WHIZ-INV-2026-0001';
+    const issueDate = docData.issueDate || docData.paymentDate || '08 November, 2026';
     const curr = (docData.currency || 'USD').toUpperCase();
+    const rawStatus = (docData.status || 'PAID').toUpperCase().replace(/_/g, ' ');
+    const isPaid = rawStatus === 'PAID' || rawStatus === 'CONFIRMED' || rawStatus === 'PAID IN FULL';
+    const isPartial = rawStatus === 'PARTIALLY PAID' || rawStatus === 'PARTIAL';
+    const statusText = isPaid ? 'PAID' : (isPartial ? 'PARTIALLY PAID' : 'PAYMENT DUE');
 
-    let metaY = headerTopY - 42;
-    const metaLineGap = 12.5;
+    let metaY = headerTopY - 38;
+    const metaLineGap = 13;
 
-    function drawHeaderMeta(label, value, isHighlight = false) {
-      const valW = (isHighlight ? fontBold : fontRegular).widthOfTextAtSize(value, 8.5);
+    function drawHeaderMeta(label, value, isBoldVal = false, valColor = cCharcoal) {
+      const valW = (isBoldVal ? fontBold : fontRegular).widthOfTextAtSize(value, 8.5);
       const labelW = fontBold.widthOfTextAtSize(label + '  ', 8.5);
       page.drawText(label, {
         x: rightAlignX - valW - labelW,
@@ -287,103 +284,46 @@
         x: rightAlignX - valW,
         y: metaY,
         size: 8.5,
-        font: isHighlight ? fontBold : fontRegular,
-        color: isHighlight ? cEmeraldDark : cCharcoal
+        font: isBoldVal ? fontBold : fontRegular,
+        color: valColor
       });
       metaY -= metaLineGap;
     }
 
-    drawHeaderMeta(isReceipt ? 'Receipt Number:' : 'Invoice Number:', docNumber, true);
-    drawHeaderMeta(isReceipt ? 'Payment Date:' : 'Issue Date:', issueDate);
-    if (isReceipt && docData.invoiceNumber && docData.invoiceNumber !== docNumber) {
-      drawHeaderMeta('Invoice Reference:', docData.invoiceNumber);
+    drawHeaderMeta('Invoice Number:', docNumber, true, cCharcoal);
+    drawHeaderMeta('Invoice Date:', issueDate);
+    if (docData.dueDate) {
+      drawHeaderMeta('Due Date:', docData.dueDate);
     }
-    drawHeaderMeta('Billing Currency:', curr);
+    // Clean Typographic Status (No Pill/Web Button Outline)
+    drawHeaderMeta('Payment Status:', statusText, true, isPaid ? cEmerald : (isPartial ? cGold : cCharcoal));
+    drawHeaderMeta('Currency:', curr);
 
-    // Prominent Status Pill Badge
-    const rawStatus = (docData.status || (isReceipt ? 'CONFIRMED' : 'PAID')).toUpperCase().replace(/_/g, ' ');
-    const isPaid = rawStatus === 'PAID' || rawStatus === 'CONFIRMED' || rawStatus === 'PAID IN FULL';
-    const isPartial = rawStatus === 'PARTIALLY PAID' || rawStatus === 'PARTIAL';
-    const badgeText = isPaid
-      ? (isReceipt ? 'PAYMENT CONFIRMED' : 'PAID IN FULL')
-      : (isPartial ? 'PARTIALLY PAID' : 'PAYMENT PENDING');
-
-    const badgeW = fontBold.widthOfTextAtSize(badgeText, 7.5) + 16;
-    const badgeH = 15;
-    const badgeX = rightAlignX - badgeW;
-    const badgeY = metaY - 3;
-
-    page.drawRectangle({
-      x: badgeX,
-      y: badgeY,
-      width: badgeW,
-      height: badgeH,
-      color: isPaid ? cEmeraldLight : (isPartial ? cGoldLight : cCardBg),
-      borderColor: isPaid ? cEmerald : (isPartial ? cGold : cBorder),
-      borderWidth: 0.8
-    });
-    page.drawText(badgeText, {
-      x: badgeX + 8,
-      y: badgeY + 4,
-      size: 7.5,
-      font: fontBold,
-      color: isPaid ? cEmeraldDark : (isPartial ? cGold : cMuted)
-    });
-
-    // D. Header Divider Rule with Centered Gold Signature Accent
-    const headerDividerY = headerTopY - 110;
+    // D. Header Horizontal Divider Rule
+    const headerDividerY = headerTopY - 105;
     page.drawLine({
       start: { x: marginX, y: headerDividerY },
       end: { x: rightAlignX, y: headerDividerY },
       thickness: 0.75,
       color: cBorder
     });
-    page.drawLine({
-      start: { x: marginX, y: headerDividerY },
-      end: { x: marginX + 60, y: headerDividerY },
-      thickness: 2,
-      color: cGold
-    });
 
     // =========================================================================
-    // 4. BALANCED TWO-COLUMN PROPORTIONAL GRID (Client Info & Settlement Details)
-    // Symmetrical, perfectly aligned corporate cards
+    // 5. BILLED TO & PAYMENT DETAILS (Clean Typographic 2-Column Section)
+    // Completely removed AI-style boxed cards, outlines, and badges
     // =========================================================================
-    const gridTopY = headerDividerY - 14;
-    const cardHeight = 98;
-    const cardGap = 16;
-    const cardWidth = (contentWidth - cardGap) / 2; // 249.64 pt each
-    const card2X = marginX + cardWidth + cardGap;  // 305.64 pt
+    const sectionTopY = headerDividerY - 18;
+    const col2X = marginX + (contentWidth / 2) + 12;
 
-    // Card 1: Billed To / Received From (Client CIF Record)
-    page.drawRectangle({
+    // Left Column: BILLED TO
+    page.drawText('BILLED TO:', {
       x: marginX,
-      y: gridTopY - cardHeight,
-      width: cardWidth,
-      height: cardHeight,
-      color: cCardBg,
-      borderColor: cBorder,
-      borderWidth: 0.8
-    });
-    // Header strip for Card 1
-    page.drawRectangle({
-      x: marginX,
-      y: gridTopY - 20,
-      width: cardWidth,
-      height: 20,
-      color: cEmeraldLight,
-      borderColor: cBorder,
-      borderWidth: 0.8
-    });
-    page.drawText(isReceipt ? 'RECEIVED FROM (CLIENT)' : 'BILLED TO (CLIENT)', {
-      x: marginX + 10,
-      y: gridTopY - 14,
-      size: 7.5,
+      y: sectionTopY,
+      size: 8,
       font: fontBold,
-      color: cEmeraldDark
+      color: cEmerald
     });
 
-    // Extract Client Information
     const client = docData.client || {};
     const clientName = client.billingName || client.organizationName || client.fullName || docData.clientName || 'Valued Client';
     const companyName = client.companyName || '';
@@ -392,160 +332,140 @@
     const clientPhone = client.phone || docData.clientPhone || '';
     const clientEmail = client.email || docData.clientEmail || '';
 
-    let clientTextY = gridTopY - 33;
+    let clientCurY = sectionTopY - 14;
     page.drawText(clientName, {
-      x: marginX + 10,
-      y: clientTextY,
-      size: 10,
+      x: marginX,
+      y: clientCurY,
+      size: 10.5,
       font: fontBold,
       color: cCharcoal
     });
-    clientTextY -= 12;
+    clientCurY -= 12;
 
     if (companyName && companyName.toLowerCase() !== clientName.toLowerCase()) {
       page.drawText(companyName, {
-        x: marginX + 10,
-        y: clientTextY,
-        size: 8,
+        x: marginX,
+        y: clientCurY,
+        size: 8.5,
         font: fontBold,
-        color: cEmerald
+        color: cEmeraldDark
       });
-      clientTextY -= 11;
+      clientCurY -= 11;
     }
 
-    const wrappedAddr = wrapText(clientAddr, 38);
+    const wrappedAddr = wrapText(clientAddr, 42);
     wrappedAddr.slice(0, 2).forEach(line => {
       page.drawText(line, {
-        x: marginX + 10,
-        y: clientTextY,
-        size: 7.5,
+        x: marginX,
+        y: clientCurY,
+        size: 8,
         font: fontRegular,
-        color: cCharcoal
+        color: cMuted
       });
-      clientTextY -= 10;
+      clientCurY -= 10.5;
     });
 
     if (clientCityCountry) {
       page.drawText(clientCityCountry, {
-        x: marginX + 10,
-        y: clientTextY,
-        size: 7.5,
+        x: marginX,
+        y: clientCurY,
+        size: 8,
         font: fontRegular,
-        color: cCharcoal
+        color: cMuted
       });
-      clientTextY -= 10;
+      clientCurY -= 10.5;
     }
 
     const contactStr = [clientEmail, clientPhone].filter(Boolean).join('  •  ');
     if (contactStr) {
       page.drawText(contactStr, {
-        x: marginX + 10,
-        y: gridTopY - cardHeight + 8,
-        size: 7,
+        x: marginX,
+        y: clientCurY,
+        size: 7.5,
         font: fontRegular,
         color: cMuted
       });
     }
 
-    // Card 2: Payment Settlement Details (Strictly Aligned)
-    page.drawRectangle({
-      x: card2X,
-      y: gridTopY - cardHeight,
-      width: cardWidth,
-      height: cardHeight,
-      color: cCardBg,
-      borderColor: cBorder,
-      borderWidth: 0.8
-    });
-    // Header strip for Card 2
-    page.drawRectangle({
-      x: card2X,
-      y: gridTopY - 20,
-      width: cardWidth,
-      height: 20,
-      color: cGoldLight,
-      borderColor: cBorder,
-      borderWidth: 0.8
-    });
-    page.drawText(isReceipt ? 'PAYMENT SETTLEMENT DETAILS' : 'INVOICE TERMS & PAYMENT', {
-      x: card2X + 10,
-      y: gridTopY - 14,
-      size: 7.5,
+    // Right Column: PAYMENT & SETTLEMENT DETAILS (Clean Minimalist Typography)
+    page.drawText('PAYMENT DETAILS:', {
+      x: col2X,
+      y: sectionTopY,
+      size: 8,
       font: fontBold,
-      color: cGold
+      color: cEmerald
     });
 
     const paymentMethodRaw = docData.paymentMethod || 'Bank Transfer / Wire';
-    const paymentRef = docData.paymentReference || 'TXN-CONFIRMED-LEDGER';
+    const paymentRef = docData.paymentReference || 'TXN-CONFIRMED';
     const serviceName = docData.serviceName || docData.description || 'Digital Retainer Service';
 
-    let settleY = gridTopY - 33;
-    function drawSettleRow(lbl, val, isMono = false) {
+    let rightCurY = sectionTopY - 14;
+    function drawDetailRow(lbl, val, isBoldVal = false) {
       page.drawText(lbl, {
-        x: card2X + 10,
-        y: settleY,
-        size: 7.5,
+        x: col2X,
+        y: rightCurY,
+        size: 8,
         font: fontBold,
         color: cMuted
       });
-      const valW = (isMono ? fontBold : fontRegular).widthOfTextAtSize(val, 7.5);
       page.drawText(val, {
-        x: card2X + cardWidth - 10 - valW,
-        y: settleY,
-        size: 7.5,
-        font: isMono ? fontBold : fontRegular,
+        x: col2X + 96,
+        y: rightCurY,
+        size: 8,
+        font: isBoldVal ? fontBold : fontRegular,
         color: cCharcoal
       });
-      settleY -= 12;
+      rightCurY -= 12;
     }
 
-    drawSettleRow('Payment Method:', paymentMethodRaw);
-    drawSettleRow('Transaction Reference:', paymentRef, true);
-    drawSettleRow('Settlement Status:', 'Cleared & Reconciled');
-    drawSettleRow('Accounting Ledger:', 'Verified Entry (D1)');
+    drawDetailRow('Payment Method:', paymentMethodRaw);
+    drawDetailRow('Transaction Ref:', paymentRef, true);
+    drawDetailRow('Payment Date:', issueDate);
+    drawDetailRow('Settlement:', 'Cleared & Reconciled');
 
     const acctDetails = docData.paymentAccountDetails;
     if (acctDetails && (acctDetails.accountName || acctDetails.providerName)) {
-      const acctStr = `${acctDetails.providerName || 'MFS'}: ${acctDetails.accountNumber || acctDetails.accountName || ''}`;
-      page.drawText(acctStr, {
-        x: card2X + 10,
-        y: gridTopY - cardHeight + 8,
-        size: 7,
-        font: fontRegular,
-        color: cMuted
-      });
+      const acctStr = `${acctDetails.providerName || 'Account'}: ${acctDetails.accountNumber || acctDetails.accountName || ''}`;
+      drawDetailRow('Settlement Acct:', acctStr);
     }
 
     // =========================================================================
-    // 5. CORPORATE DATA TABLE (Subtle Shading, Clean Borders, Crisp Padding)
+    // 6. ITEMIZED ACCOUNTING DATA TABLE
+    // Clean subtle borders, light gray header row, clear typography
     // =========================================================================
-    const tableTopY = gridTopY - cardHeight - 16;
+    const tableTopY = sectionTopY - 78;
     const thHeight = 22;
 
-    // Table Header Background & Borders
+    // Shaded Header Row Background
     page.drawRectangle({
       x: marginX,
       y: tableTopY - thHeight,
       width: contentWidth,
       height: thHeight,
-      color: cTableHeadBg,
-      borderColor: cBorder,
-      borderWidth: 0.8
+      color: cTableHeadBg
     });
-    // Top Accent Border on Table
+
+    // Top and Bottom Subtle Table Dividers
     page.drawLine({
       start: { x: marginX, y: tableTopY },
       end: { x: rightAlignX, y: tableTopY },
-      thickness: 1.5,
-      color: cEmerald
+      thickness: 1,
+      color: cBorderDark
+    });
+    page.drawLine({
+      start: { x: marginX, y: tableTopY - thHeight },
+      end: { x: rightAlignX, y: tableTopY - thHeight },
+      thickness: 0.8,
+      color: cBorderDark
     });
 
-    const colDescX = marginX + 12;
-    const colQtyX = marginX + 315;
-    const colRateX = marginX + 375;
-    const colTotalX = rightAlignX - 12;
+    const colDescX = marginX + 8;
+    const colQtyX = marginX + 310;
+    const colRateX = marginX + 380;
+    const colTotalX = rightAlignX - 8;
 
-    page.drawText('DESCRIPTION / SERVICE SPECIFICATION', {
+    page.drawText('DESCRIPTION', {
       x: colDescX,
       y: tableTopY - 14.5,
       size: 7.5,
@@ -566,29 +486,28 @@
       font: fontBold,
       color: cCharcoal
     });
-    const colPaidLabel = isReceipt ? 'PAID AMOUNT' : 'TOTAL AMOUNT';
-    const colPaidW = fontBold.widthOfTextAtSize(colPaidLabel, 7.5);
-    page.drawText(colPaidLabel, {
-      x: colTotalX - colPaidW,
+    const colTotalLabel = 'TOTAL';
+    const colTotalW = fontBold.widthOfTextAtSize(colTotalLabel, 7.5);
+    page.drawText(colTotalLabel, {
+      x: colTotalX - colTotalW,
       y: tableTopY - 14.5,
       size: 7.5,
       font: fontBold,
       color: cCharcoal
     });
 
-    // Populate Items
+    // Populate Itemized Rows
     const items = (docData.items && docData.items.length > 0) ? docData.items : [{
       description: serviceName,
       quantity: 1,
-      unitPriceCents: isReceipt ? (docData.amountPaidCents || docData.totalCents || 0) : (docData.totalCents || 0),
-      totalCents: isReceipt ? (docData.amountPaidCents || docData.totalCents || 0) : (docData.totalCents || 0)
+      unitPriceCents: docData.amountPaidCents || docData.totalCents || 0,
+      totalCents: docData.amountPaidCents || docData.totalCents || 0
     }];
 
     let rowY = tableTopY - thHeight;
-    const rowHeight = 32;
+    const rowHeight = 30;
 
     items.forEach((item, index) => {
-      // Alternating row background
       if (index % 2 === 1) {
         page.drawRectangle({
           x: marginX,
@@ -599,27 +518,15 @@
         });
       }
 
-      // Outer table side borders and bottom border
-      page.drawLine({
-        start: { x: marginX, y: rowY },
-        end: { x: marginX, y: rowY - rowHeight },
-        thickness: 0.8,
-        color: cBorder
-      });
-      page.drawLine({
-        start: { x: rightAlignX, y: rowY },
-        end: { x: rightAlignX, y: rowY - rowHeight },
-        thickness: 0.8,
-        color: cBorder
-      });
+      // Subtle hairline row divider
       page.drawLine({
         start: { x: marginX, y: rowY - rowHeight },
         end: { x: rightAlignX, y: rowY - rowHeight },
-        thickness: 0.8,
+        thickness: 0.5,
         color: cBorder
       });
 
-      // Item Description
+      // Description
       const itemDesc = item.description || 'Professional Marketing Retainer';
       page.drawText(itemDesc, {
         x: colDescX,
@@ -629,12 +536,12 @@
         color: cCharcoal
       });
 
-      // Subtitle if package / category available
+      // Sub-package/category if present
       const subInfo = [docData.servicePackage, docData.serviceCategory].filter(Boolean).join('  •  ');
       if (subInfo) {
         page.drawText(subInfo, {
           x: colDescX,
-          y: rowY - 24,
+          y: rowY - 23,
           size: 7,
           font: fontRegular,
           color: cMuted
@@ -663,7 +570,7 @@
         color: cCharcoal
       });
 
-      // Paid / Total
+      // Line Total
       const totalStr = formatMoney(itemTotalCents, curr);
       const totalStrW = fontBold.widthOfTextAtSize(totalStr, 8.5);
       page.drawText(totalStr, {
@@ -678,221 +585,148 @@
     });
 
     // =========================================================================
-    // 6. FINANCIAL RECONCILIATION & TOTALS (Symmetrical Split)
-    // Left: Official Reconciliation Notes | Right: Totals Breakdown Box
+    // 7. FINANCIAL TOTALS SECTION (Clean Right-Aligned Typography)
+    // Strictly removed tinted AI-style UI boxes around amounts
     // =========================================================================
-    const summaryTopY = rowY - 16;
-    const summaryBoxWidth = 230;
-    const summaryBoxX = rightAlignX - summaryBoxWidth;
-    const notesBoxWidth = contentWidth - summaryBoxWidth - 16;
-    const summaryBoxHeight = 100;
+    const totalsTopY = rowY - 16;
+    const totalsWidth = 220;
+    const totalsX = rightAlignX - totalsWidth;
 
-    // Left Notes & Legal Acknowledgment Box
-    page.drawRectangle({
-      x: marginX,
-      y: summaryTopY - summaryBoxHeight,
-      width: notesBoxWidth,
-      height: summaryBoxHeight,
-      color: cCardBg,
-      borderColor: cBorder,
-      borderWidth: 0.8
-    });
-    // Header for Notes Box
-    page.drawRectangle({
-      x: marginX,
-      y: summaryTopY - 18,
-      width: notesBoxWidth,
-      height: 18,
-      color: cTableHeadBg,
-      borderColor: cBorder,
-      borderWidth: 0.8
-    });
-    page.drawText('LEDGER RECONCILIATION & AUDIT SUMMARY', {
-      x: marginX + 10,
-      y: summaryTopY - 12.5,
-      size: 7,
-      font: fontBold,
-      color: cEmeraldDark
-    });
-
-    const note1 = 'This document verifies full electronic payment settlement recorded in the corporate client ledger.';
-    const noteLines1 = wrapText(note1, 48);
-    let noteY = summaryTopY - 30;
-    noteLines1.forEach(l => {
-      page.drawText(l, { x: marginX + 10, y: noteY, size: 7.5, font: fontRegular, color: cCharcoal });
-      noteY -= 10;
-    });
-
-    if (docData.notes) {
-      const customNotes = `Client Memo: "${docData.notes}"`;
-      const noteLines2 = wrapText(customNotes, 48);
-      noteLines2.slice(0, 2).forEach(l => {
-        page.drawText(l, { x: marginX + 10, y: noteY, size: 7, font: fontOblique, color: cMuted });
-        noteY -= 9.5;
-      });
-    }
-
-    page.drawText('Ledger Status: Immutable Settlement • Cryptographically Authenticated', {
-      x: marginX + 10,
-      y: summaryTopY - summaryBoxHeight + 8,
-      size: 6.8,
-      font: fontBold,
-      color: cEmerald
-    });
-
-    // Right: Financial Totals Box
     const subtotalCents = docData.subtotalCents ?? docData.subtotal_cents ?? (docData.subtotal ? Math.round(docData.subtotal * 100) : 0);
     const taxCents = docData.taxCents ?? docData.tax_cents ?? (docData.vatAmount ? Math.round(docData.vatAmount * 100) : 0);
     const totalCents = docData.totalInvoiceAmountCents ?? docData.totalCents ?? docData.total_cents ?? (docData.total ? Math.round(docData.total * 100) : (subtotalCents + taxCents));
-    const amountPaidCents = isReceipt
-      ? (docData.amountPaidCents ?? docData.amount_paid_cents ?? (docData.amountPaid ? Math.round(docData.amountPaid * 100) : totalCents))
-      : (docData.amountPaidCents ?? docData.amount_paid_cents ?? (docData.amountPaid ? Math.round(docData.amountPaid * 100) : 0));
+    const amountPaidCents = docData.amountPaidCents ?? docData.amount_paid_cents ?? (docData.amountPaid ? Math.round(docData.amountPaid * 100) : totalCents);
     const balanceCents = docData.remainingBalanceCents !== undefined
       ? docData.remainingBalanceCents
       : (docData.outstandingBalanceCents !== undefined
         ? docData.outstandingBalanceCents
         : Math.max(0, totalCents - amountPaidCents));
 
-    let sumLineY = summaryTopY;
-    function drawSummaryRow(label, amountStr, isGrandTotal = false, isAccent = false) {
-      const sz = isGrandTotal ? 10.5 : 8.5;
-      const col = isGrandTotal ? cEmeraldDark : (isAccent ? cGold : cCharcoal);
-
-      if (isGrandTotal) {
-        page.drawRectangle({
-          x: summaryBoxX,
-          y: sumLineY - 18,
-          width: summaryBoxWidth,
-          height: 22,
-          color: cEmeraldLight,
-          borderColor: cEmerald,
-          borderWidth: 0.8
+    // Optional Clean Notes on Left (No Fluff/Jargon)
+    if (docData.notes) {
+      const notesLeftWidth = contentWidth - totalsWidth - 24;
+      page.drawText('Notes:', {
+        x: marginX,
+        y: totalsTopY - 4,
+        size: 8,
+        font: fontBold,
+        color: cEmerald
+      });
+      const cleanNoteLines = wrapText(docData.notes, 52);
+      cleanNoteLines.slice(0, 3).forEach((line, idx) => {
+        page.drawText(line, {
+          x: marginX,
+          y: totalsTopY - 16 - (idx * 10.5),
+          size: 7.5,
+          font: fontRegular,
+          color: cMuted
         });
-      }
+      });
+    }
 
+    // Right-Aligned Accounting Totals (Clean Lines & Fonts)
+    let curTotalY = totalsTopY;
+    function drawAccountingRow(label, amtStr, isBold = false, isAccent = false) {
+      const sz = isBold ? 9.5 : 8.5;
       page.drawText(label, {
-        x: summaryBoxX + (isGrandTotal ? 8 : 4),
-        y: sumLineY - (isGrandTotal ? 12 : 9),
+        x: totalsX,
+        y: curTotalY - 8,
         size: sz,
-        font: isGrandTotal ? fontBold : (isAccent ? fontBold : fontRegular),
-        color: col
+        font: isBold ? fontBold : fontRegular,
+        color: isAccent ? cEmerald : cCharcoal
       });
-
-      const amtW = (isGrandTotal ? fontBold : fontRegular).widthOfTextAtSize(amountStr, sz);
-      page.drawText(amountStr, {
-        x: rightAlignX - (isGrandTotal ? 8 : 4) - amtW,
-        y: sumLineY - (isGrandTotal ? 12 : 9),
+      const amtW = (isBold ? fontBold : fontRegular).widthOfTextAtSize(amtStr, sz);
+      page.drawText(amtStr, {
+        x: rightAlignX - amtW,
+        y: curTotalY - 8,
         size: sz,
-        font: isGrandTotal ? fontBold : fontRegular,
-        color: col
+        font: isBold ? fontBold : fontRegular,
+        color: isAccent ? cEmerald : cCharcoal
       });
-
-      sumLineY -= (isGrandTotal ? 26 : 17);
+      curTotalY -= 15;
     }
 
-    if (isReceipt) {
-      drawSummaryRow('Total Invoiced Amount:', formatMoney(totalCents, curr));
-      drawSummaryRow('AMOUNT RECEIVED:', formatMoney(amountPaidCents, curr), true);
-      drawSummaryRow('Outstanding Balance:', formatMoney(balanceCents, curr), false, balanceCents > 0);
-    } else {
-      drawSummaryRow('Subtotal:', formatMoney(subtotalCents, curr));
-      if (taxCents > 0) {
-        drawSummaryRow('Applicable VAT:', formatMoney(taxCents, curr));
-      }
-      drawSummaryRow('INVOICE TOTAL:', formatMoney(totalCents, curr), true);
-      drawSummaryRow('Amount Paid to Date:', formatMoney(amountPaidCents, curr));
-      drawSummaryRow('Outstanding Balance:', formatMoney(balanceCents, curr), false, balanceCents > 0);
-    }
+    drawAccountingRow('Subtotal:', formatMoney(totalCents, curr));
+    drawAccountingRow('Amount Paid:', formatMoney(amountPaidCents, curr), true, isPaid);
 
-    // =========================================================================
-    // 7. BALANCED DIGITAL AUTHENTICATION & ZERO-STORAGE DISCLAIMER BANNER
-    // Prominent, perfectly centered, eliminating the bottom void
-    // =========================================================================
-    const bannerY = Math.max(88, summaryTopY - summaryBoxHeight - 34);
-    const bannerHeight = 44;
-
-    page.drawRectangle({
-      x: marginX,
-      y: bannerY - bannerHeight,
-      width: contentWidth,
-      height: bannerHeight,
-      color: cCardBg,
-      borderColor: cBorder,
-      borderWidth: 0.8
+    // Subtle divider above Total Due
+    page.drawLine({
+      start: { x: totalsX, y: curTotalY - 2 },
+      end: { x: rightAlignX, y: curTotalY - 2 },
+      thickness: 0.8,
+      color: cBorderDark
     });
-    // Left decorative emerald bar on disclaimer box
-    page.drawRectangle({
-      x: marginX,
-      y: bannerY - bannerHeight,
-      width: 4,
-      height: bannerHeight,
-      color: cEmerald
-    });
+    curTotalY -= 4;
 
-    const disclaimerTitle = 'OFFICIAL ELECTRONIC SYSTEM RECEIPT  •  DIGITALLY VERIFIED';
-    const dTitleW = fontBold.widthOfTextAtSize(disclaimerTitle, 7.5);
-    page.drawText(disclaimerTitle, {
-      x: (width - dTitleW) / 2,
-      y: bannerY - 14,
-      size: 7.5,
-      font: fontBold,
-      color: cEmerald
-    });
-
-    // Exact Mandatory Compliance String
-    const disclaimerSub = 'This is a system-generated online receipt. No physical signature or seal is required.';
-    const dSubW = fontBold.widthOfTextAtSize(disclaimerSub, 8);
-    page.drawText(disclaimerSub, {
-      x: (width - dSubW) / 2,
-      y: bannerY - 26,
-      size: 8,
+    // Total Due
+    const balanceStr = formatMoney(balanceCents, curr);
+    const balW = fontBold.widthOfTextAtSize(balanceStr, 11);
+    page.drawText('TOTAL DUE:', {
+      x: totalsX,
+      y: curTotalY - 10,
+      size: 11,
       font: fontBold,
       color: cCharcoal
     });
+    page.drawText(balanceStr, {
+      x: rightAlignX - balW,
+      y: curTotalY - 10,
+      size: 11,
+      font: fontBold,
+      color: balanceCents > 0 ? cGold : cCharcoal
+    });
 
-    const disclaimerRef = `Document ID: ${docNumber}  •  Auth Date: ${issueDate}  •  Platform: https://whizstudio.art`;
-    const dRefW = fontRegular.widthOfTextAtSize(disclaimerRef, 6.8);
-    page.drawText(disclaimerRef, {
-      x: (width - dRefW) / 2,
-      y: bannerY - 37,
-      size: 6.8,
-      font: fontRegular,
-      color: cMuted
+    // Double bottom accounting underline under Total Due
+    page.drawLine({
+      start: { x: totalsX, y: curTotalY - 16 },
+      end: { x: rightAlignX, y: curTotalY - 16 },
+      thickness: 0.6,
+      color: cBorderDark
+    });
+    page.drawLine({
+      start: { x: totalsX, y: curTotalY - 18.5 },
+      end: { x: rightAlignX, y: curTotalY - 18.5 },
+      thickness: 0.6,
+      color: cBorderDark
     });
 
     // =========================================================================
-    // 8. CORPORATE LEGAL FOOTER (Bottom 40 pt)
+    // 8. MINIMAL SYSTEM-GENERATED COMPLIANCE FOOTER
+    // Clean, professional, zero redundant address or jargon
     // =========================================================================
     const footerY = 32;
+
+    // Footer Divider Line
     page.drawLine({
-      start: { x: marginX, y: footerY + 16 },
-      end: { x: rightAlignX, y: footerY + 16 },
-      thickness: 0.8,
+      start: { x: marginX, y: footerY + 18 },
+      end: { x: rightAlignX, y: footerY + 18 },
+      thickness: 0.75,
       color: cBorder
     });
+    // Centered Gold Hairline Notch
     page.drawLine({
-      start: { x: width / 2 - 30, y: footerY + 16 },
-      end: { x: width / 2 + 30, y: footerY + 16 },
+      start: { x: width / 2 - 28, y: footerY + 18 },
+      end: { x: width / 2 + 28, y: footerY + 18 },
       thickness: 1.5,
       color: cGold
     });
 
-    const footerLine1 = 'Whiz Studio  •  Registered Digital Agency  •  House 53, Road 7, Block A, Mirpur 12, Dhaka 1216, BD';
-    const f1W = fontRegular.widthOfTextAtSize(footerLine1, 6.8);
-    page.drawText(footerLine1, {
-      x: (width - f1W) / 2,
+    const disclaimerText = 'This is a system-generated online invoice. No physical signature or seal is required.';
+    const discW = fontRegular.widthOfTextAtSize(disclaimerText, 7.5);
+    page.drawText(disclaimerText, {
+      x: (width - discW) / 2,
       y: footerY + 6,
-      size: 6.8,
-      font: fontRegular,
+      size: 7.5,
+      font: fontOblique,
       color: cMuted
     });
 
-    const footerLine2 = 'For billing inquiries or tax verification, contact accounting at info@whizstudio.art or visit https://whizstudio.art';
-    const f2W = fontRegular.widthOfTextAtSize(footerLine2, 6.2);
-    page.drawText(footerLine2, {
-      x: (width - f2W) / 2,
+    const footerBottom = 'Whiz Studio  •  House 53, Road 7, Block A, Mirpur 12, Dhaka 1216, Bangladesh  •  https://whizstudio.art';
+    const fBottomW = fontRegular.widthOfTextAtSize(footerBottom, 6.8);
+    page.drawText(footerBottom, {
+      x: (width - fBottomW) / 2,
       y: footerY - 4,
-      size: 6.2,
+      size: 6.8,
       font: fontRegular,
       color: cMutedLight
     });
