@@ -54,6 +54,202 @@
       .replace(/'/g, '&#039;');
   }
 
+  let _activeGlassMenu = null;
+  let _activeGlassTrigger = null;
+  let _activeGlassWrapper = null;
+
+  function getGlassPortal() {
+    let p = document.getElementById('whizGlassSelectPortal');
+    if (!p) {
+      p = document.createElement('div');
+      p.id = 'whizGlassSelectPortal';
+      p.className = 'whiz-glass-portal-root';
+      p.setAttribute('aria-hidden', 'true');
+      p.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:0;overflow:visible;pointer-events:none;z-index:95;';
+      document.body.appendChild(p);
+    }
+    return p;
+  }
+
+  function positionGlassMenu(triggerBtn, menuEl) {
+    if (!triggerBtn || !menuEl) return;
+    const rect = triggerBtn.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const menuHeight = menuEl.offsetHeight || 240;
+    const spaceBelow = viewportHeight - rect.bottom - 12;
+    const spaceAbove = rect.top - 12;
+    const shouldDropup = spaceBelow < menuHeight && spaceAbove > spaceBelow;
+
+    let top = shouldDropup ? rect.top - menuHeight - 6 : rect.bottom + 6;
+    let left = Math.max(8, Math.min(rect.left, window.innerWidth - rect.width - 8));
+    let width = Math.min(rect.width, window.innerWidth - 16);
+    let maxHeight = shouldDropup ? Math.max(160, Math.min(280, spaceAbove)) : Math.max(160, Math.min(280, spaceBelow));
+
+    menuEl.classList.toggle('dropup', shouldDropup);
+    menuEl.style.position = 'fixed';
+    menuEl.style.top = Math.round(top) + 'px';
+    menuEl.style.left = Math.round(left) + 'px';
+    menuEl.style.width = Math.round(width) + 'px';
+    menuEl.style.maxHeight = Math.round(maxHeight) + 'px';
+    menuEl.style.zIndex = '9999';
+    menuEl.style.pointerEvents = 'auto';
+  }
+
+  function closeActiveGlassMenu() {
+    if (!_activeGlassMenu) return;
+    const menuEl = _activeGlassMenu;
+    const triggerBtn = _activeGlassTrigger;
+    const wrapper = _activeGlassWrapper;
+
+    menuEl.classList.remove('open', 'dropup');
+    triggerBtn?.classList.remove('active');
+    triggerBtn?.setAttribute('aria-expanded', 'false');
+
+    if (wrapper && menuEl.parentNode !== wrapper) {
+      wrapper.appendChild(menuEl);
+    }
+
+    menuEl.style.position = '';
+    menuEl.style.top = '';
+    menuEl.style.left = '';
+    menuEl.style.width = '';
+    menuEl.style.maxHeight = '';
+    menuEl.style.zIndex = '';
+    menuEl.style.pointerEvents = '';
+
+    _activeGlassMenu = null;
+    _activeGlassTrigger = null;
+    _activeGlassWrapper = null;
+  }
+
+  function initGlassSelects() {
+    const wrappers = document.querySelectorAll('[data-glass-select]');
+    wrappers.forEach(wrapper => {
+      const selectEl = wrapper.querySelector('select');
+      const triggerBtn = wrapper.querySelector('.glass-select-trigger');
+      const menuEl = wrapper.querySelector('.glass-select-menu') || 
+                     (document.getElementById('whizGlassSelectPortal')?.querySelector('[id="' + wrapper.dataset.glassSelect + 'Menu"]'));
+      const labelSpan = triggerBtn?.querySelector('.select-label');
+      const iconEl = triggerBtn?.querySelector('.select-icon');
+
+      if (!triggerBtn || !menuEl) return;
+
+      if (wrapper.dataset.glassInitialized === 'true') {
+        const val = selectEl?.value || '';
+        const currentOptions = menuEl.querySelectorAll('.glass-select-option');
+        currentOptions.forEach(opt => {
+          const isMatch = opt.dataset.value === val;
+          opt.classList.toggle('selected', isMatch);
+          opt.setAttribute('aria-selected', isMatch ? 'true' : 'false');
+          if (isMatch) {
+            if (labelSpan) {
+              const optText = opt.querySelector('.select-opt-text')?.textContent || opt.querySelector('span:not(.currency-badge)')?.textContent || opt.querySelector('span')?.textContent || opt.textContent.trim();
+              labelSpan.textContent = optText;
+            }
+            const symbolBadge = triggerBtn.querySelector('.select-currency-symbol');
+            const optBadge = opt.querySelector('.currency-badge');
+            if (symbolBadge && optBadge) {
+              symbolBadge.textContent = optBadge.textContent;
+            }
+          }
+        });
+        return;
+      }
+      wrapper.dataset.glassInitialized = 'true';
+
+      const options = menuEl.querySelectorAll('.glass-select-option');
+
+      function setSelected(val, triggerChangeEvent = true) {
+        if (selectEl) {
+          selectEl.value = val;
+        }
+        options.forEach(opt => {
+          const isMatch = opt.dataset.value === val;
+          opt.classList.toggle('selected', isMatch);
+          opt.setAttribute('aria-selected', isMatch ? 'true' : 'false');
+          if (isMatch) {
+            if (labelSpan) {
+              const optText = opt.querySelector('.select-opt-text')?.textContent || opt.querySelector('span:not(.currency-badge)')?.textContent || opt.querySelector('span')?.textContent || opt.textContent.trim();
+              labelSpan.textContent = optText;
+            }
+            const symbolBadge = triggerBtn.querySelector('.select-currency-symbol');
+            const optBadge = opt.querySelector('.currency-badge');
+            if (symbolBadge && optBadge) {
+              symbolBadge.textContent = optBadge.textContent;
+            }
+          }
+        });
+        if (triggerChangeEvent && selectEl) {
+          selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      }
+
+      function toggleMenu(force) {
+        const willOpen = typeof force === 'boolean' ? force : (menuEl !== _activeGlassMenu || !menuEl.classList.contains('open'));
+        if (willOpen) {
+          if (_activeGlassMenu && _activeGlassMenu !== menuEl) {
+            closeActiveGlassMenu();
+          }
+          _activeGlassMenu = menuEl;
+          _activeGlassTrigger = triggerBtn;
+          _activeGlassWrapper = wrapper;
+
+          const portal = getGlassPortal();
+          portal.appendChild(menuEl);
+          positionGlassMenu(triggerBtn, menuEl);
+
+          requestAnimationFrame(() => {
+            menuEl.classList.add('open');
+            triggerBtn.classList.add('active');
+            triggerBtn.setAttribute('aria-expanded', 'true');
+            positionGlassMenu(triggerBtn, menuEl);
+            const currentSelected = menuEl.querySelector('.glass-select-option.selected') || options[0];
+            currentSelected?.focus();
+          });
+        } else {
+          closeActiveGlassMenu();
+        }
+      }
+
+      triggerBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleMenu();
+      });
+
+      options.forEach(opt => {
+        opt.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setSelected(opt.dataset.value, true);
+          closeActiveGlassMenu();
+          triggerBtn.focus();
+        });
+      });
+
+      if (selectEl) {
+        selectEl.addEventListener('change', () => {
+          setSelected(selectEl.value, false);
+        });
+        if (selectEl.value) {
+          setSelected(selectEl.value, false);
+        }
+      }
+    });
+  }
+
+  document.addEventListener('click', (e) => {
+    if (_activeGlassMenu && !_activeGlassMenu.contains(e.target) && !_activeGlassTrigger?.contains(e.target)) {
+      closeActiveGlassMenu();
+    }
+  });
+
+  window.addEventListener('resize', () => {
+    if (_activeGlassMenu && _activeGlassTrigger) {
+      positionGlassMenu(_activeGlassTrigger, _activeGlassMenu);
+    }
+  });
+
   let clientChart = null;
 
   const state = {
@@ -591,6 +787,7 @@
     setInput('profilePostalCode', data.postalCode || data.postal_code || '');
     setInput('profileTaxId', data.taxId || data.tax_id || '');
 
+    initGlassSelects();
     updateProfileFormProgress();
     applyProfileLockUi(data.isLocked || data.is_locked === 1);
   }
@@ -617,6 +814,12 @@
           el.disabled = false;
           el.classList.remove('bg-slate-100', 'cursor-not-allowed', 'text-slate-600', 'border-slate-200');
           el.classList.add('bg-slate-50');
+        }
+        const trigger = el.closest('.glass-select-wrapper')?.querySelector('.glass-select-trigger');
+        if (trigger) {
+          trigger.disabled = isProfileLocked;
+          trigger.classList.toggle('opacity-60', isProfileLocked);
+          trigger.classList.toggle('cursor-not-allowed', isProfileLocked);
         }
       }
     });
@@ -2079,6 +2282,7 @@
       });
     }
 
+    initGlassSelects();
     checkAuthAndInit();
   }
 

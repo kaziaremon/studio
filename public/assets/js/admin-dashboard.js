@@ -1544,6 +1544,7 @@
     document.getElementById('editBlueprintSteps').value = bp.steps || bp.instructions || '';
     document.getElementById('editBlueprintDoneWhen').value = bp.done_when || '';
     document.getElementById('editBlueprintQACriteria').value = bp.qa_criteria || '';
+    initGlassSelects();
 
     modal.classList.remove('hidden');
   }
@@ -2077,6 +2078,7 @@
         if (modalPriority) modalPriority.value = task.priority || 'medium';
         const modalNotes = document.getElementById('liveTaskNotes');
         if (modalNotes) modalNotes.value = task.internal_notes || '';
+        initGlassSelects();
 
         modal.classList.remove('hidden');
       });
@@ -2253,6 +2255,7 @@
             document.getElementById('editPaymentMethod').value = p.payment_method || 'bank_transfer';
             document.getElementById('editPaymentReference').value = p.payment_reference || '';
             document.getElementById('editPaymentNotes').value = p.financial_notes || '';
+            initGlassSelects();
 
             document.getElementById('modalEditPayment')?.classList.remove('hidden');
           });
@@ -2271,6 +2274,7 @@
             document.getElementById('correctAmountInput').value = ((p.amount_cents || 0) / 100).toFixed(2);
             document.getElementById('correctCurrencySelect').value = p.currency || 'USD';
             document.getElementById('correctReasonInput').value = '';
+            initGlassSelects();
 
             document.getElementById('modalCorrectPayment')?.classList.remove('hidden');
           });
@@ -2466,21 +2470,29 @@
       if (!triggerBtn || !menuEl) return;
 
       if (wrapper.dataset.glassInitialized === 'true') {
-        // Sync trigger display with current select value
-        const currentOpt = menuEl.querySelector('.glass-select-option[data-value="' + (selectEl?.value || '') + '"]') || menuEl.querySelector('.glass-select-option.selected');
-        if (currentOpt && labelSpan) {
-          const optText = currentOpt.querySelector('.select-opt-text')?.textContent || currentOpt.querySelector('span:not(.currency-badge)')?.textContent || currentOpt.querySelector('span')?.textContent || currentOpt.textContent.trim();
-          labelSpan.textContent = optText;
-          const optIcon = currentOpt.querySelector('.option-icon');
-          if (optIcon && iconEl) {
-            iconEl.className = optIcon.className.replace('option-icon', 'select-icon');
+        // Sync trigger display and option highlights with current select value
+        const val = selectEl?.value || '';
+        const currentOptions = menuEl.querySelectorAll('.glass-select-option');
+        currentOptions.forEach(opt => {
+          const isMatch = opt.dataset.value === val;
+          opt.classList.toggle('selected', isMatch);
+          opt.setAttribute('aria-selected', isMatch ? 'true' : 'false');
+          if (isMatch) {
+            if (labelSpan) {
+              const optText = opt.querySelector('.select-opt-text')?.textContent || opt.querySelector('span:not(.currency-badge)')?.textContent || opt.querySelector('span')?.textContent || opt.textContent.trim();
+              labelSpan.textContent = optText;
+            }
+            const optIcon = opt.querySelector('.option-icon');
+            if (optIcon && iconEl) {
+              iconEl.className = optIcon.className.replace('option-icon', 'select-icon');
+            }
+            const symbolBadge = triggerBtn.querySelector('.select-currency-symbol');
+            const optBadge = opt.querySelector('.currency-badge');
+            if (symbolBadge && optBadge) {
+              symbolBadge.textContent = optBadge.textContent;
+            }
           }
-          const symbolBadge = triggerBtn.querySelector('.select-currency-symbol');
-          const optBadge = currentOpt.querySelector('.currency-badge');
-          if (symbolBadge && optBadge) {
-            symbolBadge.textContent = optBadge.textContent;
-          }
-        }
+        });
         return;
       }
       wrapper.dataset.glassInitialized = 'true';
@@ -4838,6 +4850,7 @@
         auditText.textContent = parts.length > 0 ? parts.join(' • ') : 'No modifications recorded yet.';
       }
 
+      initGlassSelects();
       document.getElementById('modalEditClient')?.classList.remove('hidden');
     });
 
@@ -4961,6 +4974,7 @@
         deadlineInput.value = '';
         if (typeof updateDatePickerTrigger === 'function') updateDatePickerTrigger(deadlineInput);
       }
+      initGlassSelects();
 
       document.getElementById('modalAssignService')?.classList.remove('hidden');
     });
@@ -5095,6 +5109,7 @@
 
     // 3. Service Management Modals
     document.getElementById('btnOpenAddServiceModal')?.addEventListener('click', () => {
+      initGlassSelects();
       document.getElementById('modalAddService')?.classList.remove('hidden');
     });
 
@@ -5225,6 +5240,7 @@
 
     document.getElementById('btnOpenAddBlueprintModal')?.addEventListener('click', () => {
       document.getElementById('addBlueprintServiceId').value = state.selectedServiceId;
+      initGlassSelects();
       document.getElementById('modalAddBlueprint')?.classList.remove('hidden');
     });
 

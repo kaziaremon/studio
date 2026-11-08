@@ -98,11 +98,19 @@
       --dock-duration: 200ms;
     }
 
-    /* Base Scrollbar */
-    ::-webkit-scrollbar { width: 5px; height: 5px; }
-    ::-webkit-scrollbar-track { background: #F1F5F9; }
-    ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 9999px; }
-    ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+    /* Universal Containment & Anti-Clipping Scrollbar */
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(8, 127, 112, 0.3) transparent;
+    }
+    *::-webkit-scrollbar { width: 6px; height: 6px; }
+    *::-webkit-scrollbar-track { background: transparent !important; margin-block: 10px !important; border-radius: 9999px !important; }
+    *::-webkit-scrollbar-thumb { background: rgba(8, 127, 112, 0.28) !important; border-radius: 9999px !important; }
+    *::-webkit-scrollbar-thumb:hover { background: rgba(8, 127, 112, 0.6) !important; }
+    select {
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+      color-scheme: light !important;
+    }
 
     /* Custom Subtle Dock Scrollbar (Independently scrollable content) */
     .whiz-dock-scroll {
@@ -346,13 +354,7 @@
     }
   </style>
 
-  <style>
-    /* Custom Scrollbar for Dashboard */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #F1F5F9; }
-    ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 9999px; }
-    ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
-  </style>
+
 
   <style>
     /* ==========================================================================
@@ -1810,16 +1812,51 @@
 
                 <!-- Row 2 & 3: Priority Dropdown + Segmented Status Control -->
                 <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
-                  <!-- Priority Filter Dropdown (44px touch height) -->
+                  <!-- Priority Filter Dropdown (44px touch height, Liquid Glass Custom Popover) -->
                   <div class="relative w-full sm:w-48 shrink-0">
-                    <select id="taskPriorityFilter" class="w-full h-11 px-3.5 pr-8 rounded-xl bg-white border border-[#E6ECE9] text-xs font-semibold text-[#202D2A] focus:outline-none focus:border-[#087F70] focus:ring-2 focus:ring-[#087F70]/15 shadow-2xs appearance-none cursor-pointer touch-manipulation" aria-label="Filter tasks by priority">
-                      <option value="all">All Priorities</option>
-                      <option value="urgent">Urgent</option>
-                      <option value="high">High</option>
-                      <option value="medium">Medium</option>
-                      <option value="low">Low</option>
-                    </select>
-                    <i class="fa-solid fa-chevron-down absolute right-3.5 top-1/2 -translate-y-1/2 text-[#74817D] text-[10px] pointer-events-none"></i>
+                    <div class="glass-select-wrapper" data-glass-select="taskPriorityFilter">
+                      <select id="taskPriorityFilter" class="sr-only" tabindex="-1" aria-hidden="true" aria-label="Filter tasks by priority">
+                        <option value="all" selected>All Priorities</option>
+                        <option value="urgent">Urgent</option>
+                        <option value="high">High</option>
+                        <option value="medium">Medium</option>
+                        <option value="low">Low</option>
+                      </select>
+                      <button type="button" class="glass-select-trigger" id="taskPriorityFilterTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="taskPriorityFilterMenu">
+                        <span class="flex items-center gap-2 min-w-0">
+                          <i class="fa-solid fa-flag text-slate-400 text-xs shrink-0 select-icon"></i>
+                          <span class="select-label truncate">All Priorities</span>
+                        </span>
+                        <i class="fa-solid fa-chevron-down chevron-icon shrink-0"></i>
+                      </button>
+                      <div class="glass-select-menu" id="taskPriorityFilterMenu" role="listbox" aria-label="Filter by Priority">
+                        <button type="button" class="glass-select-option selected" data-value="all" role="option" aria-selected="true">
+                          <i class="fa-solid fa-flag text-slate-400 text-xs shrink-0 option-icon"></i>
+                          <span class="truncate select-opt-text">All Priorities</span>
+                          <i class="fa-solid fa-check check-icon"></i>
+                        </button>
+                        <button type="button" class="glass-select-option" data-value="urgent" role="option" aria-selected="false">
+                          <span class="w-2 h-2 rounded-full bg-rose-500 shrink-0 option-icon"></span>
+                          <span class="truncate select-opt-text">Urgent</span>
+                          <i class="fa-solid fa-check check-icon"></i>
+                        </button>
+                        <button type="button" class="glass-select-option" data-value="high" role="option" aria-selected="false">
+                          <span class="w-2 h-2 rounded-full bg-amber-500 shrink-0 option-icon"></span>
+                          <span class="truncate select-opt-text">High</span>
+                          <i class="fa-solid fa-check check-icon"></i>
+                        </button>
+                        <button type="button" class="glass-select-option" data-value="medium" role="option" aria-selected="false">
+                          <span class="w-2 h-2 rounded-full bg-blue-500 shrink-0 option-icon"></span>
+                          <span class="truncate select-opt-text">Medium</span>
+                          <i class="fa-solid fa-check check-icon"></i>
+                        </button>
+                        <button type="button" class="glass-select-option" data-value="low" role="option" aria-selected="false">
+                          <span class="w-2 h-2 rounded-full bg-slate-400 shrink-0 option-icon"></span>
+                          <span class="truncate select-opt-text">Low</span>
+                          <i class="fa-solid fa-check check-icon"></i>
+                        </button>
+                      </div>
+                    </div>
                   </div>
 
                   <!-- Segmented Status Filter Control (Compact All / Pending / Completed) -->
@@ -3397,19 +3434,20 @@
   <!-- =========================================================================
        MODAL: EDIT CLIENT PROFILE
        ========================================================================= -->
-  <div id="modalEditClient" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
-    <div class="bg-white border border-[#E3E9EF] rounded-3xl max-w-xl w-full p-5 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
-      <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
-        <h3 class="text-lg font-bold text-[#172B36] flex items-center gap-2">
-          <i class="fa-solid fa-user-pen text-brand-whiz text-sm"></i>
-          <span>Edit Client Business Profile</span>
+  <div id="modalEditClient" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
+    <div class="whiz-floating-modal-card relative bg-white border border-[#E3E9EF] rounded-3xl max-w-xl w-full shadow-2xl flex flex-col my-auto">
+      <div class="relative flex items-center justify-between p-5 sm:p-7 pb-4 sm:pb-5 border-b border-[#E3E9EF] shrink-0 pr-14 sm:pr-16 bg-white z-10">
+        <h3 class="text-base sm:text-lg font-bold text-[#172B36] flex items-center gap-2 min-w-0">
+          <i class="fa-solid fa-user-pen text-[#087F70] text-sm shrink-0"></i>
+          <span class="truncate">Edit Client Business Profile</span>
         </h3>
-        <button type="button" class="btn-close-modal text-slate-500 hover:text-[#172B36] cursor-pointer" data-modal="modalEditClient">
-          <i class="fa-solid fa-xmark text-lg"></i>
+        <button type="button" class="btn-close-modal absolute top-4 right-4 sm:top-5 sm:right-6 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#172B36] flex items-center justify-center transition-all cursor-pointer shadow-2xs z-20" data-modal="modalEditClient" aria-label="Close modal">
+          <i class="fa-solid fa-xmark text-sm sm:text-base"></i>
         </button>
       </div>
 
-      <form id="formEditClient" class="space-y-4">
+      <div class="whiz-modal-scroll-body p-5 sm:p-8 flex-1 min-h-0">
+        <form id="formEditClient" class="space-y-4">
         <input type="hidden" name="clientId" id="editClientId">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -3466,36 +3504,154 @@
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <!-- Account Status Glass Dropdown -->
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Account Status</label>
-            <select name="status" id="editClientStatus" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
-              <option value="active">Active</option>
-              <option value="suspended">Suspended</option>
-            </select>
+            <div class="glass-select-wrapper" data-glass-select="editClientStatus">
+              <select name="status" id="editClientStatus" class="sr-only" tabindex="-1" aria-hidden="true">
+                <option value="active" selected>Active</option>
+                <option value="suspended">Suspended</option>
+              </select>
+              <button type="button" class="glass-select-trigger" id="editClientStatusTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="editClientStatusMenu">
+                <span class="flex items-center gap-2 min-w-0">
+                  <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0 select-icon"></span>
+                  <span class="select-label truncate">Active</span>
+                </span>
+                <i class="fa-solid fa-chevron-down chevron-icon shrink-0"></i>
+              </button>
+              <div class="glass-select-menu" id="editClientStatusMenu" role="listbox" aria-label="Account Status">
+                <button type="button" class="glass-select-option selected" data-value="active" role="option" aria-selected="true">
+                  <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0 option-icon"></span>
+                  <span class="truncate select-opt-text">Active</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="suspended" role="option" aria-selected="false">
+                  <span class="w-2 h-2 rounded-full bg-rose-500 shrink-0 option-icon"></span>
+                  <span class="truncate select-opt-text">Suspended</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+              </div>
+            </div>
           </div>
+
+          <!-- Preferred Currency Glass Dropdown -->
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Preferred Currency *</label>
-            <select name="currency" id="editClientCurrency" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
-              <option value="USD">USD — $ (US Dollar)</option>
-              <option value="BDT">BDT — ৳ (Bangladeshi Taka)</option>
-              <option value="GBP">GBP — £ (British Pound)</option>
-              <option value="EUR">EUR — € (Euro)</option>
-              <option value="AED">AED — د.إ (UAE Dirham)</option>
-              <option value="SAR">SAR — ر.س (Saudi Riyal)</option>
-              <option value="CAD">CAD — CA$ (Canadian Dollar)</option>
-              <option value="AUD">AUD — A$ (Australian Dollar)</option>
-              <option value="SGD">SGD — S$ (Singapore Dollar)</option>
-              <option value="INR">INR — ₹ (Indian Rupee)</option>
-              <option value="JPY">JPY — ¥ (Japanese Yen)</option>
-              <option value="MYR">MYR — RM (Malaysian Ringgit)</option>
-            </select>
+            <div class="glass-select-wrapper" data-glass-select="editClientCurrency">
+              <select name="currency" id="editClientCurrency" class="sr-only" tabindex="-1" aria-hidden="true">
+                <option value="USD" selected>USD — $ (US Dollar)</option>
+                <option value="BDT">BDT — ৳ (Bangladeshi Taka)</option>
+                <option value="GBP">GBP — £ (British Pound)</option>
+                <option value="EUR">EUR — € (Euro)</option>
+                <option value="AED">AED — د.إ (UAE Dirham)</option>
+                <option value="SAR">SAR — ر.س (Saudi Riyal)</option>
+                <option value="CAD">CAD — CA$ (Canadian Dollar)</option>
+                <option value="AUD">AUD — A$ (Australian Dollar)</option>
+                <option value="SGD">SGD — S$ (Singapore Dollar)</option>
+                <option value="INR">INR — ₹ (Indian Rupee)</option>
+                <option value="JPY">JPY — ¥ (Japanese Yen)</option>
+                <option value="MYR">MYR — RM (Malaysian Ringgit)</option>
+              </select>
+              <button type="button" class="glass-select-trigger" id="editClientCurrencyTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="editClientCurrencyMenu">
+                <span class="flex items-center gap-2 min-w-0">
+                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[10px] font-bold flex items-center justify-center border border-emerald-200/60 select-currency-symbol shrink-0">$</span>
+                  <span class="select-label truncate">USD — $ (US Dollar)</span>
+                </span>
+                <i class="fa-solid fa-chevron-down chevron-icon shrink-0"></i>
+              </button>
+              <div class="glass-select-menu" id="editClientCurrencyMenu" role="listbox" aria-label="Preferred Currency">
+                <button type="button" class="glass-select-option selected" data-value="USD" role="option" aria-selected="true">
+                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[10px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">$</span>
+                  <span class="truncate select-opt-text">USD — $ (US Dollar)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="BDT" role="option" aria-selected="false">
+                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[10px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">৳</span>
+                  <span class="truncate select-opt-text">BDT — ৳ (Bangladeshi Taka)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="GBP" role="option" aria-selected="false">
+                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[10px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">£</span>
+                  <span class="truncate select-opt-text">GBP — £ (British Pound)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="EUR" role="option" aria-selected="false">
+                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[10px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">€</span>
+                  <span class="truncate select-opt-text">EUR — € (Euro)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="AED" role="option" aria-selected="false">
+                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[9px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">د.إ</span>
+                  <span class="truncate select-opt-text">AED — د.إ (UAE Dirham)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="SAR" role="option" aria-selected="false">
+                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[9px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">ر.س</span>
+                  <span class="truncate select-opt-text">SAR — ر.س (Saudi Riyal)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="CAD" role="option" aria-selected="false">
+                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[9px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">CA$</span>
+                  <span class="truncate select-opt-text">CAD — CA$ (Canadian Dollar)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="AUD" role="option" aria-selected="false">
+                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[9px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">A$</span>
+                  <span class="truncate select-opt-text">AUD — A$ (Australian Dollar)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="SGD" role="option" aria-selected="false">
+                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[9px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">S$</span>
+                  <span class="truncate select-opt-text">SGD — S$ (Singapore Dollar)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="INR" role="option" aria-selected="false">
+                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[10px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">₹</span>
+                  <span class="truncate select-opt-text">INR — ₹ (Indian Rupee)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="JPY" role="option" aria-selected="false">
+                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[10px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">¥</span>
+                  <span class="truncate select-opt-text">JPY — ¥ (Japanese Yen)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="MYR" role="option" aria-selected="false">
+                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[9px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">RM</span>
+                  <span class="truncate select-opt-text">MYR — RM (Malaysian Ringgit)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+              </div>
+            </div>
           </div>
+
+          <!-- CIF Lock Status Glass Dropdown -->
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">CIF Lock Status *</label>
-            <select name="isLocked" id="editClientIsLocked" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-semibold">
-              <option value="1">Locked (Verified & Protected)</option>
-              <option value="0">Unlocked (Client Can Edit)</option>
-            </select>
+            <div class="glass-select-wrapper" data-glass-select="editClientIsLocked">
+              <select name="isLocked" id="editClientIsLocked" class="sr-only" tabindex="-1" aria-hidden="true">
+                <option value="1">Locked (Verified & Protected)</option>
+                <option value="0" selected>Unlocked (Client Can Edit)</option>
+              </select>
+              <button type="button" class="glass-select-trigger" id="editClientIsLockedTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="editClientIsLockedMenu">
+                <span class="flex items-center gap-2 min-w-0">
+                  <i class="fa-solid fa-lock-open text-amber-500 text-xs shrink-0 select-icon"></i>
+                  <span class="select-label truncate">Unlocked (Client Can Edit)</span>
+                </span>
+                <i class="fa-solid fa-chevron-down chevron-icon shrink-0"></i>
+              </button>
+              <div class="glass-select-menu" id="editClientIsLockedMenu" role="listbox" aria-label="CIF Lock Status">
+                <button type="button" class="glass-select-option" data-value="1" role="option" aria-selected="false">
+                  <i class="fa-solid fa-lock text-emerald-600 text-xs shrink-0 option-icon"></i>
+                  <span class="truncate select-opt-text">Locked (Verified & Protected)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option selected" data-value="0" role="option" aria-selected="true">
+                  <i class="fa-solid fa-lock-open text-amber-500 text-xs shrink-0 option-icon"></i>
+                  <span class="truncate select-opt-text">Unlocked (Client Can Edit)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -3510,26 +3666,29 @@
             <i class="fa-solid fa-floppy-disk text-xs"></i>
             <span>Save Profile Changes</span>
           </button>
-        </div></form>
+        </div>
+        </form>
+      </div>
     </div>
   </div>
 
   <!-- =========================================================================
        MODAL: ASSIGN SERVICE TO CLIENT
        ========================================================================= -->
-  <div id="modalAssignService" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
-    <div class="bg-white border border-[#E3E9EF] rounded-3xl max-w-lg w-full p-5 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
-      <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
-        <h3 class="text-lg font-bold text-[#172B36] flex items-center gap-2">
-          <i class="fa-solid fa-layer-group text-brand-whiz text-sm"></i>
-          <span>Assign Service to Client</span>
+  <div id="modalAssignService" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
+    <div class="whiz-floating-modal-card relative bg-white border border-[#E3E9EF] rounded-3xl max-w-lg w-full shadow-2xl flex flex-col my-auto">
+      <div class="relative flex items-center justify-between p-5 sm:p-7 pb-4 sm:pb-5 border-b border-[#E3E9EF] shrink-0 pr-14 sm:pr-16 bg-white z-10">
+        <h3 class="text-base sm:text-lg font-bold text-[#172B36] flex items-center gap-2 min-w-0">
+          <i class="fa-solid fa-layer-group text-[#087F70] text-sm shrink-0"></i>
+          <span class="truncate">Assign Service to Client</span>
         </h3>
-        <button type="button" class="btn-close-modal text-slate-500 hover:text-[#172B36] cursor-pointer" data-modal="modalAssignService">
-          <i class="fa-solid fa-xmark text-lg"></i>
+        <button type="button" class="btn-close-modal absolute top-4 right-4 sm:top-5 sm:right-6 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#172B36] flex items-center justify-center transition-all cursor-pointer shadow-2xs z-20" data-modal="modalAssignService" aria-label="Close modal">
+          <i class="fa-solid fa-xmark text-sm sm:text-base"></i>
         </button>
       </div>
 
-      <form id="formAssignService" class="space-y-4">
+      <div class="whiz-modal-scroll-body p-5 sm:p-8 flex-1 min-h-0">
+        <form id="formAssignService" class="space-y-4">
         <input type="hidden" name="clientId" id="assignServiceClientId">
         <div>
           <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Select Catalog Service *</label>
@@ -3690,7 +3849,8 @@
             <span>Provision Service & Auto-Instantiate Tasks</span>
           </button>
         </div>
-      </form>
+        </form>
+      </div>
     </div>
   </div>
 
@@ -3740,19 +3900,20 @@
   <!-- =========================================================================
        MODAL: ADD NEW SERVICE (Phase 6)
        ========================================================================= -->
-  <div id="modalAddService" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
-    <div class="bg-white border border-[#E3E9EF] rounded-3xl max-w-xl w-full p-5 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
-      <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
-        <h3 class="text-lg font-bold text-[#172B36] flex items-center gap-2">
-          <i class="fa-solid fa-plus text-brand-whiz text-sm"></i>
-          <span>Add New Service to Catalog</span>
+  <div id="modalAddService" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
+    <div class="whiz-floating-modal-card relative bg-white border border-[#E3E9EF] rounded-3xl max-w-xl w-full shadow-2xl flex flex-col my-auto">
+      <div class="relative flex items-center justify-between p-5 sm:p-7 pb-4 sm:pb-5 border-b border-[#E3E9EF] shrink-0 pr-14 sm:pr-16 bg-white z-10">
+        <h3 class="text-base sm:text-lg font-bold text-[#172B36] flex items-center gap-2 min-w-0">
+          <i class="fa-solid fa-plus text-[#087F70] text-sm shrink-0"></i>
+          <span class="truncate">Add New Service to Catalog</span>
         </h3>
-        <button type="button" class="btn-close-modal text-slate-500 hover:text-[#172B36] cursor-pointer" data-modal="modalAddService">
-          <i class="fa-solid fa-xmark text-lg"></i>
+        <button type="button" class="btn-close-modal absolute top-4 right-4 sm:top-5 sm:right-6 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#172B36] flex items-center justify-center transition-all cursor-pointer shadow-2xs z-20" data-modal="modalAddService" aria-label="Close modal">
+          <i class="fa-solid fa-xmark text-sm sm:text-base"></i>
         </button>
       </div>
 
-      <form id="formAddService" class="space-y-4">
+      <div class="whiz-modal-scroll-body p-5 sm:p-8 flex-1 min-h-0">
+        <form id="formAddService" class="space-y-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Service Name *</label>
@@ -3767,16 +3928,67 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Category *</label>
-            <select name="category" required class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
-              <option value="Paid Advertising">Paid Advertising</option>
-              <option value="Paid & Organic Social Media">Paid & Organic Social Media</option>
-              <option value="Conversational Commerce">Conversational Commerce</option>
-              <option value="Video Media">Video Media</option>
-              <option value="Visual Search & SEO">Visual Search & SEO</option>
-              <option value="Enterprise Growth">Enterprise Growth</option>
-              <option value="Performance Media Engineering">Performance Media Engineering</option>
-              <option value="Professional Branding">Professional Branding</option>
-            </select>
+            <div class="glass-select-wrapper" data-glass-select="addServiceCategory">
+              <select name="category" id="addServiceCategory" required class="sr-only" tabindex="-1" aria-hidden="true">
+                <option value="Paid Advertising" selected>Paid Advertising</option>
+                <option value="Paid & Organic Social Media">Paid & Organic Social Media</option>
+                <option value="Conversational Commerce">Conversational Commerce</option>
+                <option value="Video Media">Video Media</option>
+                <option value="Visual Search & SEO">Visual Search & SEO</option>
+                <option value="Enterprise Growth">Enterprise Growth</option>
+                <option value="Performance Media Engineering">Performance Media Engineering</option>
+                <option value="Professional Branding">Professional Branding</option>
+              </select>
+              <button type="button" class="glass-select-trigger" id="addServiceCategoryTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="addServiceCategoryMenu">
+                <span class="flex items-center gap-2 min-w-0">
+                  <i class="fa-solid fa-tags text-slate-400 text-xs shrink-0 select-icon"></i>
+                  <span class="select-label truncate">Paid Advertising</span>
+                </span>
+                <i class="fa-solid fa-chevron-down chevron-icon shrink-0"></i>
+              </button>
+              <div class="glass-select-menu" id="addServiceCategoryMenu" role="listbox" aria-label="Service Category">
+                <button type="button" class="glass-select-option selected" data-value="Paid Advertising" role="option" aria-selected="true">
+                  <i class="fa-solid fa-tags text-slate-400 text-xs shrink-0 option-icon"></i>
+                  <span class="truncate select-opt-text">Paid Advertising</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="Paid & Organic Social Media" role="option" aria-selected="false">
+                  <i class="fa-solid fa-share-nodes text-slate-400 text-xs shrink-0 option-icon"></i>
+                  <span class="truncate select-opt-text">Paid & Organic Social Media</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="Conversational Commerce" role="option" aria-selected="false">
+                  <i class="fa-solid fa-comments text-slate-400 text-xs shrink-0 option-icon"></i>
+                  <span class="truncate select-opt-text">Conversational Commerce</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="Video Media" role="option" aria-selected="false">
+                  <i class="fa-solid fa-video text-slate-400 text-xs shrink-0 option-icon"></i>
+                  <span class="truncate select-opt-text">Video Media</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="Visual Search & SEO" role="option" aria-selected="false">
+                  <i class="fa-solid fa-magnifying-glass-chart text-slate-400 text-xs shrink-0 option-icon"></i>
+                  <span class="truncate select-opt-text">Visual Search & SEO</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="Enterprise Growth" role="option" aria-selected="false">
+                  <i class="fa-solid fa-chart-line text-slate-400 text-xs shrink-0 option-icon"></i>
+                  <span class="truncate select-opt-text">Enterprise Growth</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="Performance Media Engineering" role="option" aria-selected="false">
+                  <i class="fa-solid fa-bolt text-slate-400 text-xs shrink-0 option-icon"></i>
+                  <span class="truncate select-opt-text">Performance Media Engineering</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="Professional Branding" role="option" aria-selected="false">
+                  <i class="fa-solid fa-palette text-slate-400 text-xs shrink-0 option-icon"></i>
+                  <span class="truncate select-opt-text">Professional Branding</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+              </div>
+            </div>
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Standard Retainer Price ($ USD) *</label>
@@ -3801,26 +4013,28 @@
             <span>Create Service Record</span>
           </button>
         </div>
-      </form>
+        </form>
+      </div>
     </div>
   </div>
 
   <!-- =========================================================================
        MODAL: EDIT SERVICE METADATA
        ========================================================================= -->
-  <div id="modalEditService" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
-    <div class="bg-white border border-[#E3E9EF] rounded-3xl max-w-xl w-full p-5 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
-      <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
-        <h3 class="text-lg font-bold text-[#172B36] flex items-center gap-2">
-          <i class="fa-solid fa-pen-to-square text-brand-whiz text-sm"></i>
-          <span>Edit Service Master Definition</span>
+  <div id="modalEditService" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
+    <div class="whiz-floating-modal-card relative bg-white border border-[#E3E9EF] rounded-3xl max-w-xl w-full shadow-2xl flex flex-col my-auto">
+      <div class="relative flex items-center justify-between p-5 sm:p-7 pb-4 sm:pb-5 border-b border-[#E3E9EF] shrink-0 pr-14 sm:pr-16 bg-white z-10">
+        <h3 class="text-base sm:text-lg font-bold text-[#172B36] flex items-center gap-2 min-w-0">
+          <i class="fa-solid fa-pen-to-square text-[#087F70] text-sm shrink-0"></i>
+          <span class="truncate">Edit Service Master Definition</span>
         </h3>
-        <button type="button" class="btn-close-modal text-slate-500 hover:text-[#172B36] cursor-pointer" data-modal="modalEditService">
-          <i class="fa-solid fa-xmark text-lg"></i>
+        <button type="button" class="btn-close-modal absolute top-4 right-4 sm:top-5 sm:right-6 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#172B36] flex items-center justify-center transition-all cursor-pointer shadow-2xs z-20" data-modal="modalEditService" aria-label="Close modal">
+          <i class="fa-solid fa-xmark text-sm sm:text-base"></i>
         </button>
       </div>
 
-      <form id="formEditService" class="space-y-4">
+      <div class="whiz-modal-scroll-body p-5 sm:p-8 flex-1 min-h-0">
+        <form id="formEditService" class="space-y-4">
         <input type="hidden" name="serviceId" id="editServiceId">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -3872,7 +4086,8 @@
             </button>
           </div>
         </div>
-      </form>
+        </form>
+      </div>
     </div>
   </div>
 
@@ -3940,19 +4155,20 @@
   <!-- =========================================================================
        MODAL: EDIT TASK BLUEPRINT (Phase 7 & 8)
        ========================================================================= -->
-  <div id="modalEditBlueprint" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
-    <div class="bg-white border border-[#E3E9EF] rounded-3xl max-w-3xl w-full p-6 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] flex flex-col">
-      <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF] shrink-0">
-        <h3 class="text-lg font-bold text-[#172B36] flex items-center gap-2">
-          <i class="fa-solid fa-pen-nib text-brand-whiz text-sm"></i>
-          <span>Edit Master SOP Task Blueprint</span>
+  <div id="modalEditBlueprint" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
+    <div class="whiz-floating-modal-card relative bg-white border border-[#E3E9EF] rounded-3xl max-w-3xl w-full shadow-2xl flex flex-col my-auto">
+      <div class="relative flex items-center justify-between p-5 sm:p-7 pb-4 sm:pb-5 border-b border-[#E3E9EF] shrink-0 pr-14 sm:pr-16 bg-white z-10">
+        <h3 class="text-base sm:text-lg font-bold text-[#172B36] flex items-center gap-2 min-w-0">
+          <i class="fa-solid fa-pen-nib text-[#087F70] text-sm shrink-0"></i>
+          <span class="truncate">Edit Master SOP Task Blueprint</span>
         </h3>
-        <button type="button" class="btn-close-modal text-slate-500 hover:text-[#172B36] cursor-pointer" data-modal="modalEditBlueprint">
-          <i class="fa-solid fa-xmark text-lg"></i>
+        <button type="button" class="btn-close-modal absolute top-4 right-4 sm:top-5 sm:right-6 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#172B36] flex items-center justify-center transition-all cursor-pointer shadow-2xs z-20" data-modal="modalEditBlueprint" aria-label="Close modal">
+          <i class="fa-solid fa-xmark text-sm sm:text-base"></i>
         </button>
       </div>
 
-      <form id="formEditBlueprint" class="space-y-4 overflow-y-auto flex-1 pr-1">
+      <div class="whiz-modal-scroll-body p-5 sm:p-8 flex-1 min-h-0">
+        <form id="formEditBlueprint" class="space-y-4">
         <input type="hidden" name="blueprintId" id="editBlueprintId">
         
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -3967,23 +4183,84 @@
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <!-- Phase Glass Dropdown -->
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Phase</label>
-            <select name="phase" id="editBlueprintPhase" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
-              <option value="Beginning">Beginning</option>
-              <option value="Intermediate">Intermediate</option>
-              <option value="Advanced">Advanced</option>
-            </select>
+            <div class="glass-select-wrapper" data-glass-select="editBlueprintPhase">
+              <select name="phase" id="editBlueprintPhase" class="sr-only" tabindex="-1" aria-hidden="true">
+                <option value="Beginning" selected>Beginning</option>
+                <option value="Intermediate">Intermediate</option>
+                <option value="Advanced">Advanced</option>
+              </select>
+              <button type="button" class="glass-select-trigger" id="editBlueprintPhaseTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="editBlueprintPhaseMenu">
+                <span class="flex items-center gap-2 min-w-0">
+                  <i class="fa-solid fa-layer-group text-slate-400 text-xs shrink-0 select-icon"></i>
+                  <span class="select-label truncate">Beginning</span>
+                </span>
+                <i class="fa-solid fa-chevron-down chevron-icon shrink-0"></i>
+              </button>
+              <div class="glass-select-menu" id="editBlueprintPhaseMenu" role="listbox" aria-label="Phase">
+                <button type="button" class="glass-select-option selected" data-value="Beginning" role="option" aria-selected="true">
+                  <i class="fa-solid fa-seedling text-emerald-600 text-xs shrink-0 option-icon"></i>
+                  <span class="truncate select-opt-text">Beginning</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="Intermediate" role="option" aria-selected="false">
+                  <i class="fa-solid fa-chart-line text-blue-600 text-xs shrink-0 option-icon"></i>
+                  <span class="truncate select-opt-text">Intermediate</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="Advanced" role="option" aria-selected="false">
+                  <i class="fa-solid fa-crown text-amber-600 text-xs shrink-0 option-icon"></i>
+                  <span class="truncate select-opt-text">Advanced</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+              </div>
+            </div>
           </div>
+
+          <!-- Priority Glass Dropdown -->
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Priority</label>
-            <select name="priority" id="editBlueprintPriority" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
-              <option value="urgent">Urgent</option>
-              <option value="high">High</option>
-              <option value="medium">Medium</option>
-              <option value="low">Low</option>
-            </select>
+            <div class="glass-select-wrapper" data-glass-select="editBlueprintPriority">
+              <select name="priority" id="editBlueprintPriority" class="sr-only" tabindex="-1" aria-hidden="true">
+                <option value="urgent">Urgent</option>
+                <option value="high">High</option>
+                <option value="medium" selected>Medium</option>
+                <option value="low">Low</option>
+              </select>
+              <button type="button" class="glass-select-trigger" id="editBlueprintPriorityTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="editBlueprintPriorityMenu">
+                <span class="flex items-center gap-2 min-w-0">
+                  <span class="w-2 h-2 rounded-full bg-blue-500 shrink-0 select-icon"></span>
+                  <span class="select-label truncate">Medium</span>
+                </span>
+                <i class="fa-solid fa-chevron-down chevron-icon shrink-0"></i>
+              </button>
+              <div class="glass-select-menu" id="editBlueprintPriorityMenu" role="listbox" aria-label="Priority">
+                <button type="button" class="glass-select-option" data-value="urgent" role="option" aria-selected="false">
+                  <span class="w-2 h-2 rounded-full bg-rose-500 shrink-0 option-icon"></span>
+                  <span class="truncate select-opt-text">Urgent</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="high" role="option" aria-selected="false">
+                  <span class="w-2 h-2 rounded-full bg-amber-500 shrink-0 option-icon"></span>
+                  <span class="truncate select-opt-text">High</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option selected" data-value="medium" role="option" aria-selected="true">
+                  <span class="w-2 h-2 rounded-full bg-blue-500 shrink-0 option-icon"></span>
+                  <span class="truncate select-opt-text">Medium</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="low" role="option" aria-selected="false">
+                  <span class="w-2 h-2 rounded-full bg-slate-400 shrink-0 option-icon"></span>
+                  <span class="truncate select-opt-text">Low</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+              </div>
+            </div>
           </div>
+
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Sort Order</label>
             <input type="number" name="sortOrder" id="editBlueprintSortOrder" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-mono">
@@ -4033,7 +4310,8 @@
             </button>
           </div>
         </div>
-      </form>
+        </form>
+      </div>
     </div>
   </div>
 
@@ -4089,19 +4367,20 @@
   <!-- =========================================================================
        MODAL: ADD NEW TASK BLUEPRINT
        ========================================================================= -->
-  <div id="modalAddBlueprint" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
-    <div class="bg-white border border-[#E3E9EF] rounded-3xl max-w-2xl w-full p-5 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
-      <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
-        <h3 class="text-lg font-bold text-[#172B36] flex items-center gap-2">
-          <i class="fa-solid fa-plus text-brand-whiz text-sm"></i>
-          <span>Add New SOP Task Blueprint</span>
+  <div id="modalAddBlueprint" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
+    <div class="whiz-floating-modal-card relative bg-white border border-[#E3E9EF] rounded-3xl max-w-2xl w-full shadow-2xl flex flex-col my-auto">
+      <div class="relative flex items-center justify-between p-5 sm:p-7 pb-4 sm:pb-5 border-b border-[#E3E9EF] shrink-0 pr-14 sm:pr-16 bg-white z-10">
+        <h3 class="text-base sm:text-lg font-bold text-[#172B36] flex items-center gap-2 min-w-0">
+          <i class="fa-solid fa-plus text-[#087F70] text-sm shrink-0"></i>
+          <span class="truncate">Add New SOP Task Blueprint</span>
         </h3>
-        <button type="button" class="btn-close-modal text-slate-500 hover:text-[#172B36] cursor-pointer" data-modal="modalAddBlueprint">
-          <i class="fa-solid fa-xmark text-lg"></i>
+        <button type="button" class="btn-close-modal absolute top-4 right-4 sm:top-5 sm:right-6 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#172B36] flex items-center justify-center transition-all cursor-pointer shadow-2xs z-20" data-modal="modalAddBlueprint" aria-label="Close modal">
+          <i class="fa-solid fa-xmark text-sm sm:text-base"></i>
         </button>
       </div>
 
-      <form id="formAddBlueprint" class="space-y-4">
+      <div class="whiz-modal-scroll-body p-5 sm:p-8 flex-1 min-h-0">
+        <form id="formAddBlueprint" class="space-y-4">
         <input type="hidden" name="serviceId" id="addBlueprintServiceId">
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
@@ -4115,23 +4394,84 @@
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <!-- Phase Glass Dropdown -->
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Phase</label>
-            <select name="phase" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
-              <option value="Beginning">Beginning</option>
-              <option value="Intermediate">Intermediate</option>
-              <option value="Advanced">Advanced</option>
-            </select>
+            <div class="glass-select-wrapper" data-glass-select="addBlueprintPhase">
+              <select name="phase" id="addBlueprintPhase" class="sr-only" tabindex="-1" aria-hidden="true">
+                <option value="Beginning" selected>Beginning</option>
+                <option value="Intermediate">Intermediate</option>
+                <option value="Advanced">Advanced</option>
+              </select>
+              <button type="button" class="glass-select-trigger" id="addBlueprintPhaseTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="addBlueprintPhaseMenu">
+                <span class="flex items-center gap-2 min-w-0">
+                  <i class="fa-solid fa-layer-group text-slate-400 text-xs shrink-0 select-icon"></i>
+                  <span class="select-label truncate">Beginning</span>
+                </span>
+                <i class="fa-solid fa-chevron-down chevron-icon shrink-0"></i>
+              </button>
+              <div class="glass-select-menu" id="addBlueprintPhaseMenu" role="listbox" aria-label="Phase">
+                <button type="button" class="glass-select-option selected" data-value="Beginning" role="option" aria-selected="true">
+                  <i class="fa-solid fa-seedling text-emerald-600 text-xs shrink-0 option-icon"></i>
+                  <span class="truncate select-opt-text">Beginning</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="Intermediate" role="option" aria-selected="false">
+                  <i class="fa-solid fa-chart-line text-blue-600 text-xs shrink-0 option-icon"></i>
+                  <span class="truncate select-opt-text">Intermediate</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="Advanced" role="option" aria-selected="false">
+                  <i class="fa-solid fa-crown text-amber-600 text-xs shrink-0 option-icon"></i>
+                  <span class="truncate select-opt-text">Advanced</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+              </div>
+            </div>
           </div>
+
+          <!-- Priority Glass Dropdown -->
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Priority</label>
-            <select name="priority" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
-              <option value="urgent">Urgent</option>
-              <option value="high">High</option>
-              <option value="medium" selected>Medium</option>
-              <option value="low">Low</option>
-            </select>
+            <div class="glass-select-wrapper" data-glass-select="addBlueprintPriority">
+              <select name="priority" id="addBlueprintPriority" class="sr-only" tabindex="-1" aria-hidden="true">
+                <option value="urgent">Urgent</option>
+                <option value="high">High</option>
+                <option value="medium" selected>Medium</option>
+                <option value="low">Low</option>
+              </select>
+              <button type="button" class="glass-select-trigger" id="addBlueprintPriorityTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="addBlueprintPriorityMenu">
+                <span class="flex items-center gap-2 min-w-0">
+                  <span class="w-2 h-2 rounded-full bg-blue-500 shrink-0 select-icon"></span>
+                  <span class="select-label truncate">Medium</span>
+                </span>
+                <i class="fa-solid fa-chevron-down chevron-icon shrink-0"></i>
+              </button>
+              <div class="glass-select-menu" id="addBlueprintPriorityMenu" role="listbox" aria-label="Priority">
+                <button type="button" class="glass-select-option" data-value="urgent" role="option" aria-selected="false">
+                  <span class="w-2 h-2 rounded-full bg-rose-500 shrink-0 option-icon"></span>
+                  <span class="truncate select-opt-text">Urgent</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="high" role="option" aria-selected="false">
+                  <span class="w-2 h-2 rounded-full bg-amber-500 shrink-0 option-icon"></span>
+                  <span class="truncate select-opt-text">High</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option selected" data-value="medium" role="option" aria-selected="true">
+                  <span class="w-2 h-2 rounded-full bg-blue-500 shrink-0 option-icon"></span>
+                  <span class="truncate select-opt-text">Medium</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="low" role="option" aria-selected="false">
+                  <span class="w-2 h-2 rounded-full bg-slate-400 shrink-0 option-icon"></span>
+                  <span class="truncate select-opt-text">Low</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+              </div>
+            </div>
           </div>
+
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Est. Minutes</label>
             <input type="number" name="estimatedMinutes" value="60" class="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-mono">
@@ -4155,7 +4495,8 @@
             <span>Add Blueprint Task</span>
           </button>
         </div>
-      </form>
+        </form>
+      </div>
     </div>
   </div>
 
@@ -4195,17 +4536,19 @@
   <!-- =========================================================================
        MODAL: LIVE TASK DETAILS & EDIT (Phase 11)
        ========================================================================= -->
-  <div id="modalLiveTaskDetail" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
-    <div class="bg-white border border-[#E3E9EF] rounded-3xl max-w-lg w-full p-5 sm:p-8 space-y-4 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
-      <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
-        <h3 class="text-base font-bold text-[#172B36] flex items-center gap-2" id="liveTaskModalTitle">
-          <i class="fa-solid fa-list-check text-brand-whiz"></i>
-          <span>Operational Task Details</span>
+  <div id="modalLiveTaskDetail" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
+    <div class="whiz-floating-modal-card relative bg-white border border-[#E3E9EF] rounded-3xl max-w-lg w-full shadow-2xl flex flex-col my-auto">
+      <div class="relative flex items-center justify-between p-5 sm:p-7 pb-4 sm:pb-5 border-b border-[#E3E9EF] shrink-0 pr-14 sm:pr-16 bg-white z-10">
+        <h3 class="text-base sm:text-lg font-bold text-[#172B36] flex items-center gap-2 min-w-0" id="liveTaskModalTitle">
+          <i class="fa-solid fa-list-check text-[#087F70] text-sm shrink-0"></i>
+          <span class="truncate">Operational Task Details</span>
         </h3>
-        <button type="button" class="btn-close-modal text-slate-500 hover:text-[#172B36] cursor-pointer" data-modal="modalLiveTaskDetail">
-          <i class="fa-solid fa-xmark text-lg"></i>
+        <button type="button" class="btn-close-modal absolute top-4 right-4 sm:top-5 sm:right-6 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#172B36] flex items-center justify-center transition-all cursor-pointer shadow-2xs z-20" data-modal="modalLiveTaskDetail" aria-label="Close modal">
+          <i class="fa-solid fa-xmark text-sm sm:text-base"></i>
         </button>
       </div>
+
+      <div class="whiz-modal-scroll-body p-5 sm:p-8 flex-1 min-h-0">
 
       <div class="space-y-3 text-xs">
         <div>
@@ -4225,22 +4568,82 @@
       <form id="formLiveTaskDetail" class="space-y-3 pt-2 border-t border-[#E3E9EF]">
         <input type="hidden" name="taskId" id="liveTaskId">
         <div class="grid grid-cols-2 gap-3">
+          <!-- Status Glass Dropdown -->
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Status</label>
-            <select name="status" id="liveTaskStatus" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
-              <option value="todo">Pending (Todo)</option>
-              <option value="in_progress">In Progress</option>
-              <option value="completed">Completed & Approved</option>
-            </select>
+            <div class="glass-select-wrapper" data-glass-select="liveTaskStatus">
+              <select name="status" id="liveTaskStatus" class="sr-only" tabindex="-1" aria-hidden="true">
+                <option value="todo" selected>Pending (Todo)</option>
+                <option value="in_progress">In Progress</option>
+                <option value="completed">Completed & Approved</option>
+              </select>
+              <button type="button" class="glass-select-trigger" id="liveTaskStatusTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="liveTaskStatusMenu">
+                <span class="flex items-center gap-2 min-w-0">
+                  <span class="w-2 h-2 rounded-full bg-amber-500 shrink-0 select-icon"></span>
+                  <span class="select-label truncate">Pending (Todo)</span>
+                </span>
+                <i class="fa-solid fa-chevron-down chevron-icon shrink-0"></i>
+              </button>
+              <div class="glass-select-menu" id="liveTaskStatusMenu" role="listbox" aria-label="Status">
+                <button type="button" class="glass-select-option selected" data-value="todo" role="option" aria-selected="true">
+                  <span class="w-2 h-2 rounded-full bg-amber-500 shrink-0 option-icon"></span>
+                  <span class="truncate select-opt-text">Pending (Todo)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="in_progress" role="option" aria-selected="false">
+                  <span class="w-2 h-2 rounded-full bg-blue-500 shrink-0 option-icon"></span>
+                  <span class="truncate select-opt-text">In Progress</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="completed" role="option" aria-selected="false">
+                  <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0 option-icon"></span>
+                  <span class="truncate select-opt-text">Completed & Approved</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+              </div>
+            </div>
           </div>
+
+          <!-- Priority Glass Dropdown -->
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Priority</label>
-            <select name="priority" id="liveTaskPriority" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36]">
-              <option value="urgent">Urgent</option>
-              <option value="high">High</option>
-              <option value="medium">Medium</option>
-              <option value="low">Low</option>
-            </select>
+            <div class="glass-select-wrapper" data-glass-select="liveTaskPriority">
+              <select name="priority" id="liveTaskPriority" class="sr-only" tabindex="-1" aria-hidden="true">
+                <option value="urgent">Urgent</option>
+                <option value="high">High</option>
+                <option value="medium" selected>Medium</option>
+                <option value="low">Low</option>
+              </select>
+              <button type="button" class="glass-select-trigger" id="liveTaskPriorityTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="liveTaskPriorityMenu">
+                <span class="flex items-center gap-2 min-w-0">
+                  <span class="w-2 h-2 rounded-full bg-blue-500 shrink-0 select-icon"></span>
+                  <span class="select-label truncate">Medium</span>
+                </span>
+                <i class="fa-solid fa-chevron-down chevron-icon shrink-0"></i>
+              </button>
+              <div class="glass-select-menu" id="liveTaskPriorityMenu" role="listbox" aria-label="Priority">
+                <button type="button" class="glass-select-option" data-value="urgent" role="option" aria-selected="false">
+                  <span class="w-2 h-2 rounded-full bg-rose-500 shrink-0 option-icon"></span>
+                  <span class="truncate select-opt-text">Urgent</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="high" role="option" aria-selected="false">
+                  <span class="w-2 h-2 rounded-full bg-amber-500 shrink-0 option-icon"></span>
+                  <span class="truncate select-opt-text">High</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option selected" data-value="medium" role="option" aria-selected="true">
+                  <span class="w-2 h-2 rounded-full bg-blue-500 shrink-0 option-icon"></span>
+                  <span class="truncate select-opt-text">Medium</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="low" role="option" aria-selected="false">
+                  <span class="w-2 h-2 rounded-full bg-slate-400 shrink-0 option-icon"></span>
+                  <span class="truncate select-opt-text">Low</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -4256,7 +4659,8 @@
             <span>Update Task</span>
           </button>
         </div>
-      </form>
+        </form>
+      </div>
     </div>
   </div>
 
@@ -4515,19 +4919,20 @@
   <!-- =========================================================================
        MODAL: EDIT PAYMENT DETAILS
        ========================================================================= -->
-  <div id="modalEditPayment" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
-    <div class="bg-white border border-[#E3E9EF] rounded-3xl max-w-lg w-full p-5 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
-      <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
-        <h3 class="text-lg font-bold text-[#172B36] flex items-center gap-2">
-          <i class="fa-solid fa-pen-to-square text-[#147D64] text-sm"></i>
-          <span>Edit Payment Details</span>
+  <div id="modalEditPayment" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
+    <div class="whiz-floating-modal-card relative bg-white border border-[#E3E9EF] rounded-3xl max-w-lg w-full shadow-2xl flex flex-col my-auto">
+      <div class="relative flex items-center justify-between p-5 sm:p-7 pb-4 sm:pb-5 border-b border-[#E3E9EF] shrink-0 pr-14 sm:pr-16 bg-white z-10">
+        <h3 class="text-base sm:text-lg font-bold text-[#172B36] flex items-center gap-2 min-w-0">
+          <i class="fa-solid fa-pen-to-square text-[#147D64] text-sm shrink-0"></i>
+          <span class="truncate">Edit Payment Details</span>
         </h3>
-        <button type="button" class="btn-close-modal text-slate-500 hover:text-[#172B36] cursor-pointer" data-modal="modalEditPayment">
-          <i class="fa-solid fa-xmark text-lg"></i>
+        <button type="button" class="btn-close-modal absolute top-4 right-4 sm:top-5 sm:right-6 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#172B36] flex items-center justify-center transition-all cursor-pointer shadow-2xs z-20" data-modal="modalEditPayment" aria-label="Close modal">
+          <i class="fa-solid fa-xmark text-sm sm:text-base"></i>
         </button>
       </div>
 
-      <form id="formEditPayment" class="space-y-4">
+      <div class="whiz-modal-scroll-body p-5 sm:p-8 flex-1 min-h-0">
+        <form id="formEditPayment" class="space-y-4">
         <input type="hidden" name="paymentId" id="editPaymentId">
         
         <div class="p-3.5 rounded-xl bg-slate-50 border border-[#E3E9EF] space-y-1">
@@ -4559,15 +4964,52 @@
               </button>
             </div>
           </div>
+          <!-- Payment Method Glass Dropdown -->
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Payment Method *</label>
-            <select name="paymentMethod" id="editPaymentMethod" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:border-[#147D64]">
-              <option value="bank_transfer">Bank Transfer / Wire Transfer</option>
-              <option value="card">Credit / Debit Card</option>
-              <option value="cash_cheque">Cash / Cheque</option>
-              <option value="online_banking">Online Banking</option>
-              <option value="mobile_banking">Mobile Banking / MFS</option>
-            </select>
+            <div class="glass-select-wrapper" data-glass-select="editPaymentMethod">
+              <select name="paymentMethod" id="editPaymentMethod" required class="sr-only" tabindex="-1" aria-hidden="true">
+                <option value="bank_transfer" selected>Bank Transfer / Wire Transfer</option>
+                <option value="card">Credit / Debit Card</option>
+                <option value="cash_cheque">Cash / Cheque</option>
+                <option value="online_banking">Online Banking</option>
+                <option value="mobile_banking">Mobile Banking / MFS</option>
+              </select>
+              <button type="button" class="glass-select-trigger" id="editPaymentMethodTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="editPaymentMethodMenu">
+                <span class="flex items-center gap-2 min-w-0">
+                  <i class="fa-solid fa-building-columns text-[#087F70] text-xs shrink-0 select-icon"></i>
+                  <span class="select-label truncate">Bank Transfer / Wire Transfer</span>
+                </span>
+                <i class="fa-solid fa-chevron-down chevron-icon shrink-0"></i>
+              </button>
+              <div class="glass-select-menu" id="editPaymentMethodMenu" role="listbox" aria-label="Payment Method">
+                <button type="button" class="glass-select-option selected" data-value="bank_transfer" role="option" aria-selected="true">
+                  <i class="fa-solid fa-building-columns text-[#087F70] text-xs shrink-0 option-icon"></i>
+                  <span class="truncate select-opt-text">Bank Transfer / Wire Transfer</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="card" role="option" aria-selected="false">
+                  <i class="fa-solid fa-credit-card text-[#087F70] text-xs shrink-0 option-icon"></i>
+                  <span class="truncate select-opt-text">Credit / Debit Card</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="cash_cheque" role="option" aria-selected="false">
+                  <i class="fa-solid fa-money-bill-1-wave text-[#087F70] text-xs shrink-0 option-icon"></i>
+                  <span class="truncate select-opt-text">Cash / Cheque</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="online_banking" role="option" aria-selected="false">
+                  <i class="fa-solid fa-globe text-[#087F70] text-xs shrink-0 option-icon"></i>
+                  <span class="truncate select-opt-text">Online Banking</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="mobile_banking" role="option" aria-selected="false">
+                  <i class="fa-solid fa-mobile-screen-button text-[#087F70] text-xs shrink-0 option-icon"></i>
+                  <span class="truncate select-opt-text">Mobile Banking / MFS</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -4588,30 +5030,32 @@
             <span>Save Payment Details</span>
           </button>
         </div>
-      </form>
+        </form>
+      </div>
     </div>
   </div>
 
   <!-- =========================================================================
        MODAL: CORRECT PAYMENT AMOUNT
        ========================================================================= -->
-  <div id="modalCorrectPayment" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
-    <div class="bg-white border border-[#E3E9EF] rounded-3xl max-w-lg w-full p-5 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
-      <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
-        <h3 class="text-lg font-bold text-[#172B36] flex items-center gap-2">
-          <i class="fa-solid fa-scale-balanced text-[#147D64] text-sm"></i>
-          <span>Financial Correction</span>
+  <div id="modalCorrectPayment" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
+    <div class="whiz-floating-modal-card relative bg-white border border-[#E3E9EF] rounded-3xl max-w-lg w-full shadow-2xl flex flex-col my-auto">
+      <div class="relative flex items-center justify-between p-5 sm:p-7 pb-4 sm:pb-5 border-b border-[#E3E9EF] shrink-0 pr-14 sm:pr-16 bg-white z-10">
+        <h3 class="text-base sm:text-lg font-bold text-[#172B36] flex items-center gap-2 min-w-0">
+          <i class="fa-solid fa-scale-balanced text-[#147D64] text-sm shrink-0"></i>
+          <span class="truncate">Financial Correction</span>
         </h3>
-        <button type="button" class="btn-close-modal text-slate-500 hover:text-[#172B36] cursor-pointer" data-modal="modalCorrectPayment">
-          <i class="fa-solid fa-xmark text-lg"></i>
+        <button type="button" class="btn-close-modal absolute top-4 right-4 sm:top-5 sm:right-6 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#172B36] flex items-center justify-center transition-all cursor-pointer shadow-2xs z-20" data-modal="modalCorrectPayment" aria-label="Close modal">
+          <i class="fa-solid fa-xmark text-sm sm:text-base"></i>
         </button>
       </div>
 
-      <p class="text-xs text-slate-500">
-        Adjusting payment amount automatically updates the authoritative financial ledger, recalculates invoice balances, and preserves an audited correction trail.
-      </p>
+      <div class="whiz-modal-scroll-body p-5 sm:p-8 flex-1 min-h-0">
+        <p class="text-xs text-slate-500 mb-4">
+          Adjusting payment amount automatically updates the authoritative financial ledger, recalculates invoice balances, and preserves an audited correction trail.
+        </p>
 
-      <form id="formCorrectPayment" class="space-y-4">
+        <form id="formCorrectPayment" class="space-y-4">
         <input type="hidden" name="paymentId" id="correctPaymentId">
         
         <div class="p-3.5 rounded-xl bg-amber-50/60 border border-amber-200/60 space-y-1.5 text-xs">
@@ -4630,22 +5074,94 @@
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Corrected Amount *</label>
             <input type="number" step="0.01" min="0.01" name="amount" id="correctAmountInput" required placeholder="0.00" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-mono focus:border-[#147D64]">
           </div>
+          <!-- Currency Glass Dropdown -->
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Currency *</label>
-            <select name="currency" id="correctCurrencySelect" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:border-[#147D64]">
-              <option value="BDT">BDT — ৳ (Bangladeshi Taka)</option>
-              <option value="USD">USD — $ (US Dollar)</option>
-              <option value="GBP">GBP — £ (British Pound)</option>
-              <option value="EUR">EUR — € (Euro)</option>
-              <option value="AED">AED — د.إ (UAE Dirham)</option>
-              <option value="SAR">SAR — ر.س (Saudi Riyal)</option>
-              <option value="CAD">CAD — CA$ (Canadian Dollar)</option>
-              <option value="AUD">AUD — A$ (Australian Dollar)</option>
-              <option value="SGD">SGD — S$ (Singapore Dollar)</option>
-              <option value="INR">INR — ₹ (Indian Rupee)</option>
-              <option value="JPY">JPY — ¥ (Japanese Yen)</option>
-              <option value="MYR">MYR — RM (Malaysian Ringgit)</option>
-            </select>
+            <div class="glass-select-wrapper" data-glass-select="correctCurrencySelect">
+              <select name="currency" id="correctCurrencySelect" class="sr-only" tabindex="-1" aria-hidden="true">
+                <option value="BDT" selected>BDT — ৳ (Bangladeshi Taka)</option>
+                <option value="USD">USD — $ (US Dollar)</option>
+                <option value="GBP">GBP — £ (British Pound)</option>
+                <option value="EUR">EUR — € (Euro)</option>
+                <option value="AED">AED — د.إ (UAE Dirham)</option>
+                <option value="SAR">SAR — ر.س (Saudi Riyal)</option>
+                <option value="CAD">CAD — CA$ (Canadian Dollar)</option>
+                <option value="AUD">AUD — A$ (Australian Dollar)</option>
+                <option value="SGD">SGD — S$ (Singapore Dollar)</option>
+                <option value="INR">INR — ₹ (Indian Rupee)</option>
+                <option value="JPY">JPY — ¥ (Japanese Yen)</option>
+                <option value="MYR">MYR — RM (Malaysian Ringgit)</option>
+              </select>
+              <button type="button" class="glass-select-trigger" id="correctCurrencySelectTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="correctCurrencySelectMenu">
+                <span class="flex items-center gap-2 min-w-0">
+                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[10px] font-bold flex items-center justify-center border border-emerald-200/60 select-currency-symbol shrink-0">৳</span>
+                  <span class="select-label truncate">BDT — ৳ (Bangladeshi Taka)</span>
+                </span>
+                <i class="fa-solid fa-chevron-down chevron-icon shrink-0"></i>
+              </button>
+              <div class="glass-select-menu" id="correctCurrencySelectMenu" role="listbox" aria-label="Currency">
+                <button type="button" class="glass-select-option selected" data-value="BDT" role="option" aria-selected="true">
+                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[10px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">৳</span>
+                  <span class="truncate select-opt-text">BDT — ৳ (Bangladeshi Taka)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="USD" role="option" aria-selected="false">
+                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[10px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">$</span>
+                  <span class="truncate select-opt-text">USD — $ (US Dollar)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="GBP" role="option" aria-selected="false">
+                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[10px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">£</span>
+                  <span class="truncate select-opt-text">GBP — £ (British Pound)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="EUR" role="option" aria-selected="false">
+                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[10px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">€</span>
+                  <span class="truncate select-opt-text">EUR — € (Euro)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="AED" role="option" aria-selected="false">
+                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[9px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">د.إ</span>
+                  <span class="truncate select-opt-text">AED — د.إ (UAE Dirham)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="SAR" role="option" aria-selected="false">
+                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[9px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">ر.س</span>
+                  <span class="truncate select-opt-text">SAR — ر.س (Saudi Riyal)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="CAD" role="option" aria-selected="false">
+                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[9px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">CA$</span>
+                  <span class="truncate select-opt-text">CAD — CA$ (Canadian Dollar)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="AUD" role="option" aria-selected="false">
+                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[9px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">A$</span>
+                  <span class="truncate select-opt-text">AUD — A$ (Australian Dollar)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="SGD" role="option" aria-selected="false">
+                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[9px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">S$</span>
+                  <span class="truncate select-opt-text">SGD — S$ (Singapore Dollar)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="INR" role="option" aria-selected="false">
+                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[10px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">₹</span>
+                  <span class="truncate select-opt-text">INR — ₹ (Indian Rupee)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="JPY" role="option" aria-selected="false">
+                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[10px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">¥</span>
+                  <span class="truncate select-opt-text">JPY — ¥ (Japanese Yen)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+                <button type="button" class="glass-select-option" data-value="MYR" role="option" aria-selected="false">
+                  <span class="w-5 h-5 rounded-md bg-emerald-50 text-[#087F70] text-[9px] font-bold flex items-center justify-center border border-emerald-200/60 currency-badge shrink-0">RM</span>
+                  <span class="truncate select-opt-text">MYR — RM (Malaysian Ringgit)</span>
+                  <i class="fa-solid fa-check check-icon"></i>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -4661,7 +5177,8 @@
             <span>Commit Financial Correction</span>
           </button>
         </div>
-      </form>
+        </form>
+      </div>
     </div>
   </div>
 
@@ -4751,22 +5268,24 @@
   <!-- =========================================================================
        MODAL: SUPPORT TICKET DETAILS & STATUS RESOLUTION
        ========================================================================= -->
-  <div id="modalSupportDetail" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
-    <div class="bg-white border border-[#E3E9EF] rounded-3xl max-w-xl w-full p-5 sm:p-8 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
-      <div class="flex items-center justify-between pb-3 border-b border-[#E3E9EF]">
-        <div class="flex items-center gap-2">
-          <div class="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-[#147D64]">
+  <div id="modalSupportDetail" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
+    <div class="whiz-floating-modal-card relative bg-white border border-[#E3E9EF] rounded-3xl max-w-xl w-full shadow-2xl flex flex-col my-auto">
+      <div class="relative flex items-center justify-between p-5 sm:p-7 pb-4 sm:pb-5 border-b border-[#E3E9EF] shrink-0 pr-14 sm:pr-16 bg-white z-10">
+        <div class="flex items-center gap-2 min-w-0">
+          <div class="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-[#147D64] shrink-0">
             <i class="fa-solid fa-headset text-xs"></i>
           </div>
-          <div>
-            <h3 class="text-base font-bold text-[#172B36]">Support Ticket Details</h3>
-            <p class="text-[10px] text-slate-400 font-mono" id="modalSupportTicketId">TIC-...</p>
+          <div class="min-w-0">
+            <h3 class="text-base font-bold text-[#172B36] truncate">Support Ticket Details</h3>
+            <p class="text-[10px] text-slate-400 font-mono truncate" id="modalSupportTicketId">TIC-...</p>
           </div>
         </div>
-        <button type="button" id="btnCloseSupportModal" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#172B36] transition-colors flex items-center justify-center cursor-pointer">
-          <i class="fa-solid fa-xmark text-sm"></i>
+        <button type="button" id="btnCloseSupportModal" class="btn-close-modal absolute top-4 right-4 sm:top-5 sm:right-6 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#172B36] flex items-center justify-center transition-all cursor-pointer shadow-2xs z-20" data-modal="modalSupportDetail" aria-label="Close modal">
+          <i class="fa-solid fa-xmark text-sm sm:text-base"></i>
         </button>
       </div>
+
+      <div class="whiz-modal-scroll-body p-5 sm:p-8 flex-1 min-h-0">
 
       <!-- Ticket Summary Box -->
       <div class="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-2.5">
@@ -4844,14 +5363,15 @@
             <span>Save Status</span>
           </button>
         </div>
-      </form>
+        </form>
+      </div>
     </div>
   </div>
 
 
   <!-- EDIT PAYMENT METHOD CONFIGURATION MODAL -->
   <div id="modalEditPaymentMethod" class="fixed inset-0 bg-black/60 z-50 backdrop-blur-sm hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in duration-200">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in duration-200 overflow-hidden">
       <div class="flex items-center justify-between pb-4 border-b border-slate-100">
         <div>
           <h3 class="text-base font-bold text-slate-800">Edit Payment Method Details</h3>
