@@ -1986,17 +1986,13 @@
                TAB 6: PAYMENTS & FINANCIAL LEDGER
                ================================================================= -->
           <div id="view_finance" class="hidden space-y-6">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
               <div>
                 <h2 class="text-2xl font-black text-[#172B36] tracking-tight">Finance &amp; Payment Ledger</h2>
                 <p class="text-xs text-slate-500">Verifiable payment records, invoice obligations, and payment method configuration.</p>
               </div>
-              <div class="flex items-center gap-2 flex-wrap">
-                <button type="button" id="btnOpenPaymentMethodsModal" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-white text-[#172B36] border border-[#E3E9EF] hover:bg-slate-50 transition-all flex items-center space-x-1.5 shadow-xs cursor-pointer">
-                  <i class="fa-solid fa-sliders text-[#147D64]"></i>
-                  <span>Payment Method Settings</span>
-                </button>
-                <button type="button" id="btnOpenRecordPaymentModal" class="px-4 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm hover:shadow-md transition-all flex items-center space-x-2 cursor-pointer self-start sm:self-auto">
+              <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+                <button type="button" id="btnOpenRecordPaymentModal" class="w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm hover:shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer">
                   <i class="fa-solid fa-receipt text-xs"></i>
                   <span>Record New Payment</span>
                 </button>
