@@ -1370,14 +1370,16 @@
     const localQuota = getDailyInvoiceQuota();
     let q = localQuota;
     if (state.receiptQuota && typeof state.receiptQuota.remaining === 'number') {
-      const rem = Math.min(localQuota.remaining, state.receiptQuota.remaining);
-      const used = Math.max(localQuota.used, state.receiptQuota.used || 0);
       q = {
-        ...localQuota,
-        remaining: rem,
-        used: used,
-        isLimitReached: rem <= 0
+        date: localQuota.date,
+        max: state.receiptQuota.max || 2,
+        remaining: state.receiptQuota.remaining,
+        used: state.receiptQuota.used || 0,
+        isLimitReached: Boolean(state.receiptQuota.isLimitReached || state.receiptQuota.remaining <= 0)
       };
+      try {
+        localStorage.setItem(RATE_LIMIT_STORAGE_KEY, JSON.stringify(q));
+      } catch (e) {}
     }
     state.receiptQuota = q;
 

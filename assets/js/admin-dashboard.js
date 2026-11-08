@@ -1157,6 +1157,7 @@
     }
 
     const { client, services, projects, invoices, payments, auditLogs } = res.data.data;
+    state.selectedClient = client;
 
     // Header info
     if (titleEl) {
@@ -4654,12 +4655,23 @@
       const btn = document.getElementById('btnResetClientReceiptLimit');
       setBtnLoading(btn, true, 'Restoring limit...');
       try {
+        const payload = {
+          clientId,
+          organizationId: state.selectedClient?.organization_id || null,
+          userId: state.selectedClient?.id || null,
+          clerkUserId: state.selectedClient?.clerk_user_id || null,
+          email: state.selectedClient?.email || null
+        };
         const res = await apiFetch(`/pdf/quota/reset/${encodeURIComponent(clientId)}`, {
           method: 'POST',
-          body: JSON.stringify({ clientId })
+          body: JSON.stringify(payload)
         });
         setBtnLoading(btn, false);
         if (res.ok && res.data && res.data.success) {
+          if (state.selectedClient) {
+            state.selectedClient.receiptQuota = { used: 0, max: 2, remaining: 2, isLimitReached: false };
+            state.selectedClient.dailyPdfDownloads = 0;
+          }
           showToast(`Receipt download limit for ${clientName} has been successfully restored (2/2 allowance available).`, 'success');
         } else {
           showToast(res.data?.error || 'Failed to reset download limit.', 'error');
