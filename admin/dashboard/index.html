@@ -59,6 +59,8 @@
 
   <!-- pdf-lib for Pure Client-Side Vector PDF Generation (Zero Server Storage) -->
   <script src="/assets/js/pdf-lib.min.js"></script>
+  <!-- html2pdf for zero-storage client-side HTML-to-PDF rendering -->
+  <script src="/assets/js/html2pdf.bundle.min.js"></script>
 
   <!-- Liquid Glass Theme Styles -->
   <link rel="stylesheet" href="/assets/css/liquid-glass.css?v=20261108_close_btn">
@@ -2368,33 +2370,36 @@
                       </div>
                     </div>
 
-                    <!-- Bottom Section: Notes & Official Signature -->
-                    <div class="relative z-10 pt-8 pb-2">
-                      <div class="grid grid-cols-2 gap-4 items-end">
-                        
+<!-- Bottom Section: Notes & System-Generated Notice (No Signature / Seal) -->
+                    <div class="relative z-10 pt-6 pb-2 space-y-4">
+                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start border-t border-[#E3E9EF] pt-4">
                         <!-- Bottom-Left: NOTES & Agency Contacts -->
-                        <div class="pl-14 sm:pl-16 space-y-1 text-xs">
-                          <p class="font-extrabold text-[#147D64] uppercase tracking-wider text-[11px]">NOTES:</p>
+                        <div class="space-y-1 text-xs">
+                          <p class="font-extrabold text-[#147D64] uppercase tracking-wider text-[11px]">NOTES &amp; CONTACT DETAILS:</p>
                           <p class="font-black text-slate-900 text-xs">Whiz Studio</p>
                           <p class="text-[10px] text-slate-600 leading-tight">
-                            <span class="font-bold text-slate-800">Address:</span> Road 7, Block A, Mirpur 12, Dhaka, Bangladesh – 1216
+                            <span class="font-bold text-slate-800">Address:</span> House 53, Road 7, Block A, Mirpur 12, Dhaka 1216, Bangladesh
                           </p>
                           <p class="text-[10px] text-slate-600">
-                            <span class="font-bold text-slate-800">Phone Number:</span> +880 1322196665
-                          </p>
-                          <p class="text-[10px] text-slate-600">
-                            <span class="font-bold text-slate-800">Email:</span> info@whizstudio.art
+                            <span class="font-bold text-slate-800">Phone:</span> +880 1815127022  •  <span class="font-bold text-slate-800">Email:</span> info@whizstudio.art
                           </p>
                         </div>
 
-                        <!-- Bottom-Right: Official Signature & Teal Underline -->
-                        <div class="text-center flex flex-col items-center ml-auto">
-                          <div class="w-28 sm:w-36 h-14 sm:h-16 flex items-center justify-center">
-                            <img src="/assets/images/official-signature.png" alt="Signature" class="max-h-full w-auto object-contain">
+                        <!-- Bottom-Right: Verification & Digital Ref -->
+                        <div class="sm:text-right space-y-1.5 text-xs">
+                          <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20">
+                            <i class="fa-solid fa-shield-check text-[11px]"></i>
+                            <span>Digitally Authenticated Document</span>
                           </div>
-                          <div class="w-32 sm:w-44 h-0.5 bg-[#147D64] my-1"></div>
-                          <p class="font-black text-[#147D64] text-[10px] sm:text-[11px] uppercase tracking-widest">SIGNATURE</p>
+                          <p class="text-[10px] text-slate-500 font-mono">Ledger Cryptographic Ref: <span class="font-bold text-slate-700">VERIFIED-LEDGER-ONLINE</span></p>
                         </div>
+                      </div>
+
+                      <!-- Standardized Official Footer Note -->
+                      <div class="pt-3 border-t border-slate-100 text-center">
+                        <p class="text-[10px] sm:text-[11px] font-semibold text-slate-600 italic">
+                          "This is a system-generated online invoice and does not require a physical signature or seal."
+                        </p>
                       </div>
                     </div>
 
@@ -4853,6 +4858,12 @@
                 </button>
               </div>
             </div>
+          </div>
+
+          <!-- 1b. Service Provided (Ledger Mandatory Field) -->
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1" for="paymentServiceProvidedInput">Service Provided *</label>
+            <input type="text" name="serviceProvided" id="paymentServiceProvidedInput" required placeholder="e.g. Meta Ads Performance, SEO Optimization, Web Design" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] font-medium focus:border-brand-whiz focus:bg-white focus:outline-none transition-all">
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">

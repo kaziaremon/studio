@@ -197,6 +197,57 @@
         return Promise.resolve({ ok: true, status: 200, data: { success: true, message: 'Ticket submitted successfully.', ticket: newTicket } });
       }
 
+      // 8. PDF Authorization & Document Data
+      if (ep.startsWith('/pdf/authorize-') || ep.startsWith('/pdf/data/')) {
+        const isReceipt = ep.includes('receipt');
+        const num = endpoint.split('/').pop() || (isReceipt ? 'RCP-2026-081' : 'INV-2026-104');
+        const inv = (mockClientData.finance && mockClientData.finance.invoices) ? mockClientData.finance.invoices.find(i => i.invoice_no === num || i.receipt_no === num) : null;
+        const totalCents = inv ? inv.amount_cents : 450000;
+        const srvName = inv ? inv.title : 'Meta Ads Performance Accelerator (Month 3)';
+        const docObj = {
+          documentType: isReceipt ? 'receipt' : 'invoice',
+          number: num,
+          invoiceNumber: inv?.invoice_no || num,
+          receiptNumber: inv?.receipt_no || (isReceipt ? num : 'RCP-2026-081'),
+          issueDate: inv?.issue_date || '2026-10-31',
+          paymentDate: inv?.issue_date || '2026-10-31',
+          dueDate: inv?.due_date || '2026-11-14',
+          currency: inv?.currency || 'USD',
+          status: inv?.status || 'paid',
+          serviceName: srvName,
+          totalCents: totalCents,
+          amountPaidCents: totalCents,
+          outstandingBalanceCents: 0,
+          paymentMethod: 'Stripe Card Checkout',
+          paymentReference: 'TXN-98234190',
+          items: [{
+            description: srvName,
+            quantity: 1,
+            unitPriceCents: totalCents,
+            totalCents: totalCents
+          }],
+          client: {
+            billingName: mockClientData.user.companyName || mockClientData.user.fullName,
+            fullName: mockClientData.user.fullName,
+            companyName: mockClientData.user.companyName,
+            billingAddress: '555 Mission St, Suite 1400',
+            city: mockClientData.user.city,
+            country: mockClientData.user.country,
+            phone: mockClientData.user.phone,
+            email: mockClientData.user.email
+          },
+          issuer: {
+            legalName: 'Whiz Studio',
+            tagline: 'Digital Marketing & Growth Consultancy',
+            address: 'House 53, Road 7, Block A, Mirpur 12, Dhaka 1216, Bangladesh',
+            phone: '+880 1815127022',
+            email: 'info@whizstudio.art',
+            website: 'https://whizstudio.art'
+          }
+        };
+        return Promise.resolve({ ok: true, status: 200, data: { success: true, data: docObj, quota: { max: 2, used: 1, remaining: 1 } } });
+      }
+
       return Promise.resolve({ ok: true, status: 200, data: { success: true, data: [] } });
     }
   };
