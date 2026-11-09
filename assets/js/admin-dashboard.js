@@ -5969,7 +5969,7 @@
         if (authGuard) {
           authGuard.innerHTML = `
             <div class="mb-5 flex items-center justify-center">
-              <img src="/assets/images/logo.png" alt="Whiz Studio" class="h-12 w-auto object-contain">
+              <img src="/assets/images/whiz-logo-primary-new.png" alt="Whiz Studio" class="h-12 w-auto object-contain">
             </div>
             <h2 class="text-xl font-bold text-[#172B36] tracking-tight">Authentication Service Unavailable</h2>
             <p class="text-xs text-rose-500 mt-2 max-w-sm">Unable to connect to Clerk authentication services. Please verify your internet connection or disable tracking blockers.</p>
@@ -6082,7 +6082,7 @@
       if (authGuard) {
         authGuard.innerHTML = `
           <div class="mb-5 flex items-center justify-center">
-            <img src="/assets/images/logo.png" alt="Whiz Studio" class="h-12 w-auto object-contain">
+            <img src="/assets/images/whiz-logo-primary-new.png" alt="Whiz Studio" class="h-12 w-auto object-contain">
           </div>
           <h2 class="text-xl font-bold text-[#172B36] tracking-tight">Workspace Initialization Failed</h2>
           <p class="text-xs text-rose-500 mt-2 max-w-sm">${escapeHtml(err.message || 'An unexpected error occurred while preparing your workspace.')}</p>
