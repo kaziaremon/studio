@@ -1447,3 +1447,109 @@ button {
     flex: 1 1 0% !important;
   }
 }
+
+/* =========================================================================
+   NAVBAR MOBILE HAMBURGER BUTTON (DIRECT ON GLASS - NO OVERFLOW CIRCLE)
+   ========================================================================= */
+#mobileMenuToggle {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+#mobileMenuToggle:hover,
+#mobileMenuToggle:active {
+  background: transparent !important;
+  color: #087F70 !important;
+}
+
+/* ==========================================================================
+   CAMPAIGN MONITOR (GROWTH ENGINE) MOBILE VIEW SCALING (max-width: 768px)
+   Reduces internal padding, compacts metric cards, and scales fonts
+   ========================================================================== */
+@media (max-width: 768px) {
+  #campaign-monitor-section {
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+  }
+
+  #campaign-monitor-section .growth-engine-card {
+    padding: 1rem !important;
+    border-radius: 1.25rem !important;
+  }
+
+  #campaign-monitor-section .growth-engine-header {
+    padding-bottom: 0.75rem !important;
+    gap: 0.625rem !important;
+  }
+
+  #campaign-monitor-section .growth-engine-title-sub {
+    font-size: 0.6875rem !important;
+    letter-spacing: 0.04em !important;
+  }
+
+  #campaign-monitor-section .growth-engine-title-main {
+    font-size: 0.9375rem !important;
+    line-height: 1.25 !important;
+  }
+
+  #campaign-monitor-section .growth-engine-badge {
+    padding: 0.2rem 0.55rem !important;
+    font-size: 0.6875rem !important;
+  }
+
+  #campaign-monitor-section .metric-grid {
+    margin-top: 0.75rem !important;
+    margin-bottom: 0.75rem !important;
+    gap: 0.5rem !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  #campaign-monitor-section .metric-card {
+    padding: 0.625rem 0.75rem !important;
+    border-radius: 0.875rem !important;
+  }
+
+  #campaign-monitor-section .metric-card-label {
+    font-size: 0.65rem !important;
+    line-height: 1.15 !important;
+    letter-spacing: 0.02em !important;
+  }
+
+  #campaign-monitor-section .metric-card-val {
+    font-size: 1.35rem !important;
+    line-height: 1.1 !important;
+    margin-top: 0.25rem !important;
+    margin-bottom: 0.125rem !important;
+  }
+
+  #campaign-monitor-section .metric-card-sub {
+    font-size: 0.625rem !important;
+    line-height: 1.2 !important;
+    margin-top: 0.125rem !important;
+  }
+
+  #campaign-monitor-section .workflow-header {
+    font-size: 0.6875rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  #campaign-monitor-section .workflow-item {
+    padding: 0.5rem 0.65rem !important;
+    border-radius: 0.75rem !important;
+  }
+
+  #campaign-monitor-section .workflow-item-title {
+    font-size: 0.75rem !important;
+  }
+
+  #campaign-monitor-section .workflow-item-sub {
+    font-size: 0.625rem !important;
+  }
+
+  #campaign-monitor-section .workflow-badge {
+    font-size: 0.625rem !important;
+    padding: 0.15rem 0.45rem !important;
+  }
+}

@@ -279,7 +279,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 
   <!-- Bespoke True Liquid Glass Stylesheet -->
-  <link rel="stylesheet" href="assets/css/liquid-glass.css?v=20261108_close_btn">
+  <link rel="stylesheet" href="assets/css/liquid-glass.css?v=20261109_mobile_opt">
 </head>
 <body class="bg-[#F4FAF7] text-slate-900 selection:bg-brand-whiz selection:text-white antialiased relative min-h-screen">
 
@@ -327,16 +327,16 @@
             <i class="fa-solid fa-arrow-right text-xs ml-1.5"></i>
           </a>
 
-          <!-- Unified Action Cluster (My Account & Mobile Menu Toggle) -->
-          <div class="flex items-center gap-2 sm:gap-2.5 shrink-0 p-0.5 sm:p-1 rounded-full bg-white/25 hover:bg-white/35 border border-white/40 shadow-2xs backdrop-blur-xs transition-colors duration-200 lg:p-0 lg:bg-transparent lg:border-none lg:shadow-none lg:backdrop-blur-none">
+          <!-- Unified Action Cluster (My Profile & Mobile Menu Toggle) -->
+          <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button id="myAccountNavBtn" type="button" class="inline-flex items-center justify-center gap-1.5 h-[32px] sm:h-[34px] px-2.5 sm:px-3 rounded-full text-[11px] sm:text-xs font-bold text-[#172B36] hover:text-[#087F70] bg-white/60 hover:bg-white border border-white/70 hover:border-[#087F70]/30 transition-all duration-200 shadow-2xs hover:shadow-xs focus:outline-none focus:ring-2 focus:ring-[#087F70]/30 active:scale-95 cursor-pointer select-none shrink-0" aria-haspopup="dialog" aria-expanded="false" aria-controls="accountPortalModal">
               <i class="fa-solid fa-circle-user text-xs text-[#087F70] shrink-0"></i>
-              <span class="truncate max-w-[75px] sm:max-w-[95px] whitespace-nowrap">My Account</span>
+              <span class="truncate max-w-[75px] sm:max-w-[95px] whitespace-nowrap">My Profile</span>
             </button>
 
-            <!-- Mobile Hamburger Toggle (Exact Same Height & Perfectly Centered) -->
-            <button id="mobileMenuToggle" class="lg:hidden w-[32px] h-[32px] sm:w-[34px] sm:h-[34px] flex items-center justify-center rounded-full text-[#172B36] hover:text-[#087F70] bg-white/60 hover:bg-white border border-white/70 hover:border-[#087F70]/30 transition-all duration-200 shadow-2xs hover:shadow-xs focus:outline-none focus:ring-2 focus:ring-[#087F70]/30 active:scale-95 cursor-pointer shrink-0" aria-label="Toggle Navigation" aria-expanded="false">
-              <i class="fa-solid fa-bars text-[12px] sm:text-[13px]"></i>
+            <!-- Mobile Hamburger Toggle (Rendered cleanly directly on glass background - no overflowing white circular bg) -->
+            <button id="mobileMenuToggle" class="lg:hidden w-8 h-8 flex items-center justify-center text-slate-800 hover:text-[#087F70] transition-colors duration-200 focus:outline-none cursor-pointer shrink-0" aria-label="Toggle Navigation" aria-expanded="false">
+              <i class="fa-solid fa-bars text-[15px] sm:text-base"></i>
             </button>
           </div>
         </div>
@@ -353,7 +353,7 @@
         <a href="/faq" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]" data-route="/faq">FAQ</a>
         <button id="myAccountMobileNavBtn" type="button" class="mobile-nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 hover:text-brand-whiz bg-white/70 hover:bg-white border border-white/80 transition-all min-h-[44px] w-full max-w-xs mt-1 shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-whiz/50 active:scale-[0.98] cursor-pointer" aria-haspopup="dialog" aria-expanded="false" aria-controls="accountPortalModal">
           <i class="fa-solid fa-circle-user text-xs mr-2 text-brand-whiz"></i>
-          <span>My Account</span>
+          <span>My Profile</span>
         </button>
         <a href="/contact" data-route="/contact" class="mobile-nav-link inline-flex items-center justify-center text-center px-7 py-3 rounded-full text-sm font-bold btn-glass-primary shadow-sm mt-2 min-h-[44px]">Contact with Us</a>
       </div>
@@ -439,115 +439,115 @@
          1.5 WHIZ STUDIO GROWTH ENGINE (CAMPAIGN MONITOR TELEMETRY)
          Rendered immediately after Hero section as first section on scroll
          ======================================================================= -->
-    <section id="campaign-monitor-section" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+    <section id="campaign-monitor-section" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8 md:py-12">
       <div class="relative group">
         <!-- Ambient Liquid-Glass Glow Underlay -->
         <div class="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 via-[#DDB92F]/20 to-teal-500/20 rounded-3xl blur-xl opacity-75 group-hover:opacity-100 transition duration-700"></div>
 
-        <div class="relative bg-white/20 backdrop-blur-xl border border-white/40 shadow-[0_16px_50px_rgba(0,168,107,0.12)] rounded-3xl p-6 sm:p-8 md:p-10 overflow-hidden">
+        <div class="growth-engine-card relative bg-white/20 backdrop-blur-xl border border-white/40 shadow-[0_16px_50px_rgba(0,168,107,0.12)] rounded-3xl p-4 sm:p-8 md:p-10 overflow-hidden">
           
           <!-- Top Bar: Telemetry Status & Live Ping -->
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-white/25 gap-4">
-            <div class="flex items-center space-x-3.5">
-              <div class="relative flex items-center justify-center w-8 h-8">
+          <div class="growth-engine-header flex flex-col sm:flex-row sm:items-center justify-between pb-4 sm:pb-6 border-b border-white/25 gap-3 sm:gap-4">
+            <div class="flex items-center space-x-3 sm:space-x-3.5">
+              <div class="relative flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8">
                 <span class="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping"></span>
-                <span class="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500"></span>
+                <span class="relative inline-flex rounded-full h-3 w-3 sm:h-3.5 sm:w-3.5 bg-emerald-500"></span>
               </div>
               <div>
-                <div class="text-xs font-extrabold uppercase tracking-wider text-emerald-950">Campaign Monitor Telemetry</div>
-                <div class="text-base sm:text-lg font-extrabold text-slate-900">Whiz Studio Growth Engine</div>
+                <div class="growth-engine-title-sub text-[11px] sm:text-xs font-extrabold uppercase tracking-wider text-emerald-950">Campaign Monitor Telemetry</div>
+                <div class="growth-engine-title-main text-sm sm:text-base md:text-lg font-extrabold text-slate-900">Whiz Studio Growth Engine</div>
               </div>
             </div>
 
-            <div class="flex items-center space-x-3">
-              <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-100/90 text-emerald-900 border border-emerald-300 shadow-2xs">
+            <div class="flex flex-wrap items-center gap-2 sm:space-x-3">
+              <span class="growth-engine-badge inline-flex items-center px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-bold bg-emerald-100/90 text-emerald-900 border border-emerald-300 shadow-2xs">
                 <span class="w-1.5 h-1.5 rounded-full bg-brand-whiz mr-1.5 animate-pulse"></span>
                 Live Status: Optimal
               </span>
-              <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-white/60 text-slate-700 border border-white/80 shadow-2xs">
-                <i class="fa-solid fa-satellite-dish text-[#D8A816] mr-1.5 text-[11px]"></i>
+              <span class="growth-engine-badge inline-flex items-center px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-bold bg-white/60 text-slate-700 border border-white/80 shadow-2xs">
+                <i class="fa-solid fa-satellite-dish text-[#D8A816] mr-1.5 text-[10px] sm:text-[11px]"></i>
                 24ms Realtime Telemetry
               </span>
             </div>
           </div>
 
-          <!-- 4-Column Balanced Key Metrics -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 my-6 sm:my-8">
-            <div class="p-4 sm:p-5 rounded-2xl bg-white/30 backdrop-blur-md border border-white/50 shadow-xs hover:border-emerald-300 transition-all">
-              <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">Conversion Hygiene</span>
-              <div class="text-3xl font-extrabold text-slate-900 mt-2">98.4%</div>
-              <div class="text-[11px] font-bold text-emerald-800 flex items-center mt-1">
-                <i class="fa-solid fa-arrow-trend-up text-xs mr-1 text-brand-whiz"></i> Continuous Verification
+          <!-- 4-Column Balanced Key Metrics (Responsive 2x2 grid on mobile for balanced height) -->
+          <div class="metric-grid grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-5 my-4 sm:my-8">
+            <div class="metric-card p-3 sm:p-5 rounded-xl sm:rounded-2xl bg-white/30 backdrop-blur-md border border-white/50 shadow-xs hover:border-emerald-300 transition-all">
+              <span class="metric-card-label text-[10px] sm:text-xs font-bold text-slate-700 uppercase tracking-wider block">Conversion Hygiene</span>
+              <div class="metric-card-val text-xl sm:text-3xl font-extrabold text-slate-900 mt-1 sm:mt-2">98.4%</div>
+              <div class="metric-card-sub text-[10px] sm:text-[11px] font-bold text-emerald-800 flex items-center mt-1">
+                <i class="fa-solid fa-arrow-trend-up text-[10px] sm:text-xs mr-1 text-brand-whiz"></i> Continuous Verification
               </div>
             </div>
 
-            <div class="p-4 sm:p-5 rounded-2xl bg-white/30 backdrop-blur-md border border-white/50 shadow-xs hover:border-emerald-300 transition-all">
-              <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">Audience Quality Score</span>
-              <div class="text-3xl font-extrabold text-slate-900 mt-2">Tier-1</div>
-              <div class="text-[11px] font-bold text-emerald-800 flex items-center mt-1">
-                <i class="fa-solid fa-shield-halved text-xs mr-1 text-brand-whiz"></i> High-Intent Signals
+            <div class="metric-card p-3 sm:p-5 rounded-xl sm:rounded-2xl bg-white/30 backdrop-blur-md border border-white/50 shadow-xs hover:border-emerald-300 transition-all">
+              <span class="metric-card-label text-[10px] sm:text-xs font-bold text-slate-700 uppercase tracking-wider block">Audience Quality Score</span>
+              <div class="metric-card-val text-xl sm:text-3xl font-extrabold text-slate-900 mt-1 sm:mt-2">Tier-1</div>
+              <div class="metric-card-sub text-[10px] sm:text-[11px] font-bold text-emerald-800 flex items-center mt-1">
+                <i class="fa-solid fa-shield-halved text-[10px] sm:text-xs mr-1 text-brand-whiz"></i> High-Intent Signals
               </div>
             </div>
 
-            <div class="p-4 sm:p-5 rounded-2xl bg-white/30 backdrop-blur-md border border-white/50 shadow-xs hover:border-emerald-300 transition-all">
-              <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">Client Account Equity</span>
-              <div class="text-3xl font-extrabold text-slate-900 mt-2">100%</div>
-              <div class="text-[11px] font-bold text-emerald-800 flex items-center mt-1">
-                <i class="fa-solid fa-lock text-xs mr-1 text-brand-whiz"></i> Direct Owner Access
+            <div class="metric-card p-3 sm:p-5 rounded-xl sm:rounded-2xl bg-white/30 backdrop-blur-md border border-white/50 shadow-xs hover:border-emerald-300 transition-all">
+              <span class="metric-card-label text-[10px] sm:text-xs font-bold text-slate-700 uppercase tracking-wider block">Client Account Equity</span>
+              <div class="metric-card-val text-xl sm:text-3xl font-extrabold text-slate-900 mt-1 sm:mt-2">100%</div>
+              <div class="metric-card-sub text-[10px] sm:text-[11px] font-bold text-emerald-800 flex items-center mt-1">
+                <i class="fa-solid fa-lock text-[10px] sm:text-xs mr-1 text-brand-whiz"></i> Direct Owner Access
               </div>
             </div>
 
-            <div class="p-4 sm:p-5 rounded-2xl bg-white/30 backdrop-blur-md border border-white/50 shadow-xs hover:border-emerald-300 transition-all">
-              <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">Ad Spend Efficiency</span>
-              <div class="text-3xl font-extrabold text-slate-900 mt-2">3.4x</div>
-              <div class="text-[11px] font-bold text-emerald-800 flex items-center mt-1">
-                <i class="fa-solid fa-chart-line text-xs mr-1 text-brand-whiz"></i> Benchmarked ROAS Range
+            <div class="metric-card p-3 sm:p-5 rounded-xl sm:rounded-2xl bg-white/30 backdrop-blur-md border border-white/50 shadow-xs hover:border-emerald-300 transition-all">
+              <span class="metric-card-label text-[10px] sm:text-xs font-bold text-slate-700 uppercase tracking-wider block">Ad Spend Efficiency</span>
+              <div class="metric-card-val text-xl sm:text-3xl font-extrabold text-slate-900 mt-1 sm:mt-2">3.4x</div>
+              <div class="metric-card-sub text-[10px] sm:text-[11px] font-bold text-emerald-800 flex items-center mt-1">
+                <i class="fa-solid fa-chart-line text-[10px] sm:text-xs mr-1 text-brand-whiz"></i> Benchmarked ROAS Range
               </div>
             </div>
           </div>
 
           <!-- 3-Column Execution Platform Workflows -->
-          <div class="pt-2">
-            <div class="text-xs font-extrabold text-slate-900 uppercase tracking-wider mb-3">Active Platform Governance Workflows</div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+          <div class="pt-1 sm:pt-2">
+            <div class="workflow-header text-[11px] sm:text-xs font-extrabold text-slate-900 uppercase tracking-wider mb-2.5 sm:mb-3">Active Platform Governance Workflows</div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5 sm:gap-3.5">
               
-              <div class="p-3.5 rounded-xl bg-white/30 backdrop-blur-md border border-white/40 flex items-center justify-between text-xs hover:border-emerald-300 transition-all">
-                <div class="flex items-center space-x-3">
-                  <div class="w-8 h-8 rounded-lg bg-[#0081FB]/15 text-[#0081FB] flex items-center justify-center shrink-0">
-                    <i class="fa-solid fa-bullseye text-sm"></i>
+              <div class="workflow-item p-2.5 sm:p-3.5 rounded-xl bg-white/30 backdrop-blur-md border border-white/40 flex items-center justify-between text-xs hover:border-emerald-300 transition-all">
+                <div class="flex items-center space-x-2.5 sm:space-x-3 min-w-0">
+                  <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#0081FB]/15 text-[#0081FB] flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-bullseye text-xs sm:text-sm"></i>
                   </div>
-                  <div>
-                    <span class="font-bold text-slate-900 block">Meta Paid Acquisition</span>
-                    <span class="text-[11px] text-slate-600">Pixel, CAPI & Creative Testing</span>
+                  <div class="min-w-0">
+                    <span class="workflow-item-title font-bold text-slate-900 block truncate">Meta Paid Acquisition</span>
+                    <span class="workflow-item-sub text-[10px] sm:text-[11px] text-slate-600 block truncate">Pixel, CAPI & Creative Testing</span>
                   </div>
                 </div>
-                <span class="text-emerald-950 font-extrabold bg-emerald-100/90 px-2.5 py-1 rounded-md border border-emerald-300">Structured</span>
+                <span class="workflow-badge text-emerald-950 font-extrabold bg-emerald-100/90 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md border border-emerald-300 text-[10px] sm:text-xs shrink-0 ml-2">Structured</span>
               </div>
 
-              <div class="p-3.5 rounded-xl bg-white/30 backdrop-blur-md border border-white/40 flex items-center justify-between text-xs hover:border-emerald-300 transition-all">
-                <div class="flex items-center space-x-3">
-                  <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
-                    <i class="fa-solid fa-layer-group text-sm"></i>
+              <div class="workflow-item p-2.5 sm:p-3.5 rounded-xl bg-white/30 backdrop-blur-md border border-white/40 flex items-center justify-between text-xs hover:border-emerald-300 transition-all">
+                <div class="flex items-center space-x-2.5 sm:space-x-3 min-w-0">
+                  <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-layer-group text-xs sm:text-sm"></i>
                   </div>
-                  <div>
-                    <span class="font-bold text-slate-900 block">Social Profile Architecture</span>
-                    <span class="text-[11px] text-slate-600">Bio, Highlights & Funnel Hygiene</span>
+                  <div class="min-w-0">
+                    <span class="workflow-item-title font-bold text-slate-900 block truncate">Social Profile Architecture</span>
+                    <span class="workflow-item-sub text-[10px] sm:text-[11px] text-slate-600 block truncate">Bio, Highlights & Funnel Hygiene</span>
                   </div>
                 </div>
-                <span class="text-emerald-950 font-extrabold bg-emerald-100/90 px-2.5 py-1 rounded-md border border-emerald-300">Optimized</span>
+                <span class="workflow-badge text-emerald-950 font-extrabold bg-emerald-100/90 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md border border-emerald-300 text-[10px] sm:text-xs shrink-0 ml-2">Optimized</span>
               </div>
 
-              <div class="p-3.5 rounded-xl bg-white/30 backdrop-blur-md border border-white/40 flex items-center justify-between text-xs hover:border-emerald-300 transition-all">
-                <div class="flex items-center space-x-3">
-                  <div class="w-8 h-8 rounded-lg bg-[#0A66C2]/15 text-[#0A66C2] flex items-center justify-center shrink-0">
-                    <i class="fa-brands fa-linkedin-in text-sm"></i>
+              <div class="workflow-item p-2.5 sm:p-3.5 rounded-xl bg-white/30 backdrop-blur-md border border-white/40 flex items-center justify-between text-xs hover:border-emerald-300 transition-all">
+                <div class="flex items-center space-x-2.5 sm:space-x-3 min-w-0">
+                  <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#0A66C2]/15 text-[#0A66C2] flex items-center justify-center shrink-0">
+                    <i class="fa-brands fa-linkedin-in text-xs sm:text-sm"></i>
                   </div>
-                  <div>
-                    <span class="font-bold text-slate-900 block">LinkedIn Executive Authority</span>
-                    <span class="text-[11px] text-slate-600">B2B Trust & Enterprise Leads</span>
+                  <div class="min-w-0">
+                    <span class="workflow-item-title font-bold text-slate-900 block truncate">LinkedIn Executive Authority</span>
+                    <span class="workflow-item-sub text-[10px] sm:text-[11px] text-slate-600 block truncate">B2B Trust & Enterprise Leads</span>
                   </div>
                 </div>
-                <span class="text-emerald-950 font-extrabold bg-emerald-100/90 px-2.5 py-1 rounded-md border border-emerald-300">Positioned</span>
+                <span class="workflow-badge text-emerald-950 font-extrabold bg-emerald-100/90 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md border border-emerald-300 text-[10px] sm:text-xs shrink-0 ml-2">Positioned</span>
               </div>
 
             </div>

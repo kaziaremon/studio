@@ -505,16 +505,16 @@
       state.userRole = 'guest';
       state.backendProfile = null;
       if (mainNavBtn) {
-        mainNavBtn.className = "inline-flex items-center gap-1.5 h-10 px-3 sm:px-3.5 rounded-full text-xs sm:text-sm font-bold text-[#172B36] hover:text-[#087F70] bg-white/40 hover:bg-white/80 border border-white/60 hover:border-[#087F70]/30 transition-all duration-200 shadow-2xs hover:shadow-xs focus:outline-none focus:ring-2 focus:ring-[#087F70]/30 active:scale-95 cursor-pointer select-none";
-        mainNavBtn.title = "My Account";
+        mainNavBtn.className = "inline-flex items-center justify-center gap-1.5 h-[32px] sm:h-[34px] px-2.5 sm:px-3 rounded-full text-[11px] sm:text-xs font-bold text-[#172B36] hover:text-[#087F70] bg-white/60 hover:bg-white border border-white/70 hover:border-[#087F70]/30 transition-all duration-200 shadow-2xs hover:shadow-xs focus:outline-none focus:ring-2 focus:ring-[#087F70]/30 active:scale-95 cursor-pointer select-none shrink-0";
+        mainNavBtn.title = "My Profile";
         mainNavBtn.innerHTML = `
-          <i class="fa-solid fa-circle-user text-sm text-[#087F70] shrink-0"></i>
-          <span class="truncate max-w-[80px] sm:max-w-[120px] whitespace-nowrap">My Account</span>
+          <i class="fa-solid fa-circle-user text-xs text-[#087F70] shrink-0"></i>
+          <span class="truncate max-w-[75px] sm:max-w-[95px] whitespace-nowrap">My Profile</span>
         `;
       }
       if (mobileNavBtn) {
         const span = mobileNavBtn.querySelector('span');
-        if (span) span.textContent = 'My Account';
+        if (span) span.textContent = 'My Profile';
         const icon = mobileNavBtn.querySelector('i');
         if (icon) icon.className = 'fa-solid fa-circle-user text-xs mr-2 text-brand-whiz';
       }
@@ -574,15 +574,15 @@
 
     // Update Desktop Nav Button with sleek minimalist circular avatar & clean first name (Never wraps)
     if (mainNavBtn) {
-      mainNavBtn.className = "inline-flex items-center gap-2 h-10 p-1 pr-2.5 sm:pr-3 rounded-full bg-white/40 hover:bg-white/80 border border-white/50 hover:border-[#087F70]/30 transition-all duration-200 shadow-2xs hover:shadow-xs focus:outline-none focus:ring-2 focus:ring-[#087F70]/30 active:scale-95 cursor-pointer select-none";
+      mainNavBtn.className = "inline-flex items-center gap-1.5 h-[32px] sm:h-[34px] p-0.5 pr-2 sm:pr-2.5 rounded-full bg-white/60 hover:bg-white border border-white/70 hover:border-[#087F70]/30 transition-all duration-200 shadow-2xs hover:shadow-xs focus:outline-none focus:ring-2 focus:ring-[#087F70]/30 active:scale-95 cursor-pointer select-none shrink-0";
       mainNavBtn.title = `${cleanFirstName} (${isStaff ? 'Admin Workspace' : 'Client Workspace'})`;
       mainNavBtn.innerHTML = `
-        <div class="w-8 h-8 rounded-full bg-[#087F70] text-white flex items-center justify-center font-bold text-xs shrink-0 select-none shadow-2xs tracking-tight">
+        <div class="w-[24px] h-[24px] sm:w-[26px] sm:h-[26px] rounded-full bg-[#087F70] text-white flex items-center justify-center font-bold text-[10px] sm:text-xs shrink-0 select-none shadow-2xs tracking-tight">
           ${initials}
         </div>
         <div class="flex items-center gap-1 min-w-0">
-          ${isStaff ? '<i class="fa-solid fa-shield-halved text-[10px] text-[#087F70] shrink-0"></i>' : ''}
-          <span class="truncate max-w-[65px] sm:max-w-[100px] whitespace-nowrap text-xs sm:text-sm font-bold text-[#172B36]">${cleanFirstName}</span>
+          ${isStaff ? '<i class="fa-solid fa-shield-halved text-[9px] text-[#087F70] shrink-0"></i>' : ''}
+          <span class="truncate max-w-[65px] sm:max-w-[95px] whitespace-nowrap text-[11px] sm:text-xs font-bold text-[#172B36]">${cleanFirstName}</span>
         </div>
       `;
     }
