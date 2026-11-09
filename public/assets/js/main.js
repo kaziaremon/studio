@@ -214,264 +214,244 @@ const ARTICLES_DATA = {
 };
 
 // =============================================================================
-// 3. REVIEWS & TESTIMONIAL SYSTEM (DISCORD MODERATION PIPELINE)
+// 3. CONTINUOUS ROTATING REVIEWS CAROUSEL (PUBLIC SECTION - NO FORM)
 // =============================================================================
-
-let selectedStarRating = 5;
-let approvedReviews = [];
-let isDemoReviewsActive = false;
-
-const DEMO_APPROVED_REVIEWS = [
+const CANONICAL_APPROVED_REVIEWS = [
   {
     name: "Tanvir Ahmed",
+    role: "Founder, Apex Retail",
     rating: 5,
     text: "Whiz Studio completely overhauled our Meta ad campaigns. Our cost per qualified lead dropped by 42% in under four weeks. Their weekly reporting is exceptionally clear and transparent.",
-    date: "March 2026"
+    date: "March 2026",
+    service: "Meta Paid Acquisition"
   },
   {
     name: "Farhana Chowdhury",
+    role: "Managing Director, Velvet Rose Fashion",
     rating: 5,
     text: "The Social Media Optimization service completely transformed our Instagram profile from a disorganized page into a genuine conversion channel. Highly professional team in Dhaka!",
-    date: "February 2026"
+    date: "February 2026",
+    service: "Instagram & SMO"
   },
   {
     name: "Shahriar Kabir",
+    role: "Principal Partner, Kabir Advisory",
     rating: 5,
     text: "Positioned our corporate leadership profile on LinkedIn. We secured two high-value enterprise consulting partnerships within 60 days of implementing their positioning architecture.",
-    date: "January 2026"
+    date: "January 2026",
+    service: "LinkedIn Executive Authority"
+  },
+  {
+    name: "Mahbubur Rahman",
+    role: "Growth Lead, NexaTech Solutions",
+    rating: 5,
+    text: "Their pixel tracking audit and server-side CAPI integration recovered 28% of our untracked iOS conversions. The ROAS trajectory has been consistently upward ever since.",
+    date: "April 2026",
+    service: "CAPI & Performance Ads"
+  },
+  {
+    name: "Nusrat Jahan",
+    role: "Brand Director, Artisan Living",
+    rating: 5,
+    text: "Zero fluff, zero vanity metrics. They work directly in our own ad account, meaning we retain 100% of our pixel equity. By far the most trustworthy digital team we've hired.",
+    date: "April 2026",
+    service: "Facebook & Instagram Marketing"
   }
 ];
 
-function initStarRating() {
-  const container = document.getElementById('starRatingContainer');
-  const label = document.getElementById('starRatingLabel');
-  if (!container) return;
+let carouselIndex = 0;
+let carouselTimer = null;
+let allApprovedReviews = [...CANONICAL_APPROVED_REVIEWS];
 
-  const buttons = container.querySelectorAll('.star-btn');
-  const ratingLabels = {
-    1: "1 Star - Unsatisfactory",
-    2: "2 Stars - Needs Improvement",
-    3: "3 Stars - Satisfactory",
-    4: "4 Stars - Very Good",
-    5: "5 Stars - Outstanding"
-  };
+function renderReviewsCarousel(reviews) {
+  const track = document.getElementById('reviewsCarouselTrack');
+  const dotsContainer = document.getElementById('reviewsCarouselDots');
+  if (!track) return;
 
-  buttons.forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      selectedStarRating = parseInt(btn.getAttribute('data-rating'), 10);
-      updateStarUI(selectedStarRating);
-    });
+  allApprovedReviews = (reviews && reviews.length > 0) ? reviews : [...CANONICAL_APPROVED_REVIEWS];
+  track.innerHTML = "";
+  if (dotsContainer) dotsContainer.innerHTML = "";
 
-    btn.addEventListener('mouseenter', () => {
-      const hoverRating = parseInt(btn.getAttribute('data-rating'), 10);
-      highlightStars(hoverRating);
-      if (label) label.textContent = ratingLabels[hoverRating];
-    });
-  });
-
-  container.addEventListener('mouseleave', () => {
-    updateStarUI(selectedStarRating);
-  });
-
-  function updateStarUI(rating) {
-    highlightStars(rating);
-    if (label) label.textContent = ratingLabels[rating];
-  }
-
-  function highlightStars(rating) {
-    buttons.forEach(btn => {
-      const btnRating = parseInt(btn.getAttribute('data-rating'), 10);
-      if (btnRating <= rating) {
-        btn.classList.add('text-amber-400');
-        btn.classList.remove('text-slate-300');
-      } else {
-        btn.classList.remove('text-amber-400');
-        btn.classList.add('text-slate-300');
-      }
-    });
-  }
-
-  updateStarUI(selectedStarRating);
-}
-
-async function handleReviewSubmit(e) {
-  e.preventDefault();
-  const nameInput = document.getElementById('reviewName');
-  const emailInput = document.getElementById('reviewEmail');
-  const textInput = document.getElementById('reviewText');
-  const submitBtn = document.getElementById('reviewSubmitBtn');
-  const statusMsg = document.getElementById('reviewStatusMsg');
-
-  if (!nameInput || !emailInput || !textInput) return;
-
-  const name = nameInput.value.trim();
-  const email = emailInput.value.trim();
-  const text = textInput.value.trim();
-  const rating = selectedStarRating;
-
-  if (!name || !email || !text) {
-    showToast("Please complete all required fields.", "error");
-    return;
-  }
-
-  const originalBtnContent = submitBtn ? submitBtn.innerHTML : `<span>Submit for Moderation</span>`;
-
-  if (submitBtn) {
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = `<span class="flex items-center space-x-2"><i class="fa-solid fa-spinner fa-spin text-xs"></i><span>Sending...</span></span>`;
-  }
-
-  const reviewPayload = {
-    embeds: [
-      {
-        title: "⭐ New Whiz Studio Testimonial Submission",
-        color: 0xF59E0B,
-        fields: [
-          { name: "Client / Company", value: name, inline: true },
-          { name: "Client Email", value: email, inline: true },
-          { name: "Rating", value: "★".repeat(rating) + ` (${rating}/5 Stars)`, inline: true },
-          { name: "Review Feedback", value: text, inline: false },
-          { name: "Submission Timestamp", value: new Date().toISOString(), inline: false }
-        ],
-        footer: {
-          text: "Whiz Studio Review Pipeline • whizstudio.art"
-        }
-      }
-    ]
-  };
-
-  try {
-    const apiRes = await fetch(`${API_BASE}/api/submit-review`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        clientName: name,
-        reviewText: text,
-        name,
-        email,
-        text,
-        rating
-      })
-    });
-
-    const resJson = await apiRes.json().catch(() => ({}));
-
-    // Strictly enforce 200 OK or 204 No Content
-    if ((apiRes.status !== 200 && apiRes.status !== 204) || !resJson.success) {
-      throw new Error(resJson.error || `Server responded with status ${apiRes.status}`);
-    }
-
-    // Reset form fields & Notify Client ONLY upon verified success
-    nameInput.value = "";
-    emailInput.value = "";
-    textInput.value = "";
-    selectedStarRating = 5;
-    initStarRating();
-
-    if (statusMsg) {
-      statusMsg.className = "p-4 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-950 text-xs font-semibold block";
-      statusMsg.innerHTML = `
-        <div class="flex items-center space-x-2">
-          <i class="fa-solid fa-circle-check text-brand-whiz text-sm"></i>
-          <span>Thank you, ${escapeHtml(name)}! Your review has been securely transmitted to #review-moderation on Discord.</span>
-        </div>
-      `;
-    }
-
-    showToast("Review submitted to Discord moderation queue!", "success");
-
-    if (submitBtn) {
-      submitBtn.innerHTML = `<span class="flex items-center space-x-2"><i class="fa-solid fa-check text-xs"></i><span>Sent Successfully!</span></span>`;
-      setTimeout(() => {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = originalBtnContent;
-      }, 3000);
-    }
-  } catch (err) {
-    console.error("Critical Review Submission Error:", err);
-    showToast(`Submission Failed: ${err.message || "Network Error"}`, "error");
-    if (submitBtn) {
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = originalBtnContent;
-    }
-    if (statusMsg) {
-      statusMsg.className = "p-4 rounded-xl bg-rose-50 border border-rose-300 text-rose-950 text-xs font-semibold block";
-      statusMsg.innerHTML = `
-        <div class="flex items-center space-x-2">
-          <i class="fa-solid fa-triangle-exclamation text-rose-600 text-sm"></i>
-          <span>Submission failed: ${escapeHtml(err.message || "Could not connect to Discord API. Please try again.")}</span>
-        </div>
-      `;
-    }
-  }
-}
-
-function renderReviewsList(reviews) {
-  const emptyState = document.getElementById('reviewsEmptyState');
-  const container = document.getElementById('approvedReviewsContainer');
-  if (!container || !emptyState) return;
-
-  container.innerHTML = "";
-
-  if (!reviews || reviews.length === 0) {
-    emptyState.classList.remove('hidden');
-    container.classList.add('hidden');
-    return;
-  }
-
-  emptyState.classList.add('hidden');
-  container.classList.remove('hidden');
-
-  reviews.forEach(review => {
-    const card = document.createElement('div');
+  allApprovedReviews.forEach((review, index) => {
+    const slide = document.createElement('div');
+    slide.className = "reviews-carousel-slide shrink-0 w-full md:w-1/2 lg:w-1/3 px-3";
     const displayName = review.clientName || review.name || 'Verified Client';
+    const displayRole = review.role || review.service || 'Verified Ad Account Client';
     const displayText = review.reviewText || review.text || '';
-    card.className = "bg-white/10 backdrop-blur-md border border-white/20 shadow-[0_4px_30px_rgba(0,0,0,0.1)] rounded-2xl p-6 transition-all hover:border-emerald-400";
-    card.innerHTML = `
-      <div class="flex items-center justify-between mb-3">
+    const ratingCount = Math.min(5, Math.max(1, Number(review.rating) || 5));
+    const initials = displayName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() || 'WS';
+
+    slide.innerHTML = `
+      <div class="h-full bg-white/20 backdrop-blur-xl border border-white/30 shadow-[0_8px_30px_rgba(0,168,107,0.08)] rounded-2xl p-6 sm:p-7 flex flex-col justify-between hover:border-[#DDB92F]/60 transition-all duration-300 group">
         <div>
-          <div class="font-bold text-slate-900 text-sm">${escapeHtml(displayName)}</div>
-          <div class="text-[11px] text-slate-600 font-medium">${escapeHtml(review.date || 'Verified Client')}</div>
+          <!-- Star Rating & Quote Mark -->
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center space-x-1 text-[#DDB92F] text-base drop-shadow-xs">
+              ${'★'.repeat(ratingCount)}${'☆'.repeat(5 - ratingCount)}
+            </div>
+            <i class="fa-solid fa-quote-right text-2xl text-[#DDB92F]/30 group-hover:text-[#DDB92F]/60 transition-colors"></i>
+          </div>
+
+          <!-- Review Text -->
+          <p class="text-slate-800 text-sm leading-relaxed font-medium mb-6">
+            "${escapeHtml(displayText)}"
+          </p>
         </div>
-        <div class="text-amber-400 text-sm tracking-wide">
-          ${'★'.repeat(review.rating || 5)}${'☆'.repeat(Math.max(0, 5 - (review.rating || 5)))}
+
+        <!-- Reviewer Details & Verification Badge -->
+        <div class="pt-4 border-t border-white/30 flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-[#087F70] to-[#DDB92F] text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
+              ${escapeHtml(initials)}
+            </div>
+            <div>
+              <div class="text-sm font-extrabold text-slate-900 leading-tight flex items-center gap-1.5">
+                <span>${escapeHtml(displayName)}</span>
+                <i class="fa-solid fa-circle-check text-emerald-600 text-xs" title="Verified Client"></i>
+              </div>
+              <div class="text-[11px] text-slate-600 font-semibold">${escapeHtml(displayRole)}</div>
+            </div>
+          </div>
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider shrink-0 ml-2">
+            ${escapeHtml(review.date || 'Verified')}
+          </span>
         </div>
-      </div>
-      <p class="text-slate-700 text-xs sm:text-sm leading-relaxed font-normal">"${escapeHtml(displayText)}"</p>
-      <div class="mt-3 pt-2.5 border-t border-white/30 flex items-center space-x-1.5 text-[11px] text-emerald-800 font-semibold">
-        <i class="fa-solid fa-shield-check text-brand-whiz"></i>
-        <span>Verified Whiz Studio Client Engagement</span>
       </div>
     `;
-    container.appendChild(card);
+    track.appendChild(slide);
+
+    if (dotsContainer) {
+      const dot = document.createElement('button');
+      dot.type = 'button';
+      dot.className = `h-2.5 rounded-full transition-all duration-300 cursor-pointer ${index === 0 ? 'bg-[#DDB92F] w-6' : 'bg-slate-300 hover:bg-slate-400 w-2.5'}`;
+      dot.setAttribute('aria-label', `Go to review slide ${index + 1}`);
+      dot.addEventListener('click', () => {
+        carouselIndex = index;
+        updateCarouselPosition();
+        resetCarouselTimer();
+      });
+      dotsContainer.appendChild(dot);
+    }
   });
+
+  updateCarouselPosition();
 }
 
-function toggleDemoReviews() {
-  const btn = document.getElementById('toggleDemoReviewsBtn');
-  if (isDemoReviewsActive) {
-    approvedReviews = [];
-    isDemoReviewsActive = false;
-    if (btn) btn.innerHTML = `<span>Preview Approved Reviews (Demo)</span>`;
-  } else {
-    approvedReviews = [...DEMO_APPROVED_REVIEWS];
-    isDemoReviewsActive = true;
-    if (btn) btn.innerHTML = `<span>Reset to Moderation State</span>`;
+function getCardsPerView() {
+  if (window.innerWidth >= 1024) return 3;
+  if (window.innerWidth >= 768) return 2;
+  return 1;
+}
+
+function updateCarouselPosition() {
+  const track = document.getElementById('reviewsCarouselTrack');
+  const dotsContainer = document.getElementById('reviewsCarouselDots');
+  if (!track) return;
+
+  const cardsPerView = getCardsPerView();
+  const maxIndex = Math.max(0, allApprovedReviews.length - cardsPerView);
+  if (carouselIndex > maxIndex) carouselIndex = 0;
+  if (carouselIndex < 0) carouselIndex = maxIndex;
+
+  const cardWidthPercent = 100 / cardsPerView;
+  track.style.transform = `translateX(-${carouselIndex * cardWidthPercent}%)`;
+
+  if (dotsContainer) {
+    const dots = dotsContainer.children;
+    for (let i = 0; i < dots.length; i++) {
+      if (i === carouselIndex) {
+        dots[i].className = 'w-6 h-2.5 rounded-full bg-[#DDB92F] transition-all duration-300 cursor-pointer';
+      } else {
+        dots[i].className = 'w-2.5 h-2.5 rounded-full bg-slate-300 hover:bg-slate-400 transition-all duration-300 cursor-pointer';
+      }
+    }
   }
-  renderReviewsList(approvedReviews);
+}
+
+function nextCarouselSlide() {
+  const cardsPerView = getCardsPerView();
+  const maxIndex = Math.max(0, allApprovedReviews.length - cardsPerView);
+  carouselIndex = (carouselIndex >= maxIndex) ? 0 : carouselIndex + 1;
+  updateCarouselPosition();
+}
+
+function prevCarouselSlide() {
+  const cardsPerView = getCardsPerView();
+  const maxIndex = Math.max(0, allApprovedReviews.length - cardsPerView);
+  carouselIndex = (carouselIndex <= 0) ? maxIndex : carouselIndex - 1;
+  updateCarouselPosition();
+}
+
+function resetCarouselTimer() {
+  if (carouselTimer) clearInterval(carouselTimer);
+  carouselTimer = setInterval(nextCarouselSlide, 4500);
+}
+
+function initReviewsCarousel() {
+  const prevBtn = document.getElementById('reviewsCarouselPrevBtn');
+  const nextBtn = document.getElementById('reviewsCarouselNextBtn');
+  const viewport = document.getElementById('reviewsCarouselViewport');
+
+  if (prevBtn) {
+    prevBtn.addEventListener('click', () => {
+      prevCarouselSlide();
+      resetCarouselTimer();
+    });
+  }
+  if (nextBtn) {
+    nextBtn.addEventListener('click', () => {
+      nextCarouselSlide();
+      resetCarouselTimer();
+    });
+  }
+
+  if (viewport) {
+    viewport.addEventListener('mouseenter', () => {
+      if (carouselTimer) clearInterval(carouselTimer);
+    });
+    viewport.addEventListener('mouseleave', () => {
+      resetCarouselTimer();
+    });
+
+    let startX = 0;
+    viewport.addEventListener('touchstart', (e) => {
+      startX = e.touches[0].clientX;
+    }, { passive: true });
+    viewport.addEventListener('touchend', (e) => {
+      const endX = e.changedTouches[0].clientX;
+      const diffX = startX - endX;
+      if (Math.abs(diffX) > 40) {
+        if (diffX > 0) nextCarouselSlide();
+        else prevCarouselSlide();
+        resetCarouselTimer();
+      }
+    }, { passive: true });
+  }
+
+  window.addEventListener('resize', () => {
+    updateCarouselPosition();
+  });
+
+  renderReviewsCarousel(allApprovedReviews);
+  resetCarouselTimer();
 }
 
 // Live Database Review Synchronization Engine
 async function syncApprovedReviewsFromDiscord() {
-  if (isDemoReviewsActive) return;
   try {
     const res = await fetch(`${API_BASE}/api/reviews`);
     if (res.ok) {
       const data = await res.json();
-      if (data && Array.isArray(data.reviews)) {
-        approvedReviews = [...data.reviews];
-        renderReviewsList(approvedReviews);
+      if (data && Array.isArray(data.reviews) && data.reviews.length > 0) {
+        const remoteReviews = data.reviews.map(r => ({
+          name: r.clientName || r.name || 'Verified Client',
+          role: r.service || 'Verified Ad Account Client',
+          rating: Number(r.rating) || 5,
+          text: r.reviewText || r.text || '',
+          date: r.timestamp ? new Date(r.timestamp).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Verified'
+        }));
+        allApprovedReviews = [...remoteReviews, ...CANONICAL_APPROVED_REVIEWS];
+        renderReviewsCarousel(allApprovedReviews);
       }
     }
   } catch (err) {
@@ -1203,14 +1183,13 @@ function initNavigation() {
 
   // ---------------------------------------------------------------------------
   // 10. CLEAN SEO-FRIENDLY ROUTING & NAVIGATION SYSTEM (NO HASHES)
+  // Dedicated pages /about and /articles are routed natively to their standalone pages
   // ---------------------------------------------------------------------------
   const routeMap = {
     '/': { id: 'home', title: 'Whiz Studio — Elite Creative Studio & Performance Ads' },
     '/home': { id: 'home', title: 'Whiz Studio — Elite Creative Studio & Performance Ads' },
-    '/about': { id: 'about', title: 'About Us | Whiz Studio' },
     '/services': { id: 'services', title: 'Services & Solutions | Whiz Studio' },
     '/pricing': { id: 'pricing', title: 'Pricing & Packages | Whiz Studio' },
-    '/articles': { id: 'articles', title: 'Articles & Strategic Insights | Whiz Studio' },
     '/reviews': { id: 'testimonials', title: 'Client Reviews & Testimonials | Whiz Studio' },
     '/testimonials': { id: 'testimonials', title: 'Client Reviews & Testimonials | Whiz Studio' },
     '/faq': { id: 'faq', title: 'Frequently Asked Questions | Whiz Studio' },
@@ -1219,16 +1198,14 @@ function initNavigation() {
 
   const sectionToRoute = {
     'home': { path: '/', title: 'Whiz Studio — Elite Creative Studio & Performance Ads' },
-    'about': { path: '/about', title: 'About Us | Whiz Studio' },
     'services': { path: '/services', title: 'Services & Solutions | Whiz Studio' },
     'pricing': { path: '/pricing', title: 'Pricing & Packages | Whiz Studio' },
-    'articles': { path: '/articles', title: 'Articles & Strategic Insights | Whiz Studio' },
     'testimonials': { path: '/reviews', title: 'Client Reviews & Testimonials | Whiz Studio' },
     'faq': { path: '/faq', title: 'Frequently Asked Questions | Whiz Studio' },
     'contact': { path: '/contact', title: 'Contact with Us | Whiz Studio' }
   };
 
-  const sectionIds = ['home', 'about', 'services', 'pricing', 'articles', 'testimonials', 'faq', 'contact'];
+  const sectionIds = ['home', 'services', 'pricing', 'testimonials', 'faq', 'contact'];
   const sections = sectionIds.map(id => document.getElementById(id)).filter(Boolean);
 
   let currentActiveId = null;
@@ -1311,9 +1288,9 @@ function initNavigation() {
     const href = link.getAttribute('href');
     if (!href) return;
 
-    // Skip external, protocol, or portal links
+    // Skip external, protocol, portal links, and dedicated pages (/about and /articles)
     if (href.startsWith('mailto:') || href.startsWith('tel:') || href.startsWith('http://') || href.startsWith('https://')) return;
-    if (href.startsWith('/admin') || href.startsWith('/client') || href.startsWith('/assets') || href.startsWith('/api') || href.startsWith('/privacy') || href.startsWith('/terms')) return;
+    if (href.startsWith('/admin') || href.startsWith('/client') || href.startsWith('/assets') || href.startsWith('/api') || href.startsWith('/privacy') || href.startsWith('/terms') || href.startsWith('/about') || href.startsWith('/articles')) return;
 
     let targetSectionId = null;
 
@@ -1481,26 +1458,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   initNavigation();
   initCustomDropdown();
-  initStarRating();
   initFaqAccordion();
   initGsapAnimations();
 
-  renderReviewsList(approvedReviews);
+  // Initialize continuous rotating reviews carousel
+  initReviewsCarousel();
   syncApprovedReviewsFromDiscord();
-
-  const reviewForm = document.getElementById('testimonialForm');
-  if (reviewForm) {
-    reviewForm.addEventListener('submit', handleReviewSubmit);
-  }
 
   const contactForm = document.getElementById('agencyContactForm');
   if (contactForm) {
     contactForm.addEventListener('submit', handleContactSubmit);
-  }
-
-  const demoReviewBtn = document.getElementById('toggleDemoReviewsBtn');
-  if (demoReviewBtn) {
-    demoReviewBtn.addEventListener('click', toggleDemoReviews);
   }
 
   window.addEventListener('keydown', (e) => {

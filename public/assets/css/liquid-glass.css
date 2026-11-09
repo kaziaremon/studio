@@ -11,8 +11,11 @@
   --brand-deep: #075C51;
   --brand-pale: #EAF5F1;
   --brand-pale-emerald: #EAF5F1;
-  --brand-gold: #D9AE24;
-  --brand-deep-gold: #B98C19;
+  --brand-gold: #DDB92F;
+  --brand-gold-primary: #DDB92F;
+  --brand-gold-deep: #C4920B;
+  --brand-gold-light: #F3D246;
+  --brand-deep-gold: #C4920B;
   --brand-pale-gold: #FDF8E7;
   --brand-whiz: #087F70;
   --brand-accent: #087F70;
@@ -23,7 +26,7 @@
   --brand-border-subtle: #E3E9EF;
   --brand-muted: #64748B;
   --brand-glow: rgba(8, 127, 112, 0.25);
-  --brand-gold-glow: rgba(217, 174, 36, 0.3);
+  --brand-gold-glow: rgba(221, 185, 47, 0.4);
 
   /* Master Liquid Glass Tokens */
   --liquid-surface: rgba(255, 255, 255, 0.78);
@@ -268,20 +271,23 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 }
 
 .btn-liquid-primary {
-  background: linear-gradient(135deg, #147D64 0%, #0D5C49 100%) !important;
-  color: #FFFFFF !important;
-  border: 1px solid rgba(255, 255, 255, 0.35) !important;
-  box-shadow: 0 4px 14px 0 rgba(20, 125, 100, 0.28), inset 0 1px 1px 0 rgba(255, 255, 255, 0.45) !important;
+  background: linear-gradient(135deg, #ECC839 0%, #DDB92F 50%, #C4920B 100%) !important;
+  color: #0F172A !important;
+  font-weight: 800 !important;
+  border: 1px solid rgba(255, 255, 255, 0.5) !important;
+  box-shadow: 0 4px 16px 0 rgba(216, 168, 22, 0.35), inset 0 1px 1px 0 rgba(255, 255, 255, 0.7) !important;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
   min-height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .btn-liquid-primary:hover {
-  background: linear-gradient(135deg, #189679 0%, #106D57 100%) !important;
-  box-shadow: 0 8px 22px 0 rgba(20, 125, 100, 0.38), inset 0 1px 1px 0 rgba(255, 255, 255, 0.6) !important;
+  background: linear-gradient(135deg, #F3D246 0%, #E0B01D 50%, #CE9C0F 100%) !important;
+  color: #0B1120 !important;
+  box-shadow: 0 8px 24px 0 rgba(216, 168, 22, 0.48), inset 0 1px 1px 0 rgba(255, 255, 255, 0.85) !important;
   transform: translateY(-1px) !important;
 }
 
@@ -401,23 +407,34 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   font-weight: 700 !important;
 }
 
-/* Glass Buttons */
-.btn-glass-primary {
-  background: linear-gradient(135deg, #00A86B 0%, #047857 100%) !important;
-  color: #FFFFFF !important;
-  border: 1px solid rgba(255, 255, 255, 0.35) !important;
-  box-shadow: 0 4px 14px 0 rgba(0, 168, 107, 0.35), inset 0 1px 1px 0 rgba(255, 255, 255, 0.4) !important;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+/* Glass Buttons - Master Golden Brand Theme */
+.btn-glass-primary,
+.btn-gold-action {
+  background: linear-gradient(135deg, #ECC839 0%, #DDB92F 50%, #C4920B 100%) !important;
+  color: #0F172A !important;
+  font-weight: 800 !important;
+  border: 1px solid rgba(255, 255, 255, 0.5) !important;
+  box-shadow: 0 4px 16px 0 rgba(216, 168, 22, 0.35), inset 0 1px 1px 0 rgba(255, 255, 255, 0.7) !important;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
   min-height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
-.btn-glass-primary:hover {
-  background: linear-gradient(135deg, #059669 0%, #065F46 100%) !important;
-  box-shadow: 0 8px 24px 0 rgba(0, 168, 107, 0.45), inset 0 1px 1px 0 rgba(255, 255, 255, 0.5) !important;
+.btn-glass-primary:hover,
+.btn-gold-action:hover {
+  background: linear-gradient(135deg, #F3D246 0%, #E0B01D 50%, #CE9C0F 100%) !important;
+  color: #0B1120 !important;
+  box-shadow: 0 8px 26px 0 rgba(216, 168, 22, 0.48), inset 0 1px 1px 0 rgba(255, 255, 255, 0.85) !important;
   transform: translateY(-2px);
+}
+
+.btn-glass-primary:active,
+.btn-gold-action:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px 0 rgba(216, 168, 22, 0.3) !important;
 }
 
 .btn-glass-secondary {
@@ -1195,49 +1212,50 @@ button {
 
 
 /* ==========================================================================
-   WHIZ OFFICIAL BUTTON SYSTEM: EMERALD (PRIMARY) + GOLD (EMPHASIS) + NEUTRAL
+   WHIZ OFFICIAL BUTTON SYSTEM: MASTER GOLDEN BRAND SYNC
+   Wherever primary/green action buttons were used, updated to golden accent
    ========================================================================== */
 .btn-liquid-primary,
 .btn-glass-primary,
-.btn-whiz-primary {
-  background: linear-gradient(135deg, #087F70 0%, #075C51 100%) !important;
-  color: #FFFFFF !important;
-  border: 1px solid rgba(255, 255, 255, 0.28) !important;
-  box-shadow: 0 4px 14px 0 rgba(8, 127, 112, 0.25), inset 0 1px 1px 0 rgba(255, 255, 255, 0.45) !important;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+.btn-whiz-primary,
+.btn-liquid-gold,
+.btn-glass-gold,
+.btn-whiz-gold,
+.btn-gold-action {
+  background: linear-gradient(135deg, #ECC839 0%, #DDB92F 50%, #C4920B 100%) !important;
+  color: #0F172A !important;
+  font-weight: 800 !important;
+  border: 1px solid rgba(255, 255, 255, 0.55) !important;
+  box-shadow: 0 4px 16px 0 rgba(216, 168, 22, 0.35), inset 0 1px 1px 0 rgba(255, 255, 255, 0.7) !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
 .btn-liquid-primary:hover,
 .btn-glass-primary:hover,
-.btn-whiz-primary:hover {
-  background: linear-gradient(135deg, #099180 0%, #086d60 100%) !important;
-  box-shadow: 0 6px 20px 0 rgba(8, 127, 112, 0.35), inset 0 1px 1px 0 rgba(255, 255, 255, 0.6) !important;
-  transform: translateY(-1px) !important;
-}
-
-.btn-liquid-gold,
-.btn-glass-gold,
-.btn-whiz-gold {
-  background: linear-gradient(135deg, #D9AE24 0%, #B98C19 100%) !important;
-  color: #172B36 !important;
-  font-weight: 700 !important;
-  border: 1px solid rgba(255, 255, 255, 0.45) !important;
-  box-shadow: 0 4px 14px 0 rgba(217, 174, 36, 0.25), inset 0 1px 1px 0 rgba(255, 255, 255, 0.6) !important;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
+.btn-whiz-primary:hover,
 .btn-liquid-gold:hover,
 .btn-glass-gold:hover,
-.btn-whiz-gold:hover {
-  background: linear-gradient(135deg, #E6BC28 0%, #C9991B 100%) !important;
-  box-shadow: 0 6px 20px 0 rgba(217, 174, 36, 0.35), inset 0 1px 1px 0 rgba(255, 255, 255, 0.75) !important;
-  transform: translateY(-1px) !important;
+.btn-whiz-gold:hover,
+.btn-gold-action:hover {
+  background: linear-gradient(135deg, #F3D246 0%, #E0B01D 50%, #CE9C0F 100%) !important;
+  color: #0B1120 !important;
+  box-shadow: 0 8px 24px 0 rgba(216, 168, 22, 0.48), inset 0 1px 1px 0 rgba(255, 255, 255, 0.85) !important;
+  transform: translateY(-2px) !important;
+}
+
+.btn-liquid-primary:active,
+.btn-glass-primary:active,
+.btn-whiz-primary:active,
+.btn-liquid-gold:active,
+.btn-glass-gold:active,
+.btn-whiz-gold:active,
+.btn-gold-action:active {
+  transform: translateY(0) !important;
+  box-shadow: 0 2px 8px 0 rgba(216, 168, 22, 0.3) !important;
 }
 
 .btn-liquid-secondary,

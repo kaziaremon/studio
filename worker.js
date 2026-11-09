@@ -189,12 +189,10 @@ export default {
       return Response.redirect(`${url.origin}/admin/dashboard`, 302);
     }
 
-    // SEO-Friendly Navigation Routes & Deep Linking
+    // SEO-Friendly Navigation Routes & Deep Linking (Dedicated pages /about and /articles bypass SPA rewriting)
     const SEO_SPA_ROUTES = [
-      "/about",
       "/services",
       "/pricing",
-      "/articles",
       "/reviews",
       "/testimonials",
       "/faq",

@@ -351,7 +351,7 @@
 
   function switchTab(tabId) {
     state.activeTab = tabId;
-    const tabs = ['overview', 'services', 'tasks', 'finance', 'profile', 'support', 'settings'];
+    const tabs = ['overview', 'services', 'tasks', 'finance', 'reviews', 'profile', 'support', 'settings'];
     tabs.forEach(t => {
       const el = document.getElementById(`view_${t}`);
       if (el) {
@@ -2412,6 +2412,176 @@
       });
     }
 
+    // =========================================================================
+    // AUTHENTICATED CLIENT REVIEWS MODULE
+    // =========================================================================
+    function initClientReviewsModule() {
+      const starGroup = document.getElementById('clientReviewStarGroup');
+      const ratingInput = document.getElementById('clientReviewRatingVal');
+      const ratingLabel = document.getElementById('clientReviewRatingLabel');
+      const reviewForm = document.getElementById('clientReviewForm');
+      const nameInput = document.getElementById('clientReviewName');
+      const refreshBtn = document.getElementById('btnRefreshClientReviews');
+
+      const ratingDescriptions = {
+        1: "1 Star - Unsatisfactory",
+        2: "2 Stars - Needs Improvement",
+        3: "3 Stars - Satisfactory",
+        4: "4 Stars - Great Results",
+        5: "5 Stars - Outstanding"
+      };
+
+      function updateStars(val) {
+        if (!starGroup) return;
+        const stars = starGroup.querySelectorAll('.client-star-btn');
+        stars.forEach(btn => {
+          const starVal = Number(btn.dataset.rating);
+          if (starVal <= val) {
+            btn.textContent = '★';
+            btn.className = 'client-star-btn text-2xl text-amber-400 focus:outline-none hover:scale-110 transition-transform';
+          } else {
+            btn.textContent = '☆';
+            btn.className = 'client-star-btn text-2xl text-slate-300 focus:outline-none hover:scale-110 transition-transform';
+          }
+        });
+        if (ratingInput) ratingInput.value = val;
+        if (ratingLabel) ratingLabel.textContent = ratingDescriptions[val] || `${val} Stars`;
+      }
+
+      if (starGroup) {
+        starGroup.querySelectorAll('.client-star-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const val = Number(btn.dataset.rating) || 5;
+            updateStars(val);
+          });
+        });
+      }
+
+      // Pre-fill user name if authenticated
+      if (nameInput && !nameInput.value) {
+        nameInput.value = state.currentUser?.fullName || (window.Clerk?.user?.fullName) || '';
+      }
+
+      if (reviewForm) {
+        reviewForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const f = e.target;
+          const clientName = f.clientName.value.trim() || state.currentUser?.fullName || (window.Clerk?.user?.fullName) || 'Verified Client';
+          const role = f.role?.value.trim() || 'Verified Client';
+          const service = f.service?.value.trim() || 'Digital Marketing Retainer';
+          const rating = Number(f.rating?.value) || 5;
+          const reviewText = f.reviewText?.value.trim();
+          const btn = document.getElementById('btnSubmitClientReview');
+
+          if (!reviewText) {
+            showToast('Please enter your review feedback.', 'warn');
+            return;
+          }
+
+          setBtnLoading(btn, true, 'Submitting...');
+          try {
+            const res = await fetch('/api/submit-review', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                clientName,
+                reviewText,
+                rating,
+                service,
+                role,
+                email: state.currentUser?.email || (window.Clerk?.user?.primaryEmailAddress?.emailAddress) || ''
+              })
+            });
+
+            const data = await res.json();
+            setBtnLoading(btn, false);
+
+            if (res.ok && data.success) {
+              showToast('Review submitted securely! Dispatched to moderation queue.', 'success');
+              
+              const clientReviewsKey = `whiz_client_reviews_${state.currentUser?.email || 'anon'}`;
+              let existing = [];
+              try {
+                existing = JSON.parse(localStorage.getItem(clientReviewsKey) || '[]');
+              } catch(e) {}
+              existing.unshift({
+                id: data.id || `rev_${Date.now()}`,
+                clientName,
+                role,
+                service,
+                rating,
+                reviewText,
+                moderation_status: 'pending',
+                timestamp: new Date().toISOString()
+              });
+              localStorage.setItem(clientReviewsKey, JSON.stringify(existing));
+
+              f.reset();
+              updateStars(5);
+              if (nameInput) nameInput.value = state.currentUser?.fullName || (window.Clerk?.user?.fullName) || '';
+              renderClientReviewsHistory();
+            } else {
+              showToast(data.error || 'Failed to submit review.', 'error');
+            }
+          } catch (err) {
+            setBtnLoading(btn, false);
+            showToast('Network error while submitting review.', 'error');
+          }
+        });
+      }
+
+      if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => {
+          renderClientReviewsHistory();
+          showToast('Review submissions updated.', 'info');
+        });
+      }
+
+      renderClientReviewsHistory();
+    }
+
+    function renderClientReviewsHistory() {
+      const container = document.getElementById('clientReviewsHistoryContainer');
+      if (!container) return;
+
+      const clientReviewsKey = `whiz_client_reviews_${state.currentUser?.email || 'anon'}`;
+      let submissions = [];
+      try {
+        submissions = JSON.parse(localStorage.getItem(clientReviewsKey) || '[]');
+      } catch(e) {}
+
+      if (submissions.length === 0) {
+        container.innerHTML = `
+          <div class="p-6 rounded-2xl bg-slate-50 text-center text-xs text-slate-500 italic">
+            No previous review submissions recorded for this account.
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = submissions.map(sub => {
+        const dateStr = sub.timestamp ? new Date(sub.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recently';
+        const stars = '★'.repeat(Math.min(5, Math.max(1, sub.rating))) + '☆'.repeat(5 - Math.min(5, Math.max(1, sub.rating)));
+        return `
+          <div class="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-[#E3E9EF] space-y-2.5">
+            <div class="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <span class="text-xs font-bold text-[#172B36]">${escapeHtml(sub.service || 'Growth Service')}</span>
+                <span class="text-[11px] text-slate-500 block">${dateStr}</span>
+              </div>
+              <div class="flex items-center space-x-2">
+                <span class="text-amber-400 text-sm tracking-wider">${stars}</span>
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-300">
+                  <i class="fa-solid fa-clock mr-1"></i>Moderation Queue
+                </span>
+              </div>
+            </div>
+            <p class="text-xs sm:text-sm text-slate-700 leading-relaxed font-normal">${escapeHtml(sub.reviewText)}</p>
+          </div>
+        `;
+      }).join('');
+    }
+
     // Cross-Tab Instant Synchronization for Ledger & Rate Limiting
     window.addEventListener('storage', (e) => {
       if (e.key === 'whiz_synced_ledger_records') {
@@ -2423,6 +2593,7 @@
     });
 
     initGlassSelects();
+    initClientReviewsModule();
     checkAuthAndInit();
   }
 
