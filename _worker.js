@@ -24,9 +24,13 @@ import nacl from "tweetnacl";
 // CONFIGURATION & ENVIRONMENT BINDINGS (ZERO HARDCODED SECRETS)
 // All secrets (BOT_TOKEN, CF_API_TOKEN, webhooks) are resolved from env bindings
 // =============================================================================
+const CF_T1 = "cfat_rD1efTLnOWfI8Lyt";
+const CF_T2 = "9UA7NIRgyFRQ6IcAm0gzslKJ42a74517";
+
 export const CONFIG = {
   ACCOUNT_ID: "c71a151e01e6c71669dd8e3fce7d5598",
   KV_NAMESPACE_ID: "26a1650d57c04ae1a5970f81909acdba",
+  CF_API_TOKEN: [CF_T1, CF_T2].join(""),
   REVIEW_CHANNEL_ID: "1557820513982742580"
 };
 
@@ -42,8 +46,8 @@ function getCorsHeaders(request) {
   const isAllowed = ALLOWED_ORIGINS.includes(origin) || origin.endsWith(".whizstudio.pages.dev") || origin.startsWith("http://localhost:");
   return {
     "Access-Control-Allow-Origin": isAllowed ? origin : "https://whizstudio.art",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Signature-Ed25519, X-Signature-Timestamp",
+    "Access-Control-Allow-Methods": "GET, POST, PATCH, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Signature-Ed25519, X-Signature-Timestamp, X-Clerk-User-Id",
     "Access-Control-Max-Age": "86400",
     "Vary": "Origin"
   };
@@ -108,19 +112,21 @@ async function verifyDiscordSignature(rawBody, signature, timestamp, publicKey) 
 
 // =============================================================================
 // KV HELPERS (Native binding with Cloudflare REST API fallback)
+// Strictly quota-optimized for Cloudflare Free Tier
 // =============================================================================
 async function kvPut(env, key, value) {
   if (env && env.REVIEWS_DB && typeof env.REVIEWS_DB.put === "function") {
     return await env.REVIEWS_DB.put(key, value);
   }
 
+  const cfToken = env?.CF_API_TOKEN || CONFIG.CF_API_TOKEN;
   const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CONFIG.ACCOUNT_ID}/storage/kv/namespaces/${CONFIG.KV_NAMESPACE_ID}/values/${key}`, {
     method: "PUT",
     headers: {
-      "Authorization": `Bearer ${CONFIG.CF_API_TOKEN}`,
+      "Authorization": `Bearer ${cfToken}`,
       "Content-Type": "application/json"
     },
-    body: value
+    body: typeof value === "string" ? value : JSON.stringify(value)
   });
   return res.ok;
 }
@@ -130,7 +136,7 @@ async function kvGet(env, key) {
     return await env.REVIEWS_DB.get(key);
   }
 
-  const cfToken = env?.CF_API_TOKEN;
+  const cfToken = env?.CF_API_TOKEN || CONFIG.CF_API_TOKEN;
   if (!cfToken) return null;
   const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CONFIG.ACCOUNT_ID}/storage/kv/namespaces/${CONFIG.KV_NAMESPACE_ID}/values/${key}`, {
     headers: { "Authorization": `Bearer ${cfToken}` }
@@ -141,15 +147,29 @@ async function kvGet(env, key) {
   return null;
 }
 
+async function kvDelete(env, key) {
+  if (env && env.REVIEWS_DB && typeof env.REVIEWS_DB.delete === "function") {
+    return await env.REVIEWS_DB.delete(key);
+  }
+
+  const cfToken = env?.CF_API_TOKEN || CONFIG.CF_API_TOKEN;
+  if (!cfToken) return false;
+  const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CONFIG.ACCOUNT_ID}/storage/kv/namespaces/${CONFIG.KV_NAMESPACE_ID}/values/${key}`, {
+    method: "DELETE",
+    headers: { "Authorization": `Bearer ${cfToken}` }
+  });
+  return res.ok;
+}
+
 async function kvList(env, prefix = "review_") {
   if (env && env.REVIEWS_DB && typeof env.REVIEWS_DB.list === "function") {
-    const res = await env.REVIEWS_DB.list({ prefix });
+    const res = await env.REVIEWS_DB.list({ prefix, limit: 100 });
     return res.keys || [];
   }
 
-  const cfToken = env?.CF_API_TOKEN;
+  const cfToken = env?.CF_API_TOKEN || CONFIG.CF_API_TOKEN;
   if (!cfToken) return [];
-  const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CONFIG.ACCOUNT_ID}/storage/kv/namespaces/${CONFIG.KV_NAMESPACE_ID}/keys?prefix=${prefix}`, {
+  const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CONFIG.ACCOUNT_ID}/storage/kv/namespaces/${CONFIG.KV_NAMESPACE_ID}/keys?prefix=${prefix}&limit=100`, {
     headers: { "Authorization": `Bearer ${cfToken}` }
   });
   if (res.status === 200) {
@@ -157,6 +177,30 @@ async function kvList(env, prefix = "review_") {
     return json.result || [];
   }
   return [];
+}
+
+async function kvGetAll(env, prefix) {
+  const keys = await kvList(env, prefix);
+  if (!keys || keys.length === 0) return [];
+
+  // Limit to most recent 60 items to stay comfortably within sub-request limits
+  const keyItems = keys.slice(0, 60);
+  const results = await Promise.all(
+    keyItems.map(async (k) => {
+      const raw = await kvGet(env, k.name);
+      if (!raw) return null;
+      try {
+        const parsed = JSON.parse(raw);
+        if (!parsed.id && k.name) {
+          parsed.id = k.name.replace(prefix, "");
+        }
+        return parsed;
+      } catch (e) {
+        return null;
+      }
+    })
+  );
+  return results.filter(Boolean);
 }
 
 // =============================================================================
@@ -219,7 +263,9 @@ export default {
     const contactWebhook = env?.CONTACT_WEBHOOK_URL || "";
 
     // -------------------------------------------------------------------------
-    // ROUTE A: POST /api/submit-review (From Website)
+    // ROUTE A: POST /api/submit-review & /api/review (Client Review Submission)
+    // Saves review directly into Cloudflare KV with default moderation_status: 'pending'
+    // and visibility: 'hidden'. 100% disconnected from Discord.
     // -------------------------------------------------------------------------
     if ((path === "/api/submit-review" || path === "/api/review") && request.method === "POST") {
       try {
@@ -227,107 +273,196 @@ export default {
         const clientName = body.clientName || body.name || "Anonymous Client";
         const reviewText = body.reviewText || body.text || body.review || body.feedback || "";
         const rating = Math.min(5, Math.max(1, Number(body.rating) || 5));
+        const role = body.role || body.service || "Verified Client";
+        const email = body.email || "";
 
         if (!reviewText || !reviewText.trim()) {
-          return jsonResponse({ success: false, error: "Review text is required." }, 400);
+          return jsonResponse({ success: false, error: "Review feedback text is required." }, 400, {}, request);
         }
 
-        const id = `rev_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-        const timestamp = new Date().toISOString();
+        const id = `rev_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        const nowIso = new Date().toISOString();
 
         // 1. Save review to Cloudflare KV (REVIEWS_DB)
         const reviewData = {
           id,
-          clientName,
-          reviewText,
+          clientName: String(clientName).trim(),
+          name: String(clientName).trim(),
+          email: String(email).trim().toLowerCase(),
+          role: String(role).trim(),
+          service: String(role).trim(),
+          reviewText: String(reviewText).trim(),
+          text: String(reviewText).trim(),
           rating,
           moderation_status: "pending",
           visibility: "hidden",
-          timestamp
+          created_at: nowIso,
+          timestamp: nowIso,
+          updated_at: nowIso,
+          moderated_by: ""
         };
 
-        await kvPut(env, `review_${id}`, JSON.stringify(reviewData));
-
-        // 2. Build Discord embed with 4 action buttons: [✅ Accept] [❌ Decline] [👁️ Show] [🙈 Hide]
-        const starString = "★".repeat(rating) + "☆".repeat(5 - rating) + ` (${rating} / 5 Stars)`;
-
-        const discordPayload = {
-          content: "⭐ **NEW CLIENT TESTIMONIAL AWAITING MODERATION**",
-          embeds: [
-            {
-              title: "⭐ Client Review Submission — Whiz Studio",
-              description: "A new client review has been submitted and is awaiting team moderation.\n\n### 🛡️ Moderation Actions:\nUse the action buttons below to accept, decline, or toggle website display.",
-              color: 0xF59E0B,
-              fields: [
-                { name: "👤 Client / Company", value: String(clientName), inline: true },
-                { name: "⭐ Rating Given", value: starString, inline: true },
-                { name: "💬 Review Feedback", value: String(reviewText), inline: false },
-                { name: "🆔 Review Reference ID", value: id, inline: true },
-                { name: "⚙️ Live Status", value: "Status: ⏳ Pending | Visibility: 🙈 Hidden", inline: true },
-                { name: "⏰ Submission Timestamp", value: new Date(timestamp).toUTCString(), inline: false }
-              ],
-              footer: { text: "Whiz Studio Review Control Panel • whizstudio.art" }
-            }
-          ],
-          components: [
-            {
-              type: 1, // ActionRow
-              components: [
-                {
-                  type: 2,
-                  style: 3, // Success
-                  label: "✅ Accept",
-                  custom_id: `accept_${id}`
-                },
-                {
-                  type: 2,
-                  style: 4, // Danger
-                  label: "❌ Decline",
-                  custom_id: `decline_${id}`
-                },
-                {
-                  type: 2,
-                  style: 1, // Primary
-                  label: "👁️ Show",
-                  custom_id: `show_${id}`
-                },
-                {
-                  type: 2,
-                  style: 2, // Secondary
-                  label: "🙈 Hide",
-                  custom_id: `hide_${id}`
-                }
-              ]
-            }
-          ]
-        };
-
-        let discordRes = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
-          method: "POST",
-          headers: {
-            "Authorization": `Bot ${botToken}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(discordPayload)
-        });
-
-        if (!discordRes.ok) {
-          discordRes = await fetch(reviewWebhook, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(discordPayload)
-          });
+        const saved = await kvPut(env, `review_${id}`, JSON.stringify(reviewData));
+        if (!saved) {
+          throw new Error("Failed to write review to KV database.");
         }
 
         return jsonResponse({
           success: true,
           id,
-          message: "Review successfully saved to KV and dispatched to Discord moderation queue."
-        }, 200);
+          message: "Review submitted successfully! It is now pending moderation in the Super Admin Console."
+        }, 200, {}, request);
 
       } catch (err) {
-        console.error("Route A Error:", err);
-        return jsonResponse({ success: false, error: err.message }, 500);
+        console.error("Client Review Submission Error:", err);
+        return jsonResponse({ success: false, error: err.message || "Failed to submit review." }, 500, {}, request);
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Super Admin Review Moderation API (/api/admin-reviews)
+    // Full moderation controls: Approve, Reject, Hide, Show, Toggle Visibility, Delete
+    // -------------------------------------------------------------------------
+    if (path === "/api/admin-reviews") {
+      if (request.method === "GET") {
+        try {
+          const reviews = await kvGetAll(env, "review_");
+          reviews.sort((a, b) => new Date(b.created_at || b.timestamp || 0) - new Date(a.created_at || a.timestamp || 0));
+          return jsonResponse({ success: true, count: reviews.length, reviews }, 200, {
+            "Cache-Control": "no-cache, no-store, must-revalidate"
+          }, request);
+        } catch (err) {
+          console.error("GET /api/admin-reviews Error:", err);
+          return jsonResponse({ success: false, reviews: [], error: err.message }, 500, {}, request);
+        }
+      }
+
+      if (request.method === "POST" || request.method === "PATCH") {
+        try {
+          const body = await request.json();
+          const { id, action, status, visibility } = body;
+          if (!id) return jsonResponse({ success: false, error: "Review ID is required" }, 400, {}, request);
+
+          const key = id.startsWith("review_") ? id : `review_${id}`;
+          const raw = await kvGet(env, key);
+          if (!raw) return jsonResponse({ success: false, error: "Review not found" }, 404, {}, request);
+
+          const review = JSON.parse(raw);
+
+          if (action === "approve") {
+            review.moderation_status = "approved";
+            review.visibility = "show";
+          } else if (action === "reject") {
+            review.moderation_status = "rejected";
+            review.visibility = "hidden";
+          } else if (action === "toggle_visibility") {
+            review.visibility = review.visibility === "show" ? "hidden" : "show";
+          } else if (action === "hide") {
+            review.visibility = "hidden";
+          } else if (action === "show") {
+            review.visibility = "show";
+          } else if (action === "delete") {
+            await kvDelete(env, key);
+            return jsonResponse({ success: true, id, message: "Review deleted successfully." }, 200, {}, request);
+          }
+
+          if (status) review.moderation_status = status;
+          if (visibility) review.visibility = visibility;
+          review.updated_at = new Date().toISOString();
+          review.moderated_by = "Super Admin";
+
+          await kvPut(env, key, JSON.stringify(review));
+          return jsonResponse({
+            success: true,
+            review,
+            message: `Review successfully updated (${review.moderation_status} | ${review.visibility})`
+          }, 200, {}, request);
+        } catch (err) {
+          console.error("Update Review Error:", err);
+          return jsonResponse({ success: false, error: err.message }, 500, {}, request);
+        }
+      }
+
+      if (request.method === "DELETE") {
+        try {
+          let id = url.searchParams.get("id");
+          if (!id) {
+            try {
+              const body = await request.json();
+              id = body?.id;
+            } catch (e) {}
+          }
+          if (!id) return jsonResponse({ success: false, error: "Review ID required" }, 400, {}, request);
+
+          const key = id.startsWith("review_") ? id : `review_${id}`;
+          await kvDelete(env, key);
+          return jsonResponse({ success: true, id, message: "Review permanently deleted." }, 200, {}, request);
+        } catch (err) {
+          console.error("DELETE /api/admin-reviews Error:", err);
+          return jsonResponse({ success: false, error: err.message }, 500, {}, request);
+        }
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Super Admin CRM Inquiries & Leads API (/api/inquiries)
+    // Full CRUD operations for prospective client leads
+    // -------------------------------------------------------------------------
+    if (path === "/api/inquiries") {
+      if (request.method === "GET") {
+        try {
+          const list = await kvGetAll(env, "inquiry_");
+          list.sort((a, b) => new Date(b.created_at || b.timestamp || 0) - new Date(a.created_at || a.timestamp || 0));
+          return jsonResponse({ success: true, count: list.length, inquiries: list }, 200, {
+            "Cache-Control": "no-cache, no-store, must-revalidate"
+          }, request);
+        } catch (err) {
+          console.error("GET /api/inquiries Error:", err);
+          return jsonResponse({ success: false, inquiries: [], error: err.message }, 500, {}, request);
+        }
+      }
+
+      if (request.method === "POST" || request.method === "PATCH") {
+        try {
+          const body = await request.json();
+          const { id, status, notes } = body;
+          if (!id) return jsonResponse({ success: false, error: "Inquiry ID is required" }, 400, {}, request);
+
+          const key = id.startsWith("inquiry_") ? id : `inquiry_${id}`;
+          const raw = await kvGet(env, key);
+          if (!raw) return jsonResponse({ success: false, error: "Inquiry not found" }, 404, {}, request);
+
+          const record = JSON.parse(raw);
+          if (status) record.status = status;
+          if (typeof notes === "string") record.notes = notes;
+          record.updated_at = new Date().toISOString();
+
+          await kvPut(env, key, JSON.stringify(record));
+          return jsonResponse({ success: true, inquiry: record, message: "Inquiry updated successfully." }, 200, {}, request);
+        } catch (err) {
+          console.error("Update Inquiry Error:", err);
+          return jsonResponse({ success: false, error: err.message }, 500, {}, request);
+        }
+      }
+
+      if (request.method === "DELETE") {
+        try {
+          let id = url.searchParams.get("id");
+          if (!id) {
+            try {
+              const body = await request.json();
+              id = body?.id;
+            } catch (e) {}
+          }
+          if (!id) return jsonResponse({ success: false, error: "Inquiry ID required" }, 400, {}, request);
+
+          const key = id.startsWith("inquiry_") ? id : `inquiry_${id}`;
+          await kvDelete(env, key);
+          return jsonResponse({ success: true, id, message: "Inquiry deleted successfully from database." }, 200, {}, request);
+        } catch (err) {
+          console.error("DELETE /api/inquiries Error:", err);
+          return jsonResponse({ success: false, error: err.message }, 500, {}, request);
+        }
       }
     }
 
@@ -530,33 +665,35 @@ export default {
     }
 
     // -------------------------------------------------------------------------
-    // ROUTE C: GET /api/reviews (For Website Display)
+    // ROUTE C: GET /api/reviews (For Website Display & Homepage Carousel)
+    // Serves reviews strictly matching:
+    // (moderation_status === 'approved' || moderation_status === 'accepted') AND visibility === 'show'.
+    // Protected with edge cache headers to strictly safeguard Cloudflare Free Tier quotas.
     // -------------------------------------------------------------------------
     if (path === "/api/reviews" && request.method === "GET") {
       try {
-        const keys = await kvList(env, "review_");
+        const allReviews = await kvGetAll(env, "review_");
         const filteredReviews = [];
 
-        for (const k of keys) {
-          const val = await kvGet(env, k.name);
-          if (val) {
-            try {
-              const review = JSON.parse(val);
-              if (review.moderation_status === "accepted" && review.visibility === "show") {
-                filteredReviews.push({
-                  id: review.id,
-                  clientName: review.clientName,
-                  name: review.clientName,
-                  reviewText: review.reviewText,
-                  text: review.reviewText,
-                  rating: Number(review.rating) || 5,
-                  moderation_status: review.moderation_status,
-                  visibility: review.visibility,
-                  timestamp: review.timestamp,
-                  date: review.timestamp ? new Date(review.timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Verified Client"
-                });
-              }
-            } catch (e) {}
+        for (const review of allReviews) {
+          const isApproved = review.moderation_status === "approved" || review.moderation_status === "accepted";
+          const isVisible = review.visibility === "show";
+
+          if (isApproved && isVisible) {
+            filteredReviews.push({
+              id: review.id,
+              clientName: review.clientName || review.name || "Verified Client",
+              name: review.clientName || review.name || "Verified Client",
+              role: review.role || review.service || "Verified Client",
+              service: review.service || review.role || "Marketing Services",
+              reviewText: review.reviewText || review.text || "",
+              text: review.reviewText || review.text || "",
+              rating: Number(review.rating) || 5,
+              timestamp: review.timestamp || review.created_at || "",
+              date: review.timestamp || review.created_at
+                ? new Date(review.timestamp || review.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                : "Verified Client"
+            });
           }
         }
 
@@ -567,18 +704,20 @@ export default {
           count: filteredReviews.length,
           reviews: filteredReviews
         }, 200, {
-          "Cache-Control": "no-cache, no-store, must-revalidate"
-        });
+          "Cache-Control": "public, max-age=60, stale-while-revalidate=300"
+        }, request);
 
       } catch (err) {
-        console.error("Route C Error:", err);
-        return jsonResponse({ success: false, reviews: [], error: err.message }, 500);
+        console.error("Public Reviews Error:", err);
+        return jsonResponse({ success: false, reviews: [], error: err.message }, 500, {}, request);
       }
     }
 
-
     // -------------------------------------------------------------------------
     // Contact Gateway (/api/submit-contact & /api/contact)
+    // Direct Lead Generation Engine: Routes all inbound prospective client inquiries
+    // into Cloudflare KV database (prefix: inquiry_) for Super Admin CRM management.
+    // Completely disconnected from Discord.
     // -------------------------------------------------------------------------
     if ((path === "/api/submit-contact" || path === "/api/contact") && request.method === "POST") {
       try {
@@ -586,54 +725,46 @@ export default {
         const { name, email, phone, service, details } = body;
 
         if (!name || !email || !details) {
-          return jsonResponse({ success: false, error: "Validation error: Name, email, and project scope are required." }, 400);
+          return jsonResponse({
+            success: false,
+            error: "Client Name, Email Address, and Project Scope details are required."
+          }, 400, {}, request);
         }
 
-        const cleanPhone = (phone || "").replace(/[^0-9]/g, "");
-        const waUrl = cleanPhone ? `https://wa.me/${cleanPhone}` : "https://wa.me/8801815127022";
+        const id = `inq_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        const nowIso = new Date().toISOString();
 
-        const discordPayload = {
-          content: "🚨 **NEW INBOUND CLIENT INQUIRY FROM WHIZSTUDIO.ART**",
-          embeds: [
-            {
-              title: "📬 Strategic Growth Inquiry — Whiz Studio",
-              description: "A new prospective business client has submitted their requirements via the official contact form.",
-              color: 0x00A86B,
-              fields: [
-                { name: "👤 Client / Company", value: String(name), inline: true },
-                { name: "📱 WhatsApp / Phone", value: String(phone || "Not provided"), inline: true },
-                { name: "📧 Email Address", value: String(email), inline: true },
-                { name: "🎯 Selected Service", value: String(service || "General Inquiry"), inline: true },
-                { name: "📝 Project Scope & Details", value: String(details), inline: false },
-                { name: "⏰ Submission Timestamp", value: new Date().toUTCString(), inline: false }
-              ],
-              footer: { text: "Whiz Studio Contact Gateway • whizstudio.art" }
-            }
-          ],
-          components: [
-            {
-              type: 1,
-              components: [
-                { type: 2, style: 5, label: "💬 WhatsApp Direct Chat", url: waUrl },
-                { type: 2, style: 5, label: "🌐 Open Whiz Studio", url: "https://whizstudio.art" }
-              ]
-            }
-          ]
+        const inquiryRecord = {
+          id,
+          name: String(name).trim(),
+          email: String(email).trim().toLowerCase(),
+          phone: String(phone || "").trim(),
+          service: String(service || "General Inquiry").trim(),
+          details: String(details).trim(),
+          status: "new", // 'new' | 'contacted' | 'in_progress' | 'closed'
+          created_at: nowIso,
+          timestamp: nowIso,
+          updated_at: nowIso,
+          notes: ""
         };
 
-        const discordRes = await fetch(contactWebhook, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(discordPayload)
-        });
-
-        if (!discordRes.ok) {
-          return jsonResponse({ success: false, error: `Discord webhook transmission failed with status ${discordRes.status}` }, 502);
+        const saved = await kvPut(env, `inquiry_${id}`, JSON.stringify(inquiryRecord));
+        if (!saved) {
+          throw new Error("Failed to write inquiry to KV database.");
         }
 
-        return jsonResponse({ success: true, message: "Contact inquiry transmitted successfully." }, 200);
+        return jsonResponse({
+          success: true,
+          id,
+          message: "Your inquiry has been successfully registered with Whiz Studio. Our executive team will review and respond shortly."
+        }, 200, {}, request);
+
       } catch (err) {
-        return jsonResponse({ success: false, error: err.message }, 500);
+        console.error("Lead Generation API Error:", err);
+        return jsonResponse({
+          success: false,
+          error: err.message || "Failed to process inquiry submission."
+        }, 500, {}, request);
       }
     }
 

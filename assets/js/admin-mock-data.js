@@ -1,4 +1,4 @@
-﻿/**
+/**
  * WHIZ STUDIO — ADMIN & SUPER ADMIN MOCK DATA PROVIDER
  * For isolated preview simulation, client demonstrations, and multi-device QA.
  * 100% authentic data structures matching Cloudflare D1 schema.
