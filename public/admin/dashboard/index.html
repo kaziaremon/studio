@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en" class="h-full bg-[#F8FAFC] text-slate-800">
 <head>
   <meta charset="UTF-8">
@@ -881,7 +881,47 @@
           </nav>
         </div>
 
-        <!-- SECTION 2: FINANCE & RECEIPTS -->
+        <!-- SECTION 2: INBOUND CRM & MODERATION (SUPER ADMIN EXCLUSIVE) -->
+        <div id="sidebarSectionCRM" class="role-superadmin-nav">
+          <div class="section-heading text-[10px] font-bold uppercase tracking-wider text-[#74817D] px-2.5 mb-1.5 select-none flex items-center justify-between">
+            <span>Inbound &amp; CRM</span>
+            <span class="text-[9px] font-extrabold px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-700 border border-amber-500/20">Super Admin</span>
+          </div>
+          <div class="section-divider hidden border-t border-[#E6ECE9] my-2 mx-2"></div>
+          <nav class="space-y-1">
+            <!-- Inquiries & Leads -->
+            <button type="button" id="sidebarNavInquiries" data-dash-tab="inquiries" class="role-superadmin-nav whiz-dock-item" aria-label="Inquiries & Leads">
+              <div class="w-5 h-5 flex items-center justify-center shrink-0">
+                <i class="fa-solid fa-headset text-sm dock-icon"></i>
+              </div>
+              <span class="dock-label flex-1 truncate">Inquiries &amp; Leads</span>
+              <span id="dockBadgeInquiries" class="dock-badge ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-500/20 hidden">0 New</span>
+              <div class="dock-floating-tooltip" role="tooltip">
+                <div class="flex items-center gap-1.5">
+                  <span>Inquiries &amp; Leads</span>
+                  <span id="dockTooltipBadgeInquiries" class="text-[9px] font-bold px-1 py-0.2 rounded bg-emerald-500/25 text-emerald-300 hidden">0 New</span>
+                </div>
+              </div>
+            </button>
+
+            <!-- Review Moderation -->
+            <button type="button" id="sidebarNavReviews" data-dash-tab="reviews_admin" class="role-superadmin-nav whiz-dock-item" aria-label="Review Moderation">
+              <div class="w-5 h-5 flex items-center justify-center shrink-0">
+                <i class="fa-solid fa-star-half-stroke text-sm dock-icon"></i>
+              </div>
+              <span class="dock-label flex-1 truncate">Review Moderation</span>
+              <span id="dockBadgeReviews" class="dock-badge ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-500/20 hidden">0 Pend</span>
+              <div class="dock-floating-tooltip" role="tooltip">
+                <div class="flex items-center gap-1.5">
+                  <span>Review Moderation</span>
+                  <span id="dockTooltipBadgeReviews" class="text-[9px] font-bold px-1 py-0.2 rounded bg-amber-500/25 text-amber-300 hidden">0 Pend</span>
+                </div>
+              </div>
+            </button>
+          </nav>
+        </div>
+
+        <!-- SECTION 3: FINANCE & RECEIPTS -->
         <div id="sidebarSectionFinance" class="role-financial-nav">
           <div class="section-heading text-[10px] font-bold uppercase tracking-wider text-[#74817D] px-2.5 mb-1.5 select-none">
             Finance &amp; Receipts
@@ -1031,7 +1071,27 @@
           </nav>
         </div>
 
-        <!-- Section 2: Finance & Receipts -->
+        <!-- Section 2: Inbound CRM & Moderation (Super Admin) -->
+        <div id="drawerSectionCRM" class="role-superadmin-nav">
+          <div class="text-[10px] font-bold uppercase tracking-wider text-[#74817D] px-2.5 mb-2 select-none flex items-center justify-between">
+            <span>Inbound &amp; CRM</span>
+            <span class="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-300">Super Admin</span>
+          </div>
+          <nav class="space-y-1.5">
+            <button type="button" id="drawerNavInquiries" data-dash-tab="inquiries" class="role-superadmin-nav whiz-dock-item w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-semibold transition-all text-left touch-manipulation cursor-pointer">
+              <i class="fa-solid fa-headset text-xs w-4 dock-icon"></i>
+              <span class="flex-1">Inquiries &amp; Leads</span>
+              <span id="drawerBadgeInquiries" class="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-300 hidden">0 New</span>
+            </button>
+            <button type="button" id="drawerNavReviews" data-dash-tab="reviews_admin" class="role-superadmin-nav whiz-dock-item w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-semibold transition-all text-left touch-manipulation cursor-pointer">
+              <i class="fa-solid fa-star-half-stroke text-xs w-4 dock-icon"></i>
+              <span class="flex-1">Review Moderation</span>
+              <span id="drawerBadgeReviews" class="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-300 hidden">0 Pend</span>
+            </button>
+          </nav>
+        </div>
+
+        <!-- Section 3: Finance & Receipts -->
         <div id="drawerSectionFinance" class="role-financial-nav">
           <div class="text-[10px] font-bold uppercase tracking-wider text-[#74817D] px-2.5 mb-2 select-none">Finance &amp; Receipts</div>
           <nav class="space-y-1.5">
@@ -2920,6 +2980,250 @@
               </div>
             </div>
 
+          </div>
+
+          <!-- ===================================================================
+               TAB 12: INQUIRIES & LEAD MANAGEMENT (SUPER ADMIN EXCLUSIVE)
+               =================================================================== -->
+          <div id="view_inquiries" class="hidden space-y-6">
+            <!-- Header Banner -->
+            <div class="p-6 sm:p-8 rounded-3xl bg-white border border-[#E3E9EF] shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div class="space-y-1">
+                <div class="flex items-center gap-2.5">
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-50 text-amber-800 border border-amber-300">
+                    <i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Super Admin Exclusive
+                  </span>
+                  <span class="text-xs text-slate-400">•</span>
+                  <span class="text-xs font-semibold text-emerald-700 flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Direct KV Ledger
+                  </span>
+                </div>
+                <h2 class="text-xl sm:text-2xl font-black text-[#172B36] tracking-tight">Inquiries &amp; Inbound Leads CRM</h2>
+                <p class="text-xs sm:text-sm text-slate-500 max-w-2xl">
+                  Prospective clients who submitted requests via the public "Message for Custom Quote" portal. Stored securely in database with zero third-party webhooks.
+                </p>
+              </div>
+              <div class="flex items-center gap-2 self-start sm:self-auto">
+                <button type="button" id="btnRefreshInquiries" class="px-4 py-2.5 rounded-xl text-xs font-bold bg-[#EAF5F1] text-[#087F70] hover:bg-[#d8ece4] border border-[#087F70]/20 transition-all flex items-center gap-2 cursor-pointer shadow-2xs">
+                  <i class="fa-solid fa-arrows-rotate text-xs"></i>
+                  <span>Refresh</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- KPI Metric Cards Grid -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs">
+                <div class="flex items-center justify-between text-slate-400 mb-2">
+                  <span class="text-[10px] font-bold uppercase tracking-wider">Total Inquiries</span>
+                  <div class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-inbox"></i>
+                  </div>
+                </div>
+                <div id="statTotalInquiries" class="text-xl sm:text-2xl font-black text-[#172B36]">0</div>
+                <p class="text-[11px] text-slate-400 mt-1">Lifetime leads logged</p>
+              </div>
+
+              <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs">
+                <div class="flex items-center justify-between text-slate-400 mb-2">
+                  <span class="text-[10px] font-bold uppercase tracking-wider">New / Unread</span>
+                  <div class="w-7 h-7 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-bell"></i>
+                  </div>
+                </div>
+                <div id="statNewInquiries" class="text-xl sm:text-2xl font-black text-amber-600">0</div>
+                <p class="text-[11px] text-slate-400 mt-1">Awaiting first contact</p>
+              </div>
+
+              <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs">
+                <div class="flex items-center justify-between text-slate-400 mb-2">
+                  <span class="text-[10px] font-bold uppercase tracking-wider">In Progress</span>
+                  <div class="w-7 h-7 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-comments"></i>
+                  </div>
+                </div>
+                <div id="statInProgressInquiries" class="text-xl sm:text-2xl font-black text-blue-600">0</div>
+                <p class="text-[11px] text-slate-400 mt-1">Negotiating scope / quote</p>
+              </div>
+
+              <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs">
+                <div class="flex items-center justify-between text-slate-400 mb-2">
+                  <span class="text-[10px] font-bold uppercase tracking-wider">Converted / Closed</span>
+                  <div class="w-7 h-7 rounded-lg bg-purple-50 text-purple-700 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-circle-check"></i>
+                  </div>
+                </div>
+                <div id="statClosedInquiries" class="text-xl sm:text-2xl font-black text-purple-600">0</div>
+                <p class="text-[11px] text-slate-400 mt-1">Archived or onboarding</p>
+              </div>
+            </div>
+
+            <!-- Inquiries Search & Filter Controls -->
+            <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+              <!-- Search Bar -->
+              <div class="relative flex-1 max-w-md">
+                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                <input type="text" id="searchInquiriesInput" placeholder="Search by name, email, phone, or service..." class="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:outline-none focus:border-[#087F70] transition-all">
+              </div>
+
+              <!-- Status Filters -->
+              <div class="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0" id="inquiriesStatusFilterGroup">
+                <button type="button" data-inquiry-filter="all" class="inquiry-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/25 transition-all">All</button>
+                <button type="button" data-inquiry-filter="new" class="inquiry-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 border border-transparent transition-all">New</button>
+                <button type="button" data-inquiry-filter="contacted" class="inquiry-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 border border-transparent transition-all">Contacted</button>
+                <button type="button" data-inquiry-filter="in_progress" class="inquiry-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 border border-transparent transition-all">In Progress</button>
+                <button type="button" data-inquiry-filter="closed" class="inquiry-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 border border-transparent transition-all">Closed</button>
+              </div>
+            </div>
+
+            <!-- Inquiries Data Table Container -->
+            <div class="rounded-3xl bg-white border border-[#E3E9EF] shadow-xs overflow-hidden">
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr class="bg-slate-50 border-b border-[#E3E9EF] text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+                      <th class="py-3.5 px-4 sm:px-6">Prospect / Client</th>
+                      <th class="py-3.5 px-4">Contact Channels</th>
+                      <th class="py-3.5 px-4">Target Service</th>
+                      <th class="py-3.5 px-4">Project Scope</th>
+                      <th class="py-3.5 px-4">Status</th>
+                      <th class="py-3.5 px-4">Received</th>
+                      <th class="py-3.5 px-4 text-right pr-6">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="inquiriesTableBody" class="divide-y divide-[#E3E9EF]">
+                    <tr>
+                      <td colspan="7" class="py-12 text-center text-slate-400">
+                        <i class="fa-solid fa-spinner fa-spin text-xl text-[#087F70] mb-2"></i>
+                        <p class="text-xs font-medium">Loading inbound inquiries from database...</p>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===================================================================
+               TAB 13: REVIEW MODERATION SYSTEM (SUPER ADMIN EXCLUSIVE)
+               =================================================================== -->
+          <div id="view_reviews_admin" class="hidden space-y-6">
+            <!-- Header Banner -->
+            <div class="p-6 sm:p-8 rounded-3xl bg-white border border-[#E3E9EF] shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div class="space-y-1">
+                <div class="flex items-center gap-2.5">
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-50 text-amber-800 border border-amber-300">
+                    <i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Super Admin Exclusive
+                  </span>
+                  <span class="text-xs text-slate-400">•</span>
+                  <span class="text-xs font-semibold text-emerald-700 flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Homepage Carousel Authority
+                  </span>
+                </div>
+                <h2 class="text-xl sm:text-2xl font-black text-[#172B36] tracking-tight">Review Moderation Console</h2>
+                <p class="text-xs sm:text-sm text-slate-500 max-w-2xl">
+                  Moderate client reviews submitted from authenticated Client Dashboards. Only Approved and Visible reviews appear on the live homepage carousel.
+                </p>
+              </div>
+              <div class="flex items-center gap-2 self-start sm:self-auto">
+                <button type="button" id="btnRefreshReviewsAdmin" class="px-4 py-2.5 rounded-xl text-xs font-bold bg-[#EAF5F1] text-[#087F70] hover:bg-[#d8ece4] border border-[#087F70]/20 transition-all flex items-center gap-2 cursor-pointer shadow-2xs">
+                  <i class="fa-solid fa-arrows-rotate text-xs"></i>
+                  <span>Refresh</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- KPI Metric Cards Grid -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs">
+                <div class="flex items-center justify-between text-slate-400 mb-2">
+                  <span class="text-[10px] font-bold uppercase tracking-wider">Total Reviews</span>
+                  <div class="w-7 h-7 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-comments"></i>
+                  </div>
+                </div>
+                <div id="statTotalReviews" class="text-xl sm:text-2xl font-black text-[#172B36]">0</div>
+                <p class="text-[11px] text-slate-400 mt-1">Submitted by clients</p>
+              </div>
+
+              <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs">
+                <div class="flex items-center justify-between text-slate-400 mb-2">
+                  <span class="text-[10px] font-bold uppercase tracking-wider">Pending Moderation</span>
+                  <div class="w-7 h-7 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-hourglass-half"></i>
+                  </div>
+                </div>
+                <div id="statPendingReviews" class="text-xl sm:text-2xl font-black text-amber-600">0</div>
+                <p class="text-[11px] text-slate-400 mt-1">Awaiting approval</p>
+              </div>
+
+              <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs">
+                <div class="flex items-center justify-between text-slate-400 mb-2">
+                  <span class="text-[10px] font-bold uppercase tracking-wider">Approved &amp; Live</span>
+                  <div class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-circle-check"></i>
+                  </div>
+                </div>
+                <div id="statApprovedReviews" class="text-xl sm:text-2xl font-black text-emerald-600">0</div>
+                <p class="text-[11px] text-slate-400 mt-1">Live on whizstudio.art</p>
+              </div>
+
+              <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs">
+                <div class="flex items-center justify-between text-slate-400 mb-2">
+                  <span class="text-[10px] font-bold uppercase tracking-wider">Rejected / Hidden</span>
+                  <div class="w-7 h-7 rounded-lg bg-rose-50 text-rose-700 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-eye-slash"></i>
+                  </div>
+                </div>
+                <div id="statHiddenReviews" class="text-xl sm:text-2xl font-black text-rose-600">0</div>
+                <p class="text-[11px] text-slate-400 mt-1">Suppressed from carousel</p>
+              </div>
+            </div>
+
+            <!-- Review Search & Filter Controls -->
+            <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+              <div class="relative flex-1 max-w-md">
+                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                <input type="text" id="searchReviewsInput" placeholder="Search by client name, company, or testimonial text..." class="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:outline-none focus:border-[#087F70] transition-all">
+              </div>
+
+              <div class="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0" id="reviewsStatusFilterGroup">
+                <button type="button" data-review-filter="all" class="review-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/25 transition-all">All</button>
+                <button type="button" data-review-filter="pending" class="review-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 border border-transparent transition-all">Pending</button>
+                <button type="button" data-review-filter="approved" class="review-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 border border-transparent transition-all">Approved</button>
+                <button type="button" data-review-filter="rejected" class="review-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 border border-transparent transition-all">Rejected</button>
+                <button type="button" data-review-filter="hidden" class="review-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 border border-transparent transition-all">Hidden</button>
+              </div>
+            </div>
+
+            <!-- Reviews Moderation Table Container -->
+            <div class="rounded-3xl bg-white border border-[#E3E9EF] shadow-xs overflow-hidden">
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr class="bg-slate-50 border-b border-[#E3E9EF] text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+                      <th class="py-3.5 px-4 sm:px-6">Client / Company</th>
+                      <th class="py-3.5 px-4">Rating</th>
+                      <th class="py-3.5 px-4">Review Content</th>
+                      <th class="py-3.5 px-4">Moderation Status</th>
+                      <th class="py-3.5 px-4">Carousel Visibility</th>
+                      <th class="py-3.5 px-4">Submitted</th>
+                      <th class="py-3.5 px-4 text-right pr-6">Moderation Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="reviewsTableBody" class="divide-y divide-[#E3E9EF]">
+                    <tr>
+                      <td colspan="7" class="py-12 text-center text-slate-400">
+                        <i class="fa-solid fa-spinner fa-spin text-xl text-[#087F70] mb-2"></i>
+                        <p class="text-xs font-medium">Loading review submissions from database...</p>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
 
         </div>
@@ -5241,6 +5545,100 @@
     <div class="flex items-center justify-between pt-2 border-t border-[#E3E9EF] text-xs">
       <button type="button" id="btnDatepickerClear" class="text-[11px] font-medium text-slate-400 hover:text-rose-600 cursor-pointer transition-colors">Clear</button>
       <button type="button" id="btnDatepickerToday" class="text-[11px] font-bold text-[#087F70] hover:underline cursor-pointer transition-colors">Today</button>
+    </div>
+  </div>
+
+  <!-- MODAL: INQUIRY FULL DETAILS & WORKFLOW MODAL -->
+  <div id="modalInquiryDetails" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
+    <div class="bg-white rounded-3xl border border-[#E3E9EF] shadow-2xl w-full max-w-2xl overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
+      <!-- Modal Header -->
+      <div class="px-6 py-5 border-b border-[#E3E9EF] flex items-center justify-between bg-slate-50">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center text-base">
+            <i class="fa-solid fa-envelope-open-text"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-black text-[#172B36]" id="inquiryModalTitle">Inbound Client Inquiry</h3>
+            <p class="text-[11px] text-slate-500" id="inquiryModalDate">Submitted on...</p>
+          </div>
+        </div>
+        <button type="button" id="btnCloseInquiryModal" class="whiz-modal-close-btn w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center text-xs transition-colors cursor-pointer" aria-label="Close modal">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6 space-y-5 text-xs max-h-[70vh] overflow-y-auto whiz-dock-scroll">
+        <!-- Client Profile Details -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+          <div>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Client / Company Name</span>
+            <span id="inquiryModalClientName" class="text-sm font-bold text-[#172B36] block mt-0.5">-</span>
+          </div>
+          <div>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Target Capability</span>
+            <span id="inquiryModalService" class="inline-block mt-1 px-2.5 py-0.5 rounded-md font-bold text-emerald-800 bg-emerald-50 border border-emerald-200">-</span>
+          </div>
+          <div>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Email Address</span>
+            <a id="inquiryModalEmail" href="#" class="text-xs font-semibold text-[#087F70] hover:underline flex items-center gap-1.5 mt-0.5">
+              <i class="fa-solid fa-envelope text-[11px]"></i>
+              <span id="inquiryModalEmailText">-</span>
+            </a>
+          </div>
+          <div>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Phone / WhatsApp</span>
+            <div class="flex items-center gap-2 mt-0.5">
+              <span id="inquiryModalPhoneText" class="text-xs font-semibold text-slate-700">-</span>
+              <a id="inquiryModalWhatsAppBtn" href="#" target="_blank" rel="noopener" class="px-2 py-0.5 rounded-md bg-emerald-600 text-white font-bold text-[10px] flex items-center gap-1 hover:bg-emerald-700">
+                <i class="fa-brands fa-whatsapp"></i> Chat
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Project Scope & Description -->
+        <div>
+          <label class="text-[11px] font-extrabold uppercase tracking-wider text-slate-700 block mb-2">Project Scope &amp; Details</label>
+          <div id="inquiryModalDetails" class="p-4 rounded-2xl bg-white border border-[#E3E9EF] text-slate-800 leading-relaxed font-mono text-[11px] whitespace-pre-wrap select-text">
+            -
+          </div>
+        </div>
+
+        <!-- CRM Status Selector -->
+        <div>
+          <label class="text-[11px] font-extrabold uppercase tracking-wider text-slate-700 block mb-2">Inquiry CRM Status</label>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2" id="inquiryStatusButtonsGroup">
+            <button type="button" data-set-status="new" class="inquiry-status-btn py-2 px-3 rounded-xl border text-center font-bold text-xs transition-all">New</button>
+            <button type="button" data-set-status="contacted" class="inquiry-status-btn py-2 px-3 rounded-xl border text-center font-bold text-xs transition-all">Contacted</button>
+            <button type="button" data-set-status="in_progress" class="inquiry-status-btn py-2 px-3 rounded-xl border text-center font-bold text-xs transition-all">In Progress</button>
+            <button type="button" data-set-status="closed" class="inquiry-status-btn py-2 px-3 rounded-xl border text-center font-bold text-xs transition-all">Closed</button>
+          </div>
+        </div>
+
+        <!-- Internal Notes -->
+        <div>
+          <label for="inquiryModalNotes" class="text-[11px] font-extrabold uppercase tracking-wider text-slate-700 block mb-2">Internal Executive Notes</label>
+          <textarea id="inquiryModalNotes" rows="3" placeholder="Add confidential notes about negotiations, quoted budget, or follow-up schedule..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:outline-none focus:border-[#087F70] transition-all resize-none"></textarea>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-6 py-4 border-t border-[#E3E9EF] bg-slate-50 flex items-center justify-between">
+        <button type="button" id="btnDeleteInquiryModal" class="px-3.5 py-2 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 border border-rose-200 transition-all flex items-center gap-1.5 cursor-pointer">
+          <i class="fa-solid fa-trash-can text-[11px]"></i>
+          <span>Delete</span>
+        </button>
+        <div class="flex items-center gap-2">
+          <button type="button" id="btnCloseInquiryModalBottom" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-800 cursor-pointer">
+            Cancel
+          </button>
+          <button type="button" id="btnSaveInquiryModal" class="px-5 py-2 rounded-xl text-xs font-bold btn-glass-primary shadow-xs flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-floppy-disk text-[11px]"></i>
+            <span>Save Changes</span>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 

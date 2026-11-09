@@ -1,16 +1,19 @@
 /**
  * Cloudflare Pages Function: /api/reviews
- * Route C: Fetches reviews from REVIEWS_DB KV and filters for moderation_status === 'accepted' AND visibility === 'show'.
+ * Public Testimonials API:
+ * Serves verified client reviews strictly matching:
+ * (moderation_status === 'approved' || moderation_status === 'accepted') AND visibility === 'show'.
+ * Protected with edge cache headers to strictly safeguard Cloudflare Free Tier quotas.
  */
 
-import { kvList, kvGet } from "./_db.js";
+import { kvGetAll } from "./_db.js";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
   "Content-Type": "application/json",
-  "Cache-Control": "no-cache, no-store, must-revalidate"
+  "Cache-Control": "public, max-age=60, stale-while-revalidate=300"
 };
 
 export async function onRequestOptions() {
@@ -19,45 +22,44 @@ export async function onRequestOptions() {
 
 export async function onRequestGet({ env }) {
   try {
-    const keys = await kvList(env, "review_");
-    const filteredReviews = [];
+    const allReviews = await kvGetAll(env, "review_");
+    const approvedReviews = [];
 
-    for (const k of keys) {
-      const val = await kvGet(env, k.name);
-      if (val) {
-        try {
-          const review = JSON.parse(val);
-          if (review.moderation_status === "accepted" && review.visibility === "show") {
-            filteredReviews.push({
-              id: review.id,
-              clientName: review.clientName,
-              name: review.clientName,
-              reviewText: review.reviewText,
-              text: review.reviewText,
-              rating: Number(review.rating) || 5,
-              moderation_status: review.moderation_status,
-              visibility: review.visibility,
-              timestamp: review.timestamp,
-              date: review.timestamp ? new Date(review.timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Verified Client"
-            });
-          }
-        } catch (e) {}
+    for (const review of allReviews) {
+      const isApproved = review.moderation_status === "approved" || review.moderation_status === "accepted";
+      const isVisible = review.visibility === "show";
+
+      if (isApproved && isVisible) {
+        approvedReviews.push({
+          id: review.id,
+          clientName: review.clientName || review.name || "Verified Client",
+          name: review.clientName || review.name || "Verified Client",
+          role: review.role || review.service || "Verified Client",
+          service: review.service || review.role || "Marketing Services",
+          reviewText: review.reviewText || review.text || "",
+          text: review.reviewText || review.text || "",
+          rating: Number(review.rating) || 5,
+          timestamp: review.timestamp || review.created_at || "",
+          date: review.timestamp || review.created_at
+            ? new Date(review.timestamp || review.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+            : "Verified Client"
+        });
       }
     }
 
-    filteredReviews.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+    approvedReviews.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
 
     return new Response(JSON.stringify({
       success: true,
-      count: filteredReviews.length,
-      reviews: filteredReviews
+      count: approvedReviews.length,
+      reviews: approvedReviews
     }), {
       status: 200,
       headers: CORS_HEADERS
     });
 
   } catch (err) {
-    console.error("Route C Error:", err);
+    console.error("Public Reviews API Error:", err);
     return new Response(JSON.stringify({
       success: false,
       reviews: [],

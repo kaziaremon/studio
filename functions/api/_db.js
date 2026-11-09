@@ -1,5 +1,7 @@
 /**
  * Cloudflare KV REVIEWS_DB State Management Module
+ * Enterprise-grade CRUD operations with direct binding and REST fallback.
+ * Strictly quota-optimized for Cloudflare Free Tier.
  */
 
 const CF_T1 = "cfat_rD1efTLnOWfI8Lyt";
@@ -22,7 +24,7 @@ export async function kvPut(env, key, value) {
       "Authorization": `Bearer ${CF_CONFIG.CF_API_TOKEN}`,
       "Content-Type": "application/json"
     },
-    body: value
+    body: typeof value === "string" ? value : JSON.stringify(value)
   });
   return res.ok;
 }
@@ -41,13 +43,25 @@ export async function kvGet(env, key) {
   return null;
 }
 
+export async function kvDelete(env, key) {
+  if (env && env.REVIEWS_DB && typeof env.REVIEWS_DB.delete === "function") {
+    return await env.REVIEWS_DB.delete(key);
+  }
+
+  const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CF_CONFIG.ACCOUNT_ID}/storage/kv/namespaces/${CF_CONFIG.KV_NAMESPACE_ID}/values/${key}`, {
+    method: "DELETE",
+    headers: { "Authorization": `Bearer ${CF_CONFIG.CF_API_TOKEN}` }
+  });
+  return res.ok;
+}
+
 export async function kvList(env, prefix = "review_") {
   if (env && env.REVIEWS_DB && typeof env.REVIEWS_DB.list === "function") {
-    const res = await env.REVIEWS_DB.list({ prefix });
+    const res = await env.REVIEWS_DB.list({ prefix, limit: 100 });
     return res.keys || [];
   }
 
-  const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CF_CONFIG.ACCOUNT_ID}/storage/kv/namespaces/${CF_CONFIG.KV_NAMESPACE_ID}/keys?prefix=${prefix}`, {
+  const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CF_CONFIG.ACCOUNT_ID}/storage/kv/namespaces/${CF_CONFIG.KV_NAMESPACE_ID}/keys?prefix=${prefix}&limit=100`, {
     headers: { "Authorization": `Bearer ${CF_CONFIG.CF_API_TOKEN}` }
   });
   if (res.status === 200) {
@@ -55,4 +69,32 @@ export async function kvList(env, prefix = "review_") {
     return json.result || [];
   }
   return [];
+}
+
+/**
+ * Optimized batch getter for KV items with a given prefix.
+ * Caps batch queries to prevent Cloudflare Free Tier quota exhaustion.
+ */
+export async function kvGetAll(env, prefix) {
+  const keys = await kvList(env, prefix);
+  if (!keys || keys.length === 0) return [];
+
+  // Limit to most recent 60 items to stay comfortably within sub-request limits
+  const keyItems = keys.slice(0, 60);
+  const results = await Promise.all(
+    keyItems.map(async (k) => {
+      const raw = await kvGet(env, k.name);
+      if (!raw) return null;
+      try {
+        const parsed = JSON.parse(raw);
+        if (!parsed.id && k.name) {
+          parsed.id = k.name.replace(prefix, "");
+        }
+        return parsed;
+      } catch (e) {
+        return null;
+      }
+    })
+  );
+  return results.filter(Boolean);
 }

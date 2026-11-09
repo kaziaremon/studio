@@ -1,4 +1,4 @@
-/**
+﻿/**
  * WHIZ STUDIO — ADMIN & SUPER ADMIN MOCK DATA PROVIDER
  * For isolated preview simulation, client demonstrations, and multi-device QA.
  * 100% authentic data structures matching Cloudflare D1 schema.
@@ -220,6 +220,120 @@
       { id: 'dev_01', device_name: 'Administrator Workstation (Chrome on Windows 11)', ip_address: '103.145.234.12', last_active: 'Active now (Current Device)', is_current: true },
       { id: 'dev_02', device_name: 'Executive MacBook Pro (Safari on macOS Sonoma)', ip_address: '103.145.234.88', last_active: '3 hours ago', is_current: false },
       { id: 'dev_03', device_name: 'iPhone 15 Pro (Mobile Safari on iOS 18)', ip_address: '103.145.234.95', last_active: 'Yesterday', is_current: false }
+    ],
+
+    inquiries: [
+      {
+        id: 'inq_179424001',
+        name: 'Rahim Chowdhury',
+        email: 'rahim@primefin.com',
+        phone: '+8801711234567',
+        service: 'Facebook & Instagram Marketing',
+        details: 'We are seeking an aggressive performance marketing campaign to scale our retail investment portal. Need verified CAPI and creative testing sprint.',
+        status: 'new',
+        created_at: '2026-11-09T18:30:00.000Z',
+        timestamp: '2026-11-09T18:30:00.000Z',
+        notes: ''
+      },
+      {
+        id: 'inq_179424002',
+        name: 'Sophia Sterling',
+        email: 'sophia@sterlingbrands.co.uk',
+        phone: '+442079460912',
+        service: 'LinkedIn Executive Authority',
+        details: 'Looking to position our three senior partners as thought leaders in European fintech advisory. Expected timeframe: 90 days.',
+        status: 'contacted',
+        created_at: '2026-11-08T14:15:00.000Z',
+        timestamp: '2026-11-08T14:15:00.000Z',
+        notes: 'Sent initial discovery deck. Scheduled call for Thursday.'
+      },
+      {
+        id: 'inq_179424003',
+        name: 'Mahir Al-Hassan',
+        email: 'mahir@gulfapex.ae',
+        phone: '+971501234567',
+        service: 'Meta Ads Accelerator',
+        details: 'E-commerce fashion brand with $50k monthly ad spend. Experiencing severe creative fatigue on Meta. Need DCT workflow and audience segmentation.',
+        status: 'in_progress',
+        created_at: '2026-11-07T10:00:00.000Z',
+        timestamp: '2026-11-07T10:00:00.000Z',
+        notes: 'Audit in progress. Shared preliminary findings with marketing director.'
+      },
+      {
+        id: 'inq_179424004',
+        name: 'Amina Khatun',
+        email: 'amina@artisanbengal.org',
+        phone: '+8801815127022',
+        service: 'Social Media Optimization',
+        details: 'Comprehensive profile restructuring, visual identity alignment, and weekly organic publishing schedule for craft export collective.',
+        status: 'closed',
+        created_at: '2026-11-05T09:20:00.000Z',
+        timestamp: '2026-11-05T09:20:00.000Z',
+        notes: 'Client onboarding completed. Handed over to PM Ayesha.'
+      }
+    ],
+
+    reviews: [
+      {
+        id: 'rev_179425001',
+        clientName: 'Tanvir Ahmed',
+        name: 'Tanvir Ahmed',
+        email: 'tanvir@apexretail.bd',
+        role: 'Founder, Apex Retail',
+        service: 'Meta Paid Acquisition',
+        rating: 5,
+        reviewText: 'Whiz Studio completely overhauled our Meta ad campaigns. Our cost per qualified lead dropped by 42% in under four weeks. Their weekly reporting is exceptionally clear and transparent.',
+        moderation_status: 'approved',
+        visibility: 'show',
+        created_at: '2026-10-25T11:00:00.000Z',
+        timestamp: '2026-10-25T11:00:00.000Z',
+        moderated_by: 'Super Admin'
+      },
+      {
+        id: 'rev_179425002',
+        clientName: 'Farhana Chowdhury',
+        name: 'Farhana Chowdhury',
+        email: 'farhana@velvetrose.com',
+        role: 'Managing Director, Velvet Rose Fashion',
+        service: 'Instagram & SMO',
+        rating: 5,
+        reviewText: 'The Social Media Optimization service completely transformed our Instagram profile from a disorganized page into a genuine conversion channel. Highly professional team in Dhaka!',
+        moderation_status: 'approved',
+        visibility: 'show',
+        created_at: '2026-10-28T15:30:00.000Z',
+        timestamp: '2026-10-28T15:30:00.000Z',
+        moderated_by: 'Super Admin'
+      },
+      {
+        id: 'rev_179425003',
+        clientName: 'Kareem Mansoori',
+        name: 'Kareem Mansoori',
+        email: 'kareem@mansooricorp.ae',
+        role: 'COO, Mansoori Logistics',
+        service: 'B2B Performance Funnels',
+        rating: 5,
+        reviewText: 'Outstanding transparency and execution. The weekly performance reports and client portal dashboards make tracking ROI completely effortless.',
+        moderation_status: 'pending',
+        visibility: 'hidden',
+        created_at: '2026-11-09T20:10:00.000Z',
+        timestamp: '2026-11-09T20:10:00.000Z',
+        moderated_by: ''
+      },
+      {
+        id: 'rev_179425004',
+        clientName: 'Devon Reed',
+        name: 'Devon Reed',
+        email: 'devon@cloudmetrics.io',
+        role: 'VP Marketing, CloudMetrics',
+        service: 'Full-Funnel Tracking & Attribution',
+        rating: 4,
+        reviewText: 'Their server-side Conversions API integration resolved our post-iOS 14 attribution gaps. Highly recommended team for modern technical marketing.',
+        moderation_status: 'pending',
+        visibility: 'hidden',
+        created_at: '2026-11-08T16:45:00.000Z',
+        timestamp: '2026-11-08T16:45:00.000Z',
+        moderated_by: ''
+      }
     ]
   };
 
@@ -361,6 +475,72 @@
       // 14. Trusted Devices
       if (ep === '/security/trusted-devices') {
         return Promise.resolve({ ok: true, status: 200, data: { success: true, data: mockAdminData.trustedDevices } });
+      }
+
+      // 15. Inquiries & CRM Leads (Super Admin Exclusive)
+      if (ep === '/api/inquiries' || ep === '/inquiries') {
+        if (method === 'GET') {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            data: { success: true, count: mockAdminData.inquiries.length, inquiries: mockAdminData.inquiries }
+          });
+        }
+        if (method === 'POST' || method === 'PATCH') {
+          const body = JSON.parse(options.body || '{}');
+          const target = mockAdminData.inquiries.find(i => i.id === body.id);
+          if (target) {
+            if (body.status) target.status = body.status;
+            if (typeof body.notes === 'string') target.notes = body.notes;
+            target.updated_at = new Date().toISOString();
+          }
+          return Promise.resolve({ ok: true, status: 200, data: { success: true, inquiry: target } });
+        }
+        if (method === 'DELETE') {
+          const id = options.id || (options.url && new URL(options.url, 'http://localhost').searchParams.get('id'));
+          if (id) {
+            mockAdminData.inquiries = mockAdminData.inquiries.filter(i => i.id !== id);
+          }
+          return Promise.resolve({ ok: true, status: 200, data: { success: true, message: 'Deleted' } });
+        }
+      }
+
+      // 16. Review Moderation (Super Admin Exclusive)
+      if (ep === '/api/admin-reviews' || ep === '/admin-reviews') {
+        if (method === 'GET') {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            data: { success: true, count: mockAdminData.reviews.length, reviews: mockAdminData.reviews }
+          });
+        }
+        if (method === 'POST' || method === 'PATCH') {
+          const body = JSON.parse(options.body || '{}');
+          const target = mockAdminData.reviews.find(r => r.id === body.id);
+          if (target) {
+            if (body.action === 'approve') {
+              target.moderation_status = 'approved';
+              target.visibility = 'show';
+            } else if (body.action === 'reject') {
+              target.moderation_status = 'rejected';
+              target.visibility = 'hidden';
+            } else if (body.action === 'toggle_visibility') {
+              target.visibility = target.visibility === 'show' ? 'hidden' : 'show';
+            }
+            if (body.status) target.moderation_status = body.status;
+            if (body.visibility) target.visibility = body.visibility;
+            target.updated_at = new Date().toISOString();
+            target.moderated_by = 'Super Admin';
+          }
+          return Promise.resolve({ ok: true, status: 200, data: { success: true, review: target } });
+        }
+        if (method === 'DELETE') {
+          const id = options.id || (options.url && new URL(options.url, 'http://localhost').searchParams.get('id'));
+          if (id) {
+            mockAdminData.reviews = mockAdminData.reviews.filter(r => r.id !== id);
+          }
+          return Promise.resolve({ ok: true, status: 200, data: { success: true, message: 'Deleted' } });
+        }
       }
 
       // Default fallback

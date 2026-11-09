@@ -437,7 +437,7 @@ function initReviewsCarousel() {
 }
 
 // Live Database Review Synchronization Engine
-async function syncApprovedReviewsFromDiscord() {
+async function syncApprovedReviewsFromDatabase() {
   try {
     const res = await fetch(`${API_BASE}/api/reviews`);
     if (res.ok) {
@@ -445,7 +445,7 @@ async function syncApprovedReviewsFromDiscord() {
       if (data && Array.isArray(data.reviews) && data.reviews.length > 0) {
         const remoteReviews = data.reviews.map(r => ({
           name: r.clientName || r.name || 'Verified Client',
-          role: r.service || 'Verified Ad Account Client',
+          role: r.service || r.role || 'Verified Ad Account Client',
           rating: Number(r.rating) || 5,
           text: r.reviewText || r.text || '',
           date: r.timestamp ? new Date(r.timestamp).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Verified'
@@ -651,14 +651,14 @@ async function handleContactSubmit(e) {
         <div class="flex items-center space-x-2">
           <i class="fa-solid fa-circle-check text-brand-whiz text-base"></i>
           <div>
-            <div class="font-bold">Inquiry Transmitted to Discord Ledger!</div>
-            <div class="font-normal mt-0.5">Thank you, ${escapeHtml(name)}. Your inquiry is now recorded in our #contact-inquiries channel.</div>
+            <div class="font-bold">Inquiry Received Successfully!</div>
+            <div class="font-normal mt-0.5">Thank you, ${escapeHtml(name)}. Your project scope has been registered directly with our executive team. We will review your requirements and get back to you within 24 business hours.</div>
           </div>
         </div>
       `;
     }
 
-    showToast("Inquiry successfully delivered to Discord!", "success");
+    showToast("Inquiry successfully delivered to our executive team!", "success");
 
     if (submitBtn) {
       submitBtn.innerHTML = `<span class="flex items-center space-x-2"><i class="fa-solid fa-check text-xs"></i><span>Sent Successfully!</span></span>`;
@@ -681,7 +681,7 @@ async function handleContactSubmit(e) {
           <i class="fa-solid fa-triangle-exclamation text-rose-600 text-base"></i>
           <div>
             <div class="font-bold">Delivery Failed</div>
-            <div class="font-normal mt-0.5">${escapeHtml(err.message || "Could not connect to Discord API. Please check your network or try again.")}</div>
+            <div class="font-normal mt-0.5">${escapeHtml(err.message || "Could not record inquiry. Please check your network or try again.")}</div>
           </div>
         </div>
       `;
@@ -1465,7 +1465,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize continuous rotating reviews carousel
   initReviewsCarousel();
-  syncApprovedReviewsFromDiscord();
+  syncApprovedReviewsFromDatabase();
 
   const contactForm = document.getElementById('agencyContactForm');
   if (contactForm) {

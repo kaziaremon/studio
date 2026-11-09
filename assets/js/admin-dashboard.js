@@ -1,4 +1,4 @@
-/**
+﻿/**
  * WHIZ STUDIO — SUPER ADMIN CONSOLE JAVASCRIPT CONTROLLER (v5.0 Enterprise)
  * Technology: Clerk JS SDK, Cloudflare Workers API, Cloudflare D1 Database, pdf-lib
  * Architecture: 100% Free Plan ($0 / month) | Cloudflare Authoritative Engine
@@ -70,7 +70,12 @@
     supportCache: [],
     trustedDevicesCache: [],
     currentBlueprints: [],
-    currentTaskStatus: 'all'
+    currentTaskStatus: 'all',
+    inquiries: [],
+    adminReviews: [],
+    activeInquiryFilter: 'all',
+    activeReviewFilter: 'all',
+    activeInquiryModalId: null
   };
 
   // =========================================================================
@@ -338,6 +343,16 @@
       document.querySelectorAll('.role-financial-only').forEach(el => el.classList.remove('hidden'));
     }
 
+    // Super Admin Exclusive Navigation & Controls (Inquiries CRM & Review Moderation)
+    const isSuperAdminUser = isOwner || normRole === 'super_admin';
+    document.querySelectorAll('.role-superadmin-nav, .role-superadmin-only').forEach(el => {
+      if (isSuperAdminUser) {
+        el.classList.remove('hidden');
+      } else {
+        el.classList.add('hidden');
+      }
+    });
+
     // 4. Configure Staff Invite Form role options
     const inviteRoleSelect = document.getElementById('inviteRole');
     if (inviteRoleSelect) {
@@ -487,7 +502,8 @@
     }
 
     try {
-      const response = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
+      const url = endpoint.startsWith('/api/') ? endpoint : `${API_BASE}${endpoint}`;
+      const response = await fetch(url, { ...options, headers });
       const data = await response.json().catch(() => ({}));
       return { ok: response.ok, status: response.status, data };
     } catch (err) {
@@ -563,6 +579,11 @@
     const normRole = typeof normalizeRole === 'function' ? normalizeRole(userRole) : userRole.toLowerCase();
     const isOwner = typeof isCurrentUserOwner === 'function' ? isCurrentUserOwner() : false;
 
+    // Hard Rule 0: Inquiries CRM and Review Moderation are strictly restricted to Super Admin
+    if ((tabId === 'inquiries' || tabId === 'reviews_admin') && !isOwner && normRole !== 'super_admin') {
+      showToast('Access Denied: Inquiries CRM and Review Moderation are strictly restricted to Super Administrators.', 'error');
+      tabId = normRole === 'accountant' ? 'finance' : (normRole === 'employee' ? 'tasks' : 'overview');
+    }
     // Hard Rule 1: Audit & Operational History is strictly restricted to Admin and Super Admin
     if (tabId === 'history' && !isOwner && normRole !== 'admin' && normRole !== 'super_admin') {
       showToast('Access Denied: Audit & Operational History is strictly restricted to Administrators.', 'error');
@@ -584,7 +605,7 @@
     const allViews = [
       'overview', 'clients', 'client_details', 'services', 'service_tasks',
       'projects', 'tasks', 'finance', 'team',
-      'support', 'history', 'security'
+      'support', 'history', 'security', 'inquiries', 'reviews_admin'
     ];
 
     allViews.forEach(v => {
@@ -608,7 +629,9 @@
       team: 'User & Access Management',
       support: 'Support Requests',
       history: 'Audit & History',
-      security: 'Account Security'
+      security: 'Account Security',
+      inquiries: 'Inquiries & Leads',
+      reviews_admin: 'Review Moderation'
     };
 
     const activeTitle = tabTitles[tabId] || tabId.replace(/_/g, ' ');
@@ -659,6 +682,8 @@
     if (breadcrumb) {
       if (tabId === 'client_details') breadcrumb.textContent = 'Client Workspace';
       else if (tabId === 'service_tasks') breadcrumb.textContent = 'Task Blueprints';
+      else if (tabId === 'inquiries') breadcrumb.textContent = 'Inquiries & Leads';
+      else if (tabId === 'reviews_admin') breadcrumb.textContent = 'Review Moderation';
       else breadcrumb.textContent = tabId.replace('_', ' ');
     }
 
@@ -677,6 +702,8 @@
     else if (tabId === 'support') loadSupportData();
     else if (tabId === 'history') loadHistoryData();
     else if (tabId === 'security') loadSecurityData();
+    else if (tabId === 'inquiries') loadInquiriesData();
+    else if (tabId === 'reviews_admin') loadAdminReviewsData();
 
     if (typeof initGlassSelects === 'function') initGlassSelects();
   }
@@ -6096,6 +6123,642 @@
   }
 
   // =========================================================================
+  // 12. INQUIRIES & INBOUND CRM ENGINE (SUPER ADMIN EXCLUSIVE)
+  // =========================================================================
+  async function loadInquiriesData(showToastNotice = false) {
+    const tbody = document.getElementById('inquiriesTableBody');
+    const refreshBtn = document.getElementById('btnRefreshInquiries');
+    if (refreshBtn) {
+      const icon = refreshBtn.querySelector('i');
+      if (icon) icon.classList.add('fa-spin');
+    }
+
+    if (tbody) {
+      tbody.innerHTML = '<tr><td colspan="7" class="py-12 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin text-xl text-[#087F70] mb-2"></i><p class="text-xs font-medium">Fetching inbound leads from database...</p></td></tr>';
+    }
+
+    try {
+      const res = await apiFetch('/api/inquiries');
+      if (refreshBtn) {
+        const icon = refreshBtn.querySelector('i');
+        if (icon) icon.classList.remove('fa-spin');
+      }
+
+      if (res.ok && res.data && res.data.success) {
+        state.inquiries = res.data.inquiries || [];
+        updateInquiriesBadges();
+        renderInquiries();
+        if (showToastNotice) {
+          showToast(`Synchronized ${state.inquiries.length} inquiries from database.`, 'success');
+        }
+      } else {
+        if (tbody) {
+          tbody.innerHTML = `<tr><td colspan="7" class="py-10 text-center text-rose-500 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>${escapeHtml(res.data?.error || 'Failed to load inquiries.')}</td></tr>`;
+        }
+      }
+    } catch (err) {
+      console.error('Inquiries Load Error:', err);
+      if (refreshBtn) {
+        const icon = refreshBtn.querySelector('i');
+        if (icon) icon.classList.remove('fa-spin');
+      }
+      if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="7" class="py-10 text-center text-rose-500 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Network error loading inquiries.</td></tr>';
+      }
+    }
+  }
+
+  function updateInquiriesBadges() {
+    const newCount = (state.inquiries || []).filter(i => (i.status || 'new') === 'new').length;
+    const dockBadge = document.getElementById('dockBadgeInquiries');
+    const tooltipBadge = document.getElementById('dockTooltipBadgeInquiries');
+    const drawerBadge = document.getElementById('drawerBadgeInquiries');
+
+    const updateBadgeEl = (el) => {
+      if (!el) return;
+      if (newCount > 0) {
+        el.textContent = `${newCount} New`;
+        el.classList.remove('hidden');
+      } else {
+        el.classList.add('hidden');
+      }
+    };
+
+    updateBadgeEl(dockBadge);
+    updateBadgeEl(tooltipBadge);
+    updateBadgeEl(drawerBadge);
+  }
+
+  function renderInquiries() {
+    const tbody = document.getElementById('inquiriesTableBody');
+    if (!tbody) return;
+
+    const list = state.inquiries || [];
+
+    // KPI Counters
+    const total = list.length;
+    const newCount = list.filter(i => (i.status || 'new') === 'new').length;
+    const inProgressCount = list.filter(i => i.status === 'in_progress' || i.status === 'contacted').length;
+    const closedCount = list.filter(i => i.status === 'closed').length;
+
+    const elTotal = document.getElementById('statTotalInquiries');
+    const elNew = document.getElementById('statNewInquiries');
+    const elProg = document.getElementById('statInProgressInquiries');
+    const elClosed = document.getElementById('statClosedInquiries');
+
+    if (elTotal) elTotal.textContent = total;
+    if (elNew) elNew.textContent = newCount;
+    if (elProg) elProg.textContent = inProgressCount;
+    if (elClosed) elClosed.textContent = closedCount;
+
+    // Filters & Search
+    const searchVal = (document.getElementById('searchInquiriesInput')?.value || '').toLowerCase().trim();
+    const filterVal = state.activeInquiryFilter || 'all';
+
+    const filtered = list.filter(item => {
+      if (filterVal === 'new' && (item.status || 'new') !== 'new') return false;
+      if (filterVal === 'contacted' && item.status !== 'contacted') return false;
+      if (filterVal === 'in_progress' && item.status !== 'in_progress') return false;
+      if (filterVal === 'closed' && item.status !== 'closed') return false;
+
+      if (searchVal) {
+        const textToSearch = [
+          item.name,
+          item.email,
+          item.phone,
+          item.service,
+          item.details,
+          item.notes
+        ].filter(Boolean).join(' ').toLowerCase();
+
+        if (!textToSearch.includes(searchVal)) return false;
+      }
+
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" class="py-12 text-center text-slate-400">
+            <div class="flex flex-col items-center justify-center gap-2">
+              <div class="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 text-lg">
+                <i class="fa-solid fa-inbox"></i>
+              </div>
+              <p class="font-bold text-slate-600 text-xs mt-1">No Inquiries Found</p>
+              <p class="text-[11px] text-slate-400">No leads match the current filters or search query.</p>
+            </div>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(item => {
+      const name = item.name || 'Anonymous Prospect';
+      const email = item.email || '';
+      const phone = item.phone || '';
+      const cleanPhone = phone.replace(/[^0-9]/g, '');
+      const service = item.service || 'General Inquiry';
+      const details = item.details || '';
+      const detailsSnippet = details.length > 70 ? `${details.substring(0, 70)}...` : details;
+      const status = item.status || 'new';
+      const dateStr = item.created_at || item.timestamp;
+      const formattedDate = dateStr
+        ? new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        : 'Recent';
+
+      const initials = name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() || 'IN';
+
+      let statusBadge = '';
+      if (status === 'new') {
+        statusBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-300 shadow-2xs"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>New</span>';
+      } else if (status === 'contacted') {
+        statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs"><i class="fa-solid fa-phone text-[9px]"></i>Contacted</span>';
+      } else if (status === 'in_progress') {
+        statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-purple-50 text-purple-700 border border-purple-200 shadow-2xs"><i class="fa-solid fa-comments text-[9px]"></i>In Progress</span>';
+      } else if (status === 'closed') {
+        statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-slate-100 text-slate-600 border border-slate-200 shadow-2xs"><i class="fa-solid fa-check text-[9px]"></i>Closed</span>';
+      }
+
+      const waBtn = cleanPhone
+        ? `<a href="https://wa.me/${cleanPhone}" target="_blank" rel="noopener" class="w-7 h-7 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 flex items-center justify-center transition-colors" title="Chat on WhatsApp"><i class="fa-brands fa-whatsapp text-xs"></i></a>`
+        : '';
+
+      const mailBtn = email
+        ? `<a href="mailto:${encodeURIComponent(email)}" class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-colors" title="Send Email"><i class="fa-solid fa-envelope text-xs"></i></a>`
+        : '';
+
+      return `
+        <tr class="hover:bg-slate-50/80 transition-colors">
+          <td class="py-3.5 px-4 sm:px-6">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-[#087F70] to-[#DDB92F] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
+                ${escapeHtml(initials)}
+              </div>
+              <div class="min-w-0">
+                <div class="font-extrabold text-[#172B36] text-xs truncate">${escapeHtml(name)}</div>
+                <div class="text-[11px] text-slate-500 font-mono truncate">${escapeHtml(email || 'No email')}</div>
+              </div>
+            </div>
+          </td>
+          <td class="py-3.5 px-4 whitespace-nowrap">
+            <div class="flex items-center gap-1.5">
+              ${waBtn}
+              ${mailBtn}
+              <span class="text-[11px] font-mono text-slate-600">${escapeHtml(phone || '—')}</span>
+            </div>
+          </td>
+          <td class="py-3.5 px-4 whitespace-nowrap">
+            <span class="inline-block px-2.5 py-1 rounded-md text-[10px] font-bold bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20 max-w-[160px] truncate">
+              ${escapeHtml(service)}
+            </span>
+          </td>
+          <td class="py-3.5 px-4 max-w-xs">
+            <div class="text-[11px] text-slate-600 truncate cursor-pointer hover:text-[#087F70]" onclick="window.__whizOpenInquiryModal('${item.id}')" title="Click to view full scope">
+              ${escapeHtml(detailsSnippet)}
+            </div>
+          </td>
+          <td class="py-3.5 px-4 whitespace-nowrap">
+            ${statusBadge}
+          </td>
+          <td class="py-3.5 px-4 whitespace-nowrap text-slate-400 text-[11px] font-mono">
+            ${escapeHtml(formattedDate)}
+          </td>
+          <td class="py-3.5 px-4 text-right pr-6 whitespace-nowrap">
+            <div class="flex items-center justify-end gap-1.5">
+              <button type="button" class="btn-view-inquiry px-3 py-1.5 rounded-lg text-xs font-bold bg-white hover:bg-slate-50 text-[#087F70] border border-[#087F70]/25 transition-all shadow-2xs flex items-center gap-1 cursor-pointer" data-inquiry-id="${item.id}">
+                <i class="fa-solid fa-eye text-[11px]"></i>
+                <span>View</span>
+              </button>
+              <button type="button" class="btn-delete-inquiry w-7 h-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors flex items-center justify-center cursor-pointer" data-inquiry-id="${item.id}" title="Delete inquiry">
+                <i class="fa-solid fa-trash-can text-xs"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function openInquiryDetailsModal(id) {
+    const item = (state.inquiries || []).find(i => i.id === id);
+    if (!item) return;
+
+    state.activeInquiryModalId = id;
+
+    const modal = document.getElementById('modalInquiryDetails');
+    if (!modal) return;
+
+    const elTitle = document.getElementById('inquiryModalTitle');
+    const elDate = document.getElementById('inquiryModalDate');
+    const elClientName = document.getElementById('inquiryModalClientName');
+    const elService = document.getElementById('inquiryModalService');
+    const elEmail = document.getElementById('inquiryModalEmail');
+    const elEmailText = document.getElementById('inquiryModalEmailText');
+    const elPhoneText = document.getElementById('inquiryModalPhoneText');
+    const elWhatsAppBtn = document.getElementById('inquiryModalWhatsAppBtn');
+    const elDetails = document.getElementById('inquiryModalDetails');
+    const elNotes = document.getElementById('inquiryModalNotes');
+
+    if (elTitle) elTitle.textContent = item.name ? `Inquiry from ${item.name}` : 'Client Inquiry Details';
+    if (elDate) {
+      const dt = item.created_at || item.timestamp;
+      elDate.textContent = dt ? `Received on ${new Date(dt).toLocaleString()}` : 'Date unknown';
+    }
+    if (elClientName) elClientName.textContent = item.name || 'Anonymous';
+    if (elService) elService.textContent = item.service || 'General Inquiry';
+
+    if (elEmailText) elEmailText.textContent = item.email || 'Not provided';
+    if (elEmail) elEmail.href = item.email ? `mailto:${item.email}` : '#';
+
+    if (elPhoneText) elPhoneText.textContent = item.phone || 'Not provided';
+    const cleanPhone = (item.phone || '').replace(/[^0-9]/g, '');
+    if (elWhatsAppBtn) {
+      if (cleanPhone) {
+        elWhatsAppBtn.href = `https://wa.me/${cleanPhone}`;
+        elWhatsAppBtn.classList.remove('hidden');
+      } else {
+        elWhatsAppBtn.classList.add('hidden');
+      }
+    }
+
+    if (elDetails) elDetails.textContent = item.details || 'No project scope details provided.';
+    if (elNotes) elNotes.value = item.notes || '';
+
+    // Status Buttons Highlight
+    const currentStatus = item.status || 'new';
+    document.querySelectorAll('.inquiry-status-btn').forEach(btn => {
+      const btnStatus = btn.dataset.setStatus;
+      if (btnStatus === currentStatus) {
+        btn.className = 'inquiry-status-btn py-2 px-3 rounded-xl border text-center font-bold text-xs transition-all bg-[#087F70] text-white border-[#087F70] shadow-xs';
+        btn.setAttribute('data-active', 'true');
+      } else {
+        btn.className = 'inquiry-status-btn py-2 px-3 rounded-xl border text-center font-bold text-xs transition-all bg-slate-50 text-slate-700 border-[#E3E9EF] hover:bg-slate-100';
+        btn.removeAttribute('data-active');
+      }
+    });
+
+    modal.classList.remove('hidden');
+  }
+
+  function closeInquiryDetailsModal() {
+    state.activeInquiryModalId = null;
+    document.getElementById('modalInquiryDetails')?.classList.add('hidden');
+  }
+
+  async function saveInquiryDetails() {
+    const id = state.activeInquiryModalId;
+    if (!id) return;
+
+    const item = (state.inquiries || []).find(i => i.id === id);
+    if (!item) return;
+
+    const activeStatusBtn = document.querySelector('.inquiry-status-btn[data-active="true"]');
+    const selectedStatus = activeStatusBtn ? activeStatusBtn.dataset.setStatus : (item.status || 'new');
+    const notes = document.getElementById('inquiryModalNotes')?.value || '';
+
+    const saveBtn = document.getElementById('btnSaveInquiryModal');
+    setBtnLoading(saveBtn, true, 'Saving...');
+
+    try {
+      const res = await apiFetch('/api/inquiries', {
+        method: 'PATCH',
+        body: JSON.stringify({ id, status: selectedStatus, notes })
+      });
+
+      setBtnLoading(saveBtn, false);
+
+      if (res.ok && res.data && res.data.success) {
+        item.status = selectedStatus;
+        item.notes = notes;
+        item.updated_at = new Date().toISOString();
+        showToast('Inquiry status and notes saved successfully!', 'success');
+        closeInquiryDetailsModal();
+        updateInquiriesBadges();
+        renderInquiries();
+      } else {
+        showToast(res.data?.error || 'Failed to save inquiry changes.', 'error');
+      }
+    } catch (e) {
+      setBtnLoading(saveBtn, false);
+      showToast('Network error saving inquiry.', 'error');
+    }
+  }
+
+  async function deleteInquiry(id) {
+    if (!confirm('Are you sure you want to permanently delete this client inquiry from the database? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const res = await apiFetch(`/api/inquiries?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE'
+      });
+
+      if (res.ok && res.data && res.data.success) {
+        state.inquiries = (state.inquiries || []).filter(i => i.id !== id);
+        showToast('Inquiry permanently deleted.', 'info');
+        updateInquiriesBadges();
+        renderInquiries();
+        closeInquiryDetailsModal();
+      } else {
+        showToast(res.data?.error || 'Failed to delete inquiry.', 'error');
+      }
+    } catch (e) {
+      showToast('Network error deleting inquiry.', 'error');
+    }
+  }
+
+  window.__whizOpenInquiryModal = openInquiryDetailsModal;
+
+  // =========================================================================
+  // 13. REVIEW MODERATION SYSTEM ENGINE (SUPER ADMIN EXCLUSIVE)
+  // =========================================================================
+  async function loadAdminReviewsData(showToastNotice = false) {
+    const tbody = document.getElementById('reviewsTableBody');
+    const refreshBtn = document.getElementById('btnRefreshReviewsAdmin');
+    if (refreshBtn) {
+      const icon = refreshBtn.querySelector('i');
+      if (icon) icon.classList.add('fa-spin');
+    }
+
+    if (tbody) {
+      tbody.innerHTML = '<tr><td colspan="7" class="py-12 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin text-xl text-[#087F70] mb-2"></i><p class="text-xs font-medium">Fetching client reviews from database...</p></td></tr>';
+    }
+
+    try {
+      const res = await apiFetch('/api/admin-reviews');
+      if (refreshBtn) {
+        const icon = refreshBtn.querySelector('i');
+        if (icon) icon.classList.remove('fa-spin');
+      }
+
+      if (res.ok && res.data && res.data.success) {
+        state.adminReviews = res.data.reviews || [];
+        updateReviewsBadges();
+        renderAdminReviews();
+        if (showToastNotice) {
+          showToast(`Synchronized ${state.adminReviews.length} client reviews from database.`, 'success');
+        }
+      } else {
+        if (tbody) {
+          tbody.innerHTML = `<tr><td colspan="7" class="py-10 text-center text-rose-500 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>${escapeHtml(res.data?.error || 'Failed to load reviews.')}</td></tr>`;
+        }
+      }
+    } catch (err) {
+      console.error('Reviews Load Error:', err);
+      if (refreshBtn) {
+        const icon = refreshBtn.querySelector('i');
+        if (icon) icon.classList.remove('fa-spin');
+      }
+      if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="7" class="py-10 text-center text-rose-500 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Network error loading reviews.</td></tr>';
+      }
+    }
+  }
+
+  function updateReviewsBadges() {
+    const pendCount = (state.adminReviews || []).filter(r => (r.moderation_status || 'pending') === 'pending').length;
+    const dockBadge = document.getElementById('dockBadgeReviews');
+    const tooltipBadge = document.getElementById('dockTooltipBadgeReviews');
+    const drawerBadge = document.getElementById('drawerBadgeReviews');
+
+    const updateBadgeEl = (el) => {
+      if (!el) return;
+      if (pendCount > 0) {
+        el.textContent = `${pendCount} Pend`;
+        el.classList.remove('hidden');
+      } else {
+        el.classList.add('hidden');
+      }
+    };
+
+    updateBadgeEl(dockBadge);
+    updateBadgeEl(tooltipBadge);
+    updateBadgeEl(drawerBadge);
+  }
+
+  function renderAdminReviews() {
+    const tbody = document.getElementById('reviewsTableBody');
+    if (!tbody) return;
+
+    const list = state.adminReviews || [];
+
+    // Counters
+    const total = list.length;
+    const pendingCount = list.filter(r => (r.moderation_status || 'pending') === 'pending').length;
+    const approvedCount = list.filter(r => (r.moderation_status === 'approved' || r.moderation_status === 'accepted') && r.visibility === 'show').length;
+    const hiddenCount = list.filter(r => r.moderation_status === 'rejected' || r.moderation_status === 'declined' || r.visibility === 'hidden').length;
+
+    const elTotal = document.getElementById('statTotalReviews');
+    const elPend = document.getElementById('statPendingReviews');
+    const elAppr = document.getElementById('statApprovedReviews');
+    const elHidd = document.getElementById('statHiddenReviews');
+
+    if (elTotal) elTotal.textContent = total;
+    if (elPend) elPend.textContent = pendingCount;
+    if (elAppr) elAppr.textContent = approvedCount;
+    if (elHidd) elHidd.textContent = hiddenCount;
+
+    // Filters & Search
+    const searchVal = (document.getElementById('searchReviewsInput')?.value || '').toLowerCase().trim();
+    const filterVal = state.activeReviewFilter || 'all';
+
+    const filtered = list.filter(item => {
+      if (filterVal === 'pending' && (item.moderation_status || 'pending') !== 'pending') return false;
+      if (filterVal === 'approved' && item.moderation_status !== 'approved' && item.moderation_status !== 'accepted') return false;
+      if (filterVal === 'rejected' && item.moderation_status !== 'rejected' && item.moderation_status !== 'declined') return false;
+      if (filterVal === 'hidden' && item.visibility !== 'hidden') return false;
+
+      if (searchVal) {
+        const textToSearch = [
+          item.clientName,
+          item.name,
+          item.role,
+          item.service,
+          item.reviewText,
+          item.text
+        ].filter(Boolean).join(' ').toLowerCase();
+
+        if (!textToSearch.includes(searchVal)) return false;
+      }
+
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" class="py-12 text-center text-slate-400">
+            <div class="flex flex-col items-center justify-center gap-2">
+              <div class="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 text-lg">
+                <i class="fa-solid fa-star"></i>
+              </div>
+              <p class="font-bold text-slate-600 text-xs mt-1">No Reviews Found</p>
+              <p class="text-[11px] text-slate-400">No testimonials match the active filter criteria.</p>
+            </div>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(item => {
+      const name = item.clientName || item.name || 'Verified Client';
+      const role = item.role || item.service || 'Verified Ad Account Client';
+      const text = item.reviewText || item.text || '';
+      const textSnippet = text.length > 90 ? `${text.substring(0, 90)}...` : text;
+      const rating = Math.min(5, Math.max(1, Number(item.rating) || 5));
+      const modStatus = item.moderation_status || 'pending';
+      const visStatus = item.visibility || 'hidden';
+      const dateStr = item.created_at || item.timestamp;
+      const formattedDate = dateStr
+        ? new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        : 'Recent';
+
+      const initials = name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() || 'CL';
+      const starIcons = '★'.repeat(rating) + '☆'.repeat(5 - rating);
+
+      let modBadge = '';
+      if (modStatus === 'approved' || modStatus === 'accepted') {
+        modBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-300 shadow-2xs"><i class="fa-solid fa-circle-check text-[9px]"></i>Approved</span>';
+      } else if (modStatus === 'rejected' || modStatus === 'declined') {
+        modBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-rose-50 text-rose-700 border border-rose-300 shadow-2xs"><i class="fa-solid fa-circle-xmark text-[9px]"></i>Rejected</span>';
+      } else {
+        modBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-300 shadow-2xs"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>Pending</span>';
+      }
+
+      let visBadge = '';
+      if (visStatus === 'show') {
+        visBadge = '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200"><i class="fa-solid fa-eye text-[9px]"></i>Live</span>';
+      } else {
+        visBadge = '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200"><i class="fa-solid fa-eye-slash text-[9px]"></i>Hidden</span>';
+      }
+
+      return `
+        <tr class="hover:bg-slate-50/80 transition-colors">
+          <td class="py-3.5 px-4 sm:px-6">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-[#087F70] to-[#DDB92F] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
+                ${escapeHtml(initials)}
+              </div>
+              <div class="min-w-0">
+                <div class="font-extrabold text-[#172B36] text-xs truncate">${escapeHtml(name)}</div>
+                <div class="text-[11px] text-slate-500 truncate">${escapeHtml(role)}</div>
+              </div>
+            </div>
+          </td>
+          <td class="py-3.5 px-4 whitespace-nowrap">
+            <div class="flex items-center space-x-1 text-[#DDB92F] font-bold text-xs">
+              <span>${starIcons}</span>
+              <span class="text-slate-600 text-[10px] ml-1">(${rating}/5)</span>
+            </div>
+          </td>
+          <td class="py-3.5 px-4 max-w-sm">
+            <p class="text-[11px] text-slate-700 font-medium italic line-clamp-2">
+              "${escapeHtml(textSnippet)}"
+            </p>
+          </td>
+          <td class="py-3.5 px-4 whitespace-nowrap">
+            ${modBadge}
+          </td>
+          <td class="py-3.5 px-4 whitespace-nowrap">
+            ${visBadge}
+          </td>
+          <td class="py-3.5 px-4 whitespace-nowrap text-slate-400 text-[11px] font-mono">
+            ${escapeHtml(formattedDate)}
+          </td>
+          <td class="py-3.5 px-4 text-right pr-6 whitespace-nowrap">
+            <div class="flex items-center justify-end gap-1.5">
+              <!-- Approve Button -->
+              <button type="button" class="btn-approve-review px-2.5 py-1.5 rounded-lg text-xs font-bold ${modStatus === 'approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700'} border border-emerald-300 transition-all shadow-2xs flex items-center gap-1 cursor-pointer" data-review-id="${item.id}" title="Approve & Show on Homepage">
+                <i class="fa-solid fa-check text-[10px]"></i>
+                <span>Approve</span>
+              </button>
+
+              <!-- Reject Button -->
+              <button type="button" class="btn-reject-review px-2.5 py-1.5 rounded-lg text-xs font-bold ${modStatus === 'rejected' ? 'bg-rose-100 text-rose-800' : 'bg-rose-50 hover:bg-rose-100 text-rose-700'} border border-rose-300 transition-all shadow-2xs flex items-center gap-1 cursor-pointer" data-review-id="${item.id}" title="Reject & Hide">
+                <i class="fa-solid fa-xmark text-[10px]"></i>
+                <span>Reject</span>
+              </button>
+
+              <!-- Toggle Visibility Button -->
+              <button type="button" class="btn-toggle-vis-review px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 transition-all shadow-2xs flex items-center gap-1 cursor-pointer" data-review-id="${item.id}" title="${visStatus === 'show' ? 'Hide from homepage' : 'Make visible on homepage'}">
+                <i class="fa-solid ${visStatus === 'show' ? 'fa-eye-slash text-slate-500' : 'fa-eye text-emerald-600'} text-[10px]"></i>
+                <span>${visStatus === 'show' ? 'Hide' : 'Show'}</span>
+              </button>
+
+              <!-- Delete Button -->
+              <button type="button" class="btn-delete-review w-7 h-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors flex items-center justify-center cursor-pointer" data-review-id="${item.id}" title="Delete review permanently">
+                <i class="fa-solid fa-trash-can text-xs"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  async function moderateReview(id, action) {
+    const item = (state.adminReviews || []).find(r => r.id === id);
+    if (!item) return;
+
+    try {
+      const res = await apiFetch('/api/admin-reviews', {
+        method: 'PATCH',
+        body: JSON.stringify({ id, action })
+      });
+
+      if (res.ok && res.data && res.data.success) {
+        if (action === 'approve') {
+          item.moderation_status = 'approved';
+          item.visibility = 'show';
+          showToast('Review approved and live on homepage!', 'success');
+        } else if (action === 'reject') {
+          item.moderation_status = 'rejected';
+          item.visibility = 'hidden';
+          showToast('Review rejected and hidden from site.', 'info');
+        } else if (action === 'toggle_visibility') {
+          item.visibility = item.visibility === 'show' ? 'hidden' : 'show';
+          showToast(`Review visibility set to ${item.visibility}.`, 'info');
+        }
+
+        item.updated_at = new Date().toISOString();
+        updateReviewsBadges();
+        renderAdminReviews();
+      } else {
+        showToast(res.data?.error || 'Failed to update review moderation.', 'error');
+      }
+    } catch (e) {
+      showToast('Network error moderating review.', 'error');
+    }
+  }
+
+  async function deleteReviewAdmin(id) {
+    if (!confirm('Are you sure you want to permanently delete this client review from the database? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const res = await apiFetch(`/api/admin-reviews?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE'
+      });
+
+      if (res.ok && res.data && res.data.success) {
+        state.adminReviews = (state.adminReviews || []).filter(r => r.id !== id);
+        showToast('Review permanently deleted.', 'info');
+        updateReviewsBadges();
+        renderAdminReviews();
+      } else {
+        showToast(res.data?.error || 'Failed to delete review.', 'error');
+      }
+    } catch (e) {
+      showToast('Network error deleting review.', 'error');
+    }
+  }
+
+  // =========================================================================
   // BOOTSTRAP EVENT LISTENERS
   // =========================================================================
   function init() {
@@ -6989,6 +7652,114 @@
     document.getElementById('supportSearchInput')?.addEventListener('input', () => renderSupport());
     document.getElementById('supportStatusFilter')?.addEventListener('change', () => renderSupport());
 
+    // =========================================================================
+    // INQUIRIES & LEADS CRM EVENT LISTENERS
+    // =========================================================================
+    document.getElementById('btnRefreshInquiries')?.addEventListener('click', () => loadInquiriesData(true));
+    document.getElementById('searchInquiriesInput')?.addEventListener('input', () => renderInquiries());
+
+    document.querySelectorAll('#inquiriesStatusFilterGroup .inquiry-filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.activeInquiryFilter = btn.dataset.inquiryFilter || 'all';
+        document.querySelectorAll('#inquiriesStatusFilterGroup .inquiry-filter-btn').forEach(b => {
+          if (b === btn) {
+            b.className = 'inquiry-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/25 transition-all';
+          } else {
+            b.className = 'inquiry-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 border border-transparent transition-all';
+          }
+        });
+        renderInquiries();
+      });
+    });
+
+    // Delegated Inquiries Table Actions
+    document.addEventListener('click', (e) => {
+      const viewBtn = e.target.closest('.btn-view-inquiry');
+      if (viewBtn) {
+        const id = viewBtn.dataset.inquiryId;
+        if (id) openInquiryDetailsModal(id);
+        return;
+      }
+
+      const delBtn = e.target.closest('.btn-delete-inquiry');
+      if (delBtn) {
+        const id = delBtn.dataset.inquiryId;
+        if (id) deleteInquiry(id);
+        return;
+      }
+    });
+
+    // Inquiry Modal Buttons
+    document.getElementById('btnCloseInquiryModal')?.addEventListener('click', closeInquiryDetailsModal);
+    document.getElementById('btnCloseInquiryModalBottom')?.addEventListener('click', closeInquiryDetailsModal);
+    document.getElementById('btnSaveInquiryModal')?.addEventListener('click', saveInquiryDetails);
+    document.getElementById('btnDeleteInquiryModal')?.addEventListener('click', () => {
+      if (state.activeInquiryModalId) deleteInquiry(state.activeInquiryModalId);
+    });
+
+    // Inquiry Status Buttons inside Modal
+    document.querySelectorAll('#inquiryStatusButtonsGroup .inquiry-status-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#inquiryStatusButtonsGroup .inquiry-status-btn').forEach(b => {
+          b.className = 'inquiry-status-btn py-2 px-3 rounded-xl border text-center font-bold text-xs transition-all bg-slate-50 text-slate-700 border-[#E3E9EF] hover:bg-slate-100';
+          b.removeAttribute('data-active');
+        });
+        btn.className = 'inquiry-status-btn py-2 px-3 rounded-xl border text-center font-bold text-xs transition-all bg-[#087F70] text-white border-[#087F70] shadow-xs';
+        btn.setAttribute('data-active', 'true');
+      });
+    });
+
+    // =========================================================================
+    // REVIEW MODERATION EVENT LISTENERS
+    // =========================================================================
+    document.getElementById('btnRefreshReviewsAdmin')?.addEventListener('click', () => loadAdminReviewsData(true));
+    document.getElementById('searchReviewsInput')?.addEventListener('input', () => renderAdminReviews());
+
+    document.querySelectorAll('#reviewsStatusFilterGroup .review-filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.activeReviewFilter = btn.dataset.reviewFilter || 'all';
+        document.querySelectorAll('#reviewsStatusFilterGroup .review-filter-btn').forEach(b => {
+          if (b === btn) {
+            b.className = 'review-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/25 transition-all';
+          } else {
+            b.className = 'review-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 border border-transparent transition-all';
+          }
+        });
+        renderAdminReviews();
+      });
+    });
+
+    // Delegated Reviews Moderation Actions
+    document.addEventListener('click', (e) => {
+      const approveBtn = e.target.closest('.btn-approve-review');
+      if (approveBtn) {
+        const id = approveBtn.dataset.reviewId;
+        if (id) moderateReview(id, 'approve');
+        return;
+      }
+
+      const rejectBtn = e.target.closest('.btn-reject-review');
+      if (rejectBtn) {
+        const id = rejectBtn.dataset.reviewId;
+        if (id) moderateReview(id, 'reject');
+        return;
+      }
+
+      const visBtn = e.target.closest('.btn-toggle-vis-review');
+      if (visBtn) {
+        const id = visBtn.dataset.reviewId;
+        if (id) moderateReview(id, 'toggle_visibility');
+        return;
+      }
+
+      const delRevBtn = e.target.closest('.btn-delete-review');
+      if (delRevBtn) {
+        const id = delRevBtn.dataset.reviewId;
+        if (id) deleteReviewAdmin(id);
+        return;
+      }
+    });
+
     // Support Search Clear Button
     document.getElementById('supportSearchClear')?.addEventListener('click', () => {
       const input = document.getElementById('supportSearchInput');
@@ -7093,6 +7864,8 @@
       else if (tabId === 'support') loadSupportData();
       else if (tabId === 'history') loadHistoryData();
       else if (tabId === 'security') loadSecurityData();
+      else if (tabId === 'inquiries') loadInquiriesData();
+      else if (tabId === 'reviews_admin') loadAdminReviewsData();
       setTimeout(() => {
         if (icon) icon.classList.remove('fa-spin');
         showToast('Console synchronized successfully.', 'success');
