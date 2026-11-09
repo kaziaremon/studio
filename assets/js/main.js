@@ -945,15 +945,17 @@ function initGsapAnimations() {
       });
     });
 
-    // About Us Stats Numerical Counter Trigger
-    ScrollTrigger.create({
-      trigger: "#about-stats",
-      start: "top 85%",
-      once: true,
-      onEnter: () => {
-        animateStatsCounter();
-      }
-    });
+    // About Us Stats Numerical Counter Trigger (Only if present)
+    if (document.getElementById('about-stats')) {
+      ScrollTrigger.create({
+        trigger: "#about-stats",
+        start: "top 85%",
+        once: true,
+        onEnter: () => {
+          animateStatsCounter();
+        }
+      });
+    }
 
     // Ambient Glowing Blob Floating Motion
     gsap.to(".blob-1", {
