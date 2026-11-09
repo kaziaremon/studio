@@ -1,4 +1,4 @@
-﻿/**
+/**
  * WHIZ STUDIO — ADMIN & SUPER ADMIN MOCK DATA PROVIDER
  * For isolated preview simulation, client demonstrations, and multi-device QA.
  * 100% authentic data structures matching Cloudflare D1 schema.
@@ -497,11 +497,18 @@
           return Promise.resolve({ ok: true, status: 200, data: { success: true, inquiry: target } });
         }
         if (method === 'DELETE') {
-          const id = options.id || (options.url && new URL(options.url, 'http://localhost').searchParams.get('id'));
-          if (id) {
-            mockAdminData.inquiries = mockAdminData.inquiries.filter(i => i.id !== id);
+          const urlObj = new URL(endpoint, 'http://localhost');
+          let id = urlObj.searchParams.get('id') || options.id;
+          if (!id && options.body) {
+            try {
+              const parsed = JSON.parse(options.body);
+              id = parsed.id;
+            } catch (e) {}
           }
-          return Promise.resolve({ ok: true, status: 200, data: { success: true, message: 'Deleted' } });
+          if (id) {
+            mockAdminData.inquiries = mockAdminData.inquiries.filter(i => i.id !== id && i.id !== ('inquiry_' + id) && ('inquiry_' + i.id) !== id);
+          }
+          return Promise.resolve({ ok: true, status: 200, data: { success: true, id, message: 'Inquiry deleted successfully from database.' } });
         }
       }
 
@@ -535,11 +542,18 @@
           return Promise.resolve({ ok: true, status: 200, data: { success: true, review: target } });
         }
         if (method === 'DELETE') {
-          const id = options.id || (options.url && new URL(options.url, 'http://localhost').searchParams.get('id'));
-          if (id) {
-            mockAdminData.reviews = mockAdminData.reviews.filter(r => r.id !== id);
+          const urlObj = new URL(endpoint, 'http://localhost');
+          let id = urlObj.searchParams.get('id') || options.id;
+          if (!id && options.body) {
+            try {
+              const parsed = JSON.parse(options.body);
+              id = parsed.id;
+            } catch (e) {}
           }
-          return Promise.resolve({ ok: true, status: 200, data: { success: true, message: 'Deleted' } });
+          if (id) {
+            mockAdminData.reviews = mockAdminData.reviews.filter(r => r.id !== id && r.id !== ('review_' + id) && ('review_' + r.id) !== id);
+          }
+          return Promise.resolve({ ok: true, status: 200, data: { success: true, id, message: 'Review permanently deleted.' } });
         }
       }
 

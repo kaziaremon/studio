@@ -398,6 +398,9 @@ export default {
 
           const key = id.startsWith("review_") ? id : `review_${id}`;
           await kvDelete(env, key);
+          if (key !== id) {
+            await kvDelete(env, id);
+          }
           return jsonResponse({ success: true, id, message: "Review permanently deleted." }, 200, {}, request);
         } catch (err) {
           console.error("DELETE /api/admin-reviews Error:", err);
@@ -460,6 +463,9 @@ export default {
 
           const key = id.startsWith("inquiry_") ? id : `inquiry_${id}`;
           await kvDelete(env, key);
+          if (key !== id) {
+            await kvDelete(env, id);
+          }
           return jsonResponse({ success: true, id, message: "Inquiry deleted successfully from database." }, 200, {}, request);
         } catch (err) {
           console.error("DELETE /api/inquiries Error:", err);

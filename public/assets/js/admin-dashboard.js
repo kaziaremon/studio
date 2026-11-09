@@ -1,4 +1,4 @@
-﻿/**
+/**
  * WHIZ STUDIO — SUPER ADMIN CONSOLE JAVASCRIPT CONTROLLER (v5.0 Enterprise)
  * Technology: Clerk JS SDK, Cloudflare Workers API, Cloudflare D1 Database, pdf-lib
  * Architecture: 100% Free Plan ($0 / month) | Cloudflare Authoritative Engine
@@ -502,7 +502,13 @@
     }
 
     try {
-      const url = endpoint.startsWith('/api/') ? endpoint : `${API_BASE}${endpoint}`;
+      let url = endpoint;
+      if (endpoint.startsWith('/api/')) {
+        const isLocal = window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        url = isLocal ? `https://whizstudio.art${endpoint}` : endpoint;
+      } else {
+        url = `${API_BASE}${endpoint}`;
+      }
       const response = await fetch(url, { ...options, headers });
       const data = await response.json().catch(() => ({}));
       return { ok: response.ok, status: response.status, data };
@@ -6290,7 +6296,7 @@
         : '';
 
       return `
-        <tr class="hover:bg-slate-50/80 transition-colors">
+        <tr class="hover:bg-slate-50/80 transition-colors" data-inquiry-row="${escapeHtml(item.id)}">
           <td class="py-3.5 px-4 sm:px-6">
             <div class="flex items-center gap-3">
               <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-[#087F70] to-[#DDB92F] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
@@ -6315,7 +6321,7 @@
             </span>
           </td>
           <td class="py-3.5 px-4 max-w-xs">
-            <div class="text-[11px] text-slate-600 truncate cursor-pointer hover:text-[#087F70]" onclick="window.__whizOpenInquiryModal('${item.id}')" title="Click to view full scope">
+            <div class="text-[11px] text-slate-600 truncate cursor-pointer hover:text-[#087F70]" onclick="window.__whizOpenInquiryModal('${escapeHtml(item.id)}')" title="Click to view full scope">
               ${escapeHtml(detailsSnippet)}
             </div>
           </td>
@@ -6327,11 +6333,11 @@
           </td>
           <td class="py-3.5 px-4 text-right pr-6 whitespace-nowrap">
             <div class="flex items-center justify-end gap-1.5">
-              <button type="button" class="btn-view-inquiry px-3 py-1.5 rounded-lg text-xs font-bold bg-white hover:bg-slate-50 text-[#087F70] border border-[#087F70]/25 transition-all shadow-2xs flex items-center gap-1 cursor-pointer" data-inquiry-id="${item.id}">
+              <button type="button" class="btn-view-inquiry px-3 py-1.5 rounded-lg text-xs font-bold bg-white hover:bg-slate-50 text-[#087F70] border border-[#087F70]/25 transition-all shadow-2xs flex items-center gap-1 cursor-pointer" data-inquiry-id="${escapeHtml(item.id)}">
                 <i class="fa-solid fa-eye text-[11px]"></i>
                 <span>View</span>
               </button>
-              <button type="button" class="btn-delete-inquiry w-7 h-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors flex items-center justify-center cursor-pointer" data-inquiry-id="${item.id}" title="Delete inquiry">
+              <button type="button" class="btn-delete-inquiry w-7 h-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors flex items-center justify-center cursor-pointer" data-inquiry-id="${escapeHtml(item.id)}" onclick="window.__whizDeleteInquiry('${escapeHtml(item.id)}', event)" title="Delete inquiry permanently">
                 <i class="fa-solid fa-trash-can text-xs"></i>
               </button>
             </div>
@@ -6339,6 +6345,25 @@
         </tr>
       `;
     }).join('');
+
+    // Directly bind action buttons in inquiries table
+    tbody.querySelectorAll('.btn-view-inquiry').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        const id = btn.dataset.inquiryId;
+        if (id) openInquiryDetailsModal(id);
+      });
+    });
+
+    tbody.querySelectorAll('.btn-delete-inquiry').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        const id = btn.dataset.inquiryId;
+        if (id) deleteInquiry(id, e);
+      });
+    });
   }
 
   function openInquiryDetailsModal(id) {
@@ -6446,30 +6471,81 @@
     }
   }
 
-  async function deleteInquiry(id) {
-    if (!confirm('Are you sure you want to permanently delete this client inquiry from the database? This action cannot be undone.')) {
+  async function deleteInquiry(id, event = null) {
+    if (event) {
+      if (typeof event.stopPropagation === 'function') event.stopPropagation();
+      if (typeof event.preventDefault === 'function') event.preventDefault();
+    }
+
+    if (!id) return;
+
+    if (!window.confirm('Are you sure you want to permanently delete this client inquiry? This action cannot be undone.')) {
       return;
+    }
+
+    const btn = (event && event.currentTarget) || document.querySelector(`button.btn-delete-inquiry[data-inquiry-id="${id}"]`);
+    const row = btn?.closest('tr') || document.querySelector(`tr[data-inquiry-row="${id}"]`);
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs text-rose-500"></i>';
+    }
+    if (row) {
+      row.classList.add('opacity-40', 'pointer-events-none');
     }
 
     try {
       const res = await apiFetch(`/api/inquiries?id=${encodeURIComponent(id)}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        body: JSON.stringify({ id })
       });
 
-      if (res.ok && res.data && res.data.success) {
-        state.inquiries = (state.inquiries || []).filter(i => i.id !== id);
-        showToast('Inquiry permanently deleted.', 'info');
+      if (res.ok && (res.data?.success || res.status === 200 || res.status === 204)) {
+        // Real-time local state update
+        state.inquiries = (state.inquiries || []).filter(i => i.id !== id && i.id !== ('inquiry_' + id) && ('inquiry_' + i.id) !== id);
+
+        if (window.__whizAdminMock && window.__whizAdminMock.getData) {
+          const md = window.__whizAdminMock.getData();
+          if (md && md.inquiries) {
+            md.inquiries = md.inquiries.filter(i => i.id !== id && i.id !== ('inquiry_' + id) && ('inquiry_' + i.id) !== id);
+          }
+        }
+
+        // Real-time DOM removal (row disappears immediately from screen)
+        if (row) row.remove();
+
+        // Update badges and re-render remaining items
         updateInquiriesBadges();
         renderInquiries();
-        closeInquiryDetailsModal();
+
+        if (state.activeInquiryModalId === id) {
+          closeInquiryDetailsModal();
+        }
+
+        showToast('Inquiry permanently deleted.', 'info');
       } else {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-trash-can text-xs"></i>';
+        }
+        if (row) {
+          row.classList.remove('opacity-40', 'pointer-events-none');
+        }
         showToast(res.data?.error || 'Failed to delete inquiry.', 'error');
       }
     } catch (e) {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-trash-can text-xs"></i>';
+      }
+      if (row) {
+        row.classList.remove('opacity-40', 'pointer-events-none');
+      }
       showToast('Network error deleting inquiry.', 'error');
     }
   }
 
+  window.__whizDeleteInquiry = deleteInquiry;
   window.__whizOpenInquiryModal = openInquiryDetailsModal;
 
   // =========================================================================
@@ -6637,7 +6713,7 @@
       }
 
       return `
-        <tr class="hover:bg-slate-50/80 transition-colors">
+        <tr class="hover:bg-slate-50/80 transition-colors" data-review-row="${escapeHtml(item.id)}">
           <td class="py-3.5 px-4 sm:px-6">
             <div class="flex items-center gap-3">
               <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-[#087F70] to-[#DDB92F] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
@@ -6672,25 +6748,25 @@
           <td class="py-3.5 px-4 text-right pr-6 whitespace-nowrap">
             <div class="flex items-center justify-end gap-1.5">
               <!-- Approve Button -->
-              <button type="button" class="btn-approve-review px-2.5 py-1.5 rounded-lg text-xs font-bold ${modStatus === 'approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700'} border border-emerald-300 transition-all shadow-2xs flex items-center gap-1 cursor-pointer" data-review-id="${item.id}" title="Approve & Show on Homepage">
+              <button type="button" class="btn-approve-review px-2.5 py-1.5 rounded-lg text-xs font-bold ${modStatus === 'approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700'} border border-emerald-300 transition-all shadow-2xs flex items-center gap-1 cursor-pointer" data-review-id="${escapeHtml(item.id)}" title="Approve & Show on Homepage">
                 <i class="fa-solid fa-check text-[10px]"></i>
                 <span>Approve</span>
               </button>
 
               <!-- Reject Button -->
-              <button type="button" class="btn-reject-review px-2.5 py-1.5 rounded-lg text-xs font-bold ${modStatus === 'rejected' ? 'bg-rose-100 text-rose-800' : 'bg-rose-50 hover:bg-rose-100 text-rose-700'} border border-rose-300 transition-all shadow-2xs flex items-center gap-1 cursor-pointer" data-review-id="${item.id}" title="Reject & Hide">
+              <button type="button" class="btn-reject-review px-2.5 py-1.5 rounded-lg text-xs font-bold ${modStatus === 'rejected' ? 'bg-rose-100 text-rose-800' : 'bg-rose-50 hover:bg-rose-100 text-rose-700'} border border-rose-300 transition-all shadow-2xs flex items-center gap-1 cursor-pointer" data-review-id="${escapeHtml(item.id)}" title="Reject & Hide">
                 <i class="fa-solid fa-xmark text-[10px]"></i>
                 <span>Reject</span>
               </button>
 
               <!-- Toggle Visibility Button -->
-              <button type="button" class="btn-toggle-vis-review px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 transition-all shadow-2xs flex items-center gap-1 cursor-pointer" data-review-id="${item.id}" title="${visStatus === 'show' ? 'Hide from homepage' : 'Make visible on homepage'}">
+              <button type="button" class="btn-toggle-vis-review px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 transition-all shadow-2xs flex items-center gap-1 cursor-pointer" data-review-id="${escapeHtml(item.id)}" title="${visStatus === 'show' ? 'Hide from homepage' : 'Make visible on homepage'}">
                 <i class="fa-solid ${visStatus === 'show' ? 'fa-eye-slash text-slate-500' : 'fa-eye text-emerald-600'} text-[10px]"></i>
                 <span>${visStatus === 'show' ? 'Hide' : 'Show'}</span>
               </button>
 
               <!-- Delete Button -->
-              <button type="button" class="btn-delete-review w-7 h-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors flex items-center justify-center cursor-pointer" data-review-id="${item.id}" title="Delete review permanently">
+              <button type="button" class="btn-delete-review w-7 h-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors flex items-center justify-center cursor-pointer" data-review-id="${escapeHtml(item.id)}" onclick="window.__whizDeleteReview('${escapeHtml(item.id)}', event)" title="Delete review permanently">
                 <i class="fa-solid fa-trash-can text-xs"></i>
               </button>
             </div>
@@ -6698,6 +6774,43 @@
         </tr>
       `;
     }).join('');
+
+    // Directly bind action buttons in reviews table
+    tbody.querySelectorAll('.btn-approve-review').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        const id = btn.dataset.reviewId;
+        if (id) moderateReview(id, 'approve');
+      });
+    });
+
+    tbody.querySelectorAll('.btn-reject-review').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        const id = btn.dataset.reviewId;
+        if (id) moderateReview(id, 'reject');
+      });
+    });
+
+    tbody.querySelectorAll('.btn-toggle-vis-review').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        const id = btn.dataset.reviewId;
+        if (id) moderateReview(id, 'toggle_visibility');
+      });
+    });
+
+    tbody.querySelectorAll('.btn-delete-review').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        const id = btn.dataset.reviewId;
+        if (id) deleteReviewAdmin(id, e);
+      });
+    });
   }
 
   async function moderateReview(id, action) {
@@ -6735,28 +6848,77 @@
     }
   }
 
-  async function deleteReviewAdmin(id) {
-    if (!confirm('Are you sure you want to permanently delete this client review from the database? This action cannot be undone.')) {
+  async function deleteReviewAdmin(id, event = null) {
+    if (event) {
+      if (typeof event.stopPropagation === 'function') event.stopPropagation();
+      if (typeof event.preventDefault === 'function') event.preventDefault();
+    }
+
+    if (!id) return;
+
+    if (!window.confirm('Are you sure you want to permanently delete this client review from the database? This action cannot be undone.')) {
       return;
+    }
+
+    const btn = (event && event.currentTarget) || document.querySelector(`button.btn-delete-review[data-review-id="${id}"]`);
+    const row = btn?.closest('tr') || document.querySelector(`tr[data-review-row="${id}"]`);
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs text-rose-500"></i>';
+    }
+    if (row) {
+      row.classList.add('opacity-40', 'pointer-events-none');
     }
 
     try {
       const res = await apiFetch(`/api/admin-reviews?id=${encodeURIComponent(id)}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        body: JSON.stringify({ id })
       });
 
-      if (res.ok && res.data && res.data.success) {
-        state.adminReviews = (state.adminReviews || []).filter(r => r.id !== id);
-        showToast('Review permanently deleted.', 'info');
+      if (res.ok && (res.data?.success || res.status === 200 || res.status === 204)) {
+        // Real-time local state update
+        state.adminReviews = (state.adminReviews || []).filter(r => r.id !== id && r.id !== ('review_' + id) && ('review_' + r.id) !== id);
+
+        if (window.__whizAdminMock && window.__whizAdminMock.getData) {
+          const md = window.__whizAdminMock.getData();
+          if (md && md.reviews) {
+            md.reviews = md.reviews.filter(r => r.id !== id && r.id !== ('review_' + id) && ('review_' + r.id) !== id);
+          }
+        }
+
+        // Real-time DOM removal (row disappears immediately from screen)
+        if (row) row.remove();
+
+        // Update badges and re-render remaining items
         updateReviewsBadges();
         renderAdminReviews();
+
+        showToast('Review permanently deleted.', 'info');
       } else {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-trash-can text-xs"></i>';
+        }
+        if (row) {
+          row.classList.remove('opacity-40', 'pointer-events-none');
+        }
         showToast(res.data?.error || 'Failed to delete review.', 'error');
       }
     } catch (e) {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-trash-can text-xs"></i>';
+      }
+      if (row) {
+        row.classList.remove('opacity-40', 'pointer-events-none');
+      }
       showToast('Network error deleting review.', 'error');
     }
   }
+
+  window.__whizDeleteReview = deleteReviewAdmin;
 
   // =========================================================================
   // BOOTSTRAP EVENT LISTENERS
@@ -7693,8 +7855,8 @@
     document.getElementById('btnCloseInquiryModal')?.addEventListener('click', closeInquiryDetailsModal);
     document.getElementById('btnCloseInquiryModalBottom')?.addEventListener('click', closeInquiryDetailsModal);
     document.getElementById('btnSaveInquiryModal')?.addEventListener('click', saveInquiryDetails);
-    document.getElementById('btnDeleteInquiryModal')?.addEventListener('click', () => {
-      if (state.activeInquiryModalId) deleteInquiry(state.activeInquiryModalId);
+    document.getElementById('btnDeleteInquiryModal')?.addEventListener('click', (e) => {
+      if (state.activeInquiryModalId) deleteInquiry(state.activeInquiryModalId, e);
     });
 
     // Inquiry Status Buttons inside Modal

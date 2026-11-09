@@ -147,6 +147,9 @@ export async function onRequestDelete({ request, env }) {
 
     const key = id.startsWith("review_") ? id : `review_${id}`;
     await kvDelete(env, key);
+    if (key !== id) {
+      await kvDelete(env, id);
+    }
 
     return new Response(JSON.stringify({
       success: true,
