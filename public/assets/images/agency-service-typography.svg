@@ -1,0 +1,177 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 640" width="100%" height="100%">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;family=Poppins:wght@600;700;800;900&amp;display=swap');
+      .font-sans { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+      .font-display { font-family: 'Poppins', 'Inter', sans-serif; }
+      .gold { fill: #C5A059; }
+      .gold-stroke { stroke: #C5A059; }
+      .sage { fill: #8DA892; }
+      .sage-stroke { stroke: #8DA892; }
+      .offwhite { fill: #F1F5F9; }
+      .offwhite-stroke { stroke: #F1F5F9; }
+      .muted-slate { fill: #64748B; }
+      .border-line { stroke: #232B35; }
+    </style>
+  </defs>
+
+  <!-- Matte Dark Charcoal Background -->
+  <rect width="800" height="640" fill="#0E1217"/>
+
+  <!-- Outer Understated Framing Border -->
+  <rect x="24" y="24" width="752" height="592" rx="14" fill="none" stroke="#222B36" stroke-width="1.2"/>
+  <rect x="32" y="32" width="736" height="576" rx="10" fill="none" stroke="#18202A" stroke-width="0.8" stroke-dasharray="3 3"/>
+
+  <!-- Four Artistic Corner Embellishments (Muted Gold) -->
+  <!-- Top Left -->
+  <path d="M20 36 L20 20 L36 20" fill="none" stroke="#C5A059" stroke-width="1.8" stroke-linecap="round"/>
+  <circle cx="20" cy="20" r="1.5" fill="#C5A059"/>
+  <!-- Top Right -->
+  <path d="M764 20 L780 20 L780 36" fill="none" stroke="#C5A059" stroke-width="1.8" stroke-linecap="round"/>
+  <circle cx="780" cy="20" r="1.5" fill="#C5A059"/>
+  <!-- Bottom Left -->
+  <path d="M20 604 L20 620 L36 620" fill="none" stroke="#C5A059" stroke-width="1.8" stroke-linecap="round"/>
+  <circle cx="20" cy="620" r="1.5" fill="#C5A059"/>
+  <!-- Bottom Right -->
+  <path d="M764 620 L780 620 L780 604" fill="none" stroke="#C5A059" stroke-width="1.8" stroke-linecap="round"/>
+  <circle cx="780" cy="620" r="1.5" fill="#C5A059"/>
+
+  <!-- Top Header Metadata Row -->
+  <g class="font-sans">
+    <text x="56" y="60" class="gold" font-size="10" font-weight="700" letter-spacing="3.5">WHIZ STUDIO</text>
+    <text x="400" y="60" text-anchor="middle" class="sage" font-size="9" font-weight="600" letter-spacing="3">AGENCY CORE SERVICE SPECIFICATION</text>
+    <text x="744" y="60" text-anchor="end" class="offwhite" font-size="9.5" font-weight="600" letter-spacing="2.5">EDITION 2026</text>
+    <!-- Top Divider Line -->
+    <line x1="56" y1="74" x2="744" y2="74" stroke="#1E2732" stroke-width="1"/>
+  </g>
+
+  <!-- Left Vertical Typography Ribbon (Rotated 90 deg counter-clockwise) -->
+  <g transform="rotate(-90 74 340)" class="font-sans">
+    <text x="74" y="340" text-anchor="middle" font-size="10.5" font-weight="700" letter-spacing="3.5" class="sage">
+      B2B EXECUTIVE AUTHORITY <tspan class="gold" font-size="9"> ◆ </tspan> <tspan class="offwhite">LINKEDIN OPTIMIZATION</tspan> <tspan class="gold" font-size="9"> ◆ </tspan> DIRECT RESPONSE ADS
+    </text>
+  </g>
+  <line x1="96" y1="92" x2="96" y2="560" stroke="#1D2530" stroke-width="1" stroke-dasharray="2 4"/>
+
+  <!-- Right Vertical Typography Ribbon (Rotated 90 deg clockwise) -->
+  <g transform="rotate(90 726 340)" class="font-sans">
+    <text x="726" y="340" text-anchor="middle" font-size="10.5" font-weight="700" letter-spacing="3.5" class="sage">
+      SOCIAL MEDIA OPTIMIZATION <tspan class="gold" font-size="9"> ◆ </tspan> <tspan class="offwhite">ACTIVE PLATFORM WORKFLOWS</tspan> <tspan class="gold" font-size="9"> ◆ </tspan> CONVERSION HYGIENE
+    </text>
+  </g>
+  <line x1="704" y1="92" x2="704" y2="560" stroke="#1D2530" stroke-width="1" stroke-dasharray="2 4"/>
+
+  <!-- Main Center Typographic Matrix (between x=112 and x=688) -->
+  <g class="font-sans">
+
+    <!-- Row 1: Facebook Marketing, Divider, Instagram Marketing, Divider, Creative Testing -->
+    <text x="115" y="118" class="offwhite" font-size="15" font-weight="700" letter-spacing="1.5">FACEBOOK MARKETING</text>
+    <path d="M346 113 L349 108 L352 113 L349 118 Z" fill="#C5A059"/>
+    <text x="368" y="118" class="gold" font-size="14.5" font-weight="600" letter-spacing="1.8">INSTAGRAM MARKETING</text>
+    <!-- Simple 2D analytics bar divider -->
+    <g transform="translate(605, 108)">
+      <rect x="0" y="6" width="2" height="6" fill="#8DA892"/>
+      <rect x="4" y="3" width="2" height="9" fill="#8DA892"/>
+      <rect x="8" y="0" width="2" height="12" fill="#C5A059"/>
+    </g>
+    <text x="685" y="118" text-anchor="end" class="sage" font-size="13.5" font-weight="600" letter-spacing="1.2">CREATIVE TESTING</text>
+
+    <!-- Row 2: Facebook Ads, Divider, Media Buying, Divider, Instagram Ads -->
+    <text x="115" y="158" class="sage" font-size="15" font-weight="700" letter-spacing="1.5">FACEBOOK ADS</text>
+    <text x="268" y="158" class="muted-slate" font-size="13">•</text>
+    <!-- Small checkmark icon -->
+    <path d="M292 153 L296 157 L304 148" fill="none" stroke="#C5A059" stroke-width="1.6" stroke-linecap="round"/>
+    <text x="314" y="158" class="gold" font-size="17" font-weight="800" letter-spacing="2.2">MEDIA BUYING</text>
+    <text x="475" y="158" class="muted-slate" font-size="13">•</text>
+    <text x="685" y="158" text-anchor="end" class="offwhite" font-size="15.5" font-weight="600" letter-spacing="1.5">INSTAGRAM ADS</text>
+
+    <!-- Row 3: Direct Response Ads, Growth Engine, Conversion Hygiene -->
+    <text x="115" y="198" class="gold" font-size="14" font-weight="600" letter-spacing="1.6">DIRECT RESPONSE ADS</text>
+    <!-- Tiny flat 2D meta node divider -->
+    <circle cx="340" cy="193" r="3" fill="none" stroke="#8DA892" stroke-width="1.2"/>
+    <circle cx="340" cy="193" r="1" fill="#8DA892"/>
+    <text x="400" y="198" text-anchor="middle" class="offwhite" font-size="15" font-weight="800" letter-spacing="2.5">GROWTH ENGINE</text>
+    <text x="685" y="198" text-anchor="end" class="sage" font-size="14" font-weight="700" letter-spacing="1.8">CONVERSION HYGIENE</text>
+
+    <!-- =========================================================================
+         PROMINENT FLAT CENTRAL TYPOGRAPHY BLOCK (CENTERPIECE)
+         "DIGITAL MARKETING SYSTEMS" & "PERFORMANCE MARKETING"
+         ========================================================================= -->
+    <g>
+      <!-- Center Box Frame (Matte, Unembellished, Grounded) -->
+      <rect x="112" y="226" width="576" height="162" rx="10" fill="#12171E" stroke="#25313D" stroke-width="1.2"/>
+      
+      <!-- Center Box Corner Embellishments -->
+      <path d="M118 238 L118 232 L124 232" fill="none" stroke="#C5A059" stroke-width="1.2"/>
+      <path d="M682 238 L682 232 L676 232" fill="none" stroke="#C5A059" stroke-width="1.2"/>
+      <path d="M118 376 L118 382 L124 382" fill="none" stroke="#C5A059" stroke-width="1.2"/>
+      <path d="M682 376 L682 382 L676 382" fill="none" stroke="#C5A059" stroke-width="1.2"/>
+
+      <!-- Center Box Subtitle Header -->
+      <text x="400" y="254" text-anchor="middle" class="sage" font-size="9" font-weight="700" letter-spacing="4">
+        PREDICTABLE REVENUE ARCHITECTURE
+      </text>
+
+      <!-- Central Phrase 1: DIGITAL MARKETING SYSTEMS -->
+      <text x="400" y="295" text-anchor="middle" class="font-display offwhite" font-size="27" font-weight="900" letter-spacing="3.5">
+        DIGITAL MARKETING SYSTEMS
+      </text>
+
+      <!-- Center Fine Divider -->
+      <line x1="220" y1="312" x2="375" y2="312" stroke="#2A3745" stroke-width="1"/>
+      <polygon points="400,308 404,312 400,316 396,312" fill="#C5A059"/>
+      <line x1="425" y1="312" x2="580" y2="312" stroke="#2A3745" stroke-width="1"/>
+
+      <!-- Central Phrase 2: PERFORMANCE MARKETING -->
+      <text x="400" y="348" text-anchor="middle" class="font-display gold" font-size="23.5" font-weight="800" letter-spacing="3">
+        PERFORMANCE MARKETING
+      </text>
+
+      <!-- Center Box Footer Tagline -->
+      <text x="400" y="372" text-anchor="middle" class="sage" font-size="9.5" font-weight="600" letter-spacing="2.2">
+        META ADS  •  LINKEDIN AUTHORITY  •  MEASURED ROI
+      </text>
+    </g>
+
+    <!-- Row 4: Active Platform Workflows, Divider, Conversion Hygiene, Divider, B2B Executive Authority -->
+    <text x="115" y="424" class="offwhite" font-size="14.5" font-weight="600" letter-spacing="1.5">ACTIVE PLATFORM WORKFLOWS</text>
+    <path d="M410 419 L414 415 L418 419 L414 423 Z" fill="#8DA892"/>
+    <text x="432" y="424" class="sage" font-size="14" font-weight="700" letter-spacing="1.5">CONVERSION HYGIENE</text>
+    <text x="685" y="424" text-anchor="end" class="gold" font-size="13.5" font-weight="700" letter-spacing="1.5">B2B EXECUTIVE AUTHORITY</text>
+
+    <!-- Row 5: Growth Engine, Creative Testing, Direct Response Ads -->
+    <text x="115" y="464" class="gold" font-size="18" font-weight="800" letter-spacing="2">GROWTH ENGINE</text>
+    <!-- Simple 2D analytics bar divider -->
+    <g transform="translate(310, 454)">
+      <rect x="0" y="4" width="2" height="8" fill="#C5A059"/>
+      <rect x="4" y="1" width="2" height="11" fill="#8DA892"/>
+      <rect x="8" y="6" width="2" height="6" fill="#8DA892"/>
+    </g>
+    <text x="335" y="464" class="offwhite" font-size="15" font-weight="700" letter-spacing="1.8">CREATIVE TESTING</text>
+    <!-- Simple checkmark icon -->
+    <path d="M510 459 L514 463 L522 454" fill="none" stroke="#8DA892" stroke-width="1.6" stroke-linecap="round"/>
+    <text x="685" y="464" text-anchor="end" class="sage" font-size="14.5" font-weight="600" letter-spacing="1.4">DIRECT RESPONSE ADS</text>
+
+    <!-- Row 6: LinkedIn Optimization, Facebook Marketing, Social Media Optimization -->
+    <text x="115" y="504" class="sage" font-size="14.5" font-weight="700" letter-spacing="1.5">LINKEDIN OPTIMIZATION</text>
+    <text x="352" y="504" class="muted-slate" font-size="13">•</text>
+    <text x="372" y="504" class="gold" font-size="15.5" font-weight="700" letter-spacing="1.6">FACEBOOK MARKETING</text>
+    <text x="685" y="504" text-anchor="end" class="offwhite" font-size="14" font-weight="600" letter-spacing="1.2">SOCIAL MEDIA OPTIMIZATION</text>
+
+    <!-- Row 7: Media Buying, Instagram Marketing, Active Platform Workflows -->
+    <text x="115" y="544" class="offwhite" font-size="15.5" font-weight="800" letter-spacing="2">MEDIA BUYING</text>
+    <path d="M260 539 L263 534 L266 539 L263 544 Z" fill="#C5A059"/>
+    <text x="282" y="544" class="gold" font-size="14" font-weight="600" letter-spacing="1.5">INSTAGRAM MARKETING</text>
+    <text x="495" y="544" class="muted-slate" font-size="13">•</text>
+    <text x="685" y="544" text-anchor="end" class="sage" font-size="13.5" font-weight="600" letter-spacing="1.2">ACTIVE PLATFORM WORKFLOWS</text>
+
+  </g>
+
+  <!-- Bottom Metadata Footer Row -->
+  <g class="font-sans">
+    <line x1="56" y1="570" x2="744" y2="570" stroke="#1E2732" stroke-width="1"/>
+    <text x="56" y="596" class="sage" font-size="9" font-weight="600" letter-spacing="2">100% CLIENT-OWNED ACCOUNTS</text>
+    <text x="400" y="596" text-anchor="middle" class="offwhite" font-size="9" font-weight="600" letter-spacing="2.2">DATA INFRASTRUCTURE • STRICT HYGIENE • NO GUESSWORK</text>
+    <text x="744" y="596" text-anchor="end" class="gold" font-size="9" font-weight="700" letter-spacing="2">WHIZSTUDIO.ART</text>
+  </g>
+</svg>
