@@ -1525,22 +1525,17 @@
     <!-- Main Modal Surface Container -->
     <div id="accountModalContent" class="relative bg-white/95 backdrop-blur-2xl border border-white/80 rounded-3xl shadow-2xl max-w-md w-full z-10 max-h-[92vh] flex flex-col overflow-hidden text-slate-900 transition-all">
       
-      <!-- Top Pinned Bar: Close Button & Brand Badges -->
-      <div class="px-6 pt-6 pb-2 sm:px-8 sm:pt-8 flex items-center justify-between relative shrink-0">
-        <!-- Visual Brand Indicator -->
-        <div class="flex items-center space-x-2.5">
-          <div class="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-center shadow-xs">
-            <i class="fa-solid fa-circle-user text-base text-brand-whiz" id="accountPortalHeaderIcon"></i>
-          </div>
-          <div>
-            <span id="accountPortalHeaderBadge" class="text-[11px] font-extrabold uppercase tracking-wider text-emerald-950 bg-emerald-100/90 px-3 py-0.5 rounded-full border border-emerald-300/80">Account Portal</span>
-          </div>
-        </div>
-
+      <!-- Top Pinned Bar: Official Centered Brand Logo & Close Button -->
+      <div class="px-6 pt-7 pb-2 sm:px-8 sm:pt-8 flex flex-col items-center justify-center relative shrink-0">
         <!-- Accessible Top-Right Close Button -->
-        <button id="accountModalCloseBtn" type="button" class="whiz-modal-close-btn" aria-label="Close Account Portal">
+        <button id="accountModalCloseBtn" type="button" class="whiz-modal-close-btn absolute right-5 top-5 sm:right-6 sm:top-6 z-20" aria-label="Close Authentication Modal">
           <i class="fa-solid fa-xmark"></i>
         </button>
+
+        <!-- Centered Official Whiz Studio Logo -->
+        <div class="flex items-center justify-center pb-1">
+          <img src="/assets/images/logo.png" alt="Whiz Studio" class="h-10 sm:h-12 w-auto max-w-[170px] sm:max-w-[200px] object-contain transition-transform duration-200 hover:scale-105">
+        </div>
       </div>
 
       <!-- Scrollable Inner Content Area -->
@@ -1556,7 +1551,7 @@
           
           <!-- SUB-VIEW A: CLIENT LOGIN INTERFACE -->
           <div id="clientLoginView">
-            <div class="mb-5">
+            <div class="mb-5 text-center">
               <h2 id="accountModalTitle" class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">Welcome Back</h2>
               <p class="text-xs sm:text-sm text-slate-600 font-normal mt-1">Sign in to access your Whiz Studio workspace.</p>
             </div>
@@ -1636,7 +1631,7 @@
 
           <!-- SUB-VIEW B: CLIENT REGISTRATION INTERFACE -->
           <div id="clientRegisterView" class="hidden">
-            <div class="mb-5">
+            <div class="mb-5 text-center">
               <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">Create Your Account</h2>
               <p class="text-xs sm:text-sm text-slate-600 font-normal mt-1">Fill in your details to create your Whiz Studio workspace profile.</p>
             </div>
@@ -1754,7 +1749,7 @@
 
           <!-- SUB-VIEW C: CLIENT OTP VERIFICATION -->
           <div id="clientOtpView" class="hidden">
-            <div class="mb-5">
+            <div class="mb-5 text-center">
               <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">Verify Your Email</h2>
               <p class="text-xs sm:text-sm text-slate-600 font-normal mt-1">We sent a 6-digit verification code to <span id="clientOtpTargetEmail" class="font-bold text-slate-900"></span></p>
             </div>
@@ -1787,7 +1782,7 @@
 
           <!-- SUB-VIEW D: CLIENT FORGOT PASSWORD -->
           <div id="clientForgotView" class="hidden">
-            <div class="mb-5">
+            <div class="mb-5 text-center">
               <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">Reset Password</h2>
               <p class="text-xs sm:text-sm text-slate-600 font-normal mt-1">Enter your email to receive a password reset code.</p>
             </div>

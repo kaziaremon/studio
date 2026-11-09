@@ -14,6 +14,12 @@
 /index.html
   Cache-Control: public, max-age=1800, stale-while-revalidate=86400
 
+/login
+  Cache-Control: public, max-age=0, must-revalidate
+
+/register
+  Cache-Control: public, max-age=0, must-revalidate
+
 /privacy
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 

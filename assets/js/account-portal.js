@@ -250,15 +250,48 @@
     }
   }
 
+  // Dedicated Deep Routing for Authentication Modals
+  function updateAuthRoute(route, push = true) {
+    try {
+      const currentPath = window.location.pathname.replace(/\/+$/, '') || '/';
+      let targetPath = '/';
+      let targetTitle = 'Whiz Studio — Elite Creative Studio & Performance Ads';
+
+      if (route === 'login') {
+        targetPath = '/login';
+        targetTitle = 'Login | Whiz Studio';
+      } else if (route === 'register') {
+        targetPath = '/register';
+        targetTitle = 'Register | Whiz Studio';
+      }
+
+      if (currentPath === targetPath) return;
+
+      if (push) {
+        window.history.pushState({ authModal: route }, targetTitle, targetPath);
+      } else {
+        window.history.replaceState({ authModal: route }, targetTitle, targetPath);
+      }
+      document.title = targetTitle;
+    } catch (err) {
+      console.warn('History routing notice:', err);
+    }
+  }
+
   // Modal Control Functions
-  function openModal(modalId) {
-    closeAllModals(false);
+  function openModal(modalId, updateUrl = true) {
+    closeAllModals(false, false);
     const modal = document.getElementById(modalId);
     if (!modal) return;
 
     modal.classList.remove('hidden');
     document.body.classList.add('overflow-hidden');
     state.currentModal = modalId;
+
+    if (modalId === 'accountPortalModal' && updateUrl) {
+      const activeSub = state.clientSubView === 'register' ? 'register' : 'login';
+      updateAuthRoute(activeSub, true);
+    }
 
     if (window.gsap) {
       window.gsap.fromTo(modal.querySelector('.backdrop-blur-2xl') || modal.firstElementChild, 
@@ -268,7 +301,7 @@
     }
   }
 
-  function closeModal(modalId) {
+  function closeModal(modalId, updateUrl = true) {
     const modal = document.getElementById(modalId);
     if (!modal) return;
     modal.classList.add('hidden');
@@ -277,9 +310,16 @@
       state.currentModal = null;
     }
     showPortalAlert('');
+
+    if (modalId === 'accountPortalModal' && updateUrl) {
+      const currentPath = window.location.pathname.replace(/\/+$/, '') || '/';
+      if (currentPath === '/login' || currentPath === '/register') {
+        updateAuthRoute(null, true);
+      }
+    }
   }
 
-  function closeAllModals(removeBodyLock = true) {
+  function closeAllModals(removeBodyLock = true, updateUrl = true) {
     ['accountPortalModal', 'clientDashboardModal', 'adminDashboardModal'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.classList.add('hidden');
@@ -289,6 +329,13 @@
     }
     state.currentModal = null;
     showPortalAlert('');
+
+    if (updateUrl) {
+      const currentPath = window.location.pathname.replace(/\/+$/, '') || '/';
+      if (currentPath === '/login' || currentPath === '/register') {
+        updateAuthRoute(null, true);
+      }
+    }
   }
 
   // Tab & Subview Switchers
@@ -344,9 +391,17 @@
     }
   }
 
-  function switchClientSubView(subview) {
+  function switchClientSubView(subview, updateUrl = true) {
     state.clientSubView = subview;
     showPortalAlert('');
+
+    if (updateUrl && state.currentModal === 'accountPortalModal') {
+      if (subview === 'register') {
+        updateAuthRoute('register', true);
+      } else if (subview === 'login') {
+        updateAuthRoute('login', true);
+      }
+    }
 
     const views = {
       login: document.getElementById('clientLoginView'),
@@ -548,7 +603,8 @@
   // Open Current Dashboard based on Role
   function openUserDashboard() {
     if (!state.currentUser) {
-      openModal('accountPortalModal');
+      openModal('accountPortalModal', true);
+      switchClientSubView('login', true);
       return;
     }
 
@@ -2603,6 +2659,25 @@
     const adminInviteForm = document.getElementById('adminInviteForm');
     if (adminInviteForm) adminInviteForm.addEventListener('submit', handleInviteAdmin);
 
+    // Popstate event listener for browser history (Back / Forward navigation)
+    window.addEventListener('popstate', (e) => {
+      const path = window.location.pathname.replace(/\/+$/, '') || '/';
+      if (path === '/login') {
+        if (!state.currentUser) {
+          openModal('accountPortalModal', false);
+          switchClientSubView('login', false);
+        }
+      } else if (path === '/register') {
+        if (!state.currentUser) {
+          openModal('accountPortalModal', false);
+          switchClientSubView('register', false);
+        }
+      } else {
+        if (state.currentModal === 'accountPortalModal') {
+          closeModal('accountPortalModal', false);
+        }
+      }
+    });
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && state.currentModal) {
         closeModal(state.currentModal);
@@ -2763,17 +2838,46 @@
         if (window.Clerk.user) {
           await routeAuthenticatedUser('Google authentication verified successfully!');
         }
-      } else if (url.searchParams.has('login') && !window.Clerk.user) {
-        openModal('accountPortalModal');
+      } else {
+        checkInitialAuthRoute();
       }
     } catch (err) {
       console.error('Clerk Initialization Error:', err);
     }
   }
 
+  // Deep Link Routing Inspector on Page Load
+  function checkInitialAuthRoute() {
+    try {
+      const url = new URL(window.location.href);
+      const path = url.pathname.replace(/\/+$/, '') || '/';
+      const isLoginRoute = path === '/login' || url.searchParams.has('login');
+      const isRegisterRoute = path === '/register' || url.searchParams.has('register');
+
+      if (!isLoginRoute && !isRegisterRoute) return;
+
+      if (window.Clerk?.user) {
+        routeAuthenticatedUser();
+        return;
+      }
+
+      const targetSub = isRegisterRoute ? 'register' : 'login';
+      openModal('accountPortalModal', false);
+      switchClientSubView(targetSub, false);
+
+      const cleanPath = targetSub === 'register' ? '/register' : '/login';
+      if (url.pathname !== cleanPath || url.searchParams.has('login') || url.searchParams.has('register')) {
+        window.history.replaceState({ authModal: targetSub }, targetSub === 'register' ? 'Register | Whiz Studio' : 'Login | Whiz Studio', cleanPath);
+      }
+    } catch (err) {
+      console.warn('checkInitialAuthRoute notice:', err);
+    }
+  }
+
   // Resilient Lifecycle Initialization
   function init() {
     bindEvents();
+    checkInitialAuthRoute();
     initClerk();
   }
 

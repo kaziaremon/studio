@@ -196,6 +196,14 @@ export default {
       return Response.redirect(`${url.origin}/admin/dashboard`, 302);
     }
 
+    // Direct Access to Authentication Routes (/login and /register)
+    if (path === "/login" || path === "/login/" || path === "/register" || path === "/register/") {
+      if (env?.ASSETS && typeof env.ASSETS.fetch === "function") {
+        const indexRequest = new Request(new URL("/", request.url), request);
+        return env.ASSETS.fetch(indexRequest);
+      }
+    }
+
     // CORS Preflight
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: getCorsHeaders(request) });
