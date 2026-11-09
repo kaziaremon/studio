@@ -1,5 +1,5 @@
 /**
- * 100% CLOUDFLARE-NATIVE BACKEND & DISCORD INTERACTION ENGINE (worker.js)
+ * 100% CLOUDFLARE-NATIVE BACKEND & DISCORD INTERACTION ENGINE (_worker.js)
  * Whiz Studio Reviews System
  *
  * Implements:
@@ -75,7 +75,6 @@ function hexToUint8Array(hex) {
 async function verifyDiscordSignature(rawBody, signature, timestamp, publicKey) {
   if (!signature || !timestamp || !publicKey) return false;
 
-  // 1. Native Web Crypto API
   try {
     const key = await crypto.subtle.importKey(
       "raw",
@@ -92,11 +91,8 @@ async function verifyDiscordSignature(rawBody, signature, timestamp, publicKey) 
       encoder.encode(timestamp + rawBody)
     );
     if (verified) return true;
-  } catch (err) {
-    // Fallback to tweetnacl
-  }
+  } catch (err) {}
 
-  // 2. tweetnacl fallback
   try {
     const encoder = new TextEncoder();
     return nacl.sign.detached.verify(
@@ -118,7 +114,6 @@ async function kvPut(env, key, value) {
     return await env.REVIEWS_DB.put(key, value);
   }
 
-  // REST API Fallback
   const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CONFIG.ACCOUNT_ID}/storage/kv/namespaces/${CONFIG.KV_NAMESPACE_ID}/values/${key}`, {
     method: "PUT",
     headers: {
@@ -135,7 +130,6 @@ async function kvGet(env, key) {
     return await env.REVIEWS_DB.get(key);
   }
 
-  // REST API Fallback
   const cfToken = env?.CF_API_TOKEN;
   if (!cfToken) return null;
   const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CONFIG.ACCOUNT_ID}/storage/kv/namespaces/${CONFIG.KV_NAMESPACE_ID}/values/${key}`, {
@@ -153,7 +147,6 @@ async function kvList(env, prefix = "review_") {
     return res.keys || [];
   }
 
-  // REST API Fallback
   const cfToken = env?.CF_API_TOKEN;
   if (!cfToken) return [];
   const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CONFIG.ACCOUNT_ID}/storage/kv/namespaces/${CONFIG.KV_NAMESPACE_ID}/keys?prefix=${prefix}`, {
@@ -196,15 +189,27 @@ export default {
       return Response.redirect(`${url.origin}/admin/dashboard`, 302);
     }
 
-    // Direct Access to Authentication Routes (/login and /register)
-    if (path === "/login" || path === "/login/" || path === "/register" || path === "/register/") {
+    // SEO-Friendly Navigation Routes & Deep Linking
+    const SEO_SPA_ROUTES = [
+      "/about",
+      "/services",
+      "/pricing",
+      "/articles",
+      "/reviews",
+      "/testimonials",
+      "/faq",
+      "/contact",
+      "/login",
+      "/register"
+    ];
+    const cleanRoutePath = path.replace(/\/+$/, '') || '/';
+    if (SEO_SPA_ROUTES.includes(cleanRoutePath)) {
       if (env?.ASSETS && typeof env.ASSETS.fetch === "function") {
         const indexRequest = new Request(new URL("/", request.url), request);
         return env.ASSETS.fetch(indexRequest);
       }
     }
 
-    // CORS Preflight
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: getCorsHeaders(request) });
     }
@@ -254,7 +259,7 @@ export default {
             {
               title: "⭐ Client Review Submission — Whiz Studio",
               description: "A new client review has been submitted and is awaiting team moderation.\n\n### 🛡️ Moderation Actions:\nUse the action buttons below to accept, decline, or toggle website display.",
-              color: 0xF59E0B, // Amber (Pending)
+              color: 0xF59E0B,
               fields: [
                 { name: "👤 Client / Company", value: String(clientName), inline: true },
                 { name: "⭐ Rating Given", value: starString, inline: true },
@@ -271,26 +276,26 @@ export default {
               type: 1, // ActionRow
               components: [
                 {
-                  type: 2, // Button
-                  style: 3, // Success (Green)
+                  type: 2,
+                  style: 3, // Success
                   label: "✅ Accept",
                   custom_id: `accept_${id}`
                 },
                 {
-                  type: 2, // Button
-                  style: 4, // Danger (Red)
+                  type: 2,
+                  style: 4, // Danger
                   label: "❌ Decline",
                   custom_id: `decline_${id}`
                 },
                 {
-                  type: 2, // Button
-                  style: 1, // Primary (Blurple)
+                  type: 2,
+                  style: 1, // Primary
                   label: "👁️ Show",
                   custom_id: `show_${id}`
                 },
                 {
-                  type: 2, // Button
-                  style: 2, // Secondary (Grey)
+                  type: 2,
+                  style: 2, // Secondary
                   label: "🙈 Hide",
                   custom_id: `hide_${id}`
                 }
@@ -299,7 +304,6 @@ export default {
           ]
         };
 
-        // Deliver to Discord (#review-moderation)
         let discordRes = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
           method: "POST",
           headers: {
@@ -309,7 +313,6 @@ export default {
           body: JSON.stringify(discordPayload)
         });
 
-        // Webhook fallback
         if (!discordRes.ok) {
           discordRes = await fetch(reviewWebhook, {
             method: "POST",
@@ -339,7 +342,6 @@ export default {
         const signature = request.headers.get("x-signature-ed25519") || request.headers.get("X-Signature-Ed25519");
         const timestamp = request.headers.get("x-signature-timestamp") || request.headers.get("X-Signature-Timestamp");
 
-        // 1. Verify Ed25519 signature
         if (!signature || !timestamp) {
           return new Response("Missing signature headers", { status: 401 });
         }
@@ -356,12 +358,10 @@ export default {
           return new Response("Invalid JSON", { status: 400 });
         }
 
-        // PING (Type 1) -> Instant PONG (Type 1)
         if (interaction.type === 1) {
           return jsonResponse({ type: 1 });
         }
 
-        // Button Click (MESSAGE_COMPONENT / Type 3)
         if (interaction.type === 3) {
           const customId = interaction.data?.custom_id || "";
           const member = interaction.member || interaction.user;
@@ -388,7 +388,6 @@ export default {
             return jsonResponse({ type: 6 });
           }
 
-          // Fetch review from KV
           let review = null;
           const existingRaw = await kvGet(env, `review_${id}`);
           if (existingRaw) {
@@ -397,7 +396,6 @@ export default {
             } catch (e) {}
           }
 
-          // Fallback if not found in KV
           if (!review) {
             const originalEmbed = interaction.message?.embeds?.[0] || {};
             const fields = originalEmbed.fields || [];
@@ -426,7 +424,6 @@ export default {
             };
           }
 
-          // Update corresponding fields in KV
           if (action === "accept") {
             review.moderation_status = "accepted";
           } else if (action === "decline") {
@@ -439,10 +436,8 @@ export default {
 
           review.updated_at = new Date().toISOString();
 
-          // Save updated review to KV (REVIEWS_DB)
           await kvPut(env, `review_${id}`, JSON.stringify(review));
 
-          // Compute visual badges & color
           const modStatus = review.moderation_status;
           const visStatus = review.visibility;
 
@@ -452,11 +447,11 @@ export default {
 
           let embedColor = 0xF59E0B;
           if (modStatus === "accepted" && visStatus === "show") {
-            embedColor = 0x00A86B; // Emerald
+            embedColor = 0x00A86B;
           } else if (modStatus === "accepted") {
-            embedColor = 0x3B82F6; // Blue
+            embedColor = 0x3B82F6;
           } else if (modStatus === "declined") {
-            embedColor = 0xEF4444; // Red
+            embedColor = 0xEF4444;
           }
 
           let statusDetail = "";
@@ -487,32 +482,31 @@ export default {
             footer: { text: "Whiz Studio Review Control Panel • whizstudio.art" }
           };
 
-          // 4 Action Buttons preserved forever
           const components = [
             {
               type: 1, // ActionRow
               components: [
                 {
                   type: 2,
-                  style: 3, // Success
+                  style: 3,
                   label: "✅ Accept",
                   custom_id: `accept_${id}`
                 },
                 {
                   type: 2,
-                  style: 4, // Danger
+                  style: 4,
                   label: "❌ Decline",
                   custom_id: `decline_${id}`
                 },
                 {
                   type: 2,
-                  style: 1, // Primary
+                  style: 1,
                   label: "👁️ Show",
                   custom_id: `show_${id}`
                 },
                 {
                   type: 2,
-                  style: 2, // Secondary
+                  style: 2,
                   label: "🙈 Hide",
                   custom_id: `hide_${id}`
                 }
@@ -520,8 +514,6 @@ export default {
             }
           ];
 
-          // CRITICAL FIX FOR TIMEOUT:
-          // Immediately return Type 7 (UPDATE_MESSAGE) in < 50ms!
           return jsonResponse({
             type: 7,
             data: {
@@ -541,7 +533,6 @@ export default {
 
     // -------------------------------------------------------------------------
     // ROUTE C: GET /api/reviews (For Website Display)
-    // Returns ONLY reviews where moderation_status === 'accepted' AND visibility === 'show'
     // -------------------------------------------------------------------------
     if (path === "/api/reviews" && request.method === "GET") {
       try {
@@ -553,7 +544,6 @@ export default {
           if (val) {
             try {
               const review = JSON.parse(val);
-              // Filter condition: moderation_status === 'accepted' AND visibility === 'show'
               if (review.moderation_status === "accepted" && review.visibility === "show") {
                 filteredReviews.push({
                   id: review.id,
@@ -572,7 +562,6 @@ export default {
           }
         }
 
-        // Sort descending by timestamp
         filteredReviews.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
 
         return jsonResponse({
@@ -589,19 +578,6 @@ export default {
       }
     }
 
-    // -------------------------------------------------------------------------
-    // Services Section Routing (/services & /services/)
-    // -------------------------------------------------------------------------
-    if (path === "/services" || path === "/services/") {
-      return Response.redirect(`${url.origin}/#services`, 301);
-    }
-
-    // -------------------------------------------------------------------------
-    // Articles Section Routing (/articles & /articles/)
-    // -------------------------------------------------------------------------
-    if (path === "/articles" || path === "/articles/") {
-      return Response.redirect(`${url.origin}/#articles`, 301);
-    }
 
     // -------------------------------------------------------------------------
     // Contact Gateway (/api/submit-contact & /api/contact)
@@ -793,7 +769,6 @@ export default {
       });
     }
 
-    // Static Asset fallback for Cloudflare Pages
     if (env?.ASSETS && typeof env.ASSETS.fetch === "function") {
       return env.ASSETS.fetch(request);
     }

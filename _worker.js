@@ -189,8 +189,21 @@ export default {
       return Response.redirect(`${url.origin}/admin/dashboard`, 302);
     }
 
-    // Direct Access to Authentication Routes (/login and /register)
-    if (path === "/login" || path === "/login/" || path === "/register" || path === "/register/") {
+    // SEO-Friendly Navigation Routes & Deep Linking
+    const SEO_SPA_ROUTES = [
+      "/about",
+      "/services",
+      "/pricing",
+      "/articles",
+      "/reviews",
+      "/testimonials",
+      "/faq",
+      "/contact",
+      "/login",
+      "/register"
+    ];
+    const cleanRoutePath = path.replace(/\/+$/, '') || '/';
+    if (SEO_SPA_ROUTES.includes(cleanRoutePath)) {
       if (env?.ASSETS && typeof env.ASSETS.fetch === "function") {
         const indexRequest = new Request(new URL("/", request.url), request);
         return env.ASSETS.fetch(indexRequest);
@@ -565,19 +578,6 @@ export default {
       }
     }
 
-    // -------------------------------------------------------------------------
-    // Services Section Routing (/services & /services/)
-    // -------------------------------------------------------------------------
-    if (path === "/services" || path === "/services/") {
-      return Response.redirect(`${url.origin}/#services`, 301);
-    }
-
-    // -------------------------------------------------------------------------
-    // Articles Section Routing (/articles & /articles/)
-    // -------------------------------------------------------------------------
-    if (path === "/articles" || path === "/articles/") {
-      return Response.redirect(`${url.origin}/#articles`, 301);
-    }
 
     // -------------------------------------------------------------------------
     // Contact Gateway (/api/submit-contact & /api/contact)

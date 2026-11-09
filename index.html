@@ -305,19 +305,19 @@
       <nav id="mainNav" class="glass-nav rounded-2xl px-4 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between border border-white/40 shadow-[0_4px_30px_rgba(0,0,0,0.06)] transition-all duration-300">
         
         <!-- Brand Logo: Single <img> tag, perfectly proportional and responsive -->
-        <a href="#home" class="inline-flex items-center group transition-transform hover:scale-[1.02] focus:outline-none" aria-label="Whiz Studio Home">
+        <a href="/" class="inline-flex items-center group transition-transform hover:scale-[1.02] focus:outline-none" aria-label="Whiz Studio Home">
           <img src="assets/images/logo.png?v=20261105" alt="Whiz Studio" decoding="async" class="h-9 sm:h-11 md:h-12 w-auto max-w-[150px] sm:max-w-[190px] md:max-w-none object-contain">
         </a>
 
         <!-- Desktop Navigation Links -->
         <div id="desktopNavLinks" class="hidden lg:flex items-center space-x-1 xl:space-x-2 text-sm font-semibold text-slate-800">
-          <a href="#home" class="nav-link px-4 py-1.5 rounded-full">Home</a>
-          <a href="#about" class="nav-link px-4 py-1.5 rounded-full">About Us</a>
-          <a href="#services" class="nav-link px-4 py-1.5 rounded-full">Services</a>
-          <a href="#pricing" class="nav-link px-4 py-1.5 rounded-full">Pricing</a>
-          <a href="#articles" class="nav-link px-4 py-1.5 rounded-full">Articles</a>
-          <a href="#testimonials" class="nav-link px-4 py-1.5 rounded-full">Reviews</a>
-          <a href="#faq" class="nav-link px-4 py-1.5 rounded-full">FAQ</a>
+          <a href="/" class="nav-link px-4 py-1.5 rounded-full" data-route="/">Home</a>
+          <a href="/about" class="nav-link px-4 py-1.5 rounded-full" data-route="/about">About Us</a>
+          <a href="/services" class="nav-link px-4 py-1.5 rounded-full" data-route="/services">Services</a>
+          <a href="/pricing" class="nav-link px-4 py-1.5 rounded-full" data-route="/pricing">Pricing</a>
+          <a href="/articles" class="nav-link px-4 py-1.5 rounded-full" data-route="/articles">Articles</a>
+          <a href="/reviews" class="nav-link px-4 py-1.5 rounded-full" data-route="/reviews">Reviews</a>
+          <a href="/faq" class="nav-link px-4 py-1.5 rounded-full" data-route="/faq">FAQ</a>
         </div>
 
         <!-- Main Call-to-Action & Profile Area (Vertically Centered & Non-Wrapping) -->
@@ -327,7 +327,7 @@
             <span class="truncate max-w-[80px] sm:max-w-[120px] whitespace-nowrap">My Account</span>
           </button>
 
-          <a href="#contact" class="hidden sm:inline-flex items-center justify-center h-10 px-5 rounded-full font-bold text-sm btn-glass-primary shadow-sm transition-all duration-200 shrink-0">
+          <a href="/contact" data-route="/contact" class="hidden sm:inline-flex items-center justify-center h-10 px-5 rounded-full font-bold text-sm btn-glass-primary shadow-sm transition-all duration-200 shrink-0">
             <span>Contact with Us</span>
             <i class="fa-solid fa-arrow-right text-xs ml-2"></i>
           </a>
@@ -341,18 +341,18 @@
 
       <!-- Mobile Dropdown Menu -->
       <div id="mobileMenu" class="hidden lg:hidden mt-2 bg-white/30 backdrop-blur-xl border border-white/40 shadow-[0_12px_40px_rgba(0,168,107,0.12)] rounded-3xl p-5 sm:p-6 flex flex-col items-center justify-center space-y-2 text-center">
-        <a href="#home" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]">Home</a>
-        <a href="#about" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]">About Us</a>
-        <a href="#services" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]">Services</a>
-        <a href="#pricing" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]">Pricing</a>
-        <a href="#articles" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]">Articles</a>
-        <a href="#testimonials" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]">Reviews</a>
-        <a href="#faq" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]">FAQ</a>
+        <a href="/" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]" data-route="/">Home</a>
+        <a href="/about" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]" data-route="/about">About Us</a>
+        <a href="/services" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]" data-route="/services">Services</a>
+        <a href="/pricing" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]" data-route="/pricing">Pricing</a>
+        <a href="/articles" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]" data-route="/articles">Articles</a>
+        <a href="/reviews" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]" data-route="/reviews">Reviews</a>
+        <a href="/faq" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]" data-route="/faq">FAQ</a>
         <button id="myAccountMobileNavBtn" type="button" class="mobile-nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 hover:text-brand-whiz bg-white/70 hover:bg-white border border-white/80 transition-all min-h-[44px] w-full max-w-xs mt-1 shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-whiz/50 active:scale-[0.98] cursor-pointer" aria-haspopup="dialog" aria-expanded="false" aria-controls="accountPortalModal">
           <i class="fa-solid fa-circle-user text-xs mr-2 text-brand-whiz"></i>
           <span>My Account</span>
         </button>
-        <a href="#contact" class="mobile-nav-link inline-flex items-center justify-center text-center px-7 py-3 rounded-full text-sm font-bold text-white bg-brand-whiz hover:bg-emerald-700 shadow-sm mt-2 min-h-[44px]">Contact with Us</a>
+        <a href="/contact" data-route="/contact" class="mobile-nav-link inline-flex items-center justify-center text-center px-7 py-3 rounded-full text-sm font-bold text-white bg-brand-whiz hover:bg-emerald-700 shadow-sm mt-2 min-h-[44px]">Contact with Us</a>
       </div>
     </div>
   </header>
@@ -376,11 +376,11 @@
           </p>
 
           <div class="hero-actions flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 sm:gap-4 pt-2">
-            <a href="#services" class="px-7 py-3.5 rounded-xl font-bold text-sm btn-glass-primary flex items-center justify-center space-x-2">
+            <a href="/services" data-route="/services" class="px-7 py-3.5 rounded-xl font-bold text-sm btn-glass-primary flex items-center justify-center space-x-2">
               <span>Explore Services</span>
               <i class="fa-solid fa-arrow-down text-xs"></i>
             </a>
-            <a href="#contact" class="px-7 py-3.5 rounded-xl font-bold text-sm btn-glass-secondary flex items-center justify-center space-x-2">
+            <a href="/contact" data-route="/contact" class="px-7 py-3.5 rounded-xl font-bold text-sm btn-glass-secondary flex items-center justify-center space-x-2">
               <span>Request Custom Quote</span>
               <i class="fa-regular fa-file-lines text-xs"></i>
             </a>
@@ -858,7 +858,7 @@
               <p class="text-xs text-slate-700 mt-0.5 font-medium">We operate directly within your native advertising accounts. You maintain 100% administrative access, pixel ownership, and data equity at all times.</p>
             </div>
           </div>
-          <a href="#contact" class="px-5 py-2.5 rounded-xl text-xs font-bold text-emerald-950 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 shrink-0 transition-colors">
+          <a href="/contact" data-route="/contact" class="px-5 py-2.5 rounded-xl text-xs font-bold text-emerald-950 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 shrink-0 transition-colors">
             Audit My Account
           </a>
         </div>
@@ -1363,7 +1363,7 @@
         
         <!-- Brand Logo & Identity in Footer -->
         <div class="col-span-1 sm:col-span-2 space-y-4">
-          <a href="#home" class="inline-flex items-center group focus:outline-none">
+          <a href="/" class="inline-flex items-center group focus:outline-none">
             <img src="assets/images/logo.png?v=20261105" alt="Whiz Studio" loading="lazy" decoding="async" class="h-10 sm:h-11 w-auto object-contain">
           </a>
           <p class="text-xs text-slate-700 max-w-sm leading-relaxed font-normal">
@@ -1375,13 +1375,13 @@
         <div>
           <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-900 mb-3">Navigation</h4>
           <ul class="space-y-1 text-xs font-bold text-slate-700">
-            <li><a href="#home" class="py-1 inline-block hover:text-brand-whiz transition-colors">Home</a></li>
-            <li><a href="#about" class="py-1 inline-block hover:text-brand-whiz transition-colors">About Us</a></li>
-            <li><a href="#services" class="py-1 inline-block hover:text-brand-whiz transition-colors">Services</a></li>
-            <li><a href="#pricing" class="py-1 inline-block hover:text-brand-whiz transition-colors">Pricing & Scope</a></li>
-            <li><a href="#articles" class="py-1 inline-block hover:text-brand-whiz transition-colors">Articles</a></li>
-            <li><a href="#testimonials" class="py-1 inline-block hover:text-brand-whiz transition-colors">Client Reviews</a></li>
-            <li><a href="#faq" class="py-1 inline-block hover:text-brand-whiz transition-colors">FAQ</a></li>
+            <li><a href="/" data-route="/" class="py-1 inline-block hover:text-brand-whiz transition-colors">Home</a></li>
+            <li><a href="/about" data-route="/about" class="py-1 inline-block hover:text-brand-whiz transition-colors">About Us</a></li>
+            <li><a href="/services" data-route="/services" class="py-1 inline-block hover:text-brand-whiz transition-colors">Services</a></li>
+            <li><a href="/pricing" data-route="/pricing" class="py-1 inline-block hover:text-brand-whiz transition-colors">Pricing & Scope</a></li>
+            <li><a href="/articles" data-route="/articles" class="py-1 inline-block hover:text-brand-whiz transition-colors">Articles</a></li>
+            <li><a href="/reviews" data-route="/reviews" class="py-1 inline-block hover:text-brand-whiz transition-colors">Client Reviews</a></li>
+            <li><a href="/faq" data-route="/faq" class="py-1 inline-block hover:text-brand-whiz transition-colors">FAQ</a></li>
           </ul>
         </div>
 
@@ -1504,7 +1504,7 @@
           <button onclick="closeArticleModal()" class="px-5 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-white/60 transition-colors">
             Close Reader
           </button>
-          <a href="#contact" onclick="closeArticleModal()" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center space-x-1.5">
+          <a href="/contact" data-route="/contact" onclick="closeArticleModal()" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-sm flex items-center space-x-1.5">
             <span>Consult with Whiz Studio</span>
             <i class="fa-solid fa-arrow-right text-xs"></i>
           </a>
@@ -2005,7 +2005,7 @@
                 <h5 class="font-bold text-sm text-slate-800">Need a New Project or Consultation?</h5>
                 <p class="text-xs text-slate-500 mt-0.5">Explore our performance marketing, AI integration, and bespoke web engineering solutions.</p>
               </div>
-              <a href="#contact" onclick="document.getElementById('clientDashboardCloseBtn').click()" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-xs shrink-0">
+              <a href="/contact" data-route="/contact" onclick="document.getElementById('clientDashboardCloseBtn').click()" class="px-5 py-2.5 rounded-xl text-xs font-bold btn-glass-primary shadow-xs shrink-0">
                 Explore Services <i class="fa-solid fa-arrow-right ml-1"></i>
               </a>
             </div>

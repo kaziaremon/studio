@@ -1202,8 +1202,32 @@ function initNavigation() {
   }
 
   // ---------------------------------------------------------------------------
-  // ACTIVE STATE INDICATOR & SCROLL SPY
+  // 10. CLEAN SEO-FRIENDLY ROUTING & NAVIGATION SYSTEM (NO HASHES)
   // ---------------------------------------------------------------------------
+  const routeMap = {
+    '/': { id: 'home', title: 'Whiz Studio — Elite Creative Studio & Performance Ads' },
+    '/home': { id: 'home', title: 'Whiz Studio — Elite Creative Studio & Performance Ads' },
+    '/about': { id: 'about', title: 'About Us | Whiz Studio' },
+    '/services': { id: 'services', title: 'Services & Solutions | Whiz Studio' },
+    '/pricing': { id: 'pricing', title: 'Pricing & Packages | Whiz Studio' },
+    '/articles': { id: 'articles', title: 'Articles & Strategic Insights | Whiz Studio' },
+    '/reviews': { id: 'testimonials', title: 'Client Reviews & Testimonials | Whiz Studio' },
+    '/testimonials': { id: 'testimonials', title: 'Client Reviews & Testimonials | Whiz Studio' },
+    '/faq': { id: 'faq', title: 'Frequently Asked Questions | Whiz Studio' },
+    '/contact': { id: 'contact', title: 'Contact with Us | Whiz Studio' }
+  };
+
+  const sectionToRoute = {
+    'home': { path: '/', title: 'Whiz Studio — Elite Creative Studio & Performance Ads' },
+    'about': { path: '/about', title: 'About Us | Whiz Studio' },
+    'services': { path: '/services', title: 'Services & Solutions | Whiz Studio' },
+    'pricing': { path: '/pricing', title: 'Pricing & Packages | Whiz Studio' },
+    'articles': { path: '/articles', title: 'Articles & Strategic Insights | Whiz Studio' },
+    'testimonials': { path: '/reviews', title: 'Client Reviews & Testimonials | Whiz Studio' },
+    'faq': { path: '/faq', title: 'Frequently Asked Questions | Whiz Studio' },
+    'contact': { path: '/contact', title: 'Contact with Us | Whiz Studio' }
+  };
+
   const sectionIds = ['home', 'about', 'services', 'pricing', 'articles', 'testimonials', 'faq', 'contact'];
   const sections = sectionIds.map(id => document.getElementById(id)).filter(Boolean);
 
@@ -1212,8 +1236,17 @@ function initNavigation() {
     if (!activeId || activeId === currentActiveId) return;
     currentActiveId = activeId;
     allNavLinks.forEach(link => {
-      const href = link.getAttribute('href');
-      if (href === `#${activeId}`) {
+      const href = link.getAttribute('href') || '';
+      const dataRoute = link.getAttribute('data-route') || '';
+      const targetRoute = dataRoute || href;
+
+      const isMatch = (
+        (activeId === 'home' && (targetRoute === '/' || targetRoute === '/home' || targetRoute === '#home')) ||
+        (activeId === 'testimonials' && (targetRoute === '/reviews' || targetRoute === '/testimonials' || targetRoute === '#testimonials' || targetRoute === '#reviews')) ||
+        (targetRoute === `/${activeId}` || targetRoute === `#${activeId}`)
+      );
+
+      if (isMatch) {
         link.classList.add('active');
       } else {
         link.classList.remove('active');
@@ -1221,15 +1254,121 @@ function initNavigation() {
     });
   }
 
-  // Set default initial active state based on URL hash if present
-  const initialHashId = window.location.hash ? window.location.hash.substring(1) : null;
-  if (initialHashId && sectionIds.includes(initialHashId)) {
-    setActiveNavLink(initialHashId);
-  } else {
-    setActiveNavLink('home');
+  function updateRoutePath(path, title, push = true) {
+    try {
+      const currentPath = window.location.pathname.replace(/\/+$/, '') || '/';
+      const cleanTarget = path.replace(/\/+$/, '') || '/';
+      if (currentPath === cleanTarget && !window.location.hash) return;
+
+      if (push) {
+        window.history.pushState({ section: path }, title || document.title, cleanTarget);
+      } else {
+        window.history.replaceState({ section: path }, title || document.title, cleanTarget);
+      }
+      if (title) document.title = title;
+    } catch (err) {
+      console.warn('History routing notice:', err);
+    }
   }
 
-  // Intersection Observer for fluid scroll-spy tracking
+  function scrollToSection(targetId, updateUrl = true, push = true) {
+    if (!targetId) return;
+
+    if (targetId === 'home') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setActiveNavLink('home');
+      if (updateUrl) {
+        updateRoutePath('/', 'Whiz Studio — Elite Creative Studio & Performance Ads', push);
+      }
+      return;
+    }
+
+    const targetElement = document.getElementById(targetId) || (targetId === 'reviews' ? document.getElementById('testimonials') : null);
+    if (!targetElement) return;
+
+    const headerOffset = (header ? header.offsetHeight : 80) + 16;
+    const elementPosition = targetElement.getBoundingClientRect().top;
+    const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+    window.scrollTo({
+      top: Math.max(0, offsetPosition),
+      behavior: 'smooth'
+    });
+
+    setActiveNavLink(targetId);
+
+    if (updateUrl) {
+      const routeInfo = sectionToRoute[targetId] || { path: '/' + targetId, title: document.title };
+      updateRoutePath(routeInfo.path, routeInfo.title, push);
+    }
+  }
+
+  // Smooth click interception for all internal navigation & CTA links
+  document.addEventListener('click', (e) => {
+    const link = e.target.closest('a');
+    if (!link) return;
+
+    const href = link.getAttribute('href');
+    if (!href) return;
+
+    // Skip external, protocol, or portal links
+    if (href.startsWith('mailto:') || href.startsWith('tel:') || href.startsWith('http://') || href.startsWith('https://')) return;
+    if (href.startsWith('/admin') || href.startsWith('/client') || href.startsWith('/assets') || href.startsWith('/api') || href.startsWith('/privacy') || href.startsWith('/terms')) return;
+
+    let targetSectionId = null;
+
+    if (href.startsWith('#')) {
+      const hashId = href.substring(1);
+      if (hashId === 'home' || hashId === '') {
+        targetSectionId = 'home';
+      } else if (hashId === 'testimonials' || hashId === 'reviews') {
+        targetSectionId = 'testimonials';
+      } else if (sectionToRoute[hashId]) {
+        targetSectionId = hashId;
+      }
+    } else {
+      const cleanPath = href.replace(/\/+$/, '') || '/';
+      if (cleanPath === '/login' || cleanPath === '/register') {
+        // Let account portal handle auth modal
+        return;
+      }
+      if (routeMap[cleanPath]) {
+        targetSectionId = routeMap[cleanPath].id;
+      }
+    }
+
+    if (targetSectionId) {
+      e.preventDefault();
+      scrollToSection(targetSectionId, true, true);
+
+      if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
+        mobileMenu.classList.add('hidden');
+        if (mobileToggle) {
+          mobileToggle.setAttribute('aria-expanded', 'false');
+          const toggleIcon = mobileToggle.querySelector('i');
+          if (toggleIcon) {
+            toggleIcon.classList.remove('fa-xmark');
+            toggleIcon.classList.add('fa-bars');
+          }
+        }
+      }
+    }
+  });
+
+  // Browser Back / Forward Button Handling
+  window.addEventListener('popstate', (e) => {
+    const cleanPath = window.location.pathname.replace(/\/+$/, '') || '/';
+    if (cleanPath === '/login' || cleanPath === '/register') return;
+
+    if (routeMap[cleanPath]) {
+      const targetId = routeMap[cleanPath].id;
+      scrollToSection(targetId, false, false);
+    } else if (cleanPath === '/') {
+      scrollToSection('home', false, false);
+    }
+  });
+
+  // Intersection Observer for fluid scroll-spy tracking & dynamic clean URL update
   if ('IntersectionObserver' in window && sections.length > 0) {
     const observerOptions = {
       root: null,
@@ -1237,10 +1376,26 @@ function initNavigation() {
       threshold: [0, 0.2, 0.5]
     };
 
+    let isUserScrolling = false;
+    let scrollTimer = null;
+    window.addEventListener('scroll', () => {
+      isUserScrolling = true;
+      clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(() => { isUserScrolling = false; }, 150);
+    }, { passive: true });
+
     const sectionObserver = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
-          setActiveNavLink(entry.target.id);
+          const sectionId = entry.target.id;
+          setActiveNavLink(sectionId);
+          if (isUserScrolling && sectionToRoute[sectionId]) {
+            const currentPath = window.location.pathname.replace(/\/+$/, '') || '/';
+            if (currentPath !== '/login' && currentPath !== '/register') {
+              const routeInfo = sectionToRoute[sectionId];
+              updateRoutePath(routeInfo.path, routeInfo.title, false);
+            }
+          }
         }
       });
     }, observerOptions);
@@ -1259,90 +1414,60 @@ function initNavigation() {
       const windowHeight = window.innerHeight;
       const documentHeight = document.documentElement.scrollHeight;
 
-      // Top of page edge case
-      if (window.scrollY < 120) {
+      // Top of page edge case -> Clean Root /
+      if (window.scrollY < 100) {
         setActiveNavLink('home');
+        const currentPath = window.location.pathname.replace(/\/+$/, '') || '/';
+        if (currentPath !== '/' && currentPath !== '/login' && currentPath !== '/register') {
+          updateRoutePath('/', 'Whiz Studio — Elite Creative Studio & Performance Ads', false);
+        }
         return;
       }
 
-      // Bottom of page edge case
+      // Bottom of page edge case -> /contact
       if (window.scrollY + windowHeight >= documentHeight - 60) {
         setActiveNavLink('contact');
+        const currentPath = window.location.pathname.replace(/\/+$/, '') || '/';
+        if (currentPath !== '/contact' && currentPath !== '/login' && currentPath !== '/register') {
+          updateRoutePath('/contact', 'Contact with Us | Whiz Studio', false);
+        }
         return;
       }
-
-      // Find current section by vertical offset
-      for (let i = sections.length - 1; i >= 0; i--) {
-        const section = sections[i];
-        if (section.offsetTop <= scrollPosition) {
-          setActiveNavLink(section.id);
-          break;
-        }
-      }
-    }, 50);
+    }, 80);
   }, { passive: true });
 
-  // ---------------------------------------------------------------------------
-  // SMOOTH SCROLLING WITH OFFSET CALCULATION
-  // ---------------------------------------------------------------------------
-  allNavLinks.forEach(link => {
-    link.addEventListener('click', (e) => {
-      const targetHref = link.getAttribute('href');
-      if (targetHref && targetHref.startsWith('#')) {
-        const targetId = targetHref.substring(1);
-        const targetElement = document.getElementById(targetId);
-        if (targetElement) {
-          e.preventDefault();
-          const headerOffset = (header ? header.offsetHeight : 80) + 16;
-          const elementPosition = targetElement.getBoundingClientRect().top;
-          const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
-
-          window.scrollTo({
-            top: Math.max(0, offsetPosition),
-            behavior: 'smooth'
-          });
-
-          setActiveNavLink(targetId);
-
-          if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
-            mobileMenu.classList.add('hidden');
-          }
-        }
-      }
-    });
-  });
-
-  // Handle direct hash navigation with sticky header offset on page load and hashchange
-  function scrollToHashTarget() {
+  // Handle direct URL visit / deep linking on fresh page load
+  function handleInitialRoute() {
+    // If arriving with legacy hash (#pricing, #contact), clean to SEO subpath
     if (window.location.hash) {
-      const targetId = window.location.hash.substring(1);
-      const targetElement = document.getElementById(targetId);
-      if (targetElement) {
-        setTimeout(() => {
-          const headerOffset = (header ? header.offsetHeight : 80) + 16;
-          const elementPosition = targetElement.getBoundingClientRect().top;
-          const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
-
-          window.scrollTo({
-            top: Math.max(0, offsetPosition),
-            behavior: 'smooth'
-          });
-
-          setActiveNavLink(targetId);
-        }, 120);
-      }
+      const hashId = window.location.hash.substring(1);
+      const cleanRoute = sectionToRoute[hashId]?.path || (hashId === 'testimonials' ? '/reviews' : (hashId === 'home' ? '/' : '/' + hashId));
+      window.history.replaceState({}, document.title, cleanRoute);
+      const targetId = hashId === 'testimonials' ? 'testimonials' : (hashId === 'home' ? 'home' : hashId);
+      setTimeout(() => {
+        scrollToSection(targetId, false, false);
+      }, 150);
+      return;
     }
-  }
 
-  // Execute scroll on page load and on hash change
-  if (window.location.hash) {
-    if (document.readyState === 'complete') {
-      scrollToHashTarget();
+    const cleanPath = window.location.pathname.replace(/\/+$/, '') || '/';
+    if (cleanPath === '/login' || cleanPath === '/register') return;
+
+    if (cleanPath !== '/' && routeMap[cleanPath]) {
+      const targetId = routeMap[cleanPath].id;
+      setTimeout(() => {
+        scrollToSection(targetId, false, false);
+      }, 150);
     } else {
-      window.addEventListener('load', scrollToHashTarget);
+      setActiveNavLink('home');
     }
   }
-  window.addEventListener('hashchange', scrollToHashTarget);
+
+  if (document.readyState === 'complete') {
+    handleInitialRoute();
+  } else {
+    window.addEventListener('load', handleInitialRoute);
+  }
 }
 
 // =============================================================================

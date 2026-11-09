@@ -20,6 +20,27 @@
 /register
   Cache-Control: public, max-age=0, must-revalidate
 
+/about
+  Cache-Control: public, max-age=1800, stale-while-revalidate=86400
+
+/services
+  Cache-Control: public, max-age=1800, stale-while-revalidate=86400
+
+/pricing
+  Cache-Control: public, max-age=1800, stale-while-revalidate=86400
+
+/articles
+  Cache-Control: public, max-age=1800, stale-while-revalidate=86400
+
+/reviews
+  Cache-Control: public, max-age=1800, stale-while-revalidate=86400
+
+/faq
+  Cache-Control: public, max-age=1800, stale-while-revalidate=86400
+
+/contact
+  Cache-Control: public, max-age=1800, stale-while-revalidate=86400
+
 /privacy
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 
