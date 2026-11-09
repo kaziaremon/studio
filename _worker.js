@@ -116,7 +116,8 @@ async function verifyDiscordSignature(rawBody, signature, timestamp, publicKey) 
 // =============================================================================
 async function kvPut(env, key, value) {
   if (env && env.REVIEWS_DB && typeof env.REVIEWS_DB.put === "function") {
-    return await env.REVIEWS_DB.put(key, value);
+    await env.REVIEWS_DB.put(key, value);
+    return true;
   }
 
   const cfToken = env?.CF_API_TOKEN || CONFIG.CF_API_TOKEN;
@@ -149,7 +150,8 @@ async function kvGet(env, key) {
 
 async function kvDelete(env, key) {
   if (env && env.REVIEWS_DB && typeof env.REVIEWS_DB.delete === "function") {
-    return await env.REVIEWS_DB.delete(key);
+    await env.REVIEWS_DB.delete(key);
+    return true;
   }
 
   const cfToken = env?.CF_API_TOKEN || CONFIG.CF_API_TOKEN;

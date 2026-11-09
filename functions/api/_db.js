@@ -15,7 +15,8 @@ export const CF_CONFIG = {
 
 export async function kvPut(env, key, value) {
   if (env && env.REVIEWS_DB && typeof env.REVIEWS_DB.put === "function") {
-    return await env.REVIEWS_DB.put(key, value);
+    await env.REVIEWS_DB.put(key, value);
+    return true;
   }
 
   const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CF_CONFIG.ACCOUNT_ID}/storage/kv/namespaces/${CF_CONFIG.KV_NAMESPACE_ID}/values/${key}`, {
@@ -45,7 +46,8 @@ export async function kvGet(env, key) {
 
 export async function kvDelete(env, key) {
   if (env && env.REVIEWS_DB && typeof env.REVIEWS_DB.delete === "function") {
-    return await env.REVIEWS_DB.delete(key);
+    await env.REVIEWS_DB.delete(key);
+    return true;
   }
 
   const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CF_CONFIG.ACCOUNT_ID}/storage/kv/namespaces/${CF_CONFIG.KV_NAMESPACE_ID}/values/${key}`, {
