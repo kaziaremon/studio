@@ -982,7 +982,7 @@ function buildRoleWelcomeEmailHtmlWorker({
     ? "Welcome to the Team!"
     : "Welcome to Whiz Studio!";
 
-  const targetLoginUrl = loginUrl || "https://portal.whizstudio.art/login";
+  const cleanLoginUrl = (loginUrl || "https://portal.whizstudio.art/login").trim();
   const ctaButtonText = isInternal ? "Login to Dashboard" : "Access Client Portal";
   const headline = isInternal ? "Welcome to the Team!" : "Welcome to Whiz Studio!";
 
@@ -992,14 +992,14 @@ function buildRoleWelcomeEmailHtmlWorker({
     : "We are thrilled to partner with you and ready to scale your digital presence. Your client portal is active, giving you complete visibility into your projects, deliverables, and performance analytics.";
 
   const signoffHtml = isInternal
-    ? `<div style="margin-top: 20px; font-size: 13px; color: #475569; line-height: 1.5;">
+    ? `<div style="font-size: 14px; color: #4B5563; line-height: 1.6;">
         Best wishes,<br>
-        <strong style="color: #0F172A;">Md Kazi Abdur Rahim Emon</strong><br>
-        <span style="font-size: 11px; color: #64748B;">CEO, Whiz Studio</span>
+        <strong style="color: #111827; font-weight: 600;">Md Kazi Abdur Rahim Emon</strong><br>
+        <span style="font-size: 13px; color: #6B7280;">CEO, Whiz Studio</span>
        </div>`
-    : `<div style="margin-top: 20px; font-size: 13px; color: #475569; line-height: 1.5;">
+    : `<div style="font-size: 14px; color: #4B5563; line-height: 1.6;">
         Warm regards,<br>
-        <strong style="color: #0F172A;">The Whiz Studio Team</strong>
+        <strong style="color: #111827; font-weight: 600;">The Whiz Studio Team</strong>
        </div>`;
 
   const html = `<!DOCTYPE html>
@@ -1009,58 +1009,55 @@ function buildRoleWelcomeEmailHtmlWorker({
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${subject}</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #F8FAFC; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #F8FAFC; padding: 24px 12px;">
+<body style="margin: 0; padding: 0; background-color: #FFFFFF; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; color: #111827;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #FFFFFF; width: 100%;">
     <tr>
-      <td align="center">
-        <!-- Compact Single-Card Container (Fits on screen without scrolling) -->
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 440px; width: 100%; background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);">
-          <!-- Top Accent Line -->
+      <td align="center" style="padding: 48px 20px 40px 20px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 520px; width: 100%; text-align: left; background-color: #FFFFFF;">
+          <!-- Centered Brand Logo -->
           <tr>
-            <td style="background-color: #00A86B; height: 3px; font-size: 3px; line-height: 3px;">&nbsp;</td>
+            <td align="center" style="padding-bottom: 36px;">
+              <a href="https://whizstudio.art" target="_blank" rel="noopener noreferrer" style="text-decoration: none; display: inline-block;">
+                <img src="${WHIZ_LOGO_URL}" alt="Whiz Studio" width="130" style="max-height: 32px; width: auto; display: block; margin: 0 auto; border: 0;" />
+              </a>
+            </td>
           </tr>
 
-          <!-- Main Content Body -->
+          <!-- Dynamic Role-Based Headline -->
           <tr>
-            <td style="padding: 24px 24px 20px 24px;">
-              <!-- Centered Brand Logo -->
-              <div style="text-align: center; margin-bottom: 16px;">
-                <a href="https://whizstudio.art" target="_blank" style="text-decoration: none; display: inline-block;">
-                  <img src="${WHIZ_LOGO_URL}" alt="Whiz Studio" width="130" style="max-height: 32px; width: auto; display: block; margin: 0 auto; border: 0;" />
-                </a>
-              </div>
-
-              <!-- Dynamic Role-Based Heading -->
-              <h1 style="font-size: 17px; font-weight: 700; color: #0F172A; margin: 0 0 10px 0; text-align: left;">
+            <td style="padding-bottom: 20px;">
+              <h1 style="margin: 0; font-size: 22px; font-weight: 700; color: #111827; letter-spacing: -0.4px; line-height: 1.3;">
                 ${headline}
               </h1>
+            </td>
+          </tr>
 
-              <!-- Greeting & Body Text -->
-              <p style="font-size: 13px; color: #334155; line-height: 1.5; margin: 0 0 10px 0;">
-                ${greeting}
-              </p>
-              <p style="font-size: 13px; color: #334155; line-height: 1.55; margin: 0 0 16px 0;">
-                ${mainCopy}
-              </p>
+          <!-- Greeting & Main Message -->
+          <tr>
+            <td style="padding-bottom: 28px; font-size: 15px; color: #374151; line-height: 1.6;">
+              <p style="margin: 0 0 16px 0;">${greeting}</p>
+              <p style="margin: 0;">${mainCopy}</p>
+            </td>
+          </tr>
 
-              <!-- Clean CTA Button (No raw URL displayed) -->
-              <div style="text-align: center; margin: 18px 0 14px 0;">
-                <a href="${targetLoginUrl}" target="_blank" style="display: inline-block; background-color: #00A86B; color: #FFFFFF; font-size: 13px; font-weight: 600; text-decoration: none; padding: 11px 26px; border-radius: 6px;">
-                  ${ctaButtonText} &rarr;
-                </a>
-              </div>
+          <!-- Seamless Call-To-Action Button (Zero Escaping Errors) -->
+          <tr>
+            <td style="padding-bottom: 36px;">
+              <a href="${cleanLoginUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: #00A86B; color: #FFFFFF; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 600; text-decoration: none; padding: 12px 28px; border-radius: 6px; letter-spacing: -0.2px;">${ctaButtonText}</a>
+            </td>
+          </tr>
 
-              <!-- Role-Based Sign-off -->
+          <!-- Role-Based Sign-off -->
+          <tr>
+            <td style="padding-top: 24px; border-top: 1px solid #F3F4F6;">
               ${signoffHtml}
             </td>
           </tr>
 
-          <!-- Minimalist Footer (Zero third-party branding) -->
+          <!-- Flat Minimalist Corporate Footer -->
           <tr>
-            <td style="background-color: #F8FAFC; border-top: 1px solid #F1F5F9; padding: 10px 24px; text-align: center;">
-              <p style="margin: 0; font-size: 11px; color: #94A3B8; line-height: 1.4;">
-                Whiz Studio &bull; House 53, Road 7, Mirpur 12, Dhaka &bull; <a href="mailto:info@whizstudio.art" style="color: #64748B; text-decoration: none;">info@whizstudio.art</a>
-              </p>
+            <td style="padding-top: 32px; font-size: 12px; color: #9CA3AF; line-height: 1.5;">
+              Whiz Studio &bull; House 53, Road 7, Mirpur 12, Dhaka &bull; <a href="mailto:info@whizstudio.art" style="color: #9CA3AF; text-decoration: underline;">info@whizstudio.art</a>
             </td>
           </tr>
         </table>
