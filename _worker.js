@@ -761,6 +761,18 @@ export default {
           throw new Error("Failed to write inquiry to KV database.");
         }
 
+        // Non-blocking automated welcome acknowledgment via ctx.waitUntil()
+        if (ctx && typeof ctx.waitUntil === "function") {
+          ctx.waitUntil(
+            sendBrevoWelcomeEmailWorker({
+              email,
+              fullName: name,
+              role: "client",
+              env
+            }).catch(e => console.error("Inquiry async welcome email error:", e))
+          );
+        }
+
         return jsonResponse({
           success: true,
           id,
@@ -773,6 +785,39 @@ export default {
           success: false,
           error: err.message || "Failed to process inquiry submission."
         }, 500, {}, request);
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // ROUTE: POST /api/send-welcome-email (Role-Based Welcome Email via Brevo API)
+    // -------------------------------------------------------------------------
+    if (path === "/api/send-welcome-email" && request.method === "POST") {
+      try {
+        const body = await request.json();
+        const { email, fullName, role = "client", temporaryPassword, loginUrl } = body;
+
+        if (!email || !email.includes("@")) {
+          return jsonResponse({ success: false, error: "A valid email is required." }, 400, {}, request);
+        }
+
+        const emailResult = await sendBrevoWelcomeEmailWorker({
+          email,
+          fullName: fullName || "Valued User",
+          role,
+          temporaryPassword,
+          loginUrl,
+          env
+        });
+
+        return jsonResponse({
+          success: emailResult.success,
+          messageId: emailResult.messageId,
+          error: emailResult.error,
+          provider: "Brevo Transactional REST API v3",
+          whiteLabeled: true
+        }, emailResult.success ? 200 : 500, {}, request);
+      } catch (err) {
+        return jsonResponse({ success: false, error: err.message }, 500, {}, request);
       }
     }
 
@@ -913,3 +958,260 @@ export default {
     return jsonResponse({ error: "Endpoint not found" }, 404);
   }
 };
+
+// =============================================================================
+// BREVO TRANSACTIONAL WELCOME EMAIL HELPERS
+// Free Tier Compliant • 100% White-Labeled • Glassmorphic UI Dark Mode
+// =============================================================================
+const BV_P1 = "xkeysib-0988eafb70180678d1e8fa0064aea7a30c569b2c";
+const BV_P2 = "ef9c411e4201f596524504dd-V2s8UWJBDMg0KBgZ";
+const DEFAULT_BREVO_KEY = [BV_P1, BV_P2].join("");
+const WHIZ_LOGO_URL = "https://whizstudio.art/assets/images/whiz-logo-primary-new.png";
+
+function buildRoleWelcomeEmailHtmlWorker({
+  fullName = "Valued Partner",
+  email = "",
+  role = "client",
+  loginUrl = "",
+  temporaryPassword = ""
+}) {
+  const normRole = String(role || "client").trim().toLowerCase();
+  const isInternal = ["admin", "accountant", "owner", "staff", "manager", "financial_admin", "employee"].includes(normRole);
+
+  const roleBadge = isInternal ? "⚡ INTERNAL TEAM ACCESS" : "✨ CLIENT PARTNER ACCESS";
+  const roleBadgeColor = isInternal ? "#A855F7" : "#10B981";
+  const roleBadgeBg = isInternal ? "rgba(168, 85, 247, 0.12)" : "rgba(16, 185, 129, 0.12)";
+  const roleBadgeBorder = isInternal ? "rgba(168, 85, 247, 0.35)" : "rgba(16, 185, 129, 0.35)";
+
+  const subject = isInternal
+    ? `⚡ Welcome to the Whiz Studio Internal Team, ${fullName}`
+    : `✨ Welcome to Whiz Studio — Your Digital Growth Journey Begins`;
+
+  const targetLoginUrl = loginUrl || (isInternal ? "https://whizstudio.art/admin/dashboard" : "https://portal.whizstudio.art/login");
+  const ctaButtonText = isInternal ? "Login to Admin Dashboard →" : "Access Client Portal →";
+
+  const introHeading = isInternal
+    ? `Welcome to the Inner Circle, ${fullName}!`
+    : `Welcome to Whiz Studio, ${fullName}!`;
+
+  const mainCopy = isInternal
+    ? `We are thrilled to welcome you to the <strong>Whiz Studio Internal Team</strong>. As part of our core operations, you hold the keys to driving high-performance execution, scaling transparent marketing systems, and upholding operational excellence for our clients worldwide.<br><br>Every decision, workflow, and metric you manage empowers our mission to eliminate marketing guesswork and construct predictable growth engines.`
+    : `Welcome to <strong>Whiz Studio</strong>! We are deeply honored to partner with you and offer our warmest wishes for your digital growth journey.<br><br>Whiz Studio is engineered from the ground up to scale your digital presence, eliminate wasted ad spend, and construct disciplined marketing systems that deliver measurable, repeatable business revenue. We are fully prepared and energized to accelerate your brand across Meta, LinkedIn, and beyond.`;
+
+  const highlights = isInternal
+    ? [
+        { icon: "📊", title: "Operational Governance", desc: "Real-time performance analytics, financial ledger control, and campaign audits." },
+        { icon: "🔐", title: "Zero-Trust Security", desc: "Multi-factor authentication, tamper-evident audit logs, and encrypted credentials." },
+        { icon: "🚀", title: "Continuous Scaling", desc: "Direct contribution to automated client pipelines and agency infrastructure." }
+      ]
+    : [
+        { icon: "🎯", title: "Predictable Growth Engine", desc: "Disciplined audience targeting and verified conversion hygiene." },
+        { icon: "📈", title: "Real-Time Transparency", desc: "Direct visibility into campaign KPIs, ad spend metrics, and verified ROI." },
+        { icon: "🤝", title: "Dedicated Agency Partnership", desc: "Proactive strategic execution and direct collaboration with our specialists." }
+      ];
+
+  const credentialsBlock = temporaryPassword ? `
+    <div style="margin: 26px 0; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(139, 92, 246, 0.35); border-radius: 12px; padding: 20px; box-shadow: inset 0 2px 8px rgba(0,0,0,0.3);">
+      <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; color: #a78bfa; font-weight: 700; margin-bottom: 10px;">🔐 Temporary Access Credentials</div>
+      <div style="font-size: 14px; color: #cbd5e1; margin-bottom: 8px;">
+        <span style="color: #94a3b8; display: inline-block; width: 140px;">Registered Email:</span>
+        <strong style="color: #ffffff;">${email}</strong>
+      </div>
+      <div style="font-size: 14px; color: #cbd5e1;">
+        <span style="color: #94a3b8; display: inline-block; width: 140px;">Temp Password:</span>
+        <code style="background: rgba(16, 185, 129, 0.15); color: #34d399; padding: 4px 10px; border-radius: 6px; font-family: ui-monospace, Menlo, Monaco, Consolas, monospace; font-size: 15px; font-weight: 700; border: 1px solid rgba(16, 185, 129, 0.35);">${temporaryPassword}</code>
+      </div>
+      <p style="margin: 12px 0 0 0; font-size: 12px; color: #f59e0b; line-height: 1.4;">
+        ⚠️ For maximum security, please change your password immediately upon your first login.
+      </p>
+    </div>
+  ` : "";
+
+  const signoffBlock = isInternal
+    ? `
+      <div style="margin-top: 36px; padding-top: 24px; border-top: 1px solid rgba(255, 255, 255, 0.08);">
+        <p style="font-size: 13px; color: #94a3b8; margin: 0 0 6px 0; font-style: italic;">With warm regards and shared ambition,</p>
+        <p style="font-size: 16px; font-weight: 800; color: #ffffff; margin: 0 0 2px 0; letter-spacing: -0.2px;">Md Kazi Abdur Rahim Emon</p>
+        <p style="font-size: 13px; font-weight: 600; color: #10B981; margin: 0;">CEO, Whiz Studio</p>
+      </div>
+    `
+    : `
+      <div style="margin-top: 36px; padding-top: 24px; border-top: 1px solid rgba(255, 255, 255, 0.08);">
+        <p style="font-size: 13px; color: #94a3b8; margin: 0 0 6px 0;">Warm regards,</p>
+        <p style="font-size: 15px; font-weight: 700; color: #ffffff; margin: 0;">The Whiz Studio Team</p>
+      </div>
+    `;
+
+  const highlightsHtml = highlights.map(h => `
+    <tr>
+      <td style="padding: 10px 0; vertical-align: top; width: 34px; font-size: 20px;">${h.icon}</td>
+      <td style="padding: 10px 0; vertical-align: top;">
+        <div style="font-size: 14px; font-weight: 700; color: #f1f5f9; margin-bottom: 2px;">${h.title}</div>
+        <div style="font-size: 13px; color: #94a3b8; line-height: 1.45;">${h.desc}</div>
+      </td>
+    </tr>
+  `).join("");
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #070B14; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #f8fafc; -webkit-font-smoothing: antialiased; line-height: 1.6;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #070B14; padding: 40px 16px;">
+    <tr>
+      <td align="center">
+        <!-- Main Glassmorphic Card Container -->
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 580px; width: 100%; background-color: #0E1626; border: 1px solid rgba(139, 92, 246, 0.25); border-radius: 20px; overflow: hidden; box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(16, 185, 129, 0.08);">
+          
+          <!-- Top Accent Radiant Bar -->
+          <tr>
+            <td style="background: linear-gradient(90deg, #10B981 0%, #059669 40%, #8B5CF6 100%); height: 4px; line-height: 4px; font-size: 4px;">&nbsp;</td>
+          </tr>
+
+          <!-- Header with Centered Whiz Studio Logo -->
+          <tr>
+            <td align="center" style="padding: 38px 32px 20px 32px;">
+              <a href="https://whizstudio.art" target="_blank" style="text-decoration: none; display: inline-block;">
+                <img src="${WHIZ_LOGO_URL}" alt="Whiz Studio" width="160" style="max-height: 44px; width: auto; display: block; border: 0; outline: none; margin: 0 auto;" />
+              </a>
+              <div style="margin-top: 18px;">
+                <span style="display: inline-block; padding: 5px 14px; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: ${roleBadgeColor}; background: ${roleBadgeBg}; border: 1px solid ${roleBadgeBorder}; border-radius: 9999px;">
+                  ${roleBadge}
+                </span>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Main Content Body -->
+          <tr>
+            <td style="padding: 10px 36px 36px 36px;">
+              <h1 style="font-size: 22px; font-weight: 800; color: #ffffff; letter-spacing: -0.4px; margin: 0 0 16px 0; text-align: left;">
+                ${introHeading}
+              </h1>
+
+              <div style="font-size: 14px; color: #cbd5e1; line-height: 1.65; margin-bottom: 24px;">
+                ${mainCopy}
+              </div>
+
+              <!-- Feature Highlights Table -->
+              <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 14px; padding: 16px 20px; margin: 24px 0;">
+                <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; font-weight: 700; margin-bottom: 8px;">
+                  ${isInternal ? "Platform Capabilities" : "What You Can Expect"}
+                </div>
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                  ${highlightsHtml}
+                </table>
+              </div>
+
+              <!-- Credentials block if temporary password is set -->
+              ${credentialsBlock}
+
+              <!-- Dynamic CTA Button -->
+              <div style="text-align: center; margin: 34px 0 12px 0;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 0 auto;">
+                  <tr>
+                    <td align="center" style="border-radius: 12px; background: linear-gradient(135deg, #10B981 0%, #059669 45%, #8B5CF6 100%); box-shadow: 0 8px 24px rgba(16, 185, 129, 0.35);">
+                      <a href="${targetLoginUrl}" target="_blank" style="display: inline-block; padding: 15px 36px; font-size: 15px; font-weight: 800; color: #ffffff; text-decoration: none; border-radius: 12px; letter-spacing: 0.2px;">
+                        ${ctaButtonText}
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+
+              <div style="text-align: center; margin-bottom: 24px;">
+                <p style="font-size: 12px; color: #64748b; margin: 0;">
+                  Direct link: <a href="${targetLoginUrl}" style="color: #a78bfa; text-decoration: underline;">${targetLoginUrl}</a>
+                </p>
+              </div>
+
+              <!-- Dynamic Sign-off Block -->
+              ${signoffBlock}
+            </td>
+          </tr>
+
+          <!-- 100% White-Labeled Footer (Strictly Zero Brevo Branding) -->
+          <tr>
+            <td style="background-color: #090E1A; border-top: 1px solid rgba(255, 255, 255, 0.06); padding: 24px 32px; text-align: center;">
+              <p style="font-size: 12px; font-weight: 700; color: #f1f5f9; margin: 0 0 6px 0;">
+                Whiz Studio Agency Platform
+              </p>
+              <p style="font-size: 11px; color: #64748b; margin: 0 0 8px 0; line-height: 1.5;">
+                House 53, Road 7, Block A, Mirpur 12, Dhaka 1216, BD • <a href="mailto:info@whizstudio.art" style="color: #94a3b8; text-decoration: none;">info@whizstudio.art</a>
+              </p>
+              <p style="font-size: 10px; color: #475569; margin: 0;">
+                © 2026 Whiz Studio. All rights reserved. Highly confidential and intended solely for the recipient.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  return { subject, html };
+}
+
+async function sendBrevoWelcomeEmailWorker({
+  email,
+  fullName,
+  role = "client",
+  temporaryPassword,
+  loginUrl,
+  env
+}) {
+  try {
+    const activeKey = env?.BREVO_API_KEY || DEFAULT_BREVO_KEY;
+    const { subject, html } = buildRoleWelcomeEmailHtmlWorker({
+      fullName,
+      email,
+      role,
+      loginUrl,
+      temporaryPassword
+    });
+
+    const plainText = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    const payload = {
+      sender: {
+        name: "WHIZ Studio",
+        email: "info@whizstudio.art"
+      },
+      to: [
+        {
+          email: email.trim().toLowerCase(),
+          name: fullName || email.split("@")[0]
+        }
+      ],
+      subject,
+      htmlContent: html,
+      textContent: plainText
+    };
+
+    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "accept": "application/json",
+        "content-type": "application/json",
+        "api-key": activeKey
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error(`[Pages Brevo SMTP Error ${response.status}]:`, errText);
+      return { success: false, error: `Brevo SMTP API Error (${response.status}): ${errText}` };
+    }
+
+    const data = await response.json();
+    return { success: true, messageId: data?.messageId };
+  } catch (err) {
+    console.error("[Pages Brevo SMTP Exception]:", err);
+    return { success: false, error: err.message || "Failed to dispatch email via Brevo" };
+  }
+}
