@@ -982,7 +982,7 @@ function buildRoleWelcomeEmailHtmlWorker({
     ? "Welcome to the Team!"
     : "Welcome to Whiz Studio!";
 
-  const cleanLoginUrl = (loginUrl || "https://portal.whizstudio.art/login").trim();
+  const cleanLoginUrl = (loginUrl || "https://whizstudio.art/client/dashboard/").trim();
   const ctaButtonText = isInternal ? "Login to Dashboard" : "Access Client Portal";
   const headline = isInternal ? "Welcome to the Team!" : "Welcome to Whiz Studio!";
 
