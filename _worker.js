@@ -979,33 +979,25 @@ function buildRoleWelcomeEmailHtmlWorker({
   const isInternal = ["admin", "accountant", "owner", "staff", "manager", "financial_admin", "employee"].includes(normRole);
 
   const subject = isInternal
-    ? "Welcome to the Whiz Studio Team"
-    : "Welcome to Whiz Studio";
+    ? "Welcome to the Team!"
+    : "Welcome to Whiz Studio!";
 
-  const targetLoginUrl = loginUrl || (isInternal ? "https://whizstudio.art/admin/dashboard" : "https://portal.whizstudio.art/login");
-  const ctaButtonText = isInternal ? "Log In to Dashboard" : "Access Your Portal";
+  const targetLoginUrl = loginUrl || "https://portal.whizstudio.art/login";
+  const ctaButtonText = isInternal ? "Login to Dashboard" : "Access Client Portal";
+  const headline = isInternal ? "Welcome to the Team!" : "Welcome to Whiz Studio!";
 
   const greeting = fullName ? `Hello ${fullName},` : "Hello,";
   const mainCopy = isInternal
-    ? "Welcome to the Whiz Studio operations team! Your account is active to manage agency workflows, performance analytics, and client infrastructure."
-    : "Welcome to Whiz Studio! Your account is ready. We are excited to partner with you to scale your digital presence and drive predictable business growth.";
-
-  const credentialsHtml = temporaryPassword ? `
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin: 14px 0; background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px 14px; font-size: 13px;">
-      <tr>
-        <td style="color: #64748B; padding: 2px 0;">Temporary Password:</td>
-        <td align="right" style="font-family: ui-monospace, Consolas, monospace; font-weight: 700; color: #00A86B;">${temporaryPassword}</td>
-      </tr>
-    </table>
-  ` : "";
+    ? "Welcome to the team! We are thrilled to embark on this journey together. Your contribution, expertise, and dedication will directly shape our agency's future and elevate the results we deliver. Let's build something extraordinary together."
+    : "We are thrilled to partner with you and ready to scale your digital presence. Your client portal is active, giving you complete visibility into your projects, deliverables, and performance analytics.";
 
   const signoffHtml = isInternal
-    ? `<div style="margin-top: 20px; font-size: 13px; color: #475569; line-height: 1.45;">
-        Warm regards,<br>
+    ? `<div style="margin-top: 20px; font-size: 13px; color: #475569; line-height: 1.5;">
+        Best wishes,<br>
         <strong style="color: #0F172A;">Md Kazi Abdur Rahim Emon</strong><br>
         <span style="font-size: 11px; color: #64748B;">CEO, Whiz Studio</span>
        </div>`
-    : `<div style="margin-top: 20px; font-size: 13px; color: #475569; line-height: 1.45;">
+    : `<div style="margin-top: 20px; font-size: 13px; color: #475569; line-height: 1.5;">
         Warm regards,<br>
         <strong style="color: #0F172A;">The Whiz Studio Team</strong>
        </div>`;
@@ -1021,8 +1013,8 @@ function buildRoleWelcomeEmailHtmlWorker({
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #F8FAFC; padding: 24px 12px;">
     <tr>
       <td align="center">
-        <!-- Compact Single-Card Container (No Scroll Needed) -->
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 440px; width: 100%; background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);">
+        <!-- Compact Single-Card Container (Fits on screen without scrolling) -->
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 440px; width: 100%; background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);">
           <!-- Top Accent Line -->
           <tr>
             <td style="background-color: #00A86B; height: 3px; font-size: 3px; line-height: 3px;">&nbsp;</td>
@@ -1034,29 +1026,26 @@ function buildRoleWelcomeEmailHtmlWorker({
               <!-- Centered Brand Logo -->
               <div style="text-align: center; margin-bottom: 16px;">
                 <a href="https://whizstudio.art" target="_blank" style="text-decoration: none; display: inline-block;">
-                  <img src="${WHIZ_LOGO_URL}" alt="Whiz Studio" width="130" style="max-height: 32px; width: auto; display: block; border: 0;" />
+                  <img src="${WHIZ_LOGO_URL}" alt="Whiz Studio" width="130" style="max-height: 32px; width: auto; display: block; margin: 0 auto; border: 0;" />
                 </a>
               </div>
 
-              <!-- Clean, Professional Heading -->
+              <!-- Dynamic Role-Based Heading -->
               <h1 style="font-size: 17px; font-weight: 700; color: #0F172A; margin: 0 0 10px 0; text-align: left;">
-                Welcome to Whiz Studio!
+                ${headline}
               </h1>
 
               <!-- Greeting & Body Text -->
               <p style="font-size: 13px; color: #334155; line-height: 1.5; margin: 0 0 10px 0;">
                 ${greeting}
               </p>
-              <p style="font-size: 13px; color: #334155; line-height: 1.5; margin: 0 0 16px 0;">
+              <p style="font-size: 13px; color: #334155; line-height: 1.55; margin: 0 0 16px 0;">
                 ${mainCopy}
               </p>
 
-              <!-- Optional Credentials -->
-              ${credentialsHtml}
-
               <!-- Clean CTA Button (No raw URL displayed) -->
               <div style="text-align: center; margin: 18px 0 14px 0;">
-                <a href="${targetLoginUrl}" target="_blank" style="display: inline-block; background-color: #00A86B; color: #FFFFFF; font-size: 13px; font-weight: 600; text-decoration: none; padding: 10px 24px; border-radius: 6px;">
+                <a href="${targetLoginUrl}" target="_blank" style="display: inline-block; background-color: #00A86B; color: #FFFFFF; font-size: 13px; font-weight: 600; text-decoration: none; padding: 11px 26px; border-radius: 6px;">
                   ${ctaButtonText} &rarr;
                 </a>
               </div>
@@ -1066,7 +1055,7 @@ function buildRoleWelcomeEmailHtmlWorker({
             </td>
           </tr>
 
-          <!-- Minimalist Footer -->
+          <!-- Minimalist Footer (Zero third-party branding) -->
           <tr>
             <td style="background-color: #F8FAFC; border-top: 1px solid #F1F5F9; padding: 10px 24px; text-align: center;">
               <p style="margin: 0; font-size: 11px; color: #94A3B8; line-height: 1.4;">
@@ -1105,7 +1094,7 @@ async function sendBrevoWelcomeEmailWorker({
     const plainText = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
     const payload = {
       sender: {
-        name: "WHIZ Studio",
+        name: "Whiz Studio",
         email: "info@whizstudio.art"
       },
       to: [
