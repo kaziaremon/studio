@@ -1014,11 +1014,11 @@ function buildRoleWelcomeEmailHtmlWorker({
     <tr>
       <td align="center" style="padding: 48px 20px 40px 20px;">
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 520px; width: 100%; text-align: left; background-color: #FFFFFF;">
-          <!-- Centered Brand Logo -->
+          <!-- Centered Brand Logo (Standard Corporate Email Dimensions: 160x47 max-width) -->
           <tr>
-            <td align="center" style="padding-bottom: 36px;">
+            <td align="center" style="padding-bottom: 32px; text-align: center;">
               <a href="https://whizstudio.art" target="_blank" rel="noopener noreferrer" style="text-decoration: none; display: inline-block;">
-                <img src="${WHIZ_LOGO_URL}" alt="Whiz Studio" width="130" style="max-height: 32px; width: auto; display: block; margin: 0 auto; border: 0;" />
+                <img src="${WHIZ_LOGO_URL}" alt="Whiz Studio" width="160" height="47" border="0" style="display: block; width: 160px; max-width: 160px; height: auto; max-height: 47px; margin: 0 auto; border: 0; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic;" />
               </a>
             </td>
           </tr>

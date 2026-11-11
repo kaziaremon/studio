@@ -321,6 +321,46 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06) !important;
 }
 
+/* =========================================================================
+   CONTEXT-AWARE NAVIGATION BAR LOGO (STRICT VERTICAL BALANCE & ASPECT RATIO)
+   ========================================================================= */
+.whiz-nav-brand-logo {
+  height: 26px;
+  width: auto;
+  max-width: 95px;
+  max-height: 26px;
+  object-fit: contain;
+  display: block;
+  flex-shrink: 0;
+  vertical-align: middle;
+  image-rendering: -webkit-optimize-contrast;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+}
+
+@media (min-width: 640px) {
+  .whiz-nav-brand-logo {
+    height: 28px;
+    max-width: 102px;
+    max-height: 28px;
+  }
+}
+
+@media (min-width: 768px) {
+  .whiz-nav-brand-logo {
+    height: 30px;
+    max-width: 110px;
+    max-height: 30px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .whiz-nav-brand-logo {
+    height: 32px;
+    max-width: 118px;
+    max-height: 32px;
+  }
+}
+
 /* Navigation Link & Liquid Glass Active State Indicator (Fully Rounded Pill Shape) */
 .nav-link {
   position: relative;
