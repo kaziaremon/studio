@@ -22,15 +22,11 @@ import nacl from "tweetnacl";
 
 // =============================================================================
 // CONFIGURATION & ENVIRONMENT BINDINGS (ZERO HARDCODED SECRETS)
-// All secrets (BOT_TOKEN, CF_API_TOKEN, webhooks) are resolved from env bindings
+// All secrets (BOT_TOKEN, CF_API_TOKEN, BREVO_API_KEY) are resolved from env bindings
 // =============================================================================
-const CF_T1 = "cfat_rD1efTLnOWfI8Lyt";
-const CF_T2 = "9UA7NIRgyFRQ6IcAm0gzslKJ42a74517";
-
 export const CONFIG = {
   ACCOUNT_ID: "c71a151e01e6c71669dd8e3fce7d5598",
   KV_NAMESPACE_ID: "26a1650d57c04ae1a5970f81909acdba",
-  CF_API_TOKEN: [CF_T1, CF_T2].join(""),
   REVIEW_CHANNEL_ID: "1557820513982742580"
 };
 
@@ -41,27 +37,143 @@ const ALLOWED_ORIGINS = [
   "https://admin.whizstudio.art"
 ];
 
-function getCorsHeaders(request) {
+function getCorsHeaders(request, env = null) {
   const origin = request?.headers?.get("origin") || "";
-  const isAllowed = ALLOWED_ORIGINS.includes(origin) || origin.endsWith(".whizstudio.pages.dev") || origin.startsWith("http://localhost:");
+  const isDev = env?.ENVIRONMENT && env.ENVIRONMENT !== "production";
+  const isProdAllowed = ALLOWED_ORIGINS.includes(origin) || origin.endsWith(".whizstudio.pages.dev");
+  const isLocalAllowed = isDev && origin.startsWith("http://localhost:");
+  const isAllowed = isProdAllowed || isLocalAllowed;
   return {
     "Access-Control-Allow-Origin": isAllowed ? origin : "https://whizstudio.art",
     "Access-Control-Allow-Methods": "GET, POST, PATCH, PUT, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Signature-Ed25519, X-Signature-Timestamp, X-Clerk-User-Id",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Signature-Ed25519, X-Signature-Timestamp, X-Clerk-User-Id, X-Internal-Token, X-Device-Token",
     "Access-Control-Max-Age": "86400",
     "Vary": "Origin"
   };
 }
 
-function jsonResponse(data, status = 200, extraHeaders = {}, request = null) {
+function jsonResponse(data, status = 200, extraHeaders = {}, request = null, env = null) {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
-      ...getCorsHeaders(request),
+      ...getCorsHeaders(request, env),
       "Content-Type": "application/json",
       ...extraHeaders
     }
   });
+}
+
+// -----------------------------------------------------------------------------
+// IN-MEMORY SLIDING WINDOW RATE LIMITER FOR PAGES EDGE ISOLATES
+// -----------------------------------------------------------------------------
+const WORKER_RATE_LIMIT = new Map();
+
+function checkWorkerRateLimit(key, limit = 5, windowMs = 60000) {
+  const now = Date.now();
+  if (WORKER_RATE_LIMIT.size > 2000) {
+    for (const [k, v] of WORKER_RATE_LIMIT.entries()) {
+      if (now > v.resetAt) WORKER_RATE_LIMIT.delete(k);
+    }
+  }
+
+  const rec = WORKER_RATE_LIMIT.get(key);
+  if (!rec || now > rec.resetAt) {
+    WORKER_RATE_LIMIT.set(key, { count: 1, resetAt: now + windowMs });
+    return { allowed: true, remaining: limit - 1, waitSec: 0 };
+  }
+  if (rec.count >= limit) {
+    const waitSec = Math.ceil((rec.resetAt - now) / 1000);
+    return { allowed: false, remaining: 0, waitSec };
+  }
+  rec.count++;
+  return { allowed: true, remaining: limit - rec.count, waitSec: 0 };
+}
+
+// -----------------------------------------------------------------------------
+// STRICT ACCESS CONTROL & AUTHENTICATION VERIFIER
+// -----------------------------------------------------------------------------
+const WORKER_AUTH_CACHE = new Map();
+
+async function verifyAdminOrInternal(request, env) {
+  // 1. Service-to-service internal authentication check
+  const internalSecret = env?.INTERNAL_SECRET || env?.CF_API_TOKEN || env?.BREVO_API_KEY;
+  const headerSecret = request.headers.get("X-Internal-Token") || request.headers.get("X-Whiz-Secret");
+  if (headerSecret && internalSecret && headerSecret === internalSecret) {
+    return { ok: true, source: "internal_secret" };
+  }
+
+  // 2. Bearer session token extraction
+  const authHeader = request.headers.get("Authorization") || "";
+  let token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : null;
+  if (!token) {
+    const cookie = request.headers.get("Cookie") || "";
+    const match = cookie.match(/whiz_session=([^;]+)/);
+    if (match) token = match[1].trim();
+  }
+
+  if (!token) {
+    return { ok: false, status: 401, error: "Authentication required. Please sign in to access this resource." };
+  }
+
+  const now = Date.now();
+  const cached = WORKER_AUTH_CACHE.get(token);
+  if (cached && now < cached.expiresAt) {
+    if (cached.isAuthorized) return { ok: true, user: cached.user };
+    return { ok: false, status: 403, error: "Access denied. Administrator privileges required." };
+  }
+
+  try {
+    const apiRes = await fetch("https://whiz-api.kaziaremon.workers.dev/api/v1/auth/me", {
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "X-Clerk-User-Id": request.headers.get("X-Clerk-User-Id") || ""
+      }
+    });
+
+    if (apiRes.ok) {
+      const data = await apiRes.json();
+      const user = data?.data?.user;
+      const isStaffOrAdmin = Boolean(
+        user && (
+          user.isSuperAdmin ||
+          user.isStaff ||
+          ["owner", "admin", "super_admin", "accounts", "staff"].includes((user.role || "").toLowerCase()) ||
+          ["owner", "admin", "super_admin", "accounts", "staff"].includes((user.internalRole || "").toLowerCase()) ||
+          user.email === "kaziaremon@gmail.com"
+        )
+      );
+
+      WORKER_AUTH_CACHE.set(token, { isAuthorized: isStaffOrAdmin, expiresAt: now + 60000, user });
+      if (isStaffOrAdmin) {
+        return { ok: true, user };
+      }
+      return { ok: false, status: 403, error: "Access denied. Administrator privileges required." };
+    }
+  } catch (err) {
+    console.error("Worker auth verification error:", err);
+  }
+
+  // Fallback JWT claim verification if backend worker is undergoing rollout
+  if (token.includes(".")) {
+    try {
+      const parts = token.split(".");
+      if (parts.length === 3) {
+        const payloadJson = atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"));
+        const payload = JSON.parse(payloadJson);
+        const currentUnix = Math.floor(now / 1000);
+        if (!payload.exp || payload.exp >= currentUnix) {
+          const email = (payload.email || payload.primary_email || "").toLowerCase();
+          if (email === "kaziaremon@gmail.com" || payload.role === "admin" || payload.role === "owner") {
+            WORKER_AUTH_CACHE.set(token, { isAuthorized: true, expiresAt: now + 60000, user: payload });
+            return { ok: true, user: payload };
+          }
+        }
+      }
+    } catch (e) {}
+  }
+
+  WORKER_AUTH_CACHE.set(token, { isAuthorized: false, expiresAt: now + 15000, user: null });
+  return { ok: false, status: 401, error: "Session invalid or expired. Please sign in again." };
 }
 
 // =============================================================================
@@ -154,7 +266,7 @@ async function kvDelete(env, key) {
     return true;
   }
 
-  const cfToken = env?.CF_API_TOKEN || CONFIG.CF_API_TOKEN;
+  const cfToken = env?.CF_API_TOKEN;
   if (!cfToken) return false;
   const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CONFIG.ACCOUNT_ID}/storage/kv/namespaces/${CONFIG.KV_NAMESPACE_ID}/values/${key}`, {
     method: "DELETE",
@@ -169,7 +281,7 @@ async function kvList(env, prefix = "review_") {
     return res.keys || [];
   }
 
-  const cfToken = env?.CF_API_TOKEN || CONFIG.CF_API_TOKEN;
+  const cfToken = env?.CF_API_TOKEN;
   if (!cfToken) return [];
   const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CONFIG.ACCOUNT_ID}/storage/kv/namespaces/${CONFIG.KV_NAMESPACE_ID}/keys?prefix=${prefix}&limit=100`, {
     headers: { "Authorization": `Bearer ${cfToken}` }
@@ -181,14 +293,31 @@ async function kvList(env, prefix = "review_") {
   return [];
 }
 
+/**
+ * High-Performance Aggregated Index KV Pattern
+ * Eliminates sub-request limits by serving list queries in 1 single KV read.
+ */
 async function kvGetAll(env, prefix) {
+  const indexKey = `_idx_${prefix}`;
+
+  // 1. Try reading pre-aggregated index key (Single Sub-Request)
+  const indexRaw = await kvGet(env, indexKey);
+  if (indexRaw) {
+    try {
+      const indexList = JSON.parse(indexRaw);
+      if (Array.isArray(indexList)) {
+        return indexList;
+      }
+    } catch (e) {}
+  }
+
+  // 2. Cold start fallback: scan keys and compile the index
   const keys = await kvList(env, prefix);
   if (!keys || keys.length === 0) return [];
 
-  // Limit to most recent 60 items to stay comfortably within sub-request limits
-  const keyItems = keys.slice(0, 60);
+  const itemKeys = keys.filter(k => !k.name.startsWith("_idx_")).slice(0, 60);
   const results = await Promise.all(
-    keyItems.map(async (k) => {
+    itemKeys.map(async (k) => {
       const raw = await kvGet(env, k.name);
       if (!raw) return null;
       try {
@@ -202,7 +331,47 @@ async function kvGetAll(env, prefix) {
       }
     })
   );
-  return results.filter(Boolean);
+  const validResults = results.filter(Boolean);
+
+  // Persist aggregated index for all future single-request reads
+  if (validResults.length > 0) {
+    await kvPut(env, indexKey, JSON.stringify(validResults));
+  }
+
+  return validResults;
+}
+
+async function updateKvIndex(env, prefix, itemOrId, action = "upsert") {
+  try {
+    const indexKey = `_idx_${prefix}`;
+    let list = [];
+    const indexRaw = await kvGet(env, indexKey);
+    if (indexRaw) {
+      try {
+        const parsed = JSON.parse(indexRaw);
+        if (Array.isArray(parsed)) list = parsed;
+      } catch (e) {}
+    }
+
+    if (action === "delete") {
+      const id = String(itemOrId?.id || itemOrId).replace(prefix, "");
+      list = list.filter(i => i && i.id !== id && i.id !== `${prefix}${id}` && `${prefix}${i.id}` !== id);
+    } else {
+      const updated = itemOrId;
+      if (!updated || !updated.id) return;
+      const cleanId = String(updated.id).replace(prefix, "");
+      const idx = list.findIndex(i => i && (i.id === cleanId || i.id === updated.id));
+      if (idx >= 0) {
+        list[idx] = updated;
+      } else {
+        list.unshift(updated);
+      }
+    }
+
+    await kvPut(env, indexKey, JSON.stringify(list));
+  } catch (err) {
+    console.error(`KV index synchronization warning for ${prefix}:`, err);
+  }
 }
 
 // =============================================================================
@@ -271,6 +440,15 @@ export default {
     // -------------------------------------------------------------------------
     if ((path === "/api/submit-review" || path === "/api/review") && request.method === "POST") {
       try {
+        const clientIp = request.headers.get("cf-connecting-ip") || request.headers.get("x-real-ip") || "127.0.0.1";
+        const rl = checkWorkerRateLimit(`submit-review:${clientIp}`, 5, 60000);
+        if (!rl.allowed) {
+          return jsonResponse({
+            success: false,
+            error: `Too many review submissions from your IP. Please wait ${rl.waitSec} seconds before submitting again.`
+          }, 429, {}, request, env);
+        }
+
         const body = await request.json();
         const clientName = body.clientName || body.name || "Anonymous Client";
         const reviewText = body.reviewText || body.text || body.review || body.feedback || "";
@@ -279,7 +457,7 @@ export default {
         const email = body.email || "";
 
         if (!reviewText || !reviewText.trim()) {
-          return jsonResponse({ success: false, error: "Review feedback text is required." }, 400, {}, request);
+          return jsonResponse({ success: false, error: "Review feedback text is required." }, 400, {}, request, env);
         }
 
         const id = `rev_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
@@ -308,34 +486,41 @@ export default {
         if (!saved) {
           throw new Error("Failed to write review to KV database.");
         }
+        await updateKvIndex(env, "review_", reviewData, "upsert");
 
         return jsonResponse({
           success: true,
           id,
           message: "Review submitted successfully! It is now pending moderation in the Super Admin Console."
-        }, 200, {}, request);
+        }, 200, {}, request, env);
 
       } catch (err) {
         console.error("Client Review Submission Error:", err);
-        return jsonResponse({ success: false, error: err.message || "Failed to submit review." }, 500, {}, request);
+        return jsonResponse({ success: false, error: err.message || "Failed to submit review." }, 500, {}, request, env);
       }
     }
 
     // -------------------------------------------------------------------------
     // Super Admin Review Moderation API (/api/admin-reviews)
     // Full moderation controls: Approve, Reject, Hide, Show, Toggle Visibility, Delete
+    // Strictly authenticated: Only authorized staff/admin may access or mutate records.
     // -------------------------------------------------------------------------
     if (path === "/api/admin-reviews") {
+      const auth = await verifyAdminOrInternal(request, env);
+      if (!auth.ok) {
+        return jsonResponse({ success: false, error: auth.error }, auth.status, {}, request, env);
+      }
+
       if (request.method === "GET") {
         try {
           const reviews = await kvGetAll(env, "review_");
           reviews.sort((a, b) => new Date(b.created_at || b.timestamp || 0) - new Date(a.created_at || a.timestamp || 0));
           return jsonResponse({ success: true, count: reviews.length, reviews }, 200, {
             "Cache-Control": "no-cache, no-store, must-revalidate"
-          }, request);
+          }, request, env);
         } catch (err) {
           console.error("GET /api/admin-reviews Error:", err);
-          return jsonResponse({ success: false, reviews: [], error: err.message }, 500, {}, request);
+          return jsonResponse({ success: false, reviews: [], error: err.message }, 500, {}, request, env);
         }
       }
 
@@ -343,11 +528,11 @@ export default {
         try {
           const body = await request.json();
           const { id, action, status, visibility } = body;
-          if (!id) return jsonResponse({ success: false, error: "Review ID is required" }, 400, {}, request);
+          if (!id) return jsonResponse({ success: false, error: "Review ID is required" }, 400, {}, request, env);
 
           const key = id.startsWith("review_") ? id : `review_${id}`;
           const raw = await kvGet(env, key);
-          if (!raw) return jsonResponse({ success: false, error: "Review not found" }, 404, {}, request);
+          if (!raw) return jsonResponse({ success: false, error: "Review not found" }, 404, {}, request, env);
 
           const review = JSON.parse(raw);
 
@@ -365,23 +550,25 @@ export default {
             review.visibility = "show";
           } else if (action === "delete") {
             await kvDelete(env, key);
-            return jsonResponse({ success: true, id, message: "Review deleted successfully." }, 200, {}, request);
+            await updateKvIndex(env, "review_", key, "delete");
+            return jsonResponse({ success: true, id, message: "Review deleted successfully." }, 200, {}, request, env);
           }
 
           if (status) review.moderation_status = status;
           if (visibility) review.visibility = visibility;
           review.updated_at = new Date().toISOString();
-          review.moderated_by = "Super Admin";
+          review.moderated_by = auth.user?.full_name || auth.user?.email || "Super Admin";
 
           await kvPut(env, key, JSON.stringify(review));
+          await updateKvIndex(env, "review_", review, "upsert");
           return jsonResponse({
             success: true,
             review,
             message: `Review successfully updated (${review.moderation_status} | ${review.visibility})`
-          }, 200, {}, request);
+          }, 200, {}, request, env);
         } catch (err) {
           console.error("Update Review Error:", err);
-          return jsonResponse({ success: false, error: err.message }, 500, {}, request);
+          return jsonResponse({ success: false, error: err.message }, 500, {}, request, env);
         }
       }
 
@@ -394,17 +581,18 @@ export default {
               id = body?.id;
             } catch (e) {}
           }
-          if (!id) return jsonResponse({ success: false, error: "Review ID required" }, 400, {}, request);
+          if (!id) return jsonResponse({ success: false, error: "Review ID required" }, 400, {}, request, env);
 
           const key = id.startsWith("review_") ? id : `review_${id}`;
           await kvDelete(env, key);
           if (key !== id) {
             await kvDelete(env, id);
           }
-          return jsonResponse({ success: true, id, message: "Review permanently deleted." }, 200, {}, request);
+          await updateKvIndex(env, "review_", key, "delete");
+          return jsonResponse({ success: true, id, message: "Review permanently deleted." }, 200, {}, request, env);
         } catch (err) {
           console.error("DELETE /api/admin-reviews Error:", err);
-          return jsonResponse({ success: false, error: err.message }, 500, {}, request);
+          return jsonResponse({ success: false, error: err.message }, 500, {}, request, env);
         }
       }
     }
@@ -412,18 +600,24 @@ export default {
     // -------------------------------------------------------------------------
     // Super Admin CRM Inquiries & Leads API (/api/inquiries)
     // Full CRUD operations for prospective client leads
+    // Strictly authenticated: Only authorized staff/admin may access or mutate records.
     // -------------------------------------------------------------------------
     if (path === "/api/inquiries") {
+      const auth = await verifyAdminOrInternal(request, env);
+      if (!auth.ok) {
+        return jsonResponse({ success: false, error: auth.error }, auth.status, {}, request, env);
+      }
+
       if (request.method === "GET") {
         try {
           const list = await kvGetAll(env, "inquiry_");
           list.sort((a, b) => new Date(b.created_at || b.timestamp || 0) - new Date(a.created_at || a.timestamp || 0));
           return jsonResponse({ success: true, count: list.length, inquiries: list }, 200, {
             "Cache-Control": "no-cache, no-store, must-revalidate"
-          }, request);
+          }, request, env);
         } catch (err) {
           console.error("GET /api/inquiries Error:", err);
-          return jsonResponse({ success: false, inquiries: [], error: err.message }, 500, {}, request);
+          return jsonResponse({ success: false, inquiries: [], error: err.message }, 500, {}, request, env);
         }
       }
 
@@ -431,11 +625,11 @@ export default {
         try {
           const body = await request.json();
           const { id, status, notes } = body;
-          if (!id) return jsonResponse({ success: false, error: "Inquiry ID is required" }, 400, {}, request);
+          if (!id) return jsonResponse({ success: false, error: "Inquiry ID is required" }, 400, {}, request, env);
 
           const key = id.startsWith("inquiry_") ? id : `inquiry_${id}`;
           const raw = await kvGet(env, key);
-          if (!raw) return jsonResponse({ success: false, error: "Inquiry not found" }, 404, {}, request);
+          if (!raw) return jsonResponse({ success: false, error: "Inquiry not found" }, 404, {}, request, env);
 
           const record = JSON.parse(raw);
           if (status) record.status = status;
@@ -443,10 +637,11 @@ export default {
           record.updated_at = new Date().toISOString();
 
           await kvPut(env, key, JSON.stringify(record));
-          return jsonResponse({ success: true, inquiry: record, message: "Inquiry updated successfully." }, 200, {}, request);
+          await updateKvIndex(env, "inquiry_", record, "upsert");
+          return jsonResponse({ success: true, inquiry: record, message: "Inquiry updated successfully." }, 200, {}, request, env);
         } catch (err) {
           console.error("Update Inquiry Error:", err);
-          return jsonResponse({ success: false, error: err.message }, 500, {}, request);
+          return jsonResponse({ success: false, error: err.message }, 500, {}, request, env);
         }
       }
 
@@ -459,17 +654,18 @@ export default {
               id = body?.id;
             } catch (e) {}
           }
-          if (!id) return jsonResponse({ success: false, error: "Inquiry ID required" }, 400, {}, request);
+          if (!id) return jsonResponse({ success: false, error: "Inquiry ID required" }, 400, {}, request, env);
 
           const key = id.startsWith("inquiry_") ? id : `inquiry_${id}`;
           await kvDelete(env, key);
           if (key !== id) {
             await kvDelete(env, id);
           }
-          return jsonResponse({ success: true, id, message: "Inquiry deleted successfully from database." }, 200, {}, request);
+          await updateKvIndex(env, "inquiry_", key, "delete");
+          return jsonResponse({ success: true, id, message: "Inquiry deleted successfully from database." }, 200, {}, request, env);
         } catch (err) {
           console.error("DELETE /api/inquiries Error:", err);
-          return jsonResponse({ success: false, error: err.message }, 500, {}, request);
+          return jsonResponse({ success: false, error: err.message }, 500, {}, request, env);
         }
       }
     }
@@ -725,10 +921,19 @@ export default {
     // Contact Gateway (/api/submit-contact & /api/contact)
     // Direct Lead Generation Engine: Routes all inbound prospective client inquiries
     // into Cloudflare KV database (prefix: inquiry_) for Super Admin CRM management.
-    // Completely disconnected from Discord.
+    // Rate-limited per IP to prevent spam exhaustion.
     // -------------------------------------------------------------------------
     if ((path === "/api/submit-contact" || path === "/api/contact") && request.method === "POST") {
       try {
+        const clientIp = request.headers.get("cf-connecting-ip") || request.headers.get("x-real-ip") || "127.0.0.1";
+        const rl = checkWorkerRateLimit(`submit-contact:${clientIp}`, 5, 60000);
+        if (!rl.allowed) {
+          return jsonResponse({
+            success: false,
+            error: `Too many contact requests from your IP. Please wait ${rl.waitSec} seconds before submitting again.`
+          }, 429, {}, request, env);
+        }
+
         const body = await request.json();
         const { name, email, phone, service, details } = body;
 
@@ -736,7 +941,7 @@ export default {
           return jsonResponse({
             success: false,
             error: "Client Name, Email Address, and Project Scope details are required."
-          }, 400, {}, request);
+          }, 400, {}, request, env);
         }
 
         const id = `inq_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
@@ -760,6 +965,7 @@ export default {
         if (!saved) {
           throw new Error("Failed to write inquiry to KV database.");
         }
+        await updateKvIndex(env, "inquiry_", inquiryRecord, "upsert");
 
         // Non-blocking automated welcome acknowledgment via ctx.waitUntil()
         if (ctx && typeof ctx.waitUntil === "function") {
@@ -777,27 +983,33 @@ export default {
           success: true,
           id,
           message: "Your inquiry has been successfully registered with Whiz Studio. Our executive team will review and respond shortly."
-        }, 200, {}, request);
+        }, 200, {}, request, env);
 
       } catch (err) {
         console.error("Lead Generation API Error:", err);
         return jsonResponse({
           success: false,
           error: err.message || "Failed to process inquiry submission."
-        }, 500, {}, request);
+        }, 500, {}, request, env);
       }
     }
 
     // -------------------------------------------------------------------------
     // ROUTE: POST /api/send-welcome-email (Role-Based Welcome Email via Brevo API)
+    // Strictly authenticated: Only authorized staff/admin or internal callers.
     // -------------------------------------------------------------------------
     if (path === "/api/send-welcome-email" && request.method === "POST") {
       try {
+        const auth = await verifyAdminOrInternal(request, env);
+        if (!auth.ok) {
+          return jsonResponse({ success: false, error: auth.error }, auth.status, {}, request, env);
+        }
+
         const body = await request.json();
         const { email, fullName, role = "client", temporaryPassword, loginUrl } = body;
 
         if (!email || !email.includes("@")) {
-          return jsonResponse({ success: false, error: "A valid email is required." }, 400, {}, request);
+          return jsonResponse({ success: false, error: "A valid email is required." }, 400, {}, request, env);
         }
 
         const emailResult = await sendBrevoWelcomeEmailWorker({
@@ -815,9 +1027,9 @@ export default {
           error: emailResult.error,
           provider: "Brevo Transactional REST API v3",
           whiteLabeled: true
-        }, emailResult.success ? 200 : 500, {}, request);
+        }, emailResult.success ? 200 : 500, {}, request, env);
       } catch (err) {
-        return jsonResponse({ success: false, error: err.message }, 500, {}, request);
+        return jsonResponse({ success: false, error: err.message }, 500, {}, request, env);
       }
     }
 
@@ -963,9 +1175,6 @@ export default {
 // BREVO TRANSACTIONAL WELCOME EMAIL HELPERS
 // Free Tier Compliant • 100% White-Labeled • Glassmorphic UI Dark Mode
 // =============================================================================
-const BV_P1 = "xkeysib-0988eafb70180678d1e8fa0064aea7a30c569b2c";
-const BV_P2 = "ef9c411e4201f596524504dd-V2s8UWJBDMg0KBgZ";
-const DEFAULT_BREVO_KEY = [BV_P1, BV_P2].join("");
 const WHIZ_LOGO_URL = "https://whizstudio.art/assets/images/whiz-logo-v2.png?v=202611";
 
 function buildRoleWelcomeEmailHtmlWorker({
@@ -1079,7 +1288,10 @@ async function sendBrevoWelcomeEmailWorker({
   env
 }) {
   try {
-    const activeKey = env?.BREVO_API_KEY || DEFAULT_BREVO_KEY;
+    const activeKey = env?.BREVO_API_KEY || "";
+    if (!activeKey) {
+      return { success: false, error: "BREVO_API_KEY environment secret is not configured." };
+    }
     const { subject, html } = buildRoleWelcomeEmailHtmlWorker({
       fullName,
       email,

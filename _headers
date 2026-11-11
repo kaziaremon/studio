@@ -132,9 +132,7 @@
   Cache-Control: public, max-age=604800, stale-while-revalidate=2592000
 
 /assets/js/*
-  Cache-Control: no-cache, no-store, must-revalidate
-  Pragma: no-cache
-  Expires: 0
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 
 /admin/*
   Cache-Control: no-cache, no-store, private, must-revalidate

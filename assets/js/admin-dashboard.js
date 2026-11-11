@@ -1,992 +1,19 @@
-/**
- * WHIZ STUDIO — SUPER ADMIN CONSOLE JAVASCRIPT CONTROLLER (v5.0 Enterprise)
- * Technology: Clerk JS SDK, Cloudflare Workers API, Cloudflare D1 Database, pdf-lib
- * Architecture: 100% Free Plan ($0 / month) | Cloudflare Authoritative Engine
- */
-
-(function () {
-  'use strict';
-
-  const CLERK_PUBLISHABLE_KEY = 'pk_live_Y2xlcmsud2hpenN0dWRpby5hcnQk';
-  const API_BASE = 'https://whiz-api.kaziaremon.workers.dev/api/v1';
-
-  // Global State
-  
-  const CURRENCY_CONFIG = {
-    BDT: { symbol: '৳', name: 'Bangladeshi Taka', locale: 'bn-BD', decimals: 2 },
-    USD: { symbol: '$', name: 'US Dollar', locale: 'en-US', decimals: 2 },
-    GBP: { symbol: '£', name: 'British Pound', locale: 'en-GB', decimals: 2 },
-    EUR: { symbol: '€', name: 'Euro', locale: 'de-DE', decimals: 2 },
-    AED: { symbol: 'AED', name: 'UAE Dirham', locale: 'ar-AE', decimals: 2 },
-    SAR: { symbol: 'SAR', name: 'Saudi Riyal', locale: 'ar-SA', decimals: 2 },
-    CAD: { symbol: 'CA$', name: 'Canadian Dollar', locale: 'en-CA', decimals: 2 },
-    AUD: { symbol: 'A$', name: 'Australian Dollar', locale: 'en-AU', decimals: 2 },
-    SGD: { symbol: 'S$', name: 'Singapore Dollar', locale: 'en-SG', decimals: 2 },
-    INR: { symbol: '₹', name: 'Indian Rupee', locale: 'en-IN', decimals: 2 },
-    JPY: { symbol: '¥', name: 'Japanese Yen', locale: 'ja-JP', decimals: 0 },
-    MYR: { symbol: 'RM', name: 'Malaysian Ringgit', locale: 'ms-MY', decimals: 2 }
-  };
-
-  function formatCurrency(amountCents, currencyCode = 'USD') {
-    const code = (currencyCode || 'USD').toUpperCase();
-    const conf = CURRENCY_CONFIG[code] || { symbol: code, locale: 'en-US', decimals: 2 };
-    const divisor = conf.decimals === 0 ? 1 : 100;
-    const value = (Number(amountCents) || 0) / divisor;
-
-    try {
-      return new Intl.NumberFormat(conf.locale, {
-        style: 'currency',
-        currency: code,
-        minimumFractionDigits: conf.decimals,
-        maximumFractionDigits: conf.decimals
-      }).format(value);
-    } catch (e) {
-      return conf.symbol + value.toFixed(conf.decimals);
-    }
-  }
-
-  function escapeHtml(str) {
-    if (str === null || str === undefined) return '';
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
-  }
-
-  const state = {
-    currentUser: null,
-    adminProfile: null,
-    activeTab: 'overview',
-    selectedClientId: null,
-    selectedServiceId: null,
-    clientsCache: [],
-    servicesCache: [],
-    projectsCache: [],
-    tasksCache: [],
-    usersCache: [],
-    roleHistoryCache: [],
-    supportCache: [],
-    trustedDevicesCache: [],
-    currentBlueprints: [],
-    currentTaskStatus: 'all',
-    inquiries: [],
-    adminReviews: [],
-    activeInquiryFilter: 'all',
-    activeReviewFilter: 'all',
-    activeInquiryModalId: null
-  };
-
-  // =========================================================================
-  // ROLE-BASED ACCESS CONTROL (RBAC) & PERMISSION ENGINE
-  // =========================================================================
-  function normalizeRole(role) {
-    if (!role) return 'client';
-    const r = String(role).trim().toLowerCase();
-    if (r === 'owner' || r === 'super_admin' || r === 'superadmin') return 'super_admin';
-    if (r === 'admin' || r === 'administrator') return 'admin';
-    if (r === 'accountant' || r === 'accounts' || r === 'finance' || r === 'billing') return 'accountant';
-    if (r === 'employee' || r === 'staff' || r === 'project_manager' || r === 'operations') return 'employee';
-    return 'client';
-  }
-
-  function formatRoleName(role) {
-    const norm = normalizeRole(role);
-    if (norm === 'super_admin') return 'Super Admin';
-    if (norm === 'admin') return 'Admin';
-    if (norm === 'accountant') return 'Accountant';
-    if (norm === 'employee') return 'Employee';
-    return 'Client';
-  }
-
-  function isCurrentUserOwner() {
-    if (!state.adminProfile) return false;
-    const role = (state.adminProfile.role || '').toLowerCase();
-    // Non-owner roles are NEVER elevated regardless of email or flags
-    if (role === 'accountant' || role === 'accounts' || role === 'employee' || role === 'client') {
-      return false;
-    }
-    const email = (state.adminProfile.email || '').toLowerCase();
-    if (email === 'kaziaremon@gmail.com') return true;
-    if (role === 'owner' || role === 'super_admin' || role === 'superadmin') return true;
-    const isa = state.adminProfile.isSuperAdmin ?? state.adminProfile.is_super_admin;
-    return isa === true || isa === 1 || isa === 'true' || isa === '1';
-  }
-
-  function getRoleBadgeForRole(rawRole, isOwner = false) {
-    const norm = normalizeRole(rawRole);
-    if ((isOwner && norm !== 'accountant' && norm !== 'employee' && norm !== 'client') || norm === 'super_admin') {
-      return '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-xs"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Super Admin</span>';
-    } else if (norm === 'admin') {
-      return '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200 shadow-xs"><i class="fa-solid fa-shield-halved text-[9px]"></i> Admin</span>';
-    } else if (norm === 'accountant') {
-      return '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200 shadow-xs"><i class="fa-solid fa-calculator text-[9px]"></i> Accountant</span>';
-    } else if (norm === 'employee') {
-      return '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-teal-50 text-teal-700 border border-teal-200 shadow-xs"><i class="fa-solid fa-briefcase text-[9px]"></i> Employee</span>';
-    } else {
-      return '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200 shadow-xs"><i class="fa-solid fa-user text-[9px]"></i> Client</span>';
-    }
-  }
-
-  function applyRoleAdaptiveUI(profile) {
-    if (!profile) return;
-    const isOwner = isCurrentUserOwner();
-    const normRole = isOwner ? 'super_admin' : normalizeRole(profile.role);
-    const displayRole = isOwner ? 'Super Admin' : formatRoleName(profile.role);
-
-    // 1. Update Header Role Label
-    const headerRoleEl = document.getElementById('adminHeaderRoleLabel');
-    if (headerRoleEl) {
-      if (normRole === 'super_admin') {
-        headerRoleEl.textContent = 'Super Admin Console';
-      } else if (normRole === 'admin') {
-        headerRoleEl.textContent = 'Admin Workspace';
-      } else if (normRole === 'accountant') {
-        headerRoleEl.textContent = 'Accountant Portal';
-      } else if (normRole === 'employee') {
-        headerRoleEl.textContent = 'Employee Workspace';
-      } else {
-        headerRoleEl.textContent = 'Management Console';
-      }
-    }
-
-    // 2. Update Profile & Security Badges
-    const badge = document.getElementById('dropdownRoleBadge');
-    const sidebarRoleBadge = document.getElementById('sidebarRoleBadge');
-    const drawerRoleBadge = document.getElementById('drawerRoleBadge');
-    const secRoleHeader = document.getElementById('secRoleBadgeHeader');
-    const secRoleBadge = document.getElementById('secRoleBadge');
-
-    if (sidebarRoleBadge) sidebarRoleBadge.textContent = displayRole;
-    if (drawerRoleBadge) drawerRoleBadge.textContent = displayRole;
-    if (secRoleHeader) {
-      secRoleHeader.innerHTML = `<i class="fa-solid fa-shield-halved text-[9px]"></i> ${displayRole.toUpperCase()}`;
-    }
-
-    if (badge) {
-      badge.textContent = displayRole;
-      if (normRole === 'super_admin') {
-        badge.className = 'font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-[#147D64] border border-emerald-200 text-[10px] uppercase';
-      } else if (normRole === 'admin') {
-        badge.className = 'font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 text-[10px] uppercase';
-      } else if (normRole === 'accountant') {
-        badge.className = 'font-bold px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200 text-[10px] uppercase';
-      } else if (normRole === 'employee') {
-        badge.className = 'font-bold px-2 py-0.5 rounded-md bg-teal-50 text-teal-700 border border-teal-200 text-[10px] uppercase';
-      } else {
-        badge.className = 'font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 text-[10px] uppercase';
-      }
-    }
-
-    if (secRoleBadge) {
-      secRoleBadge.innerHTML = isOwner
-        ? '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Founding Owner</span>'
-        : getRoleBadgeForRole(profile.role, false);
-    }
-
-    // 3. Strict Navigation & UI Element RBAC Visibility Constraints
-    const sidebarFinance = document.getElementById('sidebarSectionFinance');
-    const drawerFinance = document.getElementById('drawerSectionFinance');
-    const bottomNavFinance = document.getElementById('bottomNavFinance');
-    const sidebarTeam = document.getElementById('sidebarNavTeam');
-    const drawerTeam = document.getElementById('drawerNavTeam');
-    const sidebarHistory = document.getElementById('sidebarNavHistory');
-    const drawerHistory = document.getElementById('drawerNavHistory');
-
-    const sidebarServices = document.getElementById('sidebarNavServices');
-    const sidebarProjects = document.getElementById('sidebarNavProjects');
-    const sidebarTasks = document.getElementById('sidebarNavTasks');
-    const drawerServices = document.getElementById('drawerNavServices');
-    const drawerProjects = document.getElementById('drawerNavProjects');
-    const drawerTasks = document.getElementById('drawerNavTasks');
-    const bottomNavServices = document.getElementById('bottomNavServices');
-    const bottomNavTasks = document.getElementById('bottomNavTasks');
-
-    const kpiRevenue = document.getElementById('kpiCardRevenue');
-    const chartRev = document.getElementById('chartRevenueContainer');
-    const kpiProjects = document.getElementById('kpiCardProjects');
-    const kpiServices = document.getElementById('kpiCardServices');
-    const kpiTasksComp = document.getElementById('kpiCardCompletedTasks');
-    const kpiTasksPend = document.getElementById('kpiCardPendingTasks');
-
-    const chartServices = document.getElementById('chartServiceDistributionContainer');
-    const chartProjects = document.getElementById('chartProjectProgressContainer');
-    const chartTasks = document.getElementById('chartTaskStatusContainer');
-
-    const clientFinSummary = document.getElementById('clientFinancialSummaryCard');
-    const clientFinPrefs = document.getElementById('clientFinancialPreferencesCard');
-    const btnAssignService = document.getElementById('btnOpenAssignServiceClientModal');
-    const clientAssignedServices = document.getElementById('clientAssignedServicesCard');
-    const clientProjects = document.getElementById('clientProjectsCard');
-    const clientAuditCard = document.getElementById('clientAuditHistoryCard');
-
-    // Rule A: Audit & Operational History is STRICTLY PRIVATE to Admin and Super Admin
-    const canAccessAudit = normRole === 'super_admin' || normRole === 'admin';
-    if (sidebarHistory) sidebarHistory.classList.toggle('hidden', !canAccessAudit);
-    if (drawerHistory) drawerHistory.classList.toggle('hidden', !canAccessAudit);
-    if (clientAuditCard) clientAuditCard.classList.toggle('hidden', !canAccessAudit);
-
-    // Rule B: Team Governance is restricted to Admin & Super Admin
-    const canAccessTeam = normRole === 'super_admin' || normRole === 'admin';
-    if (sidebarTeam) sidebarTeam.classList.toggle('hidden', !canAccessTeam);
-    if (drawerTeam) drawerTeam.classList.toggle('hidden', !canAccessTeam);
-
-    // Rule C: Accountant Dashboard Constraints (Financial-Only Mode)
-    if (normRole === 'accountant') {
-      // STRICTLY HIDE all Service provisioning, Task pipelines, and Project management modules
-      if (sidebarServices) sidebarServices.classList.add('hidden');
-      if (sidebarProjects) sidebarProjects.classList.add('hidden');
-      if (sidebarTasks) sidebarTasks.classList.add('hidden');
-      if (drawerServices) drawerServices.classList.add('hidden');
-      if (drawerProjects) drawerProjects.classList.add('hidden');
-      if (drawerTasks) drawerTasks.classList.add('hidden');
-      if (bottomNavServices) bottomNavServices.classList.add('hidden');
-      if (bottomNavTasks) bottomNavTasks.classList.add('hidden');
-
-      if (kpiProjects) kpiProjects.classList.add('hidden');
-      if (kpiServices) kpiServices.classList.add('hidden');
-      if (kpiTasksComp) kpiTasksComp.classList.add('hidden');
-      if (kpiTasksPend) kpiTasksPend.classList.add('hidden');
-
-      if (chartServices) chartServices.classList.add('hidden');
-      if (chartProjects) chartProjects.classList.add('hidden');
-      if (chartTasks) chartTasks.classList.add('hidden');
-
-      if (btnAssignService) btnAssignService.classList.add('hidden');
-      if (clientProjects) clientProjects.classList.add('hidden');
-      if (clientAssignedServices) clientAssignedServices.classList.add('hidden');
-
-      // EXCLUSIVELY DISPLAY financial, billing, invoicing, and ledger modules
-      if (sidebarFinance) sidebarFinance.classList.remove('hidden');
-      if (drawerFinance) drawerFinance.classList.remove('hidden');
-      if (bottomNavFinance) bottomNavFinance.classList.remove('hidden');
-      if (kpiRevenue) kpiRevenue.classList.remove('hidden');
-      if (chartRev) chartRev.classList.remove('hidden');
-      if (clientFinSummary) clientFinSummary.classList.remove('hidden');
-      if (clientFinPrefs) clientFinPrefs.classList.remove('hidden');
-
-      document.querySelectorAll('.role-operational-nav').forEach(el => el.classList.add('hidden'));
-      document.querySelectorAll('.role-operational-only').forEach(el => el.classList.add('hidden'));
-      document.querySelectorAll('.role-financial-only').forEach(el => el.classList.remove('hidden'));
-    }
-    // Rule D: Employee Dashboard Constraints (Operational-Only Mode, Zero Financial Access)
-    else if (normRole === 'employee') {
-      // STRICTLY HIDE all accounting, revenue, billing, and financial preference modules
-      if (sidebarFinance) sidebarFinance.classList.add('hidden');
-      if (drawerFinance) drawerFinance.classList.add('hidden');
-      if (bottomNavFinance) bottomNavFinance.classList.add('hidden');
-      if (kpiRevenue) kpiRevenue.classList.add('hidden');
-      if (chartRev) chartRev.classList.add('hidden');
-      if (clientFinSummary) clientFinSummary.classList.add('hidden');
-      if (clientFinPrefs) clientFinPrefs.classList.add('hidden');
-      document.querySelectorAll('.role-financial-only').forEach(el => el.classList.add('hidden'));
-
-      // DISPLAY assigned operational tasks, SOPs, and project workflows
-      if (sidebarServices) sidebarServices.classList.remove('hidden');
-      if (sidebarProjects) sidebarProjects.classList.remove('hidden');
-      if (sidebarTasks) sidebarTasks.classList.remove('hidden');
-      if (drawerServices) drawerServices.classList.remove('hidden');
-      if (drawerProjects) drawerProjects.classList.remove('hidden');
-      if (drawerTasks) drawerTasks.classList.remove('hidden');
-      if (bottomNavServices) bottomNavServices.classList.remove('hidden');
-      if (bottomNavTasks) bottomNavTasks.classList.remove('hidden');
-
-      if (kpiProjects) kpiProjects.classList.remove('hidden');
-      if (kpiServices) kpiServices.classList.remove('hidden');
-      if (kpiTasksComp) kpiTasksComp.classList.remove('hidden');
-      if (kpiTasksPend) kpiTasksPend.classList.remove('hidden');
-
-      if (chartServices) chartServices.classList.remove('hidden');
-      if (chartProjects) chartProjects.classList.remove('hidden');
-      if (chartTasks) chartTasks.classList.remove('hidden');
-
-      if (clientProjects) clientProjects.classList.remove('hidden');
-      if (clientAssignedServices) clientAssignedServices.classList.remove('hidden');
-
-      document.querySelectorAll('.role-operational-nav').forEach(el => el.classList.remove('hidden'));
-      document.querySelectorAll('.role-operational-only').forEach(el => el.classList.remove('hidden'));
-    }
-    // Rule E: Admin and Super Admin (Full operational & financial access)
-    else {
-      if (sidebarFinance) sidebarFinance.classList.remove('hidden');
-      if (drawerFinance) drawerFinance.classList.remove('hidden');
-      if (bottomNavFinance) bottomNavFinance.classList.remove('hidden');
-      if (sidebarServices) sidebarServices.classList.remove('hidden');
-      if (sidebarProjects) sidebarProjects.classList.remove('hidden');
-      if (sidebarTasks) sidebarTasks.classList.remove('hidden');
-      if (drawerServices) drawerServices.classList.remove('hidden');
-      if (drawerProjects) drawerProjects.classList.remove('hidden');
-      if (drawerTasks) drawerTasks.classList.remove('hidden');
-      if (bottomNavServices) bottomNavServices.classList.remove('hidden');
-      if (bottomNavTasks) bottomNavTasks.classList.remove('hidden');
-
-      if (kpiRevenue) kpiRevenue.classList.remove('hidden');
-      if (chartRev) chartRev.classList.remove('hidden');
-      if (kpiProjects) kpiProjects.classList.remove('hidden');
-      if (kpiServices) kpiServices.classList.remove('hidden');
-      if (kpiTasksComp) kpiTasksComp.classList.remove('hidden');
-      if (kpiTasksPend) kpiTasksPend.classList.remove('hidden');
-
-      if (chartServices) chartServices.classList.remove('hidden');
-      if (chartProjects) chartProjects.classList.remove('hidden');
-      if (chartTasks) chartTasks.classList.remove('hidden');
-
-      if (clientFinSummary) clientFinSummary.classList.remove('hidden');
-      if (clientFinPrefs) clientFinPrefs.classList.remove('hidden');
-      if (btnAssignService) btnAssignService.classList.remove('hidden');
-      if (clientProjects) clientProjects.classList.remove('hidden');
-      if (clientAssignedServices) clientAssignedServices.classList.remove('hidden');
-
-      document.querySelectorAll('.role-operational-nav').forEach(el => el.classList.remove('hidden'));
-      document.querySelectorAll('.role-operational-only').forEach(el => el.classList.remove('hidden'));
-      document.querySelectorAll('.role-financial-only').forEach(el => el.classList.remove('hidden'));
-    }
-
-    // Super Admin Exclusive Navigation & Controls (Inquiries CRM & Review Moderation)
-    const isSuperAdminUser = isOwner || normRole === 'super_admin';
-    document.querySelectorAll('.role-superadmin-nav, .role-superadmin-only').forEach(el => {
-      if (isSuperAdminUser) {
-        el.classList.remove('hidden');
-      } else {
-        el.classList.add('hidden');
-      }
-    });
-
-    // 4. Configure Staff Invite Form role options
-    const inviteRoleSelect = document.getElementById('inviteRole');
-    if (inviteRoleSelect) {
-      if (normRole === 'admin' && !isOwner) {
-        // Admins can only invite Accountant or Employee
-        const adminOption = inviteRoleSelect.querySelector('option[value="admin"]');
-        if (adminOption) adminOption.remove();
-      }
-    }
-  }
-
-  function isCurrentAdminSelf(target) {
-    if (!target) return false;
-    const currentEmail = (state.adminProfile?.email || state.currentUser?.primaryEmailAddress?.emailAddress || '').toLowerCase();
-    const currentUserId = state.adminProfile?.id;
-    const currentClerkId = state.currentUser?.id || state.adminProfile?.clerkUserId;
-
-    const targetEmail = (target.email || target.approved_email || '').toLowerCase();
-    const targetId = target.id;
-    const targetClerkId = target.clerk_user_id || target.clerkUserId;
-
-    if (currentEmail && targetEmail && currentEmail === targetEmail) return true;
-    if (currentUserId && targetId && currentUserId === targetId) return true;
-    if (currentClerkId && targetClerkId && currentClerkId === targetClerkId) return true;
-    return false;
-  }
-
-  // =========================================================================
-  // IDENTITY & AUDIT PRIVACY PROTECTION ENGINE (ZERO RAW ID LEAKAGE)
-  // =========================================================================
-  function resolveUserIdentity(rawIdOrEmail, roleHint = '') {
-    if (!rawIdOrEmail) return roleHint === 'target' ? 'Authorized Account' : 'System';
-    const clean = String(rawIdOrEmail).trim();
-    if (!clean || clean === '—' || clean === 'null' || clean === 'undefined') {
-      return roleHint === 'target' ? 'Authorized Account' : 'System';
-    }
-
-    // Direct owner checks
-    if (clean.toLowerCase() === 'kaziaremon@gmail.com' || clean.startsWith('usr_owner') || clean === 'owner') {
-      return 'Super Admin';
-    }
-
-    // Direct email check (already a human-readable email)
-    if (clean.includes('@')) {
-      const userWithEmail = (state.usersCache || []).find(u => (u.email || '').toLowerCase() === clean.toLowerCase());
-      if (userWithEmail && (userWithEmail.full_name || userWithEmail.fullName)) {
-        return userWithEmail.full_name || userWithEmail.fullName;
-      }
-      return clean;
-    }
-
-    // Search usersCache by Clerk ID, ID, or Email
-    const cachedUser = (state.usersCache || []).find(u =>
-      (u.clerk_user_id && u.clerk_user_id === clean) ||
-      (u.clerkUserId && u.clerkUserId === clean) ||
-      (u.id && u.id === clean) ||
-      (u.email && u.email.toLowerCase() === clean.toLowerCase())
-    );
-    if (cachedUser) {
-      return cachedUser.full_name || cachedUser.fullName || cachedUser.email || (cachedUser.role === 'admin' ? 'Administrator' : 'Team Member');
-    }
-
-    // Search clientsCache by Clerk ID, ID, or Email
-    const cachedClient = (state.clientsCache || []).find(c =>
-      (c.clerk_user_id && c.clerk_user_id === clean) ||
-      (c.id && c.id === clean) ||
-      (c.email && c.email.toLowerCase() === clean.toLowerCase())
-    );
-    if (cachedClient) {
-      return cachedClient.full_name || cachedClient.company_name || cachedClient.email || 'Client';
-    }
-
-    // Search active Clerk session user
-    if (window.Clerk?.user && (window.Clerk.user.id === clean || clean === window.Clerk.user.primaryEmailAddress?.emailAddress)) {
-      return window.Clerk.user.fullName || window.Clerk.user.primaryEmailAddress?.emailAddress || 'Administrator';
-    }
-
-    // STRICT PRIVACY PROTECTION: Block any raw Clerk ID (user_...) or backend hash
-    if (clean.startsWith('user_') || clean.startsWith('usr_') || clean.startsWith('org_') || /^[a-zA-Z0-9_-]{20,}$/.test(clean)) {
-      if (roleHint === 'target') return 'Authorized Account';
-      if (roleHint === 'client') return 'Client';
-      return 'Administrator';
-    }
-
-    return clean;
-  }
-
-  function sanitizeAuditDetails(details, fallbackName = '') {
-    if (!details) return '';
-    let text = '';
-    if (typeof details === 'object') {
-      try {
-        const copy = JSON.parse(JSON.stringify(details));
-        for (const [k, v] of Object.entries(copy)) {
-          if (typeof v === 'string') {
-            if (v.startsWith('user_') || v.startsWith('usr_')) {
-              copy[k] = resolveUserIdentity(v, k.includes('target') ? 'target' : 'actor');
-            }
-          }
-        }
-        text = JSON.stringify(copy, null, 2);
-      } catch (e) {
-        text = String(details);
-      }
-    } else {
-      text = String(details);
-    }
-
-    // Regex replace any remaining Clerk ID string patterns (e.g., user_3LSEtPcTNnyxAwwf7LdhNCK7ROO)
-    text = text.replace(/user_[a-zA-Z0-9]{15,}/g, (match) => {
-      return resolveUserIdentity(match, 'target');
-    });
-
-    // Replace internal owner IDs
-    text = text.replace(/usr_owner[a-zA-Z0-9_]*/g, 'Super Admin');
-
-    // Replace backend architecture references
-    text = text.replace(/Cloudflare\s+D1/gi, 'Cloud Database');
-    text = text.replace(/\bD1\b/g, 'Database');
-
-    return text;
-  }
-
-  // =========================================================================
-  // AUTHENTICATED API FETCH HELPER
-  // =========================================================================
-  async function apiFetch(endpoint, options = {}) {
-    if (state.isPreview && window.__whizAdminMock) {
-      return window.__whizAdminMock.handleRequest(endpoint, options, state);
-    }
-    const headers = {
-      'Content-Type': 'application/json',
-      ...(options.headers || {})
-    };
-
-    if (window.Clerk && window.Clerk.session) {
-      try {
-        const token = await window.Clerk.session.getToken();
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-      } catch (e) {
-        console.warn('Could not retrieve Clerk token:', e);
-      }
-    }
-
-    if (window.Clerk && window.Clerk.user) {
-      headers['X-Clerk-User-Id'] = window.Clerk.user.id;
-    }
-
-    try {
-      let url = endpoint;
-      if (endpoint.startsWith('/api/')) {
-        const isLocal = window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        url = isLocal ? `https://whizstudio.art${endpoint}` : endpoint;
-      } else {
-        url = `${API_BASE}${endpoint}`;
-      }
-      const response = await fetch(url, { ...options, headers });
-      const data = await response.json().catch(() => ({}));
-      return { ok: response.ok, status: response.status, data };
-    } catch (err) {
-      console.error('API Fetch Error:', err);
-      return { ok: false, status: 500, data: { success: false, error: 'Network connection failure.' } };
-    }
-  }
-
-  // =========================================================================
-  // TOAST NOTIFICATIONS
-  // =========================================================================
-  function showToast(message, type = 'info') {
-    const container = document.getElementById('toastContainer');
-    if (!container) return;
-
-    const toast = document.createElement('div');
-    const colors = {
-      success: 'bg-white border-emerald-400 text-[#172B36] shadow-emerald-100/60',
-      error: 'bg-white border-rose-400 text-[#172B36] shadow-rose-100/60',
-      info: 'bg-white border-[#147D64]/50 text-[#172B36] shadow-slate-100/60',
-      warn: 'bg-white border-amber-400 text-[#172B36] shadow-amber-100/60'
-    };
-    const icons = {
-      success: 'fa-circle-check text-emerald-500',
-      error: 'fa-circle-exclamation text-rose-500',
-      info: 'fa-circle-info text-[#147D64]',
-      warn: 'fa-triangle-exclamation text-amber-500'
-    };
-
-    toast.className = `p-4 rounded-2xl border backdrop-blur-xl shadow-xl flex items-start space-x-3 text-xs transition-all duration-300 transform translate-y-2 pointer-events-auto ${colors[type] || colors.info}`;
-    toast.innerHTML = `
-      <i class="fa-solid ${icons[type] || icons.info} text-sm mt-0.5 shrink-0"></i>
-      <div class="flex-1 font-medium leading-relaxed">${message}</div>
+(function(){"use strict";const Mt="pk_live_Y2xlcmsud2hpenN0dWRpby5hcnQk",Nt="https://whiz-api.kaziaremon.workers.dev/api/v1",qt={BDT:{symbol:"\u09F3",name:"Bangladeshi Taka",locale:"bn-BD",decimals:2},USD:{symbol:"$",name:"US Dollar",locale:"en-US",decimals:2},GBP:{symbol:"\xA3",name:"British Pound",locale:"en-GB",decimals:2},EUR:{symbol:"\u20AC",name:"Euro",locale:"de-DE",decimals:2},AED:{symbol:"AED",name:"UAE Dirham",locale:"ar-AE",decimals:2},SAR:{symbol:"SAR",name:"Saudi Riyal",locale:"ar-SA",decimals:2},CAD:{symbol:"CA$",name:"Canadian Dollar",locale:"en-CA",decimals:2},AUD:{symbol:"A$",name:"Australian Dollar",locale:"en-AU",decimals:2},SGD:{symbol:"S$",name:"Singapore Dollar",locale:"en-SG",decimals:2},INR:{symbol:"\u20B9",name:"Indian Rupee",locale:"en-IN",decimals:2},JPY:{symbol:"\xA5",name:"Japanese Yen",locale:"ja-JP",decimals:0},MYR:{symbol:"RM",name:"Malaysian Ringgit",locale:"ms-MY",decimals:2}};function Y(s,t="USD"){const r=(t||"USD").toUpperCase(),e=qt[r]||{symbol:r,locale:"en-US",decimals:2},l=e.decimals===0?1:100,i=(Number(s)||0)/l;try{return new Intl.NumberFormat(e.locale,{style:"currency",currency:r,minimumFractionDigits:e.decimals,maximumFractionDigits:e.decimals}).format(i)}catch{return e.symbol+i.toFixed(e.decimals)}}function p(s){return s==null?"":String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;")}const y={currentUser:null,adminProfile:null,activeTab:"overview",selectedClientId:null,selectedServiceId:null,clientsCache:[],servicesCache:[],projectsCache:[],tasksCache:[],usersCache:[],roleHistoryCache:[],supportCache:[],trustedDevicesCache:[],currentBlueprints:[],currentTaskStatus:"all",inquiries:[],adminReviews:[],activeInquiryFilter:"all",activeReviewFilter:"all",activeInquiryModalId:null};function Le(s){if(!s)return"client";const t=String(s).trim().toLowerCase();return t==="owner"||t==="super_admin"||t==="superadmin"?"super_admin":t==="admin"||t==="administrator"?"admin":t==="accountant"||t==="accounts"||t==="finance"||t==="billing"?"accountant":t==="employee"||t==="staff"||t==="project_manager"||t==="operations"?"employee":"client"}function je(s){const t=Le(s);return t==="super_admin"?"Super Admin":t==="admin"?"Admin":t==="accountant"?"Accountant":t==="employee"?"Employee":"Client"}function X(){if(!y.adminProfile)return!1;const s=(y.adminProfile.role||"").toLowerCase();if(s==="accountant"||s==="accounts"||s==="employee"||s==="client")return!1;if((y.adminProfile.email||"").toLowerCase()==="kaziaremon@gmail.com"||s==="owner"||s==="super_admin"||s==="superadmin")return!0;const r=y.adminProfile.isSuperAdmin??y.adminProfile.is_super_admin;return r===!0||r===1||r==="true"||r==="1"}function ge(s,t=!1){const r=Le(s);return t&&r!=="accountant"&&r!=="employee"&&r!=="client"||r==="super_admin"?'<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-xs"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Super Admin</span>':r==="admin"?'<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200 shadow-xs"><i class="fa-solid fa-shield-halved text-[9px]"></i> Admin</span>':r==="accountant"?'<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200 shadow-xs"><i class="fa-solid fa-calculator text-[9px]"></i> Accountant</span>':r==="employee"?'<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-teal-50 text-teal-700 border border-teal-200 shadow-xs"><i class="fa-solid fa-briefcase text-[9px]"></i> Employee</span>':'<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200 shadow-xs"><i class="fa-solid fa-user text-[9px]"></i> Client</span>'}function ht(s){if(!s)return;const t=X(),r=t?"super_admin":Le(s.role),e=t?"Super Admin":je(s.role),l=document.getElementById("adminHeaderRoleLabel");l&&(r==="super_admin"?l.textContent="Super Admin Console":r==="admin"?l.textContent="Admin Workspace":r==="accountant"?l.textContent="Accountant Portal":r==="employee"?l.textContent="Employee Workspace":l.textContent="Management Console");const i=document.getElementById("dropdownRoleBadge"),m=document.getElementById("sidebarRoleBadge"),x=document.getElementById("drawerRoleBadge"),b=document.getElementById("secRoleBadgeHeader"),a=document.getElementById("secRoleBadge");m&&(m.textContent=e),x&&(x.textContent=e),b&&(b.innerHTML=`<i class="fa-solid fa-shield-halved text-[9px]"></i> ${e.toUpperCase()}`),i&&(i.textContent=e,r==="super_admin"?i.className="font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-[#147D64] border border-emerald-200 text-[10px] uppercase":r==="admin"?i.className="font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 text-[10px] uppercase":r==="accountant"?i.className="font-bold px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200 text-[10px] uppercase":r==="employee"?i.className="font-bold px-2 py-0.5 rounded-md bg-teal-50 text-teal-700 border border-teal-200 text-[10px] uppercase":i.className="font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 text-[10px] uppercase"),a&&(a.innerHTML=t?'<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Founding Owner</span>':ge(s.role,!1));const n=document.getElementById("sidebarSectionFinance"),d=document.getElementById("drawerSectionFinance"),c=document.getElementById("bottomNavFinance"),o=document.getElementById("sidebarNavTeam"),u=document.getElementById("drawerNavTeam"),g=document.getElementById("sidebarNavHistory"),w=document.getElementById("drawerNavHistory"),C=document.getElementById("sidebarNavServices"),v=document.getElementById("sidebarNavProjects"),B=document.getElementById("sidebarNavTasks"),I=document.getElementById("drawerNavServices"),F=document.getElementById("drawerNavProjects"),M=document.getElementById("drawerNavTasks"),D=document.getElementById("bottomNavServices"),_=document.getElementById("bottomNavTasks"),N=document.getElementById("kpiCardRevenue"),j=document.getElementById("chartRevenueContainer"),W=document.getElementById("kpiCardProjects"),ee=document.getElementById("kpiCardServices"),G=document.getElementById("kpiCardCompletedTasks"),U=document.getElementById("kpiCardPendingTasks"),O=document.getElementById("chartServiceDistributionContainer"),Q=document.getElementById("chartProjectProgressContainer"),ce=document.getElementById("chartTaskStatusContainer"),te=document.getElementById("clientFinancialSummaryCard"),ue=document.getElementById("clientFinancialPreferencesCard"),oe=document.getElementById("btnOpenAssignServiceClientModal"),me=document.getElementById("clientAssignedServicesCard"),q=document.getElementById("clientProjectsCard"),ne=document.getElementById("clientAuditHistoryCard"),K=r==="super_admin"||r==="admin";g&&g.classList.toggle("hidden",!K),w&&w.classList.toggle("hidden",!K),ne&&ne.classList.toggle("hidden",!K);const V=r==="super_admin"||r==="admin";o&&o.classList.toggle("hidden",!V),u&&u.classList.toggle("hidden",!V),r==="accountant"?(C&&C.classList.add("hidden"),v&&v.classList.add("hidden"),B&&B.classList.add("hidden"),I&&I.classList.add("hidden"),F&&F.classList.add("hidden"),M&&M.classList.add("hidden"),D&&D.classList.add("hidden"),_&&_.classList.add("hidden"),W&&W.classList.add("hidden"),ee&&ee.classList.add("hidden"),G&&G.classList.add("hidden"),U&&U.classList.add("hidden"),O&&O.classList.add("hidden"),Q&&Q.classList.add("hidden"),ce&&ce.classList.add("hidden"),oe&&oe.classList.add("hidden"),q&&q.classList.add("hidden"),me&&me.classList.add("hidden"),n&&n.classList.remove("hidden"),d&&d.classList.remove("hidden"),c&&c.classList.remove("hidden"),N&&N.classList.remove("hidden"),j&&j.classList.remove("hidden"),te&&te.classList.remove("hidden"),ue&&ue.classList.remove("hidden"),document.querySelectorAll(".role-operational-nav").forEach(R=>R.classList.add("hidden")),document.querySelectorAll(".role-operational-only").forEach(R=>R.classList.add("hidden")),document.querySelectorAll(".role-financial-only").forEach(R=>R.classList.remove("hidden"))):r==="employee"?(n&&n.classList.add("hidden"),d&&d.classList.add("hidden"),c&&c.classList.add("hidden"),N&&N.classList.add("hidden"),j&&j.classList.add("hidden"),te&&te.classList.add("hidden"),ue&&ue.classList.add("hidden"),document.querySelectorAll(".role-financial-only").forEach(R=>R.classList.add("hidden")),C&&C.classList.remove("hidden"),v&&v.classList.remove("hidden"),B&&B.classList.remove("hidden"),I&&I.classList.remove("hidden"),F&&F.classList.remove("hidden"),M&&M.classList.remove("hidden"),D&&D.classList.remove("hidden"),_&&_.classList.remove("hidden"),W&&W.classList.remove("hidden"),ee&&ee.classList.remove("hidden"),G&&G.classList.remove("hidden"),U&&U.classList.remove("hidden"),O&&O.classList.remove("hidden"),Q&&Q.classList.remove("hidden"),ce&&ce.classList.remove("hidden"),q&&q.classList.remove("hidden"),me&&me.classList.remove("hidden"),document.querySelectorAll(".role-operational-nav").forEach(R=>R.classList.remove("hidden")),document.querySelectorAll(".role-operational-only").forEach(R=>R.classList.remove("hidden"))):(n&&n.classList.remove("hidden"),d&&d.classList.remove("hidden"),c&&c.classList.remove("hidden"),C&&C.classList.remove("hidden"),v&&v.classList.remove("hidden"),B&&B.classList.remove("hidden"),I&&I.classList.remove("hidden"),F&&F.classList.remove("hidden"),M&&M.classList.remove("hidden"),D&&D.classList.remove("hidden"),_&&_.classList.remove("hidden"),N&&N.classList.remove("hidden"),j&&j.classList.remove("hidden"),W&&W.classList.remove("hidden"),ee&&ee.classList.remove("hidden"),G&&G.classList.remove("hidden"),U&&U.classList.remove("hidden"),O&&O.classList.remove("hidden"),Q&&Q.classList.remove("hidden"),ce&&ce.classList.remove("hidden"),te&&te.classList.remove("hidden"),ue&&ue.classList.remove("hidden"),oe&&oe.classList.remove("hidden"),q&&q.classList.remove("hidden"),me&&me.classList.remove("hidden"),document.querySelectorAll(".role-operational-nav").forEach(R=>R.classList.remove("hidden")),document.querySelectorAll(".role-operational-only").forEach(R=>R.classList.remove("hidden")),document.querySelectorAll(".role-financial-only").forEach(R=>R.classList.remove("hidden")));const $=t||r==="super_admin";document.querySelectorAll(".role-superadmin-nav, .role-superadmin-only").forEach(R=>{$?R.classList.remove("hidden"):R.classList.add("hidden")});const z=document.getElementById("inviteRole");if(z&&r==="admin"&&!t){const R=z.querySelector('option[value="admin"]');R&&R.remove()}}function Ee(s){if(!s)return!1;const t=(y.adminProfile?.email||y.currentUser?.primaryEmailAddress?.emailAddress||"").toLowerCase(),r=y.adminProfile?.id,e=y.currentUser?.id||y.adminProfile?.clerkUserId,l=(s.email||s.approved_email||"").toLowerCase(),i=s.id,m=s.clerk_user_id||s.clerkUserId;return!!(t&&l&&t===l||r&&i&&r===i||e&&m&&e===m)}function be(s,t=""){if(!s)return t==="target"?"Authorized Account":"System";const r=String(s).trim();if(!r||r==="\u2014"||r==="null"||r==="undefined")return t==="target"?"Authorized Account":"System";if(r.toLowerCase()==="kaziaremon@gmail.com"||r.startsWith("usr_owner")||r==="owner")return"Super Admin";if(r.includes("@")){const i=(y.usersCache||[]).find(m=>(m.email||"").toLowerCase()===r.toLowerCase());return i&&(i.full_name||i.fullName)?i.full_name||i.fullName:r}const e=(y.usersCache||[]).find(i=>i.clerk_user_id&&i.clerk_user_id===r||i.clerkUserId&&i.clerkUserId===r||i.id&&i.id===r||i.email&&i.email.toLowerCase()===r.toLowerCase());if(e)return e.full_name||e.fullName||e.email||(e.role==="admin"?"Administrator":"Team Member");const l=(y.clientsCache||[]).find(i=>i.clerk_user_id&&i.clerk_user_id===r||i.id&&i.id===r||i.email&&i.email.toLowerCase()===r.toLowerCase());return l?l.full_name||l.company_name||l.email||"Client":window.Clerk?.user&&(window.Clerk.user.id===r||r===window.Clerk.user.primaryEmailAddress?.emailAddress)?window.Clerk.user.fullName||window.Clerk.user.primaryEmailAddress?.emailAddress||"Administrator":r.startsWith("user_")||r.startsWith("usr_")||r.startsWith("org_")||/^[a-zA-Z0-9_-]{20,}$/.test(r)?t==="target"?"Authorized Account":t==="client"?"Client":"Administrator":r}function He(s,t=""){if(!s)return"";let r="";if(typeof s=="object")try{const e=JSON.parse(JSON.stringify(s));for(const[l,i]of Object.entries(e))typeof i=="string"&&(i.startsWith("user_")||i.startsWith("usr_"))&&(e[l]=be(i,l.includes("target")?"target":"actor"));r=JSON.stringify(e,null,2)}catch{r=String(s)}else r=String(s);return r=r.replace(/user_[a-zA-Z0-9]{15,}/g,e=>be(e,"target")),r=r.replace(/usr_owner[a-zA-Z0-9_]*/g,"Super Admin"),r=r.replace(/Cloudflare\s+D1/gi,"Cloud Database"),r=r.replace(/\bD1\b/g,"Database"),r}async function L(s,t={}){if(y.isPreview&&window.__whizAdminMock)return window.__whizAdminMock.handleRequest(s,t,y);const r={"Content-Type":"application/json",...t.headers||{}};if(window.Clerk&&window.Clerk.session)try{const e=await window.Clerk.session.getToken();e&&(r.Authorization=`Bearer ${e}`)}catch(e){console.warn("Could not retrieve Clerk token:",e)}window.Clerk&&window.Clerk.user&&(r["X-Clerk-User-Id"]=window.Clerk.user.id);try{let e=s;s.startsWith("/api/")?e=window.location.protocol==="file:"||window.location.hostname==="localhost"||window.location.hostname==="127.0.0.1"?`https://whizstudio.art${s}`:s:e=`${Nt}${s}`;const l=await fetch(e,{...t,headers:r}),i=await l.json().catch(()=>({}));return{ok:l.ok,status:l.status,data:i}}catch(e){return console.error("API Fetch Error:",e),{ok:!1,status:500,data:{success:!1,error:"Network connection failure."}}}}function h(s,t="info"){const r=document.getElementById("toastContainer");if(!r)return;const e=document.createElement("div"),l={success:"bg-white border-emerald-400 text-[#172B36] shadow-emerald-100/60",error:"bg-white border-rose-400 text-[#172B36] shadow-rose-100/60",info:"bg-white border-[#147D64]/50 text-[#172B36] shadow-slate-100/60",warn:"bg-white border-amber-400 text-[#172B36] shadow-amber-100/60"},i={success:"fa-circle-check text-emerald-500",error:"fa-circle-exclamation text-rose-500",info:"fa-circle-info text-[#147D64]",warn:"fa-triangle-exclamation text-amber-500"};e.className=`p-4 rounded-2xl border backdrop-blur-xl shadow-xl flex items-start space-x-3 text-xs transition-all duration-300 transform translate-y-2 pointer-events-auto ${l[t]||l.info}`,e.innerHTML=`
+      <i class="fa-solid ${i[t]||i.info} text-sm mt-0.5 shrink-0"></i>
+      <div class="flex-1 font-medium leading-relaxed">${s}</div>
       <button type="button" class="text-slate-400 hover:text-[#172B36] cursor-pointer ml-2">
         <i class="fa-solid fa-xmark text-xs"></i>
       </button>
-    `;
-
-    toast.querySelector('button').addEventListener('click', () => toast.remove());
-    container.appendChild(toast);
-
-    requestAnimationFrame(() => toast.classList.remove('translate-y-2'));
-
-    setTimeout(() => {
-      toast.classList.add('opacity-0', 'translate-y-2');
-      setTimeout(() => toast.remove(), 300);
-    }, 4500);
-  }
-
-  function setBtnLoading(btn, isLoading, loadingText = 'Processing...') {
-    if (!btn) return;
-    if (isLoading) {
-      btn.dataset.originalHtml = btn.innerHTML;
-      btn.disabled = true;
-      btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin text-xs mr-2"></i><span>${loadingText}</span>`;
-      btn.classList.add('opacity-75', 'cursor-not-allowed');
-    } else {
-      btn.disabled = false;
-      if (btn.dataset.originalHtml) btn.innerHTML = btn.dataset.originalHtml;
-      btn.classList.remove('opacity-75', 'cursor-not-allowed');
-    }
-  }
-
-  // =========================================================================
-  // TAB NAVIGATION & ROUTING
-  // =========================================================================
-  function switchTab(tabId, updateHash = true) {
-    if (typeof closeActiveGlassMenu === "function") closeActiveGlassMenu();
-    if (tabId === 'settings') tabId = 'security';
-
-    // Strict RBAC Route Guard
-    const userRole = state.adminProfile?.role || '';
-    const normRole = typeof normalizeRole === 'function' ? normalizeRole(userRole) : userRole.toLowerCase();
-    const isOwner = typeof isCurrentUserOwner === 'function' ? isCurrentUserOwner() : false;
-
-    // Hard Rule 0: Inquiries CRM and Review Moderation are strictly restricted to Super Admin
-    if ((tabId === 'inquiries' || tabId === 'reviews_admin') && !isOwner && normRole !== 'super_admin') {
-      showToast('Access Denied: Inquiries CRM and Review Moderation are strictly restricted to Super Administrators.', 'error');
-      tabId = normRole === 'accountant' ? 'finance' : (normRole === 'employee' ? 'tasks' : 'overview');
-    }
-    // Hard Rule 1: Audit & Operational History is strictly restricted to Admin and Super Admin
-    if (tabId === 'history' && !isOwner && normRole !== 'admin' && normRole !== 'super_admin') {
-      showToast('Access Denied: Audit & Operational History is strictly restricted to Administrators.', 'error');
-      tabId = normRole === 'accountant' ? 'finance' : (normRole === 'employee' ? 'tasks' : 'overview');
-    }
-    // Hard Rule 2: Accountant Dashboard Constraints (Financial only)
-    else if (normRole === 'accountant' && ['services', 'service_tasks', 'projects', 'tasks', 'team', 'history'].includes(tabId)) {
-      showToast('Access Denied: Operational pipelines and user governance are restricted for accountant accounts.', 'warning');
-      tabId = 'finance';
-    }
-    // Hard Rule 3: Employee Dashboard Constraints (Operational only)
-    else if (normRole === 'employee' && ['finance', 'team', 'history'].includes(tabId)) {
-      showToast('Access Denied: Financial and administrative modules are strictly restricted for employee accounts.', 'warning');
-      tabId = 'tasks';
-    }
-
-    state.activeTab = tabId;
-
-    const allViews = [
-      'overview', 'clients', 'client_details', 'services', 'service_tasks',
-      'projects', 'tasks', 'finance', 'team',
-      'support', 'history', 'security', 'inquiries', 'reviews_admin'
-    ];
-
-    allViews.forEach(v => {
-      const el = document.getElementById(`view_${v}`);
-      if (el) {
-        if (v === tabId) el.classList.remove('hidden');
-        else el.classList.add('hidden');
-      }
-    });
-
-    // Friendly Title Mapping
-    const tabTitles = {
-      overview: 'Overview & KPIs',
-      clients: 'Client Directory',
-      client_details: 'Client Workspace',
-      services: 'Service Catalog',
-      service_tasks: 'Task Blueprints',
-      projects: 'Service Projects',
-      tasks: 'Live Tasks',
-      finance: 'Payments & Ledger',
-      team: 'User & Access Management',
-      support: 'Support Requests',
-      history: 'Audit & History',
-      security: 'Account Security',
-      inquiries: 'Inquiries & Leads',
-      reviews_admin: 'Review Moderation'
-    };
-
-    const activeTitle = tabTitles[tabId] || tabId.replace(/_/g, ' ');
-
-    // Update Mobile Subheader Title
-    const subheaderTitle = document.getElementById('mobileSubheaderTitle');
-    if (subheaderTitle) {
-      subheaderTitle.textContent = activeTitle;
-    }
-
-    // Sidebar & Mobile Bottom Nav active styling
-    document.querySelectorAll('[data-dash-tab]').forEach(btn => {
-      const isTarget = btn.dataset.dashTab === tabId;
-      if (btn.closest('#adminMobileBottomNav')) {
-        const label = btn.querySelector('.dash-bottom-label');
-        if (isTarget) {
-          btn.classList.add('bg-[#EAF5F1]', 'text-[#087F70]', 'border-[#087F70]/25', 'shadow-2xs');
-          btn.classList.remove('text-[#74817D]', 'border-transparent');
-          btn.setAttribute('aria-current', 'page');
-          if (label) {
-            label.classList.add('font-bold');
-            label.classList.remove('font-semibold');
-          }
-        } else {
-          btn.classList.remove('bg-[#EAF5F1]', 'text-[#087F70]', 'border-[#087F70]/25', 'shadow-2xs');
-          btn.classList.add('text-[#74817D]', 'border-transparent');
-          btn.removeAttribute('aria-current');
-          if (label) {
-            label.classList.remove('font-bold');
-            label.classList.add('font-semibold');
-          }
-        }
-      } else {
-        if (isTarget) {
-          btn.classList.add('dock-active', 'bg-[#EAF5F1]', 'text-[#087F70]', 'border-[#087F70]/20');
-          btn.classList.remove('text-[#74817D]', 'text-slate-400', 'border-transparent', 'hover:bg-[#F7FAF9]');
-          btn.setAttribute('aria-current', 'page');
-        } else {
-          btn.classList.remove('dock-active', 'bg-[#EAF5F1]', 'text-[#087F70]', 'border-[#087F70]/20', 'bg-brand-whiz/15', 'text-brand-whiz', 'border-brand-whiz/30');
-          btn.classList.add('text-[#74817D]', 'border-transparent');
-          btn.removeAttribute('aria-current');
-        }
-      }
-    });
-
-    // Breadcrumb
-    const breadcrumb = document.getElementById('breadcrumbActiveTab');
-    if (breadcrumb) {
-      if (tabId === 'client_details') breadcrumb.textContent = 'Client Workspace';
-      else if (tabId === 'service_tasks') breadcrumb.textContent = 'Task Blueprints';
-      else if (tabId === 'inquiries') breadcrumb.textContent = 'Inquiries & Leads';
-      else if (tabId === 'reviews_admin') breadcrumb.textContent = 'Review Moderation';
-      else breadcrumb.textContent = tabId.replace('_', ' ');
-    }
-
-    if (updateHash && !tabId.includes('_details') && !tabId.includes('_tasks')) {
-      window.location.hash = tabId;
-    }
-
-    // Lazy load tab data
-    if (tabId === 'overview') loadOverviewData();
-    else if (tabId === 'clients') loadClientsData();
-    else if (tabId === 'services') loadServicesData();
-    else if (tabId === 'projects') loadProjectsData();
-    else if (tabId === 'tasks') loadTasksData();
-    else if (tabId === 'finance') loadFinanceData();
-    else if (tabId === 'team') loadTeamData();
-    else if (tabId === 'support') loadSupportData();
-    else if (tabId === 'history') loadHistoryData();
-    else if (tabId === 'security') loadSecurityData();
-    else if (tabId === 'inquiries') loadInquiriesData();
-    else if (tabId === 'reviews_admin') loadAdminReviewsData();
-
-    if (typeof initGlassSelects === 'function') initGlassSelects();
-  }
-
-  // =========================================================================
-  // 1. OVERVIEW DATA
-  // =========================================================================
-    let charts = {
-    services: null,
-    projects: null,
-    tasks: null,
-    revenue: null
-  };
-
-  function renderCharts(d) {
-    if (typeof Chart === 'undefined') return;
-
-    // 1. Service Distribution
-    const serviceCtx = document.getElementById('chartServiceDistribution');
-    const serviceEmpty = document.getElementById('chartServiceEmptyState');
-    if (serviceCtx) {
-      if (charts.services) charts.services.destroy();
-      const items = d.serviceDistribution || [];
-      if (items.length === 0) {
-        serviceCtx.style.display = 'none';
-        if (serviceEmpty) serviceEmpty.classList.remove('hidden');
-      } else {
-        serviceCtx.style.display = 'block';
-        if (serviceEmpty) serviceEmpty.classList.add('hidden');
-        charts.services = new Chart(serviceCtx, {
-          type: 'doughnut',
-          data: {
-            labels: items.map(i => i.name),
-            datasets: [{
-              data: items.map(i => i.count),
-              backgroundColor: ['#147D64', '#06B6D4', '#3B82F6', '#8B5CF6', '#F59E0B', '#10B981'],
-              borderWidth: 2,
-              borderColor: '#FFFFFF'
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10, family: 'Inter' }, color: '#64748B' } }
-            }
-          }
-        });
-      }
-    }
-
-    // 2. Project Progress
-    const projCtx = document.getElementById('chartProjectProgress');
-    const projEmpty = document.getElementById('chartProjectEmptyState');
-    if (projCtx) {
-      if (charts.projects) charts.projects.destroy();
-      const projects = d.projectProgress || [];
-      if (projects.length === 0) {
-        projCtx.style.display = 'none';
-        if (projEmpty) projEmpty.classList.remove('hidden');
-      } else {
-        projCtx.style.display = 'block';
-        if (projEmpty) projEmpty.classList.add('hidden');
-        charts.projects = new Chart(projCtx, {
-          type: 'bar',
-          data: {
-            labels: projects.map(p => p.name.length > 20 ? p.name.substring(0, 18) + '...' : p.name),
-            datasets: [{
-              label: 'Progress %',
-              data: projects.map(p => p.progress_percent || 0),
-              backgroundColor: '#147D64',
-              borderRadius: 6
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            indexAxis: 'y',
-            scales: {
-              x: { min: 0, max: 100, ticks: { callback: v => v + '%', color: '#64748B', font: { size: 10 } }, grid: { color: '#F1F5F9' } },
-              y: { ticks: { color: '#1E293B', font: { size: 10 } }, grid: { display: false } }
-            },
-            plugins: { legend: { display: false } }
-          }
-        });
-      }
-    }
-
-    // 3. Task Status Distribution
-    const taskCtx = document.getElementById('chartTaskStatus');
-    const taskEmpty = document.getElementById('chartTaskEmptyState');
-    if (taskCtx) {
-      if (charts.tasks) charts.tasks.destroy();
-      const tasks = d.taskStatusDistribution || [];
-      const totalTasks = tasks.reduce((acc, t) => acc + (t.count || 0), 0);
-      if (totalTasks === 0) {
-        taskCtx.style.display = 'none';
-        if (taskEmpty) taskEmpty.classList.remove('hidden');
-      } else {
-        taskCtx.style.display = 'block';
-        if (taskEmpty) taskEmpty.classList.add('hidden');
-        charts.tasks = new Chart(taskCtx, {
-          type: 'doughnut',
-          data: {
-            labels: tasks.map(t => (t.status || 'todo').toUpperCase()),
-            datasets: [{
-              data: tasks.map(t => t.count),
-              backgroundColor: ['#10B981', '#3B82F6', '#F59E0B', '#94A3B8'],
-              borderWidth: 2,
-              borderColor: '#FFFFFF'
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10, family: 'Inter' }, color: '#64748B' } }
-            }
-          }
-        });
-      }
-    }
-
-    // 4. Monthly Revenue
-    const revCtx = document.getElementById('chartMonthlyRevenue');
-    const revEmpty = document.getElementById('chartRevenueEmptyState');
-    if (revCtx) {
-      if (charts.revenue) charts.revenue.destroy();
-      const revenueCents = d.confirmedRevenueCents || 0;
-      if (revenueCents === 0) {
-        revCtx.style.display = 'none';
-        if (revEmpty) revEmpty.classList.remove('hidden');
-      } else {
-        revCtx.style.display = 'block';
-        if (revEmpty) revEmpty.classList.add('hidden');
-        charts.revenue = new Chart(revCtx, {
-          type: 'bar',
-          data: {
-            labels: ['Current Month'],
-            datasets: [{
-              label: 'Confirmed Payments ($ USD)',
-              data: [revenueCents / 100],
-              backgroundColor: '#10B981',
-              borderRadius: 8
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-              y: { ticks: { callback: v => '$' + v, color: '#64748B', font: { size: 10 } }, grid: { color: '#F1F5F9' } },
-              x: { ticks: { color: '#1E293B', font: { size: 10 } }, grid: { display: false } }
-            },
-            plugins: { legend: { display: false } }
-          }
-        });
-      }
-    }
-  }
-
-  function updateOverviewGreeting() {
-    const greetingEl = document.getElementById('overviewGreetingTitle');
-    const quoteEl = document.getElementById('overviewMotivationalQuote');
-    if (!greetingEl && !quoteEl) return;
-
-    // Dynamic time-aware greeting based on local hour
-    const hour = new Date().getHours();
-    let timeGreeting = 'Good Morning';
-    if (hour >= 12 && hour < 17) {
-      timeGreeting = 'Good Afternoon';
-    } else if (hour >= 17 || hour < 4) {
-      timeGreeting = 'Good Evening';
-    }
-
-    // Resolve authenticated user's first name
-    const rawFullName = state.adminProfile?.full_name || 
-                        state.adminProfile?.fullName || 
-                        window.Clerk?.user?.firstName || 
-                        window.Clerk?.user?.fullName || 
-                        '';
-    let firstName = '';
-    if (rawFullName) {
-      const parts = rawFullName.trim().split(/\s+/);
-      firstName = parts[0];
-      if (['md', 'md.', 'mr', 'mr.', 'ms', 'ms.', 'dr', 'dr.'].includes(firstName.toLowerCase()) && parts.length > 1) {
-        firstName = parts[1];
-      }
-    } else {
-      firstName = 'Kazi';
-    }
-
-    if (firstName) {
-      firstName = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
-    }
-
-    if (greetingEl) {
-      greetingEl.textContent = `${timeGreeting}, ${firstName}!`;
-    }
-
-    // Rotating motivational subtext
-    const quotes = [
-      "Ready to crush your agency goals today?",
-      "Here is a snapshot of your operational momentum today.",
-      "Let's scale your agency to new heights with seamless execution.",
-      "Operational excellence and client success start with daily focus.",
-      "Empowering enterprise growth with real-time clarity and precision.",
-      "Every milestone achieved is another step towards scaling mastery."
-    ];
-
-    if (quoteEl) {
-      const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
-      quoteEl.textContent = randomQuote;
-    }
-  }
-
-  async function loadOverviewData() {
-    updateOverviewGreeting();
-    const res = await apiFetch('/portal/admin/stats');
-    if (res.ok && res.data && res.data.data) {
-      const d = res.data.data;
-      const totalClientsEl = document.getElementById('statTotalClients');
-      if (totalClientsEl) totalClientsEl.textContent = d.totalClients || 0;
-
-      const actCount = document.getElementById('statActiveProjects');
-      if (actCount) actCount.textContent = d.activeProjects || 0;
-
-      const srvCount = document.getElementById('statActiveServices');
-      if (srvCount) srvCount.textContent = d.activeServices || 0;
-
-      const compTasks = document.getElementById('statCompletedTasks');
-      if (compTasks) compTasks.textContent = d.completedTasks || 0;
-
-      const pendTasks = document.getElementById('statPendingTasks');
-      if (pendTasks) pendTasks.textContent = d.pendingTasks || 0;
-
-      const revEl = document.getElementById('statConfirmedRevenue');
-      if (revEl) {
-        const revByCurr = d.confirmedRevenueByCurrency || d.revenueByCurrency || [];
-        if (revByCurr.length === 0) {
-          revEl.textContent = '$0.00';
-        } else if (revByCurr.length === 1) {
-          revEl.textContent = formatCurrency(revByCurr[0].total, revByCurr[0].currency);
-        } else {
-          revEl.textContent = formatCurrency(revByCurr[0].total, revByCurr[0].currency);
-        }
-      }
-
-      renderCharts(d);
-
-      const actEl = document.getElementById('overviewActivityList');
-      if (actEl && d.recentActivity) {
-        if (d.recentActivity.length === 0) {
-          actEl.innerHTML = '<p class="text-slate-500 italic p-4 text-center">No recent system activity recorded.</p>';
-        } else {
-          actEl.innerHTML = d.recentActivity.map(a => `
+    `,e.querySelector("button").addEventListener("click",()=>e.remove()),r.appendChild(e),requestAnimationFrame(()=>e.classList.remove("translate-y-2")),setTimeout(()=>{e.classList.add("opacity-0","translate-y-2"),setTimeout(()=>e.remove(),300)},4500)}function S(s,t,r="Processing..."){s&&(t?(s.dataset.originalHtml=s.innerHTML,s.disabled=!0,s.innerHTML=`<i class="fa-solid fa-circle-notch fa-spin text-xs mr-2"></i><span>${r}</span>`,s.classList.add("opacity-75","cursor-not-allowed")):(s.disabled=!1,s.dataset.originalHtml&&(s.innerHTML=s.dataset.originalHtml),s.classList.remove("opacity-75","cursor-not-allowed")))}function Z(s,t=!0){typeof le=="function"&&le(),s==="settings"&&(s="security");const r=y.adminProfile?.role||"",e=typeof Le=="function"?Le(r):r.toLowerCase(),l=typeof X=="function"?X():!1;(s==="inquiries"||s==="reviews_admin")&&!l&&e!=="super_admin"&&(h("Access Denied: Inquiries CRM and Review Moderation are strictly restricted to Super Administrators.","error"),s=e==="accountant"?"finance":e==="employee"?"tasks":"overview"),s==="history"&&!l&&e!=="admin"&&e!=="super_admin"?(h("Access Denied: Audit & Operational History is strictly restricted to Administrators.","error"),s=e==="accountant"?"finance":e==="employee"?"tasks":"overview"):e==="accountant"&&["services","service_tasks","projects","tasks","team","history"].includes(s)?(h("Access Denied: Operational pipelines and user governance are restricted for accountant accounts.","warning"),s="finance"):e==="employee"&&["finance","team","history"].includes(s)&&(h("Access Denied: Financial and administrative modules are strictly restricted for employee accounts.","warning"),s="tasks"),y.activeTab=s,["overview","clients","client_details","services","service_tasks","projects","tasks","finance","team","support","history","security","inquiries","reviews_admin"].forEach(n=>{const d=document.getElementById(`view_${n}`);d&&(n===s?d.classList.remove("hidden"):d.classList.add("hidden"))});const x={overview:"Overview & KPIs",clients:"Client Directory",client_details:"Client Workspace",services:"Service Catalog",service_tasks:"Task Blueprints",projects:"Service Projects",tasks:"Live Tasks",finance:"Payments & Ledger",team:"User & Access Management",support:"Support Requests",history:"Audit & History",security:"Account Security",inquiries:"Inquiries & Leads",reviews_admin:"Review Moderation"}[s]||s.replace(/_/g," "),b=document.getElementById("mobileSubheaderTitle");b&&(b.textContent=x),document.querySelectorAll("[data-dash-tab]").forEach(n=>{const d=n.dataset.dashTab===s;if(n.closest("#adminMobileBottomNav")){const c=n.querySelector(".dash-bottom-label");d?(n.classList.add("bg-[#EAF5F1]","text-[#087F70]","border-[#087F70]/25","shadow-2xs"),n.classList.remove("text-[#74817D]","border-transparent"),n.setAttribute("aria-current","page"),c&&(c.classList.add("font-bold"),c.classList.remove("font-semibold"))):(n.classList.remove("bg-[#EAF5F1]","text-[#087F70]","border-[#087F70]/25","shadow-2xs"),n.classList.add("text-[#74817D]","border-transparent"),n.removeAttribute("aria-current"),c&&(c.classList.remove("font-bold"),c.classList.add("font-semibold")))}else d?(n.classList.add("dock-active","bg-[#EAF5F1]","text-[#087F70]","border-[#087F70]/20"),n.classList.remove("text-[#74817D]","text-slate-400","border-transparent","hover:bg-[#F7FAF9]"),n.setAttribute("aria-current","page")):(n.classList.remove("dock-active","bg-[#EAF5F1]","text-[#087F70]","border-[#087F70]/20","bg-brand-whiz/15","text-brand-whiz","border-brand-whiz/30"),n.classList.add("text-[#74817D]","border-transparent"),n.removeAttribute("aria-current"))});const a=document.getElementById("breadcrumbActiveTab");a&&(s==="client_details"?a.textContent="Client Workspace":s==="service_tasks"?a.textContent="Task Blueprints":s==="inquiries"?a.textContent="Inquiries & Leads":s==="reviews_admin"?a.textContent="Review Moderation":a.textContent=s.replace("_"," ")),t&&!s.includes("_details")&&!s.includes("_tasks")&&(window.location.hash=s),s==="overview"?wt():s==="clients"?de():s==="services"?Ce():s==="projects"?ke():s==="tasks"?Be():s==="finance"?ye():s==="team"?fe():s==="support"?Oe():s==="history"?dt():s==="security"?At():s==="inquiries"?ut():s==="reviews_admin"&&ft(),typeof H=="function"&&H()}let re={services:null,projects:null,tasks:null,revenue:null};function Rt(s){if(typeof Chart>"u")return;const t=document.getElementById("chartServiceDistribution"),r=document.getElementById("chartServiceEmptyState");if(t){re.services&&re.services.destroy();const a=s.serviceDistribution||[];a.length===0?(t.style.display="none",r&&r.classList.remove("hidden")):(t.style.display="block",r&&r.classList.add("hidden"),re.services=new Chart(t,{type:"doughnut",data:{labels:a.map(n=>n.name),datasets:[{data:a.map(n=>n.count),backgroundColor:["#147D64","#06B6D4","#3B82F6","#8B5CF6","#F59E0B","#10B981"],borderWidth:2,borderColor:"#FFFFFF"}]},options:{responsive:!0,maintainAspectRatio:!1,plugins:{legend:{position:"bottom",labels:{boxWidth:10,font:{size:10,family:"Inter"},color:"#64748B"}}}}}))}const e=document.getElementById("chartProjectProgress"),l=document.getElementById("chartProjectEmptyState");if(e){re.projects&&re.projects.destroy();const a=s.projectProgress||[];a.length===0?(e.style.display="none",l&&l.classList.remove("hidden")):(e.style.display="block",l&&l.classList.add("hidden"),re.projects=new Chart(e,{type:"bar",data:{labels:a.map(n=>n.name.length>20?n.name.substring(0,18)+"...":n.name),datasets:[{label:"Progress %",data:a.map(n=>n.progress_percent||0),backgroundColor:"#147D64",borderRadius:6}]},options:{responsive:!0,maintainAspectRatio:!1,indexAxis:"y",scales:{x:{min:0,max:100,ticks:{callback:n=>n+"%",color:"#64748B",font:{size:10}},grid:{color:"#F1F5F9"}},y:{ticks:{color:"#1E293B",font:{size:10}},grid:{display:!1}}},plugins:{legend:{display:!1}}}}))}const i=document.getElementById("chartTaskStatus"),m=document.getElementById("chartTaskEmptyState");if(i){re.tasks&&re.tasks.destroy();const a=s.taskStatusDistribution||[];a.reduce((d,c)=>d+(c.count||0),0)===0?(i.style.display="none",m&&m.classList.remove("hidden")):(i.style.display="block",m&&m.classList.add("hidden"),re.tasks=new Chart(i,{type:"doughnut",data:{labels:a.map(d=>(d.status||"todo").toUpperCase()),datasets:[{data:a.map(d=>d.count),backgroundColor:["#10B981","#3B82F6","#F59E0B","#94A3B8"],borderWidth:2,borderColor:"#FFFFFF"}]},options:{responsive:!0,maintainAspectRatio:!1,plugins:{legend:{position:"bottom",labels:{boxWidth:10,font:{size:10,family:"Inter"},color:"#64748B"}}}}}))}const x=document.getElementById("chartMonthlyRevenue"),b=document.getElementById("chartRevenueEmptyState");if(x){re.revenue&&re.revenue.destroy();const a=s.confirmedRevenueCents||0;a===0?(x.style.display="none",b&&b.classList.remove("hidden")):(x.style.display="block",b&&b.classList.add("hidden"),re.revenue=new Chart(x,{type:"bar",data:{labels:["Current Month"],datasets:[{label:"Confirmed Payments ($ USD)",data:[a/100],backgroundColor:"#10B981",borderRadius:8}]},options:{responsive:!0,maintainAspectRatio:!1,scales:{y:{ticks:{callback:n=>"$"+n,color:"#64748B",font:{size:10}},grid:{color:"#F1F5F9"}},x:{ticks:{color:"#1E293B",font:{size:10}},grid:{display:!1}}},plugins:{legend:{display:!1}}}}))}}function st(){const s=document.getElementById("overviewGreetingTitle"),t=document.getElementById("overviewMotivationalQuote");if(!s&&!t)return;const r=new Date().getHours();let e="Good Morning";r>=12&&r<17?e="Good Afternoon":(r>=17||r<4)&&(e="Good Evening");const l=y.adminProfile?.full_name||y.adminProfile?.fullName||window.Clerk?.user?.firstName||window.Clerk?.user?.fullName||"";let i="";if(l){const x=l.trim().split(/\s+/);i=x[0],["md","md.","mr","mr.","ms","ms.","dr","dr."].includes(i.toLowerCase())&&x.length>1&&(i=x[1])}else i="Kazi";i&&(i=i.charAt(0).toUpperCase()+i.slice(1).toLowerCase()),s&&(s.textContent=`${e}, ${i}!`);const m=["Ready to crush your agency goals today?","Here is a snapshot of your operational momentum today.","Let's scale your agency to new heights with seamless execution.","Operational excellence and client success start with daily focus.","Empowering enterprise growth with real-time clarity and precision.","Every milestone achieved is another step towards scaling mastery."];if(t){const x=m[Math.floor(Math.random()*m.length)];t.textContent=x}}async function wt(){st();const s=await L("/portal/admin/stats");if(s.ok&&s.data&&s.data.data){const t=s.data.data,r=document.getElementById("statTotalClients");r&&(r.textContent=t.totalClients||0);const e=document.getElementById("statActiveProjects");e&&(e.textContent=t.activeProjects||0);const l=document.getElementById("statActiveServices");l&&(l.textContent=t.activeServices||0);const i=document.getElementById("statCompletedTasks");i&&(i.textContent=t.completedTasks||0);const m=document.getElementById("statPendingTasks");m&&(m.textContent=t.pendingTasks||0);const x=document.getElementById("statConfirmedRevenue");if(x){const a=t.confirmedRevenueByCurrency||t.revenueByCurrency||[];a.length===0?x.textContent="$0.00":(a.length,x.textContent=Y(a[0].total,a[0].currency))}Rt(t);const b=document.getElementById("overviewActivityList");b&&t.recentActivity&&(t.recentActivity.length===0?b.innerHTML='<p class="text-slate-500 italic p-4 text-center">No recent system activity recorded.</p>':b.innerHTML=t.recentActivity.map(a=>`
             <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-[#E3E9EF]">
               <div class="flex items-center space-x-2.5">
                 <span class="w-2 h-2 rounded-full bg-brand-whiz"></span>
-                <span class="font-bold text-[#172B36] uppercase text-[10px]">${escapeHtml(a.action)}</span>
-                <span class="text-slate-500 text-xs">${escapeHtml(sanitizeAuditDetails(a.resource_type || ''))}</span>
+                <span class="font-bold text-[#172B36] uppercase text-[10px]">${p(a.action)}</span>
+                <span class="text-slate-500 text-xs">${p(He(a.resource_type||""))}</span>
               </div>
               <span class="text-[11px] text-slate-400 font-mono">${new Date(a.created_at).toLocaleTimeString()}</span>
             </div>
-          `).join('');
-        }
-      }
-    }
-  }
-
-  // =========================================================================
-  // 2. CLIENT DIRECTORY & CLIENT DETAILS WORKSPACE (Phase 3 & 4)
-  // =========================================================================
-  async function loadClientsData() {
-    const tbody = document.getElementById('adminClientsTableBody');
-    if (!tbody) return;
-
-    tbody.innerHTML = `
+          `).join(""))}}async function de(){const s=document.getElementById("adminClientsTableBody");if(!s)return;s.innerHTML=`
       <tr>
         <td colspan="5" class="px-6 py-10 text-center">
           <div class="inline-flex items-center gap-2.5 text-xs font-semibold text-slate-500">
@@ -995,19 +22,7 @@
           </div>
         </td>
       </tr>
-    `;
-
-    const statusFilter = document.getElementById('adminClientStatusFilter')?.value || 'active';
-    const searchQuery = (document.getElementById('adminClientSearchInput')?.value || '').trim();
-
-    const res = await apiFetch(`/clients?status=${statusFilter}&search=${encodeURIComponent(searchQuery)}`);
-
-    if (res.ok && res.data && Array.isArray(res.data.data)) {
-      state.clientsCache = res.data.data;
-      renderClientsTable(state.clientsCache);
-    } else {
-      const errMsg = res.data?.error || 'Failed to communicate with database.';
-      tbody.innerHTML = `
+    `;const t=document.getElementById("adminClientStatusFilter")?.value||"active",r=(document.getElementById("adminClientSearchInput")?.value||"").trim(),e=await L(`/clients?status=${t}&search=${encodeURIComponent(r)}`);if(e.ok&&e.data&&Array.isArray(e.data.data))y.clientsCache=e.data.data,jt(y.clientsCache);else{const l=e.data?.error||"Failed to communicate with database.";s.innerHTML=`
         <tr>
           <td colspan="5" class="px-6 py-8 text-center">
             <div class="max-w-md mx-auto p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs space-y-2">
@@ -1015,27 +30,14 @@
                 <i class="fa-solid fa-triangle-exclamation"></i>
                 <span>Unable to load clients directory</span>
               </div>
-              <p class="text-[11px] text-rose-600">${escapeHtml(errMsg)}</p>
+              <p class="text-[11px] text-rose-600">${p(l)}</p>
               <button type="button" id="btnRetryLoadClients" class="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-[11px] transition-colors cursor-pointer shadow-xs">
                 <i class="fa-solid fa-rotate-right"></i> Retry Connection
               </button>
             </div>
           </td>
         </tr>
-      `;
-      document.getElementById('btnRetryLoadClients')?.addEventListener('click', () => {
-        loadClientsData();
-      });
-    }
-  }
-
-  function renderClientsTable(clients) {
-    const tbody = document.getElementById('adminClientsTableBody');
-    const cardsContainer = document.getElementById('adminClientsCardsContainer');
-    if (!tbody) return;
-
-    if (!clients || clients.length === 0) {
-      const emptyHtml = `
+      `,document.getElementById("btnRetryLoadClients")?.addEventListener("click",()=>{de()})}}function jt(s){const t=document.getElementById("adminClientsTableBody"),r=document.getElementById("adminClientsCardsContainer");if(t){if(!s||s.length===0){const e=`
         <div class="p-8 rounded-2xl bg-white border border-[#E3E9EF] text-center max-w-sm mx-auto space-y-3">
           <div class="w-12 h-12 mx-auto rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 text-lg">
             <i class="fa-solid fa-users-slash"></i>
@@ -1048,264 +50,66 @@
             <i class="fa-solid fa-user-plus"></i> Add New Client
           </button>
         </div>
-      `;
-
-      tbody.innerHTML = `
+      `;t.innerHTML=`
         <tr>
-          <td colspan="5" class="px-6 py-12 text-center">${emptyHtml}</td>
+          <td colspan="5" class="px-6 py-12 text-center">${e}</td>
         </tr>
-      `;
-
-      if (cardsContainer) cardsContainer.innerHTML = emptyHtml;
-
-      document.querySelectorAll('.btn-empty-add-client').forEach(btn => {
-        btn.addEventListener('click', () => {
-          document.getElementById('btnOpenAddClientModal')?.click();
-        });
-      });
-      return;
-    }
-
-    // 1. Desktop Table Rows
-    tbody.innerHTML = clients.map(c => {
-      const isSuspended = c.status === 'suspended';
-      const isDeleted = c.status === 'deleted';
-
-      let statusBadge = '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">Active</span>';
-      if (isSuspended) {
-        statusBadge = '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-200">Suspended</span>';
-      } else if (isDeleted) {
-        statusBadge = '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-rose-50 text-rose-700 border border-rose-200">Deleted</span>';
-      }
-
-      const companyDisplay = (c.company_name && c.company_name.trim())
-        ? `<div class="text-xs text-[#147D64] font-medium truncate max-w-[220px]">${escapeHtml(c.company_name)}</div>`
-        : `<div class="mt-0.5"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200"><i class="fa-solid fa-building-circle-exclamation text-amber-500 text-[9px]"></i> Unassigned Company</span></div>`;
-
-      return `
+      `,r&&(r.innerHTML=e),document.querySelectorAll(".btn-empty-add-client").forEach(l=>{l.addEventListener("click",()=>{document.getElementById("btnOpenAddClientModal")?.click()})});return}t.innerHTML=s.map(e=>{const l=e.status==="suspended",i=e.status==="deleted";let m='<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">Active</span>';l?m='<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-200">Suspended</span>':i&&(m='<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-rose-50 text-rose-700 border border-rose-200">Deleted</span>');const x=e.company_name&&e.company_name.trim()?`<div class="text-xs text-[#147D64] font-medium truncate max-w-[220px]">${p(e.company_name)}</div>`:'<div class="mt-0.5"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200"><i class="fa-solid fa-building-circle-exclamation text-amber-500 text-[9px]"></i> Unassigned Company</span></div>';return`
         <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
           <td class="px-6 py-4">
-            <div class="font-bold text-[#172B36] text-sm">${escapeHtml(c.full_name || 'Client')}</div>
-            ${companyDisplay}
+            <div class="font-bold text-[#172B36] text-sm">${p(e.full_name||"Client")}</div>
+            ${x}
             
           </td>
           <td class="px-6 py-4 font-mono text-[#5F7180]">
-            <div>${escapeHtml(c.email)}</div>
-            <div class="text-[11px] text-slate-500">${escapeHtml(c.phone || 'No phone')}</div>
+            <div>${p(e.email)}</div>
+            <div class="text-[11px] text-slate-500">${p(e.phone||"No phone")}</div>
           </td>
           <td class="px-6 py-4 text-[#5F7180] text-xs">
-            ${escapeHtml(c.city || 'Dhaka')}, ${escapeHtml(c.country || 'Bangladesh')}
+            ${p(e.city||"Dhaka")}, ${p(e.country||"Bangladesh")}
           </td>
           <td class="px-6 py-4">
-            ${statusBadge}
+            ${m}
           </td>
           <td class="px-6 py-4 text-right">
-            <button type="button" class="btn-manage-client px-3.5 py-1.5 rounded-xl text-xs font-bold btn-glass-primary shadow-xs hover:shadow-md cursor-pointer transition-all" data-id="${escapeHtml(c.id)}">
+            <button type="button" class="btn-manage-client px-3.5 py-1.5 rounded-xl text-xs font-bold btn-glass-primary shadow-xs hover:shadow-md cursor-pointer transition-all" data-id="${p(e.id)}">
               <i class="fa-solid fa-sliders mr-1 text-[11px]"></i> Manage
             </button>
           </td>
         </tr>
-      `;
-    }).join('');
-
-    // 2. Mobile Cards List (Table-to-Card Pattern)
-    if (cardsContainer) {
-      cardsContainer.innerHTML = clients.map(c => {
-        const isSuspended = c.status === 'suspended';
-        const isDeleted = c.status === 'deleted';
-
-        let statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">Active</span>';
-        if (isSuspended) {
-          statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-200">Suspended</span>';
-        } else if (isDeleted) {
-          statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-rose-50 text-rose-700 border border-rose-200">Deleted</span>';
-        }
-
-        const companyDisplay = (c.company_name && c.company_name.trim())
-          ? `<span class="text-xs font-semibold text-[#147D64] truncate">${escapeHtml(c.company_name)}</span>`
-          : `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200"><i class="fa-solid fa-building-circle-exclamation text-amber-500 text-[9px]"></i> Unassigned</span>`;
-
-        return `
+      `}).join(""),r&&(r.innerHTML=s.map(e=>{const l=e.status==="suspended",i=e.status==="deleted";let m='<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">Active</span>';l?m='<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-200">Suspended</span>':i&&(m='<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-rose-50 text-rose-700 border border-rose-200">Deleted</span>');const x=e.company_name&&e.company_name.trim()?`<span class="text-xs font-semibold text-[#147D64] truncate">${p(e.company_name)}</span>`:'<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200"><i class="fa-solid fa-building-circle-exclamation text-amber-500 text-[9px]"></i> Unassigned</span>';return`
           <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs space-y-3">
             <div class="flex items-start justify-between gap-2">
               <div class="min-w-0">
-                <h4 class="text-sm font-black text-[#172B36] truncate">${escapeHtml(c.full_name || 'Client')}</h4>
-                <div class="mt-0.5">${companyDisplay}</div>
+                <h4 class="text-sm font-black text-[#172B36] truncate">${p(e.full_name||"Client")}</h4>
+                <div class="mt-0.5">${x}</div>
               </div>
-              <div class="shrink-0">${statusBadge}</div>
+              <div class="shrink-0">${m}</div>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-600 pt-1 border-t border-slate-100">
               <div class="flex items-center space-x-2 truncate">
                 <i class="fa-solid fa-envelope text-slate-400 text-xs w-3.5"></i>
-                <span class="truncate font-mono text-[11px]">${escapeHtml(c.email)}</span>
+                <span class="truncate font-mono text-[11px]">${p(e.email)}</span>
               </div>
               <div class="flex items-center space-x-2 truncate">
                 <i class="fa-solid fa-phone text-slate-400 text-xs w-3.5"></i>
-                <span class="text-[11px]">${escapeHtml(c.phone || 'No phone')}</span>
+                <span class="text-[11px]">${p(e.phone||"No phone")}</span>
               </div>
               <div class="flex items-center space-x-2 truncate">
                 <i class="fa-solid fa-location-dot text-slate-400 text-xs w-3.5"></i>
-                <span class="text-[11px]">${escapeHtml(c.city || 'Dhaka')}, ${escapeHtml(c.country || 'Bangladesh')}</span>
+                <span class="text-[11px]">${p(e.city||"Dhaka")}, ${p(e.country||"Bangladesh")}</span>
               </div>
             </div>
 
             <div class="pt-2 border-t border-slate-100">
-              <button type="button" class="btn-manage-client w-full py-2.5 rounded-xl text-xs font-bold bg-[#147D64] hover:bg-[#116954] active:bg-[#0e5645] text-white flex items-center justify-center gap-2 cursor-pointer transition-all shadow-xs" data-id="${escapeHtml(c.id)}">
+              <button type="button" class="btn-manage-client w-full py-2.5 rounded-xl text-xs font-bold bg-[#147D64] hover:bg-[#116954] active:bg-[#0e5645] text-white flex items-center justify-center gap-2 cursor-pointer transition-all shadow-xs" data-id="${p(e.id)}">
                 <i class="fa-solid fa-sliders text-xs"></i>
                 <span>Manage Client Workspace</span>
               </button>
             </div>
           </div>
-        `;
-      }).join('');
-    }
-
-    // Wire Manage buttons on both table and cards
-    document.querySelectorAll('.btn-manage-client').forEach(btn => {
-      btn.addEventListener('click', () => {
-        openClientDetails(btn.dataset.id);
-      });
-    });
-  }
-
-  // Open Full-Page Client Details Workspace
-  async function openClientDetails(clientId) {
-    state.selectedClientId = clientId;
-    switchTab('client_details', false);
-    window.location.hash = `client-${clientId}`;
-
-    const titleEl = document.getElementById('clientDetailTitle');
-    const subEl = document.getElementById('clientDetailSubtitle');
-    if (titleEl) {
-      titleEl.textContent = 'Loading Client Record...';
-      titleEl.title = '';
-    }
-
-    const res = await apiFetch(`/clients/${clientId}`);
-    if (!res.ok || !res.data || !res.data.data) {
-      showToast('Failed to load client details.', 'error');
-      switchTab('clients');
-      return;
-    }
-
-    const { client, services, projects, invoices, payments, auditLogs } = res.data.data;
-    state.selectedClient = client;
-
-    // Header info
-    if (titleEl) {
-      titleEl.textContent = 'Client Workspace';
-      titleEl.title = titleEl.textContent;
-    }
-    if (subEl) {
-      subEl.textContent = client.is_unassigned ? 'Unassigned Organization • Master Operational Record' : 'Authoritative Client Record & Active Services';
-      subEl.title = subEl.textContent;
-    }
-
-    const statusBadges = [
-      document.getElementById('clientDetailStatusBadge'),
-      document.getElementById('clientCardStatusBadge')
-    ].filter(Boolean);
-    const btnSuspend = document.getElementById('btnSuspendClientAction');
-    const btnReactivate = document.getElementById('btnReactivateClientAction');
-
-    statusBadges.forEach(statusBadge => {
-      if (client.status === 'suspended') {
-        statusBadge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200/90 shadow-2xs shrink-0 select-none';
-        statusBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span><span>Suspended</span>';
-      } else {
-        statusBadge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200/90 shadow-2xs shrink-0 select-none';
-        statusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span><span>${escapeHtml(client.status || 'Active')}</span>`;
-      }
-    });
-
-    if (client.status === 'suspended') {
-      btnSuspend?.classList.add('hidden');
-      btnReactivate?.classList.remove('hidden');
-    } else {
-      btnSuspend?.classList.remove('hidden');
-      btnReactivate?.classList.add('hidden');
-    }
-    // Profile Card
-    const cif = client.cif || {};
-    const effectiveFullName = cif.fullName || client.full_name || 'Valued Client';
-    const effectiveCompanyName = cif.companyName || client.company_name;
-    const effectivePhone = cif.phone || client.phone || 'None provided';
-    const effectiveAddress = cif.address || client.address;
-    const effectiveCity = cif.city || client.city || 'Dhaka';
-    const effectiveCountry = cif.country || client.country || 'Bangladesh';
-
-    const initials = effectiveFullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-    const avInit = document.getElementById('clientAvatarInitials');
-    if (avInit) avInit.textContent = initials;
-    const cfn = document.getElementById('clientCardFullName');
-    if (cfn) cfn.textContent = effectiveFullName;
-    const ccn = document.getElementById('clientCardCompanyName');
-    if (ccn) {
-      ccn.innerHTML = effectiveCompanyName
-        ? escapeHtml(effectiveCompanyName)
-        : `<span class="inline-flex items-center gap-1 text-amber-600 font-semibold"><i class="fa-solid fa-triangle-exclamation text-[10px]"></i> Unassigned (No Linked Organization)</span>`;
-    }
-    const cEm = document.getElementById('clientCardEmail');
-    if (cEm) cEm.textContent = client.email;
-    const cPh = document.getElementById('clientCardPhone');
-    if (cPh) cPh.textContent = effectivePhone;
-    const cLoc = document.getElementById('clientCardLocation');
-    if (cLoc) cLoc.textContent = `${effectiveAddress ? effectiveAddress + ', ' : ''}${effectiveCity}, ${effectiveCountry}`;
-    const cClk = document.getElementById('clientCardClerkId');
-    if (cClk) cClk.innerHTML = client.clerk_user_id ? '<span class="text-emerald-700 font-semibold"><i class="fa-solid fa-shield-check text-[#147D64] mr-1"></i>SSO Verified</span>' : '<span class="text-slate-400">Pending SSO link</span>';
-    const cOrg = document.getElementById('clientCardOrgId');
-    if (cOrg) {
-      cOrg.textContent = client.organization_name || (client.organization_id ? (client.organization_id.startsWith('org_') ? 'Primary Client Workspace' : client.organization_id) : 'Personal Workspace');
-    }
-
-    // Populate Preferred Currency in Financial Preferences
-    const clientCurrency = (cif.currency || client.currency || (effectiveCountry === 'Bangladesh' || (effectivePhone && effectivePhone.startsWith('+880')) ? 'BDT' : 'USD')).toUpperCase();
-    const currSelect = document.getElementById('clientPreferredCurrencySelect');
-    if (currSelect) {
-      currSelect.value = clientCurrency;
-      if (typeof syncClientPreferredCurrencyDropdown === 'function') {
-        syncClientPreferredCurrencyDropdown(clientCurrency);
-      }
-    }
-    const currBadge = document.getElementById('clientPreferredCurrencyBadge');
-    if (currBadge) currBadge.textContent = clientCurrency;
-
-    // Wire Save Currency button
-    const saveCurrBtn = document.getElementById('btnSaveClientCurrency');
-    if (saveCurrBtn) {
-      saveCurrBtn.onclick = async () => {
-        const newCurr = currSelect.value;
-        setBtnLoading(saveCurrBtn, true, 'Saving...');
-        const updRes = await apiFetch(`/clients/${clientId}`, {
-          method: 'PUT',
-          body: JSON.stringify({ currency: newCurr })
-        });
-        setBtnLoading(saveCurrBtn, false);
-        if (updRes.ok) {
-          showToast(`Client billing currency updated to ${newCurr}!`, 'success');
-          if (currBadge) currBadge.textContent = newCurr;
-        } else {
-          showToast(updRes.data?.error || 'Failed to update currency.', 'error');
-        }
-      };
-    }
-
-    // Financial calculations
-    const totalBilledCents = (invoices || []).reduce((sum, inv) => sum + (inv.total_cents || 0), 0);
-    const totalPaidCents = (payments || []).reduce((sum, p) => sum + (p.amount_cents || 0), 0);
-    const tbEl = document.getElementById('clientCardTotalBilled');
-    if (tbEl) tbEl.textContent = formatCurrency(totalBilledCents, clientCurrency);
-    const tpEl = document.getElementById('clientCardTotalPaid');
-    if (tpEl) tpEl.textContent = formatCurrency(totalPaidCents, clientCurrency);
-
-    // Render Assigned Services
-    const srvCountEl = document.getElementById('clientServicesCount');
-    if (srvCountEl) srvCountEl.textContent = `${services.length} Total`;
-    const srvList = document.getElementById('clientAssignedServicesList');
-    if (srvList) {
-      if (services.length === 0) {
-        srvList.innerHTML = `
+        `}).join("")),document.querySelectorAll(".btn-manage-client").forEach(e=>{e.addEventListener("click",()=>{pe(e.dataset.id)})})}}async function pe(s){y.selectedClientId=s,Z("client_details",!1),window.location.hash=`client-${s}`;const t=document.getElementById("clientDetailTitle"),r=document.getElementById("clientDetailSubtitle");t&&(t.textContent="Loading Client Record...",t.title="");const e=await L(`/clients/${s}`);if(!e.ok||!e.data||!e.data.data){h("Failed to load client details.","error"),Z("clients");return}const{client:l,services:i,projects:m,invoices:x,payments:b,auditLogs:a}=e.data.data;y.selectedClient=l,t&&(t.textContent="Client Workspace",t.title=t.textContent),r&&(r.textContent=l.is_unassigned?"Unassigned Organization \u2022 Master Operational Record":"Authoritative Client Record & Active Services",r.title=r.textContent);const n=[document.getElementById("clientDetailStatusBadge"),document.getElementById("clientCardStatusBadge")].filter(Boolean),d=document.getElementById("btnSuspendClientAction"),c=document.getElementById("btnReactivateClientAction");n.forEach($=>{l.status==="suspended"?($.className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200/90 shadow-2xs shrink-0 select-none",$.innerHTML='<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span><span>Suspended</span>'):($.className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200/90 shadow-2xs shrink-0 select-none",$.innerHTML=`<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span><span>${p(l.status||"Active")}</span>`)}),l.status==="suspended"?(d?.classList.add("hidden"),c?.classList.remove("hidden")):(d?.classList.remove("hidden"),c?.classList.add("hidden"));const o=l.cif||{},u=o.fullName||l.full_name||"Valued Client",g=o.companyName||l.company_name,w=o.phone||l.phone||"None provided",C=o.address||l.address,v=o.city||l.city||"Dhaka",B=o.country||l.country||"Bangladesh",I=u.split(" ").map($=>$[0]).join("").slice(0,2).toUpperCase(),F=document.getElementById("clientAvatarInitials");F&&(F.textContent=I);const M=document.getElementById("clientCardFullName");M&&(M.textContent=u);const D=document.getElementById("clientCardCompanyName");D&&(D.innerHTML=g?p(g):'<span class="inline-flex items-center gap-1 text-amber-600 font-semibold"><i class="fa-solid fa-triangle-exclamation text-[10px]"></i> Unassigned (No Linked Organization)</span>');const _=document.getElementById("clientCardEmail");_&&(_.textContent=l.email);const N=document.getElementById("clientCardPhone");N&&(N.textContent=w);const j=document.getElementById("clientCardLocation");j&&(j.textContent=`${C?C+", ":""}${v}, ${B}`);const W=document.getElementById("clientCardClerkId");W&&(W.innerHTML=l.clerk_user_id?'<span class="text-emerald-700 font-semibold"><i class="fa-solid fa-shield-check text-[#147D64] mr-1"></i>SSO Verified</span>':'<span class="text-slate-400">Pending SSO link</span>');const ee=document.getElementById("clientCardOrgId");ee&&(ee.textContent=l.organization_name||(l.organization_id?l.organization_id.startsWith("org_")?"Primary Client Workspace":l.organization_id:"Personal Workspace"));const G=(o.currency||l.currency||(B==="Bangladesh"||w&&w.startsWith("+880")?"BDT":"USD")).toUpperCase(),U=document.getElementById("clientPreferredCurrencySelect");U&&(U.value=G,typeof syncClientPreferredCurrencyDropdown=="function"&&syncClientPreferredCurrencyDropdown(G));const O=document.getElementById("clientPreferredCurrencyBadge");O&&(O.textContent=G);const Q=document.getElementById("btnSaveClientCurrency");Q&&(Q.onclick=async()=>{const $=U.value;S(Q,!0,"Saving...");const z=await L(`/clients/${s}`,{method:"PUT",body:JSON.stringify({currency:$})});S(Q,!1),z.ok?(h(`Client billing currency updated to ${$}!`,"success"),O&&(O.textContent=$)):h(z.data?.error||"Failed to update currency.","error")});const ce=(x||[]).reduce(($,z)=>$+(z.total_cents||0),0),te=(b||[]).reduce(($,z)=>$+(z.amount_cents||0),0),ue=document.getElementById("clientCardTotalBilled");ue&&(ue.textContent=Y(ce,G));const oe=document.getElementById("clientCardTotalPaid");oe&&(oe.textContent=Y(te,G));const me=document.getElementById("clientServicesCount");me&&(me.textContent=`${i.length} Total`);const q=document.getElementById("clientAssignedServicesList");q&&(i.length===0?(q.innerHTML=`
           <div class="p-6 rounded-2xl bg-slate-50 border border-[#E3E9EF] text-center text-xs text-[#5F7180] space-y-2">
             <i class="fa-solid fa-shapes text-2xl text-slate-600 block mb-1"></i>
             <p>No services assigned to this client organization yet.</p>
@@ -1313,308 +117,134 @@
               Assign Service from Catalog
             </button>
           </div>
-        `;
-        srvList.querySelector('.btn-open-assign-service-inline')?.addEventListener('click', () => {
-          document.getElementById('btnOpenAssignServiceClientModal')?.click();
-        });
-      } else {
-        srvList.innerHTML = services.map(s => `
+        `,q.querySelector(".btn-open-assign-service-inline")?.addEventListener("click",()=>{document.getElementById("btnOpenAssignServiceClientModal")?.click()})):(q.innerHTML=i.map($=>`
           <div class="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-white border border-[#E6ECE9] flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 shadow-2xs hover:border-[#087F70]/30 transition-all">
             <div class="flex items-center space-x-3 min-w-0">
               <div class="w-9 h-9 rounded-xl bg-brand-whiz/15 text-brand-whiz border border-brand-whiz/30 flex items-center justify-center font-bold text-xs shrink-0">
                 <i class="fa-solid fa-bolt"></i>
               </div>
               <div class="min-w-0">
-                <div class="text-xs font-bold text-[#172B36] truncate">${escapeHtml(s.service_name)}</div>
+                <div class="text-xs font-bold text-[#172B36] truncate">${p($.service_name)}</div>
                 <div class="text-[11px] text-[#5F7180] flex items-center gap-2">
-                  <span>${escapeHtml(s.package_name || 'Standard Retainer')}</span>
-                  <span>•</span>
-                  <span>Started: ${escapeHtml(s.start_date || 'N/A')}</span>
+                  <span>${p($.package_name||"Standard Retainer")}</span>
+                  <span>\u2022</span>
+                  <span>Started: ${p($.start_date||"N/A")}</span>
                 </div>
               </div>
             </div>
             <div class="flex items-center space-x-3 shrink-0 self-end sm:self-auto">
-              ${state.adminProfile?.role !== 'employee' && s.price_cents != null ? `<span class="text-xs font-mono font-bold text-brand-whiz">${formatCurrency(s.price_cents || 0, s.currency || clientCurrency || "USD")}</span>` : ''}
-              <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${s.status === 'active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-50 text-slate-600 border border-slate-200'}">${s.status}</span>
-              ${s.status === 'active' ? `
-                <button type="button" class="btn-cancel-client-service text-slate-500 hover:text-rose-600 p-1 cursor-pointer transition-colors" data-cs="${s.id}" title="Cancel Service">
+              ${y.adminProfile?.role!=="employee"&&$.price_cents!=null?`<span class="text-xs font-mono font-bold text-brand-whiz">${Y($.price_cents||0,$.currency||G||"USD")}</span>`:""}
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${$.status==="active"?"bg-emerald-50 text-emerald-700 border border-emerald-200":"bg-slate-50 text-slate-600 border border-slate-200"}">${$.status}</span>
+              ${$.status==="active"?`
+                <button type="button" class="btn-cancel-client-service text-slate-500 hover:text-rose-600 p-1 cursor-pointer transition-colors" data-cs="${$.id}" title="Cancel Service">
                   <i class="fa-solid fa-ban text-xs"></i>
                 </button>
-              ` : ''}
+              `:""}
             </div>
           </div>
-        `).join('');
-
-        // Wire cancel service buttons
-        srvList.querySelectorAll('.btn-cancel-client-service').forEach(btn => {
-          btn.addEventListener('click', async () => {
-            if (!confirm('Are you sure you want to cancel this service engagement?')) return;
-            const csId = btn.dataset.cs;
-            const cancelRes = await apiFetch(`/clients/${clientId}/services/${csId}`, { method: 'DELETE' });
-            if (cancelRes.ok) {
-              showToast('Service cancelled.', 'info');
-              openClientDetails(clientId);
-            } else {
-              showToast(cancelRes.data?.error || 'Failed to cancel service.', 'error');
-            }
-          });
-        });
-      }
-    }
-
-    // Render Projects
-    const prjCountEl = document.getElementById('clientProjectsCount');
-    if (prjCountEl) prjCountEl.textContent = `${projects.length} Projects`;
-    const prjList = document.getElementById('clientProjectsList');
-    if (prjList) {
-      if (projects.length === 0) {
-        prjList.innerHTML = '<p class="text-slate-500 italic text-xs p-4 text-center">No projects auto-provisioned yet.</p>';
-      } else {
-        prjList.innerHTML = projects.map(p => {
-          const percent = p.progress_percent || 0;
-          return `
+        `).join(""),q.querySelectorAll(".btn-cancel-client-service").forEach($=>{$.addEventListener("click",async()=>{if(!confirm("Are you sure you want to cancel this service engagement?"))return;const z=$.dataset.cs,R=await L(`/clients/${s}/services/${z}`,{method:"DELETE"});R.ok?(h("Service cancelled.","info"),pe(s)):h(R.data?.error||"Failed to cancel service.","error")})})));const ne=document.getElementById("clientProjectsCount");ne&&(ne.textContent=`${m.length} Projects`);const K=document.getElementById("clientProjectsList");K&&(m.length===0?K.innerHTML='<p class="text-slate-500 italic text-xs p-4 text-center">No projects auto-provisioned yet.</p>':K.innerHTML=m.map($=>{const z=$.progress_percent||0;return`
             <div class="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-white border border-[#E6ECE9] space-y-2.5 shadow-2xs hover:border-[#087F70]/30 transition-all">
               <div class="flex items-center justify-between">
                 <div>
-                  <h4 class="text-xs font-bold text-[#172B36]">${p.name}</h4>
-                  <p class="text-[11px] text-[#5F7180] font-mono">${p.service_name || 'Standard Engagement'}</p>
+                  <h4 class="text-xs font-bold text-[#172B36]">${$.name}</h4>
+                  <p class="text-[11px] text-[#5F7180] font-mono">${$.service_name||"Standard Engagement"}</p>
                 </div>
-                <span class="px-2.5 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">${p.status}</span>
+                <span class="px-2.5 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">${$.status}</span>
               </div>
               <div class="flex items-center space-x-3">
                 <div class="flex-1 bg-slate-100 h-2 rounded-full overflow-hidden border border-[#E3E9EF]">
-                  <div class="bg-gradient-to-r from-brand-whiz to-emerald-400 h-full rounded-full transition-all duration-500" style="width: ${percent}%"></div>
+                  <div class="bg-gradient-to-r from-brand-whiz to-emerald-400 h-full rounded-full transition-all duration-500" style="width: ${z}%"></div>
                 </div>
-                <span class="text-xs font-mono font-bold text-brand-whiz">${percent}%</span>
-                <span class="text-[11px] font-mono text-slate-400">(${p.completed_tasks || 0}/${p.total_tasks || 20} Tasks)</span>
+                <span class="text-xs font-mono font-bold text-brand-whiz">${z}%</span>
+                <span class="text-[11px] font-mono text-slate-400">(${$.completed_tasks||0}/${$.total_tasks||20} Tasks)</span>
               </div>
             </div>
-          `;
-        }).join('');
-      }
-    }
-
-    // Render Audit Trail
-    const audList = document.getElementById('clientAuditHistoryList');
-    if (audList) {
-      if (!auditLogs || auditLogs.length === 0) {
-        audList.innerHTML = '<p class="text-slate-500 italic text-xs">No audit logs for this client yet.</p>';
-      } else {
-        audList.innerHTML = auditLogs.map(a => {
-          const actionText = escapeHtml(a.action || 'ACTIVITY');
-          const actorEmail = escapeHtml(resolveUserIdentity(a.user_email || a.user_name || a.actor_id || a.clerk_id, 'actor'));
-          const dateStr = a.created_at || a.timestamp ? new Date(a.created_at || a.timestamp).toLocaleDateString() : '';
-          const detailsStr = a.details ? sanitizeAuditDetails(a.details, effectiveFullName) : '';
-
-          return `
+          `}).join(""));const V=document.getElementById("clientAuditHistoryList");V&&(!a||a.length===0?V.innerHTML='<p class="text-slate-500 italic text-xs">No audit logs for this client yet.</p>':V.innerHTML=a.map($=>{const z=p($.action||"ACTIVITY"),R=p(be($.user_email||$.user_name||$.actor_id||$.clerk_id,"actor")),Fe=$.created_at||$.timestamp?new Date($.created_at||$.timestamp).toLocaleDateString():"",Qe=$.details?He($.details,u):"";return`
             <div class="p-2.5 rounded-xl bg-slate-50/70 border border-[#E6ECE9] text-[11px] min-w-0 max-w-full overflow-hidden space-y-1.5 [overflow-wrap:anywhere] [word-break:break-all] break-all" style="overflow-wrap: anywhere; word-break: break-all;">
               <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 min-w-0">
                 <div class="flex items-start sm:items-center gap-1.5 min-w-0 flex-1 flex-wrap [overflow-wrap:anywhere] [word-break:break-all] break-all" style="overflow-wrap: anywhere; word-break: break-all;">
                   <span class="w-1.5 h-1.5 rounded-full bg-[#087F70] shrink-0 mt-1 sm:mt-0"></span>
-                  <span class="font-bold text-[#172B36] uppercase tracking-wide [overflow-wrap:anywhere] [word-break:break-all] break-all" style="overflow-wrap: anywhere; word-break: break-all;">${actionText}</span>
-                  <span class="text-[#5F7180] [overflow-wrap:anywhere] [word-break:break-all] break-all" style="overflow-wrap: anywhere; word-break: break-all;">• ${actorEmail}</span>
+                  <span class="font-bold text-[#172B36] uppercase tracking-wide [overflow-wrap:anywhere] [word-break:break-all] break-all" style="overflow-wrap: anywhere; word-break: break-all;">${z}</span>
+                  <span class="text-[#5F7180] [overflow-wrap:anywhere] [word-break:break-all] break-all" style="overflow-wrap: anywhere; word-break: break-all;">\u2022 ${R}</span>
                 </div>
-                ${dateStr ? `<span class="text-[#5F7180] font-mono text-[10px] shrink-0 self-start sm:self-auto">${dateStr}</span>` : ''}
+                ${Fe?`<span class="text-[#5F7180] font-mono text-[10px] shrink-0 self-start sm:self-auto">${Fe}</span>`:""}
               </div>
-              ${detailsStr ? `
+              ${Qe?`
                 <div class="text-[10px] text-slate-600 bg-white/80 p-2 rounded-lg border border-[#E6ECE9] [overflow-wrap:anywhere] [word-break:break-all] break-all whitespace-pre-wrap leading-relaxed select-text" style="overflow-wrap: anywhere; word-break: break-all;">
-                  ${escapeHtml(detailsStr)}
+                  ${p(Qe)}
                 </div>
-              ` : ''}
+              `:""}
             </div>
-          `;
-        }).join('');
-      }
-    }
-  }
-
-  // =========================================================================
-  // 3. SERVICE MANAGEMENT & 240 SOP TASK BLUEPRINTS (Phase 5, 6, 7, 8, 9)
-  // =========================================================================
-  async function loadServicesData() {
-    const res = await apiFetch('/services/catalog');
-    const grid = document.getElementById('adminServicesGrid');
-    if (!grid) return;
-
-    if (res.ok && res.data && res.data.data) {
-      state.servicesCache = res.data.data;
-
-      const countBadge = document.getElementById('serviceCatalogCountBadge');
-      if (countBadge) {
-        countBadge.textContent = `${state.servicesCache.length} Active Services`;
-      }
-
-      grid.innerHTML = state.servicesCache.map(s => {
-        const canViewPricing = state.adminProfile?.role !== 'employee';
-        const priceCents = s.standard_price_cents != null ? s.standard_price_cents : s.pricing_cents;
-        const priceFormatted = priceCents != null ? formatCurrency(priceCents, s.currency || 'USD') : null;
-
-        return `
+          `}).join(""))}async function Ce(){const s=await L("/services/catalog"),t=document.getElementById("adminServicesGrid");if(t&&s.ok&&s.data&&s.data.data){y.servicesCache=s.data.data;const r=document.getElementById("serviceCatalogCountBadge");r&&(r.textContent=`${y.servicesCache.length} Active Services`),t.innerHTML=y.servicesCache.map(e=>{const l=y.adminProfile?.role!=="employee",i=e.standard_price_cents!=null?e.standard_price_cents:e.pricing_cents,m=i!=null?Y(i,e.currency||"USD"):null;return`
           <div class="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white border border-[#E6ECE9] flex flex-col justify-between space-y-4 hover:border-[#087F70]/40 hover:shadow-md transition-all shadow-2xs group">
             <div class="space-y-3">
               <!-- Top Row: Code Badge, Version Tag, Price -->
               <div class="flex items-center justify-between gap-2">
                 <div class="flex items-center gap-1.5 flex-wrap">
-                  <span class="text-xs font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-2.5 py-0.5 rounded-md border border-[#087F70]/25 whitespace-nowrap shrink-0">${escapeHtml(s.code || (s.id || "").toUpperCase())}</span>
-                  <span class="text-[10px] font-mono font-semibold text-[#74817D] bg-[#F7FAF9] px-1.5 py-0.5 rounded border border-[#E6ECE9] whitespace-nowrap">v${s.version || 1}</span>
+                  <span class="text-xs font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-2.5 py-0.5 rounded-md border border-[#087F70]/25 whitespace-nowrap shrink-0">${p(e.code||(e.id||"").toUpperCase())}</span>
+                  <span class="text-[10px] font-mono font-semibold text-[#74817D] bg-[#F7FAF9] px-1.5 py-0.5 rounded border border-[#E6ECE9] whitespace-nowrap">v${e.version||1}</span>
                 </div>
-                ${canViewPricing && priceFormatted ? `
+                ${l&&m?`
                   <div class="text-right shrink-0">
-                    <span class="text-xs sm:text-sm font-mono font-bold text-[#202D2A]">${priceFormatted}</span>
+                    <span class="text-xs sm:text-sm font-mono font-bold text-[#202D2A]">${m}</span>
                     <span class="text-[10px] text-[#74817D] font-medium hidden sm:inline ml-0.5">/mo</span>
                   </div>
-                ` : ''}
+                `:""}
               </div>
 
               <!-- Service Title & Description -->
               <div class="space-y-1">
-                <h3 class="text-base font-bold text-[#202D2A] group-hover:text-[#087F70] transition-colors leading-snug break-words">${escapeHtml(s.name)}</h3>
-                <p class="text-xs text-[#74817D] line-clamp-2 leading-relaxed" title="${escapeHtml(s.description || '')}">${escapeHtml(s.description || 'Comprehensive operational service package.')}</p>
+                <h3 class="text-base font-bold text-[#202D2A] group-hover:text-[#087F70] transition-colors leading-snug break-words">${p(e.name)}</h3>
+                <p class="text-xs text-[#74817D] line-clamp-2 leading-relaxed" title="${p(e.description||"")}">${p(e.description||"Comprehensive operational service package.")}</p>
               </div>
 
               <!-- Metadata Pills -->
               <div class="flex flex-wrap items-center gap-1.5 text-[11px] pt-0.5">
                 <span class="inline-flex items-center gap-1 font-semibold text-[#087F70] bg-[#EAF5F1] px-2 py-0.5 rounded-md border border-[#087F70]/20 truncate max-w-[180px]">
                   <i class="fa-solid fa-layer-group text-[10px]"></i>
-                  <span class="truncate">${escapeHtml(s.category || 'Core Service')}</span>
+                  <span class="truncate">${p(e.category||"Core Service")}</span>
                 </span>
                 <span class="inline-flex items-center gap-1 font-medium text-[#74817D] bg-[#F7FAF9] px-2 py-0.5 rounded-md border border-[#E6ECE9] whitespace-nowrap">
                   <i class="fa-solid fa-list-check text-[10px] text-[#087F70]"></i>
-                  <span>${s.blueprint_count != null ? s.blueprint_count : (s.blueprints_count || 0)} SOPs</span>
+                  <span>${e.blueprint_count!=null?e.blueprint_count:e.blueprints_count||0} SOPs</span>
                 </span>
               </div>
             </div>
 
             <!-- Actions: Prominent Primary Button + Secondary Row -->
             <div class="pt-3 border-t border-[#E6ECE9] space-y-2">
-              <button type="button" class="btn-view-service-tasks w-full py-2.5 px-3 rounded-xl text-xs font-bold bg-[#087F70] hover:bg-[#06685c] text-white shadow-2xs hover:shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer touch-manipulation select-none" data-id="${s.id}">
+              <button type="button" class="btn-view-service-tasks w-full py-2.5 px-3 rounded-xl text-xs font-bold bg-[#087F70] hover:bg-[#06685c] text-white shadow-2xs hover:shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer touch-manipulation select-none" data-id="${e.id}">
                 <i class="fa-solid fa-list-check text-xs"></i>
-                <span>View &amp; Edit Tasks (${s.blueprint_count != null ? s.blueprint_count : (s.blueprints_count || 0)})</span>
+                <span>View &amp; Edit Tasks (${e.blueprint_count!=null?e.blueprint_count:e.blueprints_count||0})</span>
               </button>
               <div class="flex items-center gap-2">
-                <button type="button" class="btn-manage-service flex-1 py-2 px-3 rounded-xl text-xs font-semibold bg-[#F7FAF9] hover:bg-[#EAF5F1] text-[#202D2A] border border-[#E6ECE9] hover:border-[#087F70]/30 transition-all flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation select-none" data-id="${s.id}">
+                <button type="button" class="btn-manage-service flex-1 py-2 px-3 rounded-xl text-xs font-semibold bg-[#F7FAF9] hover:bg-[#EAF5F1] text-[#202D2A] border border-[#E6ECE9] hover:border-[#087F70]/30 transition-all flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation select-none" data-id="${e.id}">
                   <i class="fa-solid fa-sliders text-[11px] text-[#74817D]"></i>
                   <span>Manage</span>
                 </button>
-                <button type="button" class="btn-delete-service p-2 w-10 h-8 rounded-xl text-xs font-semibold text-[#74817D] hover:text-rose-600 bg-[#F7FAF9] hover:bg-rose-50 border border-[#E6ECE9] hover:border-rose-200 transition-all flex items-center justify-center cursor-pointer touch-manipulation shrink-0 select-none" data-id="${s.id}" title="Permanently Delete Service" aria-label="Delete Service">
+                <button type="button" class="btn-delete-service p-2 w-10 h-8 rounded-xl text-xs font-semibold text-[#74817D] hover:text-rose-600 bg-[#F7FAF9] hover:bg-rose-50 border border-[#E6ECE9] hover:border-rose-200 transition-all flex items-center justify-center cursor-pointer touch-manipulation shrink-0 select-none" data-id="${e.id}" title="Permanently Delete Service" aria-label="Delete Service">
                   <i class="fa-solid fa-trash-can text-xs"></i>
                 </button>
               </div>
             </div>
           </div>
-        `;
-      }).join('');
-
-      // Wire View & Edit Tasks
-      grid.querySelectorAll('.btn-view-service-tasks').forEach(b => {
-        b.addEventListener('click', () => openServiceTasksWorkspace(b.dataset.id));
-      });
-
-      // Wire Manage Service
-      grid.querySelectorAll('.btn-manage-service').forEach(b => {
-        b.addEventListener('click', () => openEditServiceModal(b.dataset.id));
-      });
-
-      // Wire Delete Service
-      grid.querySelectorAll('.btn-delete-service').forEach(b => {
-        b.addEventListener('click', () => openDeleteServiceModal(b.dataset.id));
-      });
-    }
-  }
-
-  // Open Full-Page Task Blueprint Workspace (Phase 7)
-  async function openServiceTasksWorkspace(serviceId) {
-    state.selectedServiceId = serviceId;
-    switchTab('service_tasks', false);
-    window.location.hash = `service-tasks-${serviceId}`;
-
-    const titleEl = document.getElementById('serviceTasksTitle');
-    const codeEl = document.getElementById('serviceTasksCodeBadge');
-    const verEl = document.getElementById('serviceTasksVersionBadge');
-    const descEl = document.getElementById('serviceTasksDescription');
-
-    // Ensure services cache is populated
-    if (!state.servicesCache || state.servicesCache.length === 0) {
-      const catRes = await apiFetch('/services/catalog');
-      if (catRes.ok && catRes.data?.data) {
-        state.servicesCache = catRes.data.data;
-      }
-    }
-
-    const service = state.servicesCache?.find(s => s.id === serviceId);
-    if (service) {
-      if (titleEl) titleEl.textContent = service.name;
-      if (codeEl) codeEl.textContent = service.code;
-      if (verEl) verEl.textContent = `v${service.version || 1}`;
-      if (descEl) descEl.textContent = service.description || `Master ${service.blueprint_count || 20}-Task SOP Blueprint Library`;
-    }
-
-    const res = await apiFetch(`/services/${serviceId}/blueprints`);
-    if (!res.ok || !res.data || !res.data.data) {
-      showToast('Failed to load task blueprints.', 'error');
-      return;
-    }
-
-    state.currentBlueprints = res.data.data;
-    renderBlueprintsWorkspace();
-  }
-
-  function renderBlueprintsWorkspace() {
-    const bps = state.currentBlueprints;
-
-    // Categorize into 3 phases: Beginning (1-7), Intermediate (8-14), Advanced (15-20)
-    const beginning = bps.filter(b => (b.phase || '').toLowerCase().includes('begin') || (b.sort_order <= 7 && !b.phase?.includes('Inter') && !b.phase?.includes('Adv')));
-    const intermediate = bps.filter(b => (b.phase || '').toLowerCase().includes('inter') || (b.sort_order > 7 && b.sort_order <= 14));
-    const advanced = bps.filter(b => (b.phase || '').toLowerCase().includes('adv') || b.sort_order > 14);
-
-    const bCount = document.getElementById('phaseBeginningCount');
-    if (bCount) bCount.textContent = `${beginning.length} Tasks`;
-    const iCount = document.getElementById('phaseIntermediateCount');
-    if (iCount) iCount.textContent = `${intermediate.length} Tasks`;
-    const aCount = document.getElementById('phaseAdvancedCount');
-    if (aCount) aCount.textContent = `${advanced.length} Tasks`;
-
-    renderBlueprintPhaseGroup('blueprintsPhaseBeginning', beginning);
-    renderBlueprintPhaseGroup('blueprintsPhaseIntermediate', intermediate);
-    renderBlueprintPhaseGroup('blueprintsPhaseAdvanced', advanced);
-  }
-
-  function renderBlueprintPhaseGroup(containerId, list) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-
-    if (!list || list.length === 0) {
-      container.innerHTML = '<p class="text-[#74817D] italic text-xs p-3">No tasks in this phase.</p>';
-      return;
-    }
-
-    container.innerHTML = list.map(bp => {
-      const priorityColors = {
-        urgent: 'bg-rose-50 text-rose-700 border-rose-200',
-        high: 'bg-amber-50 text-amber-700 border-amber-200',
-        medium: 'bg-blue-50 text-blue-700 border-blue-200',
-        low: 'bg-slate-50 text-slate-600 border-slate-200'
-      };
-
-      const hasExtraDetails = Boolean(bp.steps || bp.where_location || bp.qa_criteria);
-
-      return `
-        <div class="p-3 sm:p-5 rounded-2xl bg-[#FDFEFE] hover:bg-white border border-[#E6ECE9] hover:border-[#087F70]/30 shadow-2xs hover:shadow-xs transition-all space-y-2.5 sm:space-y-3 group" data-blueprint-id="${bp.id}">
+        `}).join(""),t.querySelectorAll(".btn-view-service-tasks").forEach(e=>{e.addEventListener("click",()=>De(e.dataset.id))}),t.querySelectorAll(".btn-manage-service").forEach(e=>{e.addEventListener("click",()=>Ot(e.dataset.id))}),t.querySelectorAll(".btn-delete-service").forEach(e=>{e.addEventListener("click",()=>kt(e.dataset.id))})}}async function De(s){y.selectedServiceId=s,Z("service_tasks",!1),window.location.hash=`service-tasks-${s}`;const t=document.getElementById("serviceTasksTitle"),r=document.getElementById("serviceTasksCodeBadge"),e=document.getElementById("serviceTasksVersionBadge"),l=document.getElementById("serviceTasksDescription");if(!y.servicesCache||y.servicesCache.length===0){const x=await L("/services/catalog");x.ok&&x.data?.data&&(y.servicesCache=x.data.data)}const i=y.servicesCache?.find(x=>x.id===s);i&&(t&&(t.textContent=i.name),r&&(r.textContent=i.code),e&&(e.textContent=`v${i.version||1}`),l&&(l.textContent=i.description||`Master ${i.blueprint_count||20}-Task SOP Blueprint Library`));const m=await L(`/services/${s}/blueprints`);if(!m.ok||!m.data||!m.data.data){h("Failed to load task blueprints.","error");return}y.currentBlueprints=m.data.data,Et()}function Et(){const s=y.currentBlueprints,t=s.filter(x=>(x.phase||"").toLowerCase().includes("begin")||x.sort_order<=7&&!x.phase?.includes("Inter")&&!x.phase?.includes("Adv")),r=s.filter(x=>(x.phase||"").toLowerCase().includes("inter")||x.sort_order>7&&x.sort_order<=14),e=s.filter(x=>(x.phase||"").toLowerCase().includes("adv")||x.sort_order>14),l=document.getElementById("phaseBeginningCount");l&&(l.textContent=`${t.length} Tasks`);const i=document.getElementById("phaseIntermediateCount");i&&(i.textContent=`${r.length} Tasks`);const m=document.getElementById("phaseAdvancedCount");m&&(m.textContent=`${e.length} Tasks`),at("blueprintsPhaseBeginning",t),at("blueprintsPhaseIntermediate",r),at("blueprintsPhaseAdvanced",e)}function at(s,t){const r=document.getElementById(s);if(r){if(!t||t.length===0){r.innerHTML='<p class="text-[#74817D] italic text-xs p-3">No tasks in this phase.</p>';return}r.innerHTML=t.map(e=>{const l={urgent:"bg-rose-50 text-rose-700 border-rose-200",high:"bg-amber-50 text-amber-700 border-amber-200",medium:"bg-blue-50 text-blue-700 border-blue-200",low:"bg-slate-50 text-slate-600 border-slate-200"},i=!!(e.steps||e.where_location||e.qa_criteria);return`
+        <div class="p-3 sm:p-5 rounded-2xl bg-[#FDFEFE] hover:bg-white border border-[#E6ECE9] hover:border-[#087F70]/30 shadow-2xs hover:shadow-xs transition-all space-y-2.5 sm:space-y-3 group" data-blueprint-id="${e.id}">
           <!-- Top Row: Code Badge + Priority + Estimate -->
           <div class="flex items-center justify-between gap-2 flex-wrap">
             <div class="flex items-center gap-2">
-              <span class="text-xs font-mono font-bold text-[#087F70] bg-[#EAF5F1] border border-[#087F70]/25 px-2.5 py-0.5 rounded-md whitespace-nowrap">${escapeHtml(bp.task_code || 'SOP')}</span>
-              <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${priorityColors[bp.priority] || priorityColors.medium}">${escapeHtml(bp.priority || 'medium')}</span>
+              <span class="text-xs font-mono font-bold text-[#087F70] bg-[#EAF5F1] border border-[#087F70]/25 px-2.5 py-0.5 rounded-md whitespace-nowrap">${p(e.task_code||"SOP")}</span>
+              <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${l[e.priority]||l.medium}">${p(e.priority||"medium")}</span>
             </div>
             <div class="flex items-center gap-1.5 text-xs font-mono text-[#74817D]">
               <i class="fa-regular fa-clock text-[11px] text-[#74817D]/70"></i>
-              <span>${bp.estimated_minutes || (bp.estimated_hours ? bp.estimated_hours * 60 : 60)} min</span>
+              <span>${e.estimated_minutes||(e.estimated_hours?e.estimated_hours*60:60)} min</span>
             </div>
           </div>
 
           <!-- Task Title: Readable, naturally wrapping -->
           <div>
-            <h4 class="text-sm sm:text-base font-bold text-[#202D2A] leading-snug break-words group-hover:text-[#087F70] transition-colors">${escapeHtml(bp.title)}</h4>
+            <h4 class="text-sm sm:text-base font-bold text-[#202D2A] leading-snug break-words group-hover:text-[#087F70] transition-colors">${p(e.title)}</h4>
           </div>
 
           <!-- Operational Core: WHY (Strategic Objective) -->
@@ -1623,7 +253,7 @@
               <i class="fa-solid fa-bullseye text-[10px]"></i>
               <span>Why (Strategic Objective)</span>
             </div>
-            <p class="text-xs sm:text-[13px] text-[#202D2A] leading-relaxed break-words">${escapeHtml(bp.why || bp.instructions || bp.description || 'Standard operational activity.')}</p>
+            <p class="text-xs sm:text-[13px] text-[#202D2A] leading-relaxed break-words">${p(e.why||e.instructions||e.description||"Standard operational activity.")}</p>
           </div>
 
           <!-- Operational Core: DONE WHEN (Measurable Standard) -->
@@ -1632,247 +262,80 @@
               <i class="fa-solid fa-circle-check text-[10px] text-[#087F70]"></i>
               <span>Done When (Measurable Standard)</span>
             </div>
-            <p class="text-xs sm:text-[13px] text-[#202D2A] leading-relaxed break-words">${escapeHtml(bp.done_when || 'Verified milestone output.')}</p>
+            <p class="text-xs sm:text-[13px] text-[#202D2A] leading-relaxed break-words">${p(e.done_when||"Verified milestone output.")}</p>
           </div>
 
           <!-- Expandable Detailed Specifications (Steps, QA, Location) -->
-          ${hasExtraDetails ? `
-            <div id="bp_details_${bp.id}" class="hidden pt-2 border-t border-[#E6ECE9] space-y-2.5 text-xs">
-              ${bp.steps ? `
+          ${i?`
+            <div id="bp_details_${e.id}" class="hidden pt-2 border-t border-[#E6ECE9] space-y-2.5 text-xs">
+              ${e.steps?`
                 <div class="space-y-1">
                   <span class="text-[11px] font-bold uppercase tracking-wider text-[#74817D] block">Operational Steps:</span>
-                  <div class="p-2 sm:p-2.5 rounded-xl bg-[#F7FAF9] border border-[#E6ECE9] text-xs text-[#202D2A] whitespace-pre-line leading-relaxed font-sans">${escapeHtml(bp.steps)}</div>
+                  <div class="p-2 sm:p-2.5 rounded-xl bg-[#F7FAF9] border border-[#E6ECE9] text-xs text-[#202D2A] whitespace-pre-line leading-relaxed font-sans">${p(e.steps)}</div>
                 </div>
-              ` : ''}
-              ${bp.where_location ? `
+              `:""}
+              ${e.where_location?`
                 <div class="flex items-center gap-1.5 text-xs text-[#74817D]">
                   <span class="font-semibold text-[#202D2A]">Location:</span>
-                  <span class="truncate font-mono text-[11px]">${escapeHtml(bp.where_location)}</span>
+                  <span class="truncate font-mono text-[11px]">${p(e.where_location)}</span>
                 </div>
-              ` : ''}
-              ${bp.qa_criteria ? `
+              `:""}
+              ${e.qa_criteria?`
                 <div class="p-2 sm:p-2.5 rounded-xl bg-[#EAF5F1]/60 border border-[#087F70]/20 text-xs text-[#087F70]">
                   <span class="font-bold uppercase text-[10px] tracking-wider block mb-0.5">QA Criteria:</span>
-                  <span class="text-[#202D2A]">${escapeHtml(bp.qa_criteria)}</span>
+                  <span class="text-[#202D2A]">${p(e.qa_criteria)}</span>
                 </div>
-              ` : ''}
+              `:""}
             </div>
-          ` : ''}
+          `:""}
 
           <!-- Card Action Controls & Expand Toggle -->
           <div class="pt-2 border-t border-[#E6ECE9] flex items-center justify-between gap-2 flex-wrap">
             <!-- Expand / Collapse Details Control -->
-            ${hasExtraDetails ? `
-              <button type="button" class="btn-toggle-bp-details text-xs font-semibold text-[#087F70] hover:text-[#06685c] flex items-center gap-1.5 py-1 px-2 rounded-lg hover:bg-[#EAF5F1] transition-all cursor-pointer touch-manipulation select-none" data-target="bp_details_${bp.id}" aria-expanded="false">
+            ${i?`
+              <button type="button" class="btn-toggle-bp-details text-xs font-semibold text-[#087F70] hover:text-[#06685c] flex items-center gap-1.5 py-1 px-2 rounded-lg hover:bg-[#EAF5F1] transition-all cursor-pointer touch-manipulation select-none" data-target="bp_details_${e.id}" aria-expanded="false">
                 <span>Show Details</span>
                 <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-200 icon-chevron"></i>
               </button>
-            ` : '<div class="text-[11px] text-[#74817D] italic">Core SOP Standard</div>'}
+            `:'<div class="text-[11px] text-[#74817D] italic">Core SOP Standard</div>'}
 
             <!-- Task Action Buttons: Edit, Duplicate, Delete -->
             <div class="flex items-center gap-1.5">
-              <button type="button" class="btn-edit-blueprint px-3 py-1.5 rounded-xl text-xs font-bold bg-[#F7FAF9] hover:bg-[#EAF5F1] text-[#202D2A] hover:text-[#087F70] border border-[#E6ECE9] hover:border-[#087F70]/30 transition-all flex items-center gap-1.5 cursor-pointer touch-manipulation select-none" data-id="${bp.id}" title="Edit Task Blueprint">
+              <button type="button" class="btn-edit-blueprint px-3 py-1.5 rounded-xl text-xs font-bold bg-[#F7FAF9] hover:bg-[#EAF5F1] text-[#202D2A] hover:text-[#087F70] border border-[#E6ECE9] hover:border-[#087F70]/30 transition-all flex items-center gap-1.5 cursor-pointer touch-manipulation select-none" data-id="${e.id}" title="Edit Task Blueprint">
                 <i class="fa-solid fa-pen-to-square text-[11px]"></i>
                 <span>Edit</span>
               </button>
-              <button type="button" class="btn-duplicate-blueprint p-2 rounded-xl text-xs font-semibold text-[#74817D] hover:text-[#202D2A] bg-[#F7FAF9] hover:bg-slate-100 border border-[#E6ECE9] transition-all flex items-center justify-center cursor-pointer touch-manipulation select-none" data-id="${bp.id}" title="Duplicate Task Blueprint" aria-label="Duplicate Task">
+              <button type="button" class="btn-duplicate-blueprint p-2 rounded-xl text-xs font-semibold text-[#74817D] hover:text-[#202D2A] bg-[#F7FAF9] hover:bg-slate-100 border border-[#E6ECE9] transition-all flex items-center justify-center cursor-pointer touch-manipulation select-none" data-id="${e.id}" title="Duplicate Task Blueprint" aria-label="Duplicate Task">
                 <i class="fa-solid fa-copy text-xs"></i>
               </button>
-              <button type="button" class="btn-delete-blueprint p-2 rounded-xl text-xs font-semibold text-[#74817D] hover:text-rose-600 bg-[#F7FAF9] hover:bg-rose-50 border border-[#E6ECE9] hover:border-rose-200 transition-all flex items-center justify-center cursor-pointer touch-manipulation select-none" data-id="${bp.id}" title="Delete Task Blueprint" aria-label="Delete Task">
+              <button type="button" class="btn-delete-blueprint p-2 rounded-xl text-xs font-semibold text-[#74817D] hover:text-rose-600 bg-[#F7FAF9] hover:bg-rose-50 border border-[#E6ECE9] hover:border-rose-200 transition-all flex items-center justify-center cursor-pointer touch-manipulation select-none" data-id="${e.id}" title="Delete Task Blueprint" aria-label="Delete Task">
                 <i class="fa-solid fa-trash-can text-xs"></i>
               </button>
             </div>
           </div>
         </div>
-      `;
-    }).join('');
-
-    // Wire edit buttons
-    container.querySelectorAll('.btn-edit-blueprint').forEach(b => {
-      b.addEventListener('click', () => openEditBlueprintModal(b.dataset.id));
-    });
-
-    // Wire duplicate buttons
-    container.querySelectorAll('.btn-duplicate-blueprint').forEach(b => {
-      b.addEventListener('click', async () => {
-        const id = b.dataset.id;
-        const dupRes = await apiFetch(`/services/blueprints/${id}/duplicate`, { method: 'POST' });
-        if (dupRes.ok && dupRes.data && dupRes.data.success) {
-          showToast(`Task duplicated as [${dupRes.data.data.taskCode}]!`, 'success');
-          openServiceTasksWorkspace(state.selectedServiceId);
-        } else {
-          showToast('Failed to duplicate blueprint.', 'error');
-        }
-      });
-    });
-
-    // Wire delete blueprint buttons (Hard Delete confirmation)
-    container.querySelectorAll('.btn-delete-blueprint').forEach(b => {
-      b.addEventListener('click', () => {
-        openDeleteBlueprintModal(b.dataset.id);
-      });
-    });
-
-    // Wire expandable detail toggles
-    container.querySelectorAll('.btn-toggle-bp-details').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const targetId = btn.dataset.target;
-        const details = document.getElementById(targetId);
-        if (!details) return;
-        const isHidden = details.classList.contains('hidden');
-        if (isHidden) {
-          details.classList.remove('hidden');
-          btn.setAttribute('aria-expanded', 'true');
-          const span = btn.querySelector('span');
-          if (span) span.textContent = 'Hide Details';
-          const icon = btn.querySelector('.icon-chevron');
-          if (icon) icon.classList.add('rotate-180');
-        } else {
-          details.classList.add('hidden');
-          btn.setAttribute('aria-expanded', 'false');
-          const span = btn.querySelector('span');
-          if (span) span.textContent = 'Show Details';
-          const icon = btn.querySelector('.icon-chevron');
-          if (icon) icon.classList.remove('rotate-180');
-        }
-      });
-    });
-  }
-
-  function openEditBlueprintModal(blueprintId) {
-    const bp = state.currentBlueprints.find(b => b.id === blueprintId);
-    if (!bp) return;
-
-    const modal = document.getElementById('modalEditBlueprint');
-    if (!modal) return;
-
-    document.getElementById('editBlueprintId').value = bp.id;
-    document.getElementById('editBlueprintTaskCode').value = bp.task_code || '';
-    document.getElementById('editBlueprintTitle').value = bp.title || '';
-    document.getElementById('editBlueprintPhase').value = bp.phase || 'Beginning';
-    document.getElementById('editBlueprintPriority').value = bp.priority || 'medium';
-    document.getElementById('editBlueprintSortOrder').value = bp.sort_order || 1;
-    document.getElementById('editBlueprintEstMinutes').value = bp.estimated_minutes || 60;
-    document.getElementById('editBlueprintWhy').value = bp.why || '';
-    document.getElementById('editBlueprintWhere').value = bp.where_location || '';
-    document.getElementById('editBlueprintSteps').value = bp.steps || bp.instructions || '';
-    document.getElementById('editBlueprintDoneWhen').value = bp.done_when || '';
-    document.getElementById('editBlueprintQACriteria').value = bp.qa_criteria || '';
-    initGlassSelects();
-
-    modal.classList.remove('hidden');
-  }
-
-  function openDeleteBlueprintModal(blueprintId) {
-    const bp = state.currentBlueprints.find(b => b.id === blueprintId);
-    if (!bp) {
-      showToast('Task blueprint not found.', 'error');
-      return;
-    }
-
-    state.selectedBlueprintId = blueprintId;
-    const currentService = state.servicesCache.find(s => s.id === (bp.service_id || state.selectedServiceId));
-
-    const codeEl = document.getElementById('deleteBlueprintTaskCode');
-    const titleEl = document.getElementById('deleteBlueprintTaskTitle');
-    const srvEl = document.getElementById('deleteBlueprintServiceName');
-    const modal = document.getElementById('modalDeleteBlueprint');
-
-    if (codeEl) codeEl.textContent = bp.task_code || bp.id;
-    if (titleEl) titleEl.textContent = bp.title || 'Untitled Task';
-    if (srvEl) srvEl.textContent = currentService ? currentService.name : (bp.service_id || 'Service');
-
-    const confirmBtn = document.getElementById('btnConfirmDeleteBlueprint');
-    if (confirmBtn) {
-      confirmBtn.disabled = false;
-      confirmBtn.innerHTML = '<i class="fa-solid fa-trash-can text-xs"></i> <span>Permanently Delete Task</span>';
-    }
-
-    if (modal) modal.classList.remove('hidden');
-  }
-
-  function openEditServiceModal(serviceId) {
-    const service = state.servicesCache.find(s => s.id === serviceId);
-    if (!service) return;
-
-    const modal = document.getElementById('modalEditService');
-    if (!modal) return;
-
-    document.getElementById('editServiceId').value = service.id;
-    document.getElementById('editServiceName').value = service.name || '';
-    document.getElementById('editServiceCode').value = service.code || '';
-    document.getElementById('editServiceCategory').value = service.category || '';
-    document.getElementById('editServicePrice').value = ((service.standard_price_cents || 100000) / 100).toFixed(0);
-    document.getElementById('editServicePackage').value = service.default_package || 'Standard Retainer';
-    document.getElementById('editServiceDescription').value = service.description || '';
-    document.getElementById('editServiceIsActive').checked = service.is_active === 1;
-
-    modal.classList.remove('hidden');
-  }
-
-  async function openDeleteServiceModal(serviceId) {
-    const service = state.servicesCache.find(s => s.id === serviceId);
-    if (!service) {
-      showToast('Service not found.', 'error');
-      return;
-    }
-
-    state.selectedServiceId = serviceId;
-    const modal = document.getElementById('modalDeleteService');
-    if (!modal) return;
-
-    const nameEl = document.getElementById('deleteServiceTargetName');
-    const codeEl = document.getElementById('deleteServiceTargetCode');
-    const countEl = document.getElementById('deleteServiceBlueprintCount');
-    const catEl = document.getElementById('deleteServiceCategory');
-    const depContainer = document.getElementById('deleteServiceDependencyContainer');
-    const confirmSection = document.getElementById('deleteServiceConfirmSection');
-    const expectedNameEl = document.getElementById('deleteServiceExpectedName');
-    const confirmInput = document.getElementById('deleteServiceConfirmInput');
-    const confirmBtn = document.getElementById('btnConfirmDeleteService');
-
-    if (nameEl) nameEl.textContent = service.name;
-    if (codeEl) codeEl.textContent = service.code || service.id;
-    if (countEl) countEl.textContent = `${service.blueprint_count || 0} Tasks`;
-    if (catEl) catEl.textContent = service.category || 'General';
-    if (expectedNameEl) expectedNameEl.textContent = `"${service.name}"`;
-    if (confirmInput) confirmInput.value = '';
-    if (confirmBtn) {
-      confirmBtn.disabled = true;
-      confirmBtn.innerHTML = '<i class="fa-solid fa-trash-can text-xs"></i> <span>Permanently Delete Service</span>';
-    }
-    if (confirmSection) confirmSection.classList.add('hidden');
-
-    if (depContainer) {
-      depContainer.innerHTML = `
+      `}).join(""),r.querySelectorAll(".btn-edit-blueprint").forEach(e=>{e.addEventListener("click",()=>Ht(e.dataset.id))}),r.querySelectorAll(".btn-duplicate-blueprint").forEach(e=>{e.addEventListener("click",async()=>{const l=e.dataset.id,i=await L(`/services/blueprints/${l}/duplicate`,{method:"POST"});i.ok&&i.data&&i.data.success?(h(`Task duplicated as [${i.data.data.taskCode}]!`,"success"),De(y.selectedServiceId)):h("Failed to duplicate blueprint.","error")})}),r.querySelectorAll(".btn-delete-blueprint").forEach(e=>{e.addEventListener("click",()=>{Ct(e.dataset.id)})}),r.querySelectorAll(".btn-toggle-bp-details").forEach(e=>{e.addEventListener("click",()=>{const l=e.dataset.target,i=document.getElementById(l);if(!i)return;if(i.classList.contains("hidden")){i.classList.remove("hidden"),e.setAttribute("aria-expanded","true");const x=e.querySelector("span");x&&(x.textContent="Hide Details");const b=e.querySelector(".icon-chevron");b&&b.classList.add("rotate-180")}else{i.classList.add("hidden"),e.setAttribute("aria-expanded","false");const x=e.querySelector("span");x&&(x.textContent="Show Details");const b=e.querySelector(".icon-chevron");b&&b.classList.remove("rotate-180")}})})}}function Ht(s){const t=y.currentBlueprints.find(e=>e.id===s);if(!t)return;const r=document.getElementById("modalEditBlueprint");r&&(document.getElementById("editBlueprintId").value=t.id,document.getElementById("editBlueprintTaskCode").value=t.task_code||"",document.getElementById("editBlueprintTitle").value=t.title||"",document.getElementById("editBlueprintPhase").value=t.phase||"Beginning",document.getElementById("editBlueprintPriority").value=t.priority||"medium",document.getElementById("editBlueprintSortOrder").value=t.sort_order||1,document.getElementById("editBlueprintEstMinutes").value=t.estimated_minutes||60,document.getElementById("editBlueprintWhy").value=t.why||"",document.getElementById("editBlueprintWhere").value=t.where_location||"",document.getElementById("editBlueprintSteps").value=t.steps||t.instructions||"",document.getElementById("editBlueprintDoneWhen").value=t.done_when||"",document.getElementById("editBlueprintQACriteria").value=t.qa_criteria||"",H(),r.classList.remove("hidden"))}function Ct(s){const t=y.currentBlueprints.find(b=>b.id===s);if(!t){h("Task blueprint not found.","error");return}y.selectedBlueprintId=s;const r=y.servicesCache.find(b=>b.id===(t.service_id||y.selectedServiceId)),e=document.getElementById("deleteBlueprintTaskCode"),l=document.getElementById("deleteBlueprintTaskTitle"),i=document.getElementById("deleteBlueprintServiceName"),m=document.getElementById("modalDeleteBlueprint");e&&(e.textContent=t.task_code||t.id),l&&(l.textContent=t.title||"Untitled Task"),i&&(i.textContent=r?r.name:t.service_id||"Service");const x=document.getElementById("btnConfirmDeleteBlueprint");x&&(x.disabled=!1,x.innerHTML='<i class="fa-solid fa-trash-can text-xs"></i> <span>Permanently Delete Task</span>'),m&&m.classList.remove("hidden")}function Ot(s){const t=y.servicesCache.find(e=>e.id===s);if(!t)return;const r=document.getElementById("modalEditService");r&&(document.getElementById("editServiceId").value=t.id,document.getElementById("editServiceName").value=t.name||"",document.getElementById("editServiceCode").value=t.code||"",document.getElementById("editServiceCategory").value=t.category||"",document.getElementById("editServicePrice").value=((t.standard_price_cents||1e5)/100).toFixed(0),document.getElementById("editServicePackage").value=t.default_package||"Standard Retainer",document.getElementById("editServiceDescription").value=t.description||"",document.getElementById("editServiceIsActive").checked=t.is_active===1,r.classList.remove("hidden"))}async function kt(s){const t=y.servicesCache.find(c=>c.id===s);if(!t){h("Service not found.","error");return}y.selectedServiceId=s;const r=document.getElementById("modalDeleteService");if(!r)return;const e=document.getElementById("deleteServiceTargetName"),l=document.getElementById("deleteServiceTargetCode"),i=document.getElementById("deleteServiceBlueprintCount"),m=document.getElementById("deleteServiceCategory"),x=document.getElementById("deleteServiceDependencyContainer"),b=document.getElementById("deleteServiceConfirmSection"),a=document.getElementById("deleteServiceExpectedName"),n=document.getElementById("deleteServiceConfirmInput"),d=document.getElementById("btnConfirmDeleteService");e&&(e.textContent=t.name),l&&(l.textContent=t.code||t.id),i&&(i.textContent=`${t.blueprint_count||0} Tasks`),m&&(m.textContent=t.category||"General"),a&&(a.textContent=`"${t.name}"`),n&&(n.value=""),d&&(d.disabled=!0,d.innerHTML='<i class="fa-solid fa-trash-can text-xs"></i> <span>Permanently Delete Service</span>'),b&&b.classList.add("hidden"),x&&(x.innerHTML=`
         <div class="p-3 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-500 flex items-center gap-2">
           <i class="fa-solid fa-circle-notch fa-spin text-brand-whiz"></i>
           <span>Checking database dependencies & live client records...</span>
         </div>
-      `;
-    }
-
-    modal.classList.remove('hidden');
-
-    try {
-      const res = await apiFetch(`/services/${serviceId}/delete-check`);
-      if (!res.ok || !res.data || !res.data.data) {
-        if (depContainer) {
-          depContainer.innerHTML = `
+      `),r.classList.remove("hidden");try{const c=await L(`/services/${s}/delete-check`);if(!c.ok||!c.data||!c.data.data){x&&(x.innerHTML=`
             <div class="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700">
               <p class="font-bold">Failed to verify dependencies.</p>
               <p class="text-[11px] mt-0.5">Could not confirm safe deletion status. Please retry.</p>
             </div>
-          `;
-        }
-        return;
-      }
-
-      const check = res.data.data;
-      if (!check.canDelete) {
-        const dep = check.dependencies || {};
-        if (depContainer) {
-          depContainer.innerHTML = `
+          `);return}const o=c.data.data;if(o.canDelete)x&&(x.innerHTML=`
+            <div class="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 space-y-1.5">
+              <div class="flex items-center gap-2 font-bold text-emerald-800">
+                <i class="fa-solid fa-shield-check text-emerald-600 text-sm"></i>
+                <span>0 Live Dependencies \u2014 Safe to Permanently Purge</span>
+              </div>
+              <p class="text-[11px] text-emerald-800/90 leading-relaxed">
+                No active client contracts, projects, or invoices reference this service.
+                Permanently deleting it will purge the service catalog record and all <strong>${o.taskBlueprintCount||0} master SOP blueprints</strong>.
+              </p>
+            </div>
+          `),b&&b.classList.remove("hidden"),n&&n.focus();else{const u=o.dependencies||{};x&&(x.innerHTML=`
             <div class="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-2">
               <div class="flex items-center gap-2 font-bold text-amber-800">
                 <i class="fa-solid fa-triangle-exclamation text-amber-600 text-sm"></i>
@@ -1883,15 +346,15 @@
               </p>
               <div class="grid grid-cols-3 gap-2 pt-1 text-center font-mono">
                 <div class="p-2 rounded-xl bg-white/80 border border-amber-200">
-                  <span class="block text-sm font-black text-amber-900">${dep.clientServicesCount || 0}</span>
+                  <span class="block text-sm font-black text-amber-900">${u.clientServicesCount||0}</span>
                   <span class="text-[9px] uppercase font-bold text-amber-700">Client Agrmts</span>
                 </div>
                 <div class="p-2 rounded-xl bg-white/80 border border-amber-200">
-                  <span class="block text-sm font-black text-amber-900">${dep.projectsCount || 0}</span>
+                  <span class="block text-sm font-black text-amber-900">${u.projectsCount||0}</span>
                   <span class="text-[9px] uppercase font-bold text-amber-700">Projects</span>
                 </div>
                 <div class="p-2 rounded-xl bg-white/80 border border-amber-200">
-                  <span class="block text-sm font-black text-amber-900">${dep.invoicesCount || 0}</span>
+                  <span class="block text-sm font-black text-amber-900">${u.invoicesCount||0}</span>
                   <span class="text-[9px] uppercase font-bold text-amber-700">Invoices</span>
                 </div>
               </div>
@@ -1899,194 +362,75 @@
                 To delete this service, unassign or conclude all linked client contracts and projects first.
               </p>
             </div>
-          `;
-        }
-        if (confirmSection) confirmSection.classList.add('hidden');
-        if (confirmBtn) confirmBtn.disabled = true;
-      } else {
-        if (depContainer) {
-          depContainer.innerHTML = `
-            <div class="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 space-y-1.5">
-              <div class="flex items-center gap-2 font-bold text-emerald-800">
-                <i class="fa-solid fa-shield-check text-emerald-600 text-sm"></i>
-                <span>0 Live Dependencies — Safe to Permanently Purge</span>
-              </div>
-              <p class="text-[11px] text-emerald-800/90 leading-relaxed">
-                No active client contracts, projects, or invoices reference this service.
-                Permanently deleting it will purge the service catalog record and all <strong>${check.taskBlueprintCount || 0} master SOP blueprints</strong>.
-              </p>
-            </div>
-          `;
-        }
-        if (confirmSection) confirmSection.classList.remove('hidden');
-        if (confirmInput) confirmInput.focus();
-      }
-    } catch (err) {
-      if (depContainer) {
-        depContainer.innerHTML = `
+          `),b&&b.classList.add("hidden"),d&&(d.disabled=!0)}}catch{x&&(x.innerHTML=`
           <div class="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700">
             <p class="font-bold">Dependency check failed.</p>
           </div>
-        `;
-      }
-    }
-  }
-
-  // =========================================================================
-  // 4. SERVICE PROJECTS (Phase 10)
-  // =========================================================================
-  async function loadProjectsData() {
-    const res = await apiFetch('/projects');
-    const tbody = document.getElementById('adminProjectsTableBody');
-    const cardsContainer = document.getElementById('adminProjectsCardsContainer');
-    if (!tbody) return;
-
-    if (res.ok && res.data && res.data.data) {
-      state.projectsCache = res.data.data;
-      const projects = state.projectsCache;
-
-      const actCount = document.getElementById('statActiveProjects');
-      if (actCount) actCount.textContent = projects.length;
-
-      if (projects.length === 0) {
-        const emptyMsg = '<tr><td colspan="6" class="px-6 py-6 text-center text-slate-500 italic">No active projects. Add a client with services to auto-provision projects.</td></tr>';
-        tbody.innerHTML = emptyMsg;
-        if (cardsContainer) cardsContainer.innerHTML = '<div class="p-6 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 italic">No active projects provisioned yet.</div>';
-        return;
-      }
-
-      // Desktop Table
-      tbody.innerHTML = projects.map(p => {
-        const percent = p.progress_percent || 0;
-        return `
+        `)}}async function ke(){const s=await L("/projects"),t=document.getElementById("adminProjectsTableBody"),r=document.getElementById("adminProjectsCardsContainer");if(t&&s.ok&&s.data&&s.data.data){y.projectsCache=s.data.data;const e=y.projectsCache,l=document.getElementById("statActiveProjects");if(l&&(l.textContent=e.length),e.length===0){const i='<tr><td colspan="6" class="px-6 py-6 text-center text-slate-500 italic">No active projects. Add a client with services to auto-provision projects.</td></tr>';t.innerHTML=i,r&&(r.innerHTML='<div class="p-6 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 italic">No active projects provisioned yet.</div>');return}t.innerHTML=e.map(i=>{const m=i.progress_percent||0;return`
           <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
-            <td class="px-6 py-4 font-bold text-[#172B36]">${p.name}</td>
-            <td class="px-6 py-4 text-slate-600">${p.organization_name || 'Organization'}</td>
-            <td class="px-6 py-4 font-mono text-xs text-[#147D64] font-semibold">${p.service_name || 'Service'}</td>
+            <td class="px-6 py-4 font-bold text-[#172B36]">${i.name}</td>
+            <td class="px-6 py-4 text-slate-600">${i.organization_name||"Organization"}</td>
+            <td class="px-6 py-4 font-mono text-xs text-[#147D64] font-semibold">${i.service_name||"Service"}</td>
             <td class="px-6 py-4">
               <div class="flex items-center space-x-2">
                 <div class="w-24 bg-slate-100 h-2 border border-[#E3E9EF] rounded-full overflow-hidden">
-                  <div class="bg-[#147D64] h-full rounded-full transition-all duration-500" style="width: ${percent}%"></div>
+                  <div class="bg-[#147D64] h-full rounded-full transition-all duration-500" style="width: ${m}%"></div>
                 </div>
-                <span class="text-xs font-mono font-bold text-[#172B36]">${percent}%</span>
+                <span class="text-xs font-mono font-bold text-[#172B36]">${m}%</span>
               </div>
             </td>
             <td class="px-6 py-4">
-              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">${p.status || 'Active'}</span>
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">${i.status||"Active"}</span>
             </td>
             <td class="px-6 py-4 text-right font-mono text-slate-500 text-xs">
-              ${p.completed_tasks || 0} / ${p.total_tasks || 20}
+              ${i.completed_tasks||0} / ${i.total_tasks||20}
             </td>
           </tr>
-        `;
-      }).join('');
-
-      // Mobile Cards
-      if (cardsContainer) {
-        cardsContainer.innerHTML = projects.map(p => {
-          const percent = p.progress_percent || 0;
-          return `
+        `}).join(""),r&&(r.innerHTML=e.map(i=>{const m=i.progress_percent||0;return`
             <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs space-y-3">
               <div class="flex items-start justify-between gap-2">
                 <div>
-                  <h4 class="text-sm font-black text-[#172B36]">${p.name}</h4>
-                  <p class="text-xs text-slate-500">${p.organization_name || 'Organization'}</p>
+                  <h4 class="text-sm font-black text-[#172B36]">${i.name}</h4>
+                  <p class="text-xs text-slate-500">${i.organization_name||"Organization"}</p>
                 </div>
-                <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">${p.status || 'Active'}</span>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">${i.status||"Active"}</span>
               </div>
 
               <div class="space-y-1.5">
                 <div class="flex items-center justify-between text-xs font-semibold">
-                  <span class="text-[#147D64]">${p.service_name || 'Service'}</span>
-                  <span class="font-mono text-[#172B36]">${percent}% Complete</span>
+                  <span class="text-[#147D64]">${i.service_name||"Service"}</span>
+                  <span class="font-mono text-[#172B36]">${m}% Complete</span>
                 </div>
                 <div class="w-full bg-slate-100 h-2 border border-[#E3E9EF] rounded-full overflow-hidden">
-                  <div class="bg-[#147D64] h-full rounded-full" style="width: ${percent}%"></div>
+                  <div class="bg-[#147D64] h-full rounded-full" style="width: ${m}%"></div>
                 </div>
               </div>
 
               <div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs text-slate-500">
                 <span>Completed Tasks</span>
-                <span class="font-mono font-bold text-slate-700">${p.completed_tasks || 0} of ${p.total_tasks || 20}</span>
+                <span class="font-mono font-bold text-slate-700">${i.completed_tasks||0} of ${i.total_tasks||20}</span>
               </div>
             </div>
-          `;
-        }).join('');
-      }
-    }
-  }
-
-  // =========================================================================
-  // 5. LIVE OPERATIONAL TASKS (Phase 11 - WHIZ Smart Task Workspace)
-  // =========================================================================
-  async function loadTasksData(filterStatus = null) {
-    if (filterStatus) {
-      state.currentTaskStatus = filterStatus;
-      updateStatusFilterButtons(filterStatus);
-    } else if (!state.currentTaskStatus) {
-      state.currentTaskStatus = 'all';
-    }
-
-    const list = document.getElementById('adminLiveTasksList');
-    if (!list) return;
-
-    // Show loading state if cache is empty
-    if (!state.tasksCache || state.tasksCache.length === 0) {
-      list.innerHTML = `
+          `}).join(""))}}async function Be(s=null){s?(y.currentTaskStatus=s,Ge(s)):y.currentTaskStatus||(y.currentTaskStatus="all");const t=document.getElementById("adminLiveTasksList");if(!t)return;(!y.tasksCache||y.tasksCache.length===0)&&(t.innerHTML=`
         <div class="p-8 rounded-2xl bg-white border border-[#E6ECE9] text-center space-y-2 shadow-2xs">
           <i class="fa-solid fa-circle-notch fa-spin text-lg text-[#087F70]"></i>
           <p class="text-xs text-[#74817D]">Loading operational tasks...</p>
         </div>
-      `;
-    }
-
-    const res = await apiFetch('/portal/admin/live-tasks');
-
-    if (!res.ok || !res.data || !res.data.data) {
-      const errMsg = res.data?.error || 'Unable to connect to live tasks database.';
-      list.innerHTML = `
+      `);const r=await L("/portal/admin/live-tasks");if(!r.ok||!r.data||!r.data.data){const e=r.data?.error||"Unable to connect to live tasks database.";t.innerHTML=`
         <div class="p-6 sm:p-8 rounded-2xl sm:rounded-3xl bg-white border border-rose-200 text-center space-y-3 shadow-2xs">
           <div class="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto text-lg border border-rose-200/60 shadow-2xs">
             <i class="fa-solid fa-triangle-exclamation"></i>
           </div>
           <div class="space-y-1">
             <h4 class="text-sm sm:text-base font-bold text-[#202D2A]">Failed to Load Operational Tasks</h4>
-            <p class="text-xs text-[#74817D] max-w-sm mx-auto leading-relaxed">${escapeHtml(errMsg)}</p>
+            <p class="text-xs text-[#74817D] max-w-sm mx-auto leading-relaxed">${p(e)}</p>
           </div>
           <button type="button" id="btnRetryLoadTasks" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-[#087F70] hover:bg-[#06685c] text-white shadow-2xs transition-all cursor-pointer touch-manipulation select-none">
             <i class="fa-solid fa-rotate-right text-xs"></i>
             <span>Retry Connection</span>
           </button>
         </div>
-      `;
-      document.getElementById('btnRetryLoadTasks')?.addEventListener('click', () => loadTasksData());
-      return;
-    }
-
-    state.tasksCache = res.data.data;
-    renderFilteredTasks();
-  }
-
-  function renderFilteredTasks() {
-    const list = document.getElementById('adminLiveTasksList');
-    if (!list) return;
-
-    const allTasks = state.tasksCache || [];
-    const searchInput = document.getElementById('taskSearchInput');
-    const prioritySelect = document.getElementById('taskPriorityFilter');
-    const clearSearchBtn = document.getElementById('btnClearTaskSearch');
-
-    const searchVal = (searchInput?.value || '').trim().toLowerCase();
-    const priorityVal = (prioritySelect?.value || 'all').toLowerCase();
-    const statusVal = state.currentTaskStatus || 'all';
-
-    if (clearSearchBtn) {
-      clearSearchBtn.classList.toggle('hidden', !searchVal);
-    }
-
-    // Case 1: Database has zero tasks across all projects
-    if (allTasks.length === 0) {
-      list.innerHTML = `
+      `,document.getElementById("btnRetryLoadTasks")?.addEventListener("click",()=>Be());return}y.tasksCache=r.data.data,Se()}function Se(){const s=document.getElementById("adminLiveTasksList");if(!s)return;const t=y.tasksCache||[],r=document.getElementById("taskSearchInput"),e=document.getElementById("taskPriorityFilter"),l=document.getElementById("btnClearTaskSearch"),i=(r?.value||"").trim().toLowerCase(),m=(e?.value||"all").toLowerCase(),x=y.currentTaskStatus||"all";if(l&&l.classList.toggle("hidden",!i),t.length===0){s.innerHTML=`
         <div class="p-8 sm:p-12 rounded-2xl sm:rounded-3xl bg-white border border-[#E6ECE9] text-center space-y-3.5 shadow-2xs">
           <div class="w-14 h-14 rounded-2xl bg-[#EAF5F1] text-[#087F70] flex items-center justify-center mx-auto text-xl border border-[#087F70]/25 shadow-2xs">
             <i class="fa-solid fa-clipboard-check"></i>
@@ -2096,42 +440,7 @@
             <p class="text-xs sm:text-sm text-[#74817D] max-w-sm mx-auto leading-relaxed">Tasks assigned to active projects will appear here.</p>
           </div>
         </div>
-      `;
-      return;
-    }
-
-    // Filter tasks
-    const filtered = allTasks.filter(t => {
-      // Status filter: pending matches any incomplete task
-      if (statusVal === 'completed' && t.status !== 'completed') return false;
-      if (statusVal === 'pending' && t.status === 'completed') return false;
-
-      // Priority filter
-      if (priorityVal !== 'all' && (t.priority || '').toLowerCase() !== priorityVal) return false;
-
-      // Search filter
-      if (searchVal) {
-        const title = (t.title || '').toLowerCase();
-        const project = (t.project_name || '').toLowerCase();
-        const org = (t.organization_name || t.client_name || '').toLowerCase();
-        const code = (t.task_code || t.id || '').toLowerCase();
-        if (!title.includes(searchVal) && !project.includes(searchVal) && !org.includes(searchVal) && !code.includes(searchVal)) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-
-    // Update count badge if present
-    const countBadge = document.getElementById('liveTasksCountBadge');
-    if (countBadge) {
-      countBadge.textContent = `${filtered.length} of ${allTasks.length} Tasks`;
-    }
-
-    // Case 2: Filters active, but no matching tasks
-    if (filtered.length === 0) {
-      list.innerHTML = `
+      `;return}const b=t.filter(d=>{if(x==="completed"&&d.status!=="completed"||x==="pending"&&d.status==="completed"||m!=="all"&&(d.priority||"").toLowerCase()!==m)return!1;if(i){const c=(d.title||"").toLowerCase(),o=(d.project_name||"").toLowerCase(),u=(d.organization_name||d.client_name||"").toLowerCase(),g=(d.task_code||d.id||"").toLowerCase();if(!c.includes(i)&&!o.includes(i)&&!u.includes(i)&&!g.includes(i))return!1}return!0}),a=document.getElementById("liveTasksCountBadge");if(a&&(a.textContent=`${b.length} of ${t.length} Tasks`),b.length===0){s.innerHTML=`
         <div class="p-8 sm:p-12 rounded-2xl sm:rounded-3xl bg-white border border-[#E6ECE9] text-center space-y-3.5 shadow-2xs">
           <div class="w-14 h-14 rounded-2xl bg-[#F7FAF9] text-[#74817D] flex items-center justify-center mx-auto text-xl border border-[#E6ECE9] shadow-2xs">
             <i class="fa-solid fa-filter-circle-xmark"></i>
@@ -2147,865 +456,148 @@
             </button>
           </div>
         </div>
-      `;
-
-      document.getElementById('btnClearTaskFilters')?.addEventListener('click', () => {
-        if (searchInput) searchInput.value = '';
-        if (prioritySelect) prioritySelect.value = 'all';
-        state.currentTaskStatus = 'all';
-        updateStatusFilterButtons('all');
-        renderFilteredTasks();
-      });
-      return;
-    }
-
-    // Priority color mapping
-    const priorityColors = {
-      urgent: 'bg-rose-50 text-rose-700 border-rose-200',
-      high: 'bg-amber-50 text-amber-700 border-amber-200',
-      medium: 'bg-blue-50 text-blue-700 border-blue-200',
-      low: 'bg-slate-50 text-slate-600 border-slate-200'
-    };
-
-    // Render task cards
-    list.innerHTML = filtered.map(t => {
-      const isCompleted = t.status === 'completed';
-      const statusLabel = isCompleted ? 'Completed' : (t.status === 'in_progress' ? 'In Progress' : (t.status === 'review' ? 'In Review' : 'Pending'));
-      const statusClass = isCompleted 
-        ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-        : 'bg-[#EAF5F1] text-[#087F70] border-[#087F70]/25';
-
-      return `
-        <div class="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white border border-[#E6ECE9] hover:border-[#087F70]/30 shadow-2xs hover:shadow-xs transition-all space-y-3 group ${isCompleted ? 'bg-[#FDFEFE]/80' : ''}" data-task-id="${t.id}">
+      `,document.getElementById("btnClearTaskFilters")?.addEventListener("click",()=>{r&&(r.value=""),e&&(e.value="all"),y.currentTaskStatus="all",Ge("all"),Se()});return}const n={urgent:"bg-rose-50 text-rose-700 border-rose-200",high:"bg-amber-50 text-amber-700 border-amber-200",medium:"bg-blue-50 text-blue-700 border-blue-200",low:"bg-slate-50 text-slate-600 border-slate-200"};s.innerHTML=b.map(d=>{const c=d.status==="completed",o=c?"Completed":d.status==="in_progress"?"In Progress":d.status==="review"?"In Review":"Pending",u=c?"bg-emerald-50 text-emerald-700 border-emerald-200":"bg-[#EAF5F1] text-[#087F70] border-[#087F70]/25";return`
+        <div class="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white border border-[#E6ECE9] hover:border-[#087F70]/30 shadow-2xs hover:shadow-xs transition-all space-y-3 group ${c?"bg-[#FDFEFE]/80":""}" data-task-id="${d.id}">
           <!-- Top Row: Priority Badge + Status Badge + Progress -->
           <div class="flex items-center justify-between gap-2 flex-wrap">
             <div class="flex items-center gap-1.5 flex-wrap">
-              <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${priorityColors[t.priority] || priorityColors.medium}">
-                ${escapeHtml(t.priority || 'medium')}
+              <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${n[d.priority]||n.medium}">
+                ${p(d.priority||"medium")}
               </span>
-              <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${statusClass}">
-                ${statusLabel}
+              <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${u}">
+                ${o}
               </span>
             </div>
             <div class="flex items-center gap-1.5 text-xs font-mono font-bold text-[#087F70]">
               <i class="fa-solid fa-chart-pie text-[11px] text-[#087F70]/70"></i>
-              <span>${t.progress_percent || 0}% Proj</span>
+              <span>${d.progress_percent||0}% Proj</span>
             </div>
           </div>
 
           <!-- Middle Row: Checkbox + Title -->
           <div class="flex items-start gap-3">
             <div class="pt-0.5 shrink-0">
-              <input type="checkbox" class="task-checkbox w-5 h-5 rounded-md text-[#087F70] bg-white border-[#CBD5E1] cursor-pointer focus:ring-2 focus:ring-[#087F70]/20 transition-all select-none" data-id="${t.id}" ${isCompleted ? 'checked' : ''} aria-label="Mark task complete">
+              <input type="checkbox" class="task-checkbox w-5 h-5 rounded-md text-[#087F70] bg-white border-[#CBD5E1] cursor-pointer focus:ring-2 focus:ring-[#087F70]/20 transition-all select-none" data-id="${d.id}" ${c?"checked":""} aria-label="Mark task complete">
             </div>
             <div class="min-w-0 flex-1 space-y-1">
-              <h4 class="text-sm sm:text-base font-bold text-[#202D2A] leading-snug break-words group-hover:text-[#087F70] transition-colors ${isCompleted ? 'line-through text-[#74817D]/70' : ''}">
-                ${escapeHtml(t.title)}
+              <h4 class="text-sm sm:text-base font-bold text-[#202D2A] leading-snug break-words group-hover:text-[#087F70] transition-colors ${c?"line-through text-[#74817D]/70":""}">
+                ${p(d.title)}
               </h4>
-              ${t.description ? `<p class="text-xs text-[#74817D] line-clamp-2 leading-relaxed">${escapeHtml(t.description)}</p>` : ''}
+              ${d.description?`<p class="text-xs text-[#74817D] line-clamp-2 leading-relaxed">${p(d.description)}</p>`:""}
             </div>
           </div>
 
           <!-- Context Row: Project, Client, Deadline, Details Button -->
           <div class="pt-2 border-t border-[#E6ECE9] flex flex-wrap items-center justify-between gap-2 text-xs">
             <div class="flex flex-wrap items-center gap-2 text-[#74817D] min-w-0">
-              <div class="inline-flex items-center gap-1.5 font-medium truncate max-w-[220px]" title="${escapeHtml(t.project_name || 'Active Project')}">
+              <div class="inline-flex items-center gap-1.5 font-medium truncate max-w-[220px]" title="${p(d.project_name||"Active Project")}">
                 <i class="fa-solid fa-folder-tree text-[11px] text-[#087F70] shrink-0"></i>
-                <span class="truncate text-[#202D2A]">${escapeHtml(t.project_name || 'Active Project')}</span>
+                <span class="truncate text-[#202D2A]">${p(d.project_name||"Active Project")}</span>
               </div>
-              ${t.organization_name || t.client_name ? `
-                <span class="text-[#CBD5E1]">•</span>
-                <div class="inline-flex items-center gap-1 font-medium truncate max-w-[180px]" title="${escapeHtml(t.organization_name || t.client_name)}">
+              ${d.organization_name||d.client_name?`
+                <span class="text-[#CBD5E1]">\u2022</span>
+                <div class="inline-flex items-center gap-1 font-medium truncate max-w-[180px]" title="${p(d.organization_name||d.client_name)}">
                   <i class="fa-regular fa-building text-[10px] text-[#74817D] shrink-0"></i>
-                  <span class="truncate">${escapeHtml(t.organization_name || t.client_name)}</span>
+                  <span class="truncate">${p(d.organization_name||d.client_name)}</span>
                 </div>
-              ` : ''}
-              ${t.deadline ? `
-                <span class="text-[#CBD5E1]">•</span>
+              `:""}
+              ${d.deadline?`
+                <span class="text-[#CBD5E1]">\u2022</span>
                 <div class="inline-flex items-center gap-1 text-[11px] font-mono text-[#74817D]">
                   <i class="fa-regular fa-calendar text-[10px]"></i>
-                  <span>${escapeHtml(t.deadline)}</span>
+                  <span>${p(d.deadline)}</span>
                 </div>
-              ` : ''}
+              `:""}
             </div>
 
             <!-- Action Button -->
             <div class="flex items-center gap-2 shrink-0 ml-auto">
-              <button type="button" class="btn-live-task-detail px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#F7FAF9] hover:bg-[#EAF5F1] text-[#202D2A] hover:text-[#087F70] border border-[#E6ECE9] hover:border-[#087F70]/30 transition-all flex items-center gap-1.5 cursor-pointer touch-manipulation select-none" data-id="${t.id}">
+              <button type="button" class="btn-live-task-detail px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#F7FAF9] hover:bg-[#EAF5F1] text-[#202D2A] hover:text-[#087F70] border border-[#E6ECE9] hover:border-[#087F70]/30 transition-all flex items-center gap-1.5 cursor-pointer touch-manipulation select-none" data-id="${d.id}">
                 <i class="fa-solid fa-circle-info text-[11px]"></i>
                 <span>Details</span>
               </button>
             </div>
           </div>
         </div>
-      `;
-    }).join('');
-
-    // Wire task checkbox completion
-    list.querySelectorAll('.task-checkbox').forEach(cb => {
-      cb.addEventListener('change', async () => {
-        const taskId = cb.dataset.id;
-        const res = await apiFetch(`/projects/tasks/${taskId}/complete`, {
-          method: 'PUT',
-          body: JSON.stringify({ notes: 'Completed via Super Admin Console' })
-        });
-        if (res.ok && res.data && res.data.success) {
-          showToast(`Task updated! Project progress is now ${res.data.data.newProgressPercent}%.`, 'success');
-          const localTask = state.tasksCache.find(t => t.id === taskId);
-          if (localTask) {
-            localTask.status = cb.checked ? 'completed' : 'todo';
-          }
-          renderFilteredTasks();
-          loadProjectsData();
-        } else {
-          showToast('Failed to update task status.', 'error');
-          cb.checked = !cb.checked;
-        }
-      });
-    });
-
-    // Wire live task details
-    list.querySelectorAll('.btn-live-task-detail').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const task = state.tasksCache.find(t => t.id === btn.dataset.id);
-        if (!task) return;
-
-        const modal = document.getElementById('modalLiveTaskDetail');
-        if (!modal) return;
-
-        document.getElementById('liveTaskId').value = task.id;
-        const modalTitle = document.getElementById('liveTaskModalTitle');
-        if (modalTitle) {
-          modalTitle.innerHTML = `<i class="fa-solid fa-list-check text-[#087F70]"></i><span>${escapeHtml(task.title)}</span>`;
-        }
-        const modalProject = document.getElementById('liveTaskModalProject');
-        if (modalProject) {
-          modalProject.textContent = `${task.project_name || 'Project'} (${task.organization_name || task.client_name || 'Client'})`;
-        }
-        const modalDesc = document.getElementById('liveTaskModalDesc');
-        if (modalDesc) {
-          modalDesc.textContent = task.description || 'Standard task execution blueprint.';
-        }
-        const modalStatus = document.getElementById('liveTaskStatus');
-        if (modalStatus) modalStatus.value = task.status || 'todo';
-        const modalPriority = document.getElementById('liveTaskPriority');
-        if (modalPriority) modalPriority.value = task.priority || 'medium';
-        const modalNotes = document.getElementById('liveTaskNotes');
-        if (modalNotes) modalNotes.value = task.internal_notes || '';
-        initGlassSelects();
-
-        modal.classList.remove('hidden');
-      });
-    });
-  }
-
-  function updateStatusFilterButtons(activeFilter) {
-    document.querySelectorAll('.task-filter-btn').forEach(b => {
-      const isTarget = b.dataset.filter === activeFilter;
-      if (isTarget) {
-        b.classList.add('bg-[#EAF5F1]', 'text-[#087F70]', 'font-bold', 'border-[#087F70]/25', 'shadow-2xs');
-        b.classList.remove('text-[#74817D]', 'border-transparent', 'font-semibold');
-      } else {
-        b.classList.remove('bg-[#EAF5F1]', 'text-[#087F70]', 'font-bold', 'border-[#087F70]/25', 'shadow-2xs');
-        b.classList.add('text-[#74817D]', 'border-transparent', 'font-semibold');
-      }
-    });
-  }
-
-  // =========================================================================
-  // 6. FINANCE & PAYMENTS
-  // =========================================================================
-  // Store payments in state cache for modal operations
-  let paymentsCache = [];
-
-  async function loadFinanceData() {
-    initFinanceSubtabs();
-    const res = await apiFetch('/finance/payments');
-    const tbody = document.getElementById('adminPaymentsTableBody');
-    const cardsContainer = document.getElementById('adminFinanceCardsContainer');
-    if (!tbody) return;
-
-    if (res.ok && res.data && res.data.data) {
-      const payments = res.data.data;
-      paymentsCache = payments;
-
-      if (payments.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-6 text-center text-slate-500 italic">No payments recorded. Click "Record New Payment" above.</td></tr>';
-        if (cardsContainer) cardsContainer.innerHTML = '<div class="p-6 rounded-2xl bg-white border border-[#E3E9EF] text-center text-slate-500 italic">No payments recorded.</div>';
-        return;
-      }
-
-      // Desktop Table
-      tbody.innerHTML = payments.map(p => {
-        const isVoided = (p.financial_notes && p.financial_notes.includes('[VOIDED]')) || (p.payment_reference && p.payment_reference.startsWith('VOIDED'));
-        const formattedAmount = formatCurrency(p.amount_cents || 0, p.currency || "USD");
-
-        return `
-          <tr class="hover:bg-slate-50/80 transition-colors border-b border-[#E3E9EF] ${isVoided ? 'opacity-60 bg-rose-50/20' : ''}">
+      `}).join(""),s.querySelectorAll(".task-checkbox").forEach(d=>{d.addEventListener("change",async()=>{const c=d.dataset.id,o=await L(`/projects/tasks/${c}/complete`,{method:"PUT",body:JSON.stringify({notes:"Completed via Super Admin Console"})});if(o.ok&&o.data&&o.data.success){h(`Task updated! Project progress is now ${o.data.data.newProgressPercent}%.`,"success");const u=y.tasksCache.find(g=>g.id===c);u&&(u.status=d.checked?"completed":"todo"),Se(),ke()}else h("Failed to update task status.","error"),d.checked=!d.checked})}),s.querySelectorAll(".btn-live-task-detail").forEach(d=>{d.addEventListener("click",()=>{const c=y.tasksCache.find(I=>I.id===d.dataset.id);if(!c)return;const o=document.getElementById("modalLiveTaskDetail");if(!o)return;document.getElementById("liveTaskId").value=c.id;const u=document.getElementById("liveTaskModalTitle");u&&(u.innerHTML=`<i class="fa-solid fa-list-check text-[#087F70]"></i><span>${p(c.title)}</span>`);const g=document.getElementById("liveTaskModalProject");g&&(g.textContent=`${c.project_name||"Project"} (${c.organization_name||c.client_name||"Client"})`);const w=document.getElementById("liveTaskModalDesc");w&&(w.textContent=c.description||"Standard task execution blueprint.");const C=document.getElementById("liveTaskStatus");C&&(C.value=c.status||"todo");const v=document.getElementById("liveTaskPriority");v&&(v.value=c.priority||"medium");const B=document.getElementById("liveTaskNotes");B&&(B.value=c.internal_notes||""),H(),o.classList.remove("hidden")})})}function Ge(s){document.querySelectorAll(".task-filter-btn").forEach(t=>{t.dataset.filter===s?(t.classList.add("bg-[#EAF5F1]","text-[#087F70]","font-bold","border-[#087F70]/25","shadow-2xs"),t.classList.remove("text-[#74817D]","border-transparent","font-semibold")):(t.classList.remove("bg-[#EAF5F1]","text-[#087F70]","font-bold","border-[#087F70]/25","shadow-2xs"),t.classList.add("text-[#74817D]","border-transparent","font-semibold"))})}let _e=[];async function ye(){Vt();const s=await L("/finance/payments"),t=document.getElementById("adminPaymentsTableBody"),r=document.getElementById("adminFinanceCardsContainer");if(t&&s.ok&&s.data&&s.data.data){const e=s.data.data;if(_e=e,e.length===0){t.innerHTML='<tr><td colspan="6" class="px-6 py-6 text-center text-slate-500 italic">No payments recorded. Click "Record New Payment" above.</td></tr>',r&&(r.innerHTML='<div class="p-6 rounded-2xl bg-white border border-[#E3E9EF] text-center text-slate-500 italic">No payments recorded.</div>');return}t.innerHTML=e.map(i=>{const m=i.financial_notes&&i.financial_notes.includes("[VOIDED]")||i.payment_reference&&i.payment_reference.startsWith("VOIDED"),x=Y(i.amount_cents||0,i.currency||"USD");return`
+          <tr class="hover:bg-slate-50/80 transition-colors border-b border-[#E3E9EF] ${m?"opacity-60 bg-rose-50/20":""}">
             <td class="px-6 py-4 font-mono font-bold text-brand-whiz">
-              ${p.receipt_number}
-              ${isVoided ? '<span class="ml-2 text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">VOIDED</span>' : ''}
+              ${i.receipt_number}
+              ${m?'<span class="ml-2 text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">VOIDED</span>':""}
             </td>
             <td class="px-6 py-4">
-              <div class="font-bold text-[#172B36]">${p.organization_name || 'Client'}</div>
-              <div class="text-[11px] text-slate-500 font-mono">${p.invoice_number || 'INV-DIRECT'}</div>
+              <div class="font-bold text-[#172B36]">${i.organization_name||"Client"}</div>
+              <div class="text-[11px] text-slate-500 font-mono">${i.invoice_number||"INV-DIRECT"}</div>
             </td>
-            <td class="px-6 py-4 font-mono font-bold ${isVoided ? 'line-through text-slate-400' : 'text-brand-whiz'}">${formattedAmount}</td>
-            <td class="px-6 py-4 uppercase text-slate-500 text-xs font-semibold">${(p.payment_method || 'card').replace('_', ' ')}</td>
-            <td class="px-6 py-4 text-slate-500 text-xs">${p.payment_date || 'N/A'}</td>
+            <td class="px-6 py-4 font-mono font-bold ${m?"line-through text-slate-400":"text-brand-whiz"}">${x}</td>
+            <td class="px-6 py-4 uppercase text-slate-500 text-xs font-semibold">${(i.payment_method||"card").replace("_"," ")}</td>
+            <td class="px-6 py-4 text-slate-500 text-xs">${i.payment_date||"N/A"}</td>
             <td class="px-6 py-4 text-right">
               <div class="flex items-center justify-end space-x-1.5">
-                                <button type="button" class="btn-edit-payment-admin px-2 py-1 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer" data-id="${p.id}" title="Edit Metadata">
+                                <button type="button" class="btn-edit-payment-admin px-2 py-1 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer" data-id="${i.id}" title="Edit Metadata">
                   <i class="fa-solid fa-pen"></i>
                 </button>
-                <button type="button" class="btn-correct-payment-admin px-2 py-1 rounded-lg text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-700 transition-colors cursor-pointer" data-id="${p.id}" title="Financial Correction">
+                <button type="button" class="btn-correct-payment-admin px-2 py-1 rounded-lg text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-700 transition-colors cursor-pointer" data-id="${i.id}" title="Financial Correction">
                   <i class="fa-solid fa-scale-balanced"></i>
                 </button>
-                ${!isVoided && state.adminProfile?.role !== 'accounts' ? `
-                  <button type="button" class="btn-void-payment-admin px-2 py-1 rounded-lg text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-600 transition-colors cursor-pointer" data-id="${p.id}" title="Void Payment">
+                ${!m&&y.adminProfile?.role!=="accounts"?`
+                  <button type="button" class="btn-void-payment-admin px-2 py-1 rounded-lg text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-600 transition-colors cursor-pointer" data-id="${i.id}" title="Void Payment">
                     <i class="fa-solid fa-ban"></i>
                   </button>
-                ` : ''}
-                ${state.adminProfile?.role !== 'accounts' ? `
-                  <button type="button" class="btn-delete-payment-admin px-2 py-1 rounded-lg text-xs font-semibold text-slate-400 hover:text-rose-600 transition-colors cursor-pointer" data-id="${p.id}" title="Delete Test Payment">
+                `:""}
+                ${y.adminProfile?.role!=="accounts"?`
+                  <button type="button" class="btn-delete-payment-admin px-2 py-1 rounded-lg text-xs font-semibold text-slate-400 hover:text-rose-600 transition-colors cursor-pointer" data-id="${i.id}" title="Delete Test Payment">
                     <i class="fa-solid fa-trash-can"></i>
                   </button>
-                ` : ''}
+                `:""}
               </div>
             </td>
           </tr>
-        `;
-      }).join('');
-
-      // Mobile Responsive Cards
-      if (cardsContainer) {
-        cardsContainer.innerHTML = payments.map(p => {
-          const isVoided = (p.financial_notes && p.financial_notes.includes('[VOIDED]')) || (p.payment_reference && p.payment_reference.startsWith('VOIDED'));
-          const formattedAmount = formatCurrency(p.amount_cents || 0, p.currency || "USD");
-
-          return `
-            <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-sm space-y-3 ${isVoided ? 'opacity-60 bg-rose-50/20' : ''}">
+        `}).join(""),r&&(r.innerHTML=e.map(i=>{const m=i.financial_notes&&i.financial_notes.includes("[VOIDED]")||i.payment_reference&&i.payment_reference.startsWith("VOIDED"),x=Y(i.amount_cents||0,i.currency||"USD");return`
+            <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-sm space-y-3 ${m?"opacity-60 bg-rose-50/20":""}">
               <div class="flex items-center justify-between">
                 <div>
-                  <span class="font-mono text-xs font-bold text-brand-whiz">${p.receipt_number}</span>
-                  ${isVoided ? '<span class="ml-2 text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">VOIDED</span>' : ''}
+                  <span class="font-mono text-xs font-bold text-brand-whiz">${i.receipt_number}</span>
+                  ${m?'<span class="ml-2 text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">VOIDED</span>':""}
                 </div>
-                <div class="font-mono font-bold text-sm ${isVoided ? 'line-through text-slate-400' : 'text-brand-whiz'}">${formattedAmount}</div>
+                <div class="font-mono font-bold text-sm ${m?"line-through text-slate-400":"text-brand-whiz"}">${x}</div>
               </div>
 
               <div class="space-y-1 text-xs">
-                <div class="font-bold text-[#172B36]">${p.organization_name || 'Client'}</div>
+                <div class="font-bold text-[#172B36]">${i.organization_name||"Client"}</div>
                 <div class="flex items-center justify-between text-slate-500 text-[11px]">
-                  <span>Invoice: <strong class="font-mono text-slate-700">${p.invoice_number || 'INV-DIRECT'}</strong></span>
-                  <span>${p.payment_date || 'N/A'}</span>
+                  <span>Invoice: <strong class="font-mono text-slate-700">${i.invoice_number||"INV-DIRECT"}</strong></span>
+                  <span>${i.payment_date||"N/A"}</span>
                 </div>
                 <div class="text-[11px] text-slate-500 uppercase">
-                  Method: <strong class="text-slate-700">${(p.payment_method || 'card').replace('_', ' ')}</strong>
+                  Method: <strong class="text-slate-700">${(i.payment_method||"card").replace("_"," ")}</strong>
                 </div>
               </div>
 
               <div class="flex items-center justify-end gap-1.5 pt-2 border-t border-[#E3E9EF]">
-                                <button type="button" class="btn-edit-payment-admin px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer" data-id="${p.id}">
+                                <button type="button" class="btn-edit-payment-admin px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer" data-id="${i.id}">
                   Edit
                 </button>
-                <button type="button" class="btn-correct-payment-admin px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-700 cursor-pointer" data-id="${p.id}">
+                <button type="button" class="btn-correct-payment-admin px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-700 cursor-pointer" data-id="${i.id}">
                   Correct
                 </button>
-                ${!isVoided && state.adminProfile?.role !== 'accounts' ? `
-                  <button type="button" class="btn-void-payment-admin px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-600 cursor-pointer" data-id="${p.id}" title="Void">
+                ${!m&&y.adminProfile?.role!=="accounts"?`
+                  <button type="button" class="btn-void-payment-admin px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-600 cursor-pointer" data-id="${i.id}" title="Void">
                     <i class="fa-solid fa-ban"></i>
                   </button>
-                ` : ''}
-                ${state.adminProfile?.role !== 'accounts' ? `
-                  <button type="button" class="btn-delete-payment-admin px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-rose-600 cursor-pointer" data-id="${p.id}" title="Delete">
+                `:""}
+                ${y.adminProfile?.role!=="accounts"?`
+                  <button type="button" class="btn-delete-payment-admin px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-rose-600 cursor-pointer" data-id="${i.id}" title="Delete">
                     <i class="fa-solid fa-trash-can"></i>
                   </button>
-                ` : ''}
+                `:""}
               </div>
             </div>
-          `;
-        }).join('');
-      }
+          `}).join(""));const l=i=>{i&&(i.querySelectorAll(".btn-edit-payment-admin").forEach(m=>{m.addEventListener("click",()=>{const x=m.dataset.id,b=_e.find(n=>n.id===x);if(!b)return;document.getElementById("editPaymentId").value=b.id,document.getElementById("editPaymentReceiptNum").textContent=b.receipt_number,document.getElementById("editPaymentInvoiceNum").textContent=b.invoice_number||"INV-DIRECT",document.getElementById("editPaymentAmountDisplay").textContent=Y(b.amount_cents||0,b.currency||"USD");const a=document.getElementById("editPaymentDate");a&&(a.value=b.payment_date||new Date().toISOString().split("T")[0],typeof updateDatePickerTrigger=="function"&&updateDatePickerTrigger(a)),document.getElementById("editPaymentMethod").value=b.payment_method||"bank_transfer",document.getElementById("editPaymentReference").value=b.payment_reference||"",document.getElementById("editPaymentNotes").value=b.financial_notes||"",H(),document.getElementById("modalEditPayment")?.classList.remove("hidden")})}),i.querySelectorAll(".btn-correct-payment-admin").forEach(m=>{m.addEventListener("click",()=>{const x=m.dataset.id,b=_e.find(a=>a.id===x);b&&(document.getElementById("correctPaymentId").value=b.id,document.getElementById("correctOriginalAmountDisplay").textContent=Y(b.amount_cents||0,b.currency||"USD"),document.getElementById("correctInvoiceNumDisplay").textContent=b.invoice_number||"INV-DIRECT",document.getElementById("correctAmountInput").value=((b.amount_cents||0)/100).toFixed(2),document.getElementById("correctCurrencySelect").value=b.currency||"USD",document.getElementById("correctReasonInput").value="",H(),document.getElementById("modalCorrectPayment")?.classList.remove("hidden"))})}),i.querySelectorAll(".btn-void-payment-admin").forEach(m=>{m.addEventListener("click",async()=>{const x=m.dataset.id,b=_e.find(c=>c.id===x);if(!b||!window.confirm(`Are you sure you want to VOID payment ${b.payment_number} (${Y(b.amount_cents,b.currency)})?
 
-      // Attach Event Listeners
-      const attachListeners = (container) => {
-        if (!container) return;
+This will record an audited reversal and adjust the client invoice balance.`))return;const n=window.prompt("Please enter the reason for voiding this payment:","Audited administrative reversal");if(!n)return;const d=await L(`/finance/payments/${x}/void`,{method:"POST",body:JSON.stringify({reason:n})});d.ok&&d.data&&d.data.success?(h(`Payment ${b.payment_number} voided successfully. Invoice balance adjusted.`,"success"),ye()):h(d.data?.error||"Failed to void payment.","error")})}),i.querySelectorAll(".btn-delete-payment-admin").forEach(m=>{m.addEventListener("click",async()=>{const x=m.dataset.id,b=_e.find(d=>d.id===x);if(!b||!window.confirm(`Permanently delete test payment ${b.payment_number} (${Y(b.amount_cents,b.currency)})?
 
-        
-        // Edit Payment Details Modal
-        container.querySelectorAll('.btn-edit-payment-admin').forEach(b => {
-          b.addEventListener('click', () => {
-            const pid = b.dataset.id;
-            const p = paymentsCache.find(x => x.id === pid);
-            if (!p) return;
-
-            document.getElementById('editPaymentId').value = p.id;
-            document.getElementById('editPaymentReceiptNum').textContent = p.receipt_number;
-            document.getElementById('editPaymentInvoiceNum').textContent = p.invoice_number || 'INV-DIRECT';
-            document.getElementById('editPaymentAmountDisplay').textContent = formatCurrency(p.amount_cents || 0, p.currency || 'USD');
-            const epd = document.getElementById('editPaymentDate');
-            if (epd) {
-              epd.value = p.payment_date || new Date().toISOString().split('T')[0];
-              if (typeof updateDatePickerTrigger === 'function') updateDatePickerTrigger(epd);
-            }
-            document.getElementById('editPaymentMethod').value = p.payment_method || 'bank_transfer';
-            document.getElementById('editPaymentReference').value = p.payment_reference || '';
-            document.getElementById('editPaymentNotes').value = p.financial_notes || '';
-            initGlassSelects();
-
-            document.getElementById('modalEditPayment')?.classList.remove('hidden');
-          });
-        });
-
-        // Financial Correction Modal
-        container.querySelectorAll('.btn-correct-payment-admin').forEach(b => {
-          b.addEventListener('click', () => {
-            const pid = b.dataset.id;
-            const p = paymentsCache.find(x => x.id === pid);
-            if (!p) return;
-
-            document.getElementById('correctPaymentId').value = p.id;
-            document.getElementById('correctOriginalAmountDisplay').textContent = formatCurrency(p.amount_cents || 0, p.currency || 'USD');
-            document.getElementById('correctInvoiceNumDisplay').textContent = p.invoice_number || 'INV-DIRECT';
-            document.getElementById('correctAmountInput').value = ((p.amount_cents || 0) / 100).toFixed(2);
-            document.getElementById('correctCurrencySelect').value = p.currency || 'USD';
-            document.getElementById('correctReasonInput').value = '';
-            initGlassSelects();
-
-            document.getElementById('modalCorrectPayment')?.classList.remove('hidden');
-          });
-        });
-
-        // Void Payment
-        container.querySelectorAll('.btn-void-payment-admin').forEach(b => {
-          b.addEventListener('click', async () => {
-            const pid = b.dataset.id;
-            const p = paymentsCache.find(x => x.id === pid);
-            if (!p) return;
-
-            const confirmed = window.confirm(`Are you sure you want to VOID payment ${p.payment_number} (${formatCurrency(p.amount_cents, p.currency)})?\n\nThis will record an audited reversal and adjust the client invoice balance.`);
-            if (!confirmed) return;
-
-            const reason = window.prompt('Please enter the reason for voiding this payment:', 'Audited administrative reversal');
-            if (!reason) return;
-
-            const vRes = await apiFetch(`/finance/payments/${pid}/void`, {
-              method: 'POST',
-              body: JSON.stringify({ reason })
-            });
-
-            if (vRes.ok && vRes.data && vRes.data.success) {
-              showToast(`Payment ${p.payment_number} voided successfully. Invoice balance adjusted.`, 'success');
-              loadFinanceData();
-            } else {
-              showToast(vRes.data?.error || 'Failed to void payment.', 'error');
-            }
-          });
-        });
-
-        // Delete Disposable Test Payment
-        container.querySelectorAll('.btn-delete-payment-admin').forEach(b => {
-          b.addEventListener('click', async () => {
-            const pid = b.dataset.id;
-            const p = paymentsCache.find(x => x.id === pid);
-            if (!p) return;
-
-            const confirmed = window.confirm(`Permanently delete test payment ${p.payment_number} (${formatCurrency(p.amount_cents, p.currency)})?\n\nThis will remove the test payment record and recalculate invoice balances. This action cannot be undone.`);
-            if (!confirmed) return;
-
-            const dRes = await apiFetch(`/finance/payments/${pid}`, {
-              method: 'DELETE'
-            });
-
-            if (dRes.ok && dRes.data && dRes.data.success) {
-              showToast(`Payment ${p.payment_number} permanently removed from ledger.`, 'success');
-              loadFinanceData();
-            } else {
-              showToast(dRes.data?.error || 'Failed to delete payment.', 'error');
-            }
-          });
-        });
-      };
-
-      attachListeners(tbody);
-      if (cardsContainer) attachListeners(cardsContainer);
-    }
-  }
-
-  // =========================================================================
-  // 7. USER & ACCESS MANAGEMENT (D1 DIRECTORY + ROLE GOVERNANCE)
-  // =========================================================================
-  
-  // =========================================================================
-  // WHIZ LIQUID GLASS SELECTION MENU CONTROLLER (PORTAL POPOVER ARCHITECTURE)
-  // Renders dropdown popovers into an elevated body portal to prevent clipping
-  // and stacking-context collision from parent cards or sibling containers.
-  // =========================================================================
-  let _activeGlassMenu = null;
-  let _activeGlassTrigger = null;
-  let _activeGlassWrapper = null;
-  let _glassPortalElement = null;
-
-  function getGlassPortal() {
-    if (!_glassPortalElement || !document.body.contains(_glassPortalElement)) {
-      _glassPortalElement = document.getElementById('whizGlassSelectPortal');
-      if (!_glassPortalElement) {
-        _glassPortalElement = document.createElement('div');
-        _glassPortalElement.id = 'whizGlassSelectPortal';
-        _glassPortalElement.className = 'whiz-glass-portal-root';
-        _glassPortalElement.setAttribute('aria-hidden', 'false');
-        _glassPortalElement.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:0;overflow:visible;pointer-events:none;z-index:10005;';
-        document.body.appendChild(_glassPortalElement);
-      } else {
-        _glassPortalElement.style.zIndex = '10005';
-        _glassPortalElement.style.pointerEvents = 'none';
-      }
-    }
-    return _glassPortalElement;
-  }
-
-  function positionGlassMenu(triggerBtn, menuEl) {
-    if (!triggerBtn || !menuEl) return;
-    const rect = triggerBtn.getBoundingClientRect();
-
-    // If trigger scrolled off screen, close gracefully
-    if (rect.bottom < -30 || rect.top > window.innerHeight + 30) {
-      closeActiveGlassMenu();
-      return;
-    }
-
-    const vh = window.innerHeight;
-    const vw = window.innerWidth;
-    const isMobile = vw < 768;
-    const bottomNavReserve = isMobile ? 68 : 16;
-    const topMargin = 12;
-
-    // Estimate or measure menu height
-    const menuHeight = menuEl.offsetHeight || menuEl.scrollHeight || 180;
-    const spaceBelow = vh - rect.bottom - bottomNavReserve;
-    const spaceAbove = rect.top - topMargin;
-
-    let isDropup = false;
-    let top = 0;
-    let maxHeight = 270;
-
-    // Viewport collision: if space below is less than required (or < 155) and space above is greater
-    if (spaceBelow < Math.min(menuHeight, 155) && spaceAbove > spaceBelow) {
-      isDropup = true;
-      maxHeight = Math.max(110, Math.min(270, spaceAbove - 10));
-      top = Math.max(topMargin, rect.top - Math.min(menuHeight, maxHeight) - 6);
-    } else {
-      isDropup = false;
-      maxHeight = Math.max(110, Math.min(270, spaceBelow - 10));
-      top = rect.bottom + 6;
-    }
-
-    let left = rect.left;
-    let width = rect.width || triggerBtn.offsetWidth || 240;
-
-    // Clamping for narrow mobile viewports (320px - 430px)
-    const maxAllowedWidth = vw - 16;
-    if (width > maxAllowedWidth) {
-      width = maxAllowedWidth;
-      left = 8;
-    } else if (left + width > vw - 8) {
-      left = Math.max(8, vw - width - 8);
-    } else if (left < 8) {
-      left = 8;
-    }
-
-    menuEl.classList.toggle('dropup', isDropup);
-    menuEl.style.position = 'fixed';
-    menuEl.style.top = Math.round(top) + 'px';
-    menuEl.style.left = Math.round(left) + 'px';
-    menuEl.style.width = Math.round(width) + 'px';
-    menuEl.style.maxHeight = Math.round(maxHeight) + 'px';
-    menuEl.style.zIndex = '10010';
-    menuEl.style.pointerEvents = 'auto';
-  }
-
-  function closeActiveGlassMenu() {
-    if (!_activeGlassMenu) return;
-    const menuEl = _activeGlassMenu;
-    const triggerBtn = _activeGlassTrigger;
-    const wrapper = _activeGlassWrapper;
-
-    menuEl.classList.remove('open', 'dropup');
-    menuEl.style.display = 'none';
-    triggerBtn?.classList.remove('active');
-    triggerBtn?.setAttribute('aria-expanded', 'false');
-
-    // Return menu to wrapper
-    if (wrapper && menuEl.parentNode !== wrapper) {
-      wrapper.appendChild(menuEl);
-    }
-
-    menuEl.style.position = '';
-    menuEl.style.top = '';
-    menuEl.style.left = '';
-    menuEl.style.width = '';
-    menuEl.style.maxHeight = '';
-    menuEl.style.zIndex = '';
-    menuEl.style.pointerEvents = '';
-
-    _activeGlassMenu = null;
-    _activeGlassTrigger = null;
-    _activeGlassWrapper = null;
-  }
-
-  function initGlassSelects() {
-    const wrappers = document.querySelectorAll('[data-glass-select]');
-    wrappers.forEach(wrapper => {
-      const selectEl = wrapper.querySelector('select');
-      const triggerBtn = wrapper.querySelector('.glass-select-trigger');
-      const menuEl = wrapper.querySelector('.glass-select-menu') || 
-                     (document.getElementById('whizGlassSelectPortal')?.querySelector('[id="' + wrapper.dataset.glassSelect + 'Menu"]'));
-      const labelSpan = triggerBtn?.querySelector('.select-label');
-      const iconEl = triggerBtn?.querySelector('.select-icon');
-
-      if (!triggerBtn || !menuEl) return;
-
-      const getOptions = () => Array.from(menuEl.querySelectorAll('.glass-select-option'));
-
-      if (wrapper.dataset.glassInitialized === 'true') {
-        // Sync trigger display and option highlights with current select value
-        const val = selectEl?.value || '';
-        const opts = getOptions();
-        opts.forEach(opt => {
-          const isMatch = opt.dataset.value === val;
-          opt.classList.toggle('selected', isMatch);
-          opt.setAttribute('aria-selected', isMatch ? 'true' : 'false');
-          if (isMatch) {
-            if (labelSpan) {
-              const optText = opt.querySelector('.select-opt-text')?.textContent || opt.querySelector('span:not(.currency-badge)')?.textContent || opt.querySelector('span')?.textContent || opt.textContent.trim();
-              labelSpan.textContent = optText;
-            }
-            const optIcon = opt.querySelector('.option-icon');
-            if (optIcon && iconEl) {
-              iconEl.className = optIcon.className.replace('option-icon', 'select-icon');
-            }
-            const symbolBadge = triggerBtn.querySelector('.select-currency-symbol');
-            const optBadge = opt.querySelector('.currency-badge');
-            if (symbolBadge && optBadge) {
-              symbolBadge.textContent = optBadge.textContent;
-            }
-          }
-        });
-        return;
-      }
-      wrapper.dataset.glassInitialized = 'true';
-
-      function setSelected(val, triggerChangeEvent = true) {
-        if (selectEl) {
-          selectEl.value = val;
-        }
-        const opts = getOptions();
-        opts.forEach(opt => {
-          const isMatch = opt.dataset.value === val;
-          opt.classList.toggle('selected', isMatch);
-          opt.setAttribute('aria-selected', isMatch ? 'true' : 'false');
-          if (isMatch) {
-            if (labelSpan) {
-              const optText = opt.querySelector('.select-opt-text')?.textContent || opt.querySelector('span:not(.currency-badge)')?.textContent || opt.querySelector('span')?.textContent || opt.textContent.trim();
-              labelSpan.textContent = optText;
-            }
-            if (iconEl) {
-              const optIcon = opt.querySelector('.option-icon');
-              if (optIcon) {
-                iconEl.className = optIcon.className.replace('option-icon', 'select-icon');
-              }
-            }
-            const symbolBadge = triggerBtn.querySelector('.select-currency-symbol');
-            const optBadge = opt.querySelector('.currency-badge');
-            if (symbolBadge && optBadge) {
-              symbolBadge.textContent = optBadge.textContent;
-            }
-          }
-        });
-        if (triggerChangeEvent && selectEl) {
-          selectEl.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-      }
-
-      function toggleMenu(force) {
-        const willOpen = typeof force === 'boolean' ? force : (menuEl !== _activeGlassMenu || !menuEl.classList.contains('open'));
-        if (willOpen) {
-          if (_activeGlassMenu && _activeGlassMenu !== menuEl) {
-            closeActiveGlassMenu();
-          }
-
-          _activeGlassMenu = menuEl;
-          _activeGlassTrigger = triggerBtn;
-          _activeGlassWrapper = wrapper;
-
-          // Teleport to portal on body
-          const portal = getGlassPortal();
-          portal.appendChild(menuEl);
-          menuEl.style.display = 'block';
-
-          // Position anchored to trigger
-          positionGlassMenu(triggerBtn, menuEl);
-
-          requestAnimationFrame(() => {
-            menuEl.classList.add('open');
-            triggerBtn.classList.add('active');
-            triggerBtn.setAttribute('aria-expanded', 'true');
-            positionGlassMenu(triggerBtn, menuEl);
-            const opts = getOptions();
-            const currentSelected = menuEl.querySelector('.glass-select-option.selected') || opts[0];
-            currentSelected?.focus();
-          });
-        } else {
-          closeActiveGlassMenu();
-        }
-      }
-
-      triggerBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        toggleMenu();
-      });
-
-      triggerBtn.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          toggleMenu(true);
-        } else if (e.key === 'Escape') {
-          toggleMenu(false);
-        }
-      });
-
-      // Delegated click on menu options (handles dynamically injected options)
-      menuEl.addEventListener('click', (e) => {
-        const opt = e.target.closest('.glass-select-option');
-        if (opt) {
-          e.preventDefault();
-          e.stopPropagation();
-          setSelected(opt.dataset.value, true);
-          closeActiveGlassMenu();
-          triggerBtn.focus();
-        }
-      });
-
-      // Keydown navigation on menu
-      menuEl.addEventListener('keydown', (e) => {
-        const opt = e.target.closest('.glass-select-option');
-        if (!opt) return;
-        const opts = getOptions();
-        const idx = opts.indexOf(opt);
-
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          setSelected(opt.dataset.value, true);
-          closeActiveGlassMenu();
-          triggerBtn.focus();
-        } else if (e.key === 'ArrowDown') {
-          e.preventDefault();
-          const next = opts[idx + 1] || opts[0];
-          next?.focus();
-        } else if (e.key === 'ArrowUp') {
-          e.preventDefault();
-          const prev = opts[idx - 1] || opts[opts.length - 1];
-          prev?.focus();
-        } else if (e.key === 'Escape') {
-          e.preventDefault();
-          closeActiveGlassMenu();
-          triggerBtn.focus();
-        } else if (e.key === 'Tab') {
-          closeActiveGlassMenu();
-        }
-      });
-
-      if (selectEl) {
-        selectEl.addEventListener('change', () => {
-          setSelected(selectEl.value, false);
-        });
-        if (selectEl.value) {
-          setSelected(selectEl.value, false);
-        }
-      }
-
-      const parentForm = wrapper.closest('form');
-      if (parentForm) {
-        parentForm.addEventListener('reset', () => {
-          setTimeout(() => {
-            if (selectEl) setSelected(selectEl.value, false);
-          }, 10);
-        });
-      }
-    });
-  }
-
-  // Global Outside Click, Escape, and Reposition listeners
-  if (typeof window !== 'undefined' && !window._glassSelectGlobalBound) {
-    window._glassSelectGlobalBound = true;
-
-    // Reposition on scroll or resize
-    const handleGlassReposition = () => {
-      if (_activeGlassMenu && _activeGlassTrigger) {
-        positionGlassMenu(_activeGlassTrigger, _activeGlassMenu);
-      }
-    };
-    window.addEventListener('scroll', handleGlassReposition, { passive: true, capture: true });
-    window.addEventListener('resize', handleGlassReposition, { passive: true });
-
-    document.addEventListener('click', (e) => {
-      if (!_activeGlassMenu) return;
-      const clickedTrigger = _activeGlassTrigger && (_activeGlassTrigger === e.target || _activeGlassTrigger.contains(e.target));
-      const clickedMenu = _activeGlassMenu && (_activeGlassMenu === e.target || _activeGlassMenu.contains(e.target));
-      if (!clickedTrigger && !clickedMenu) {
-        closeActiveGlassMenu();
-      }
-    });
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && _activeGlassMenu) {
-        const trigger = _activeGlassTrigger;
-        closeActiveGlassMenu();
-        trigger?.focus();
-      }
-    });
-  }
-
-  // Standardized Role & Status Badge Builders
-  function getUserRoleBadge(u, isOwner) {
-    if (isOwner || u.role === 'owner' || u.role === 'super_admin' || u.is_owner === 1 || u.is_owner === true) {
-      return '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-xs"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Super Admin</span>';
-    } else if (u.role === 'admin') {
-      return '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200 shadow-xs"><i class="fa-solid fa-shield-halved text-[9px]"></i> Admin</span>';
-    } else if (u.role === 'accounts') {
-      return '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200 shadow-xs"><i class="fa-solid fa-calculator text-[9px]"></i> Accounts</span>';
-    } else if (u.role === 'employee' || u.role === 'project_manager') {
-      return '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-teal-50 text-teal-700 border border-teal-200 shadow-xs"><i class="fa-solid fa-briefcase text-[9px]"></i> Employee</span>';
-    } else {
-      return '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200 shadow-xs"><i class="fa-solid fa-user text-[9px]"></i> Client</span>';
-    }
-  }
-
-  function getUserStatusBadge(status) {
-    const s = (status || 'active').toLowerCase();
-    if (s === 'active') {
-      return '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Active</span>';
-    } else if (s === 'suspended') {
-      return '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Suspended</span>';
-    } else if (s === 'revoked') {
-      return '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider text-rose-700 bg-rose-50 border border-rose-200"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Revoked</span>';
-    } else {
-      return '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider text-slate-600 bg-slate-100 border border-slate-200"><span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> ' + escapeHtml(status || 'Pending') + '</span>';
-    }
-  }
-
-  async function loadTeamData() {
-    const tbody = document.getElementById('userDirectoryTableBody');
-    const cardsContainer = document.getElementById('adminUserCardsContainer');
-    if (tbody) {
-      tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic"><i class="fa-solid fa-circle-notch fa-spin mr-2 text-[#147D64]"></i>Loading users directory...</td></tr>';
-    }
-    if (cardsContainer) {
-      cardsContainer.innerHTML = '<div class="p-6 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 italic shadow-xs"><i class="fa-solid fa-circle-notch fa-spin mr-2 text-[#147D64]"></i>Loading users directory...</div>';
-    }
-
-    try {
-      const [usersSettled, historySettled, teamSettled] = await Promise.allSettled([
-        apiFetch('/portal/admin/users'),
-        apiFetch('/portal/admin/role-history'),
-        apiFetch('/portal/admin/team')
-      ]);
-
-      const usersRes = usersSettled.status === 'fulfilled' ? usersSettled.value : null;
-      const historyRes = historySettled.status === 'fulfilled' ? historySettled.value : null;
-      const teamRes = teamSettled.status === 'fulfilled' ? teamSettled.value : null;
-
-      if (usersRes && usersRes.ok && usersRes.data && usersRes.data.data) {
-        state.usersCache = usersRes.data.data.users || [];
-        initGlassSelects(); // Sync team selects
-        try {
-          renderUserDirectory();
-        } catch (renderErr) {
-          console.error('renderUserDirectory error:', renderErr);
-        }
-      } else {
-        const errorMsg = usersRes?.data?.error || (usersSettled.status === 'rejected' ? 'Connection error' : 'Failed to load users directory.');
-        if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-6 text-center text-rose-500 font-medium">${escapeHtml(errorMsg)}</td></tr>`;
-        if (cardsContainer) cardsContainer.innerHTML = `<div class="p-6 rounded-2xl bg-white border border-rose-200 text-center text-xs text-rose-500 font-medium shadow-xs">${escapeHtml(errorMsg)}</div>`;
-      }
-
-      if (historyRes && historyRes.ok && historyRes.data) {
-        state.roleHistoryCache = historyRes.data.data || [];
-        try {
-          renderRoleHistory();
-        } catch (histErr) {
-          console.error('renderRoleHistory error:', histErr);
-        }
-      }
-
-      if (teamRes && teamRes.ok && teamRes.data) {
-        const teamData = teamRes.data.data || teamRes.data;
-        try {
-          renderTeamManagement(teamData);
-        } catch (teamErr) {
-          console.error('renderTeamManagement error:', teamErr);
-        }
-      }
-    } catch (err) {
-      console.error('User Directory Fetch Error:', err);
-      const failMsg = 'Failed to load user directory. Please retry.';
-      if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-6 text-center text-rose-500 font-medium">${failMsg}</td></tr>`;
-      if (cardsContainer) cardsContainer.innerHTML = `<div class="p-6 rounded-2xl bg-white border border-rose-200 text-center text-xs text-rose-500 font-medium shadow-xs">${failMsg}</div>`;
-    }
-  }
-
-  function renderUserDirectory() {
-    const tbody = document.getElementById('userDirectoryTableBody');
-    const countEl = document.getElementById('userDirectoryCount');
-    const cardsContainer = document.getElementById('adminUserCardsContainer');
-    if (!tbody && !cardsContainer) return;
-
-    const query = (document.getElementById('userDirectorySearch')?.value || '').toLowerCase().trim();
-    const roleFilter = document.getElementById('userDirectoryRoleFilter')?.value || 'all';
-    const statusFilter = document.getElementById('userDirectoryStatusFilter')?.value || 'all';
-
-    // Toggle clear search button
-    const clearBtn = document.getElementById('userDirectorySearchClear');
-    if (clearBtn) {
-      clearBtn.classList.toggle('hidden', !query);
-    }
-
-    let filtered = state.usersCache.filter(u => {
-      const fullName = (u.full_name || u.fullName || '').toLowerCase();
-      const email = (u.email || '').toLowerCase();
-      const username = (u.username || '').toLowerCase();
-      const clerkId = (u.clerk_user_id || u.clerkUserId || '').toLowerCase();
-      const company = (u.company_name || u.companyName || '').toLowerCase();
-      const role = (u.role || '').toLowerCase();
-
-      const matchesQuery = !query || 
-        fullName.includes(query) ||
-        email.includes(query) ||
-        username.includes(query) ||
-        clerkId.includes(query) ||
-        company.includes(query) ||
-        role.includes(query);
-
-      const matchesRole = roleFilter === 'all' || 
-        (roleFilter === 'client' && u.role === 'client') ||
-        (roleFilter === 'admin' && u.role === 'admin') ||
-        (roleFilter === 'accounts' && u.role === 'accounts') ||
-        (roleFilter === 'employee' && (u.role === 'employee' || u.role === 'project_manager')) ||
-        (roleFilter === 'owner' && (u.role === 'owner' || u.role === 'super_admin'));
-
-      const matchesStatus = statusFilter === 'all' || u.status === statusFilter;
-
-      return matchesQuery && matchesRole && matchesStatus;
-    });
-
-    if (countEl) countEl.textContent = `${filtered.length} account${filtered.length === 1 ? '' : 's'}`;
-
-    if (filtered.length === 0) {
-      const emptyMsg = '<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">No users match the search filter.</td></tr>';
-      if (tbody) tbody.innerHTML = emptyMsg;
-      if (cardsContainer) {
-        cardsContainer.innerHTML = `
+This will remove the test payment record and recalculate invoice balances. This action cannot be undone.`))return;const n=await L(`/finance/payments/${x}`,{method:"DELETE"});n.ok&&n.data&&n.data.success?(h(`Payment ${b.payment_number} permanently removed from ledger.`,"success"),ye()):h(n.data?.error||"Failed to delete payment.","error")})}))};l(t),r&&l(r)}}let se=null,ve=null,rt=null,ae=null;function zt(){return(!ae||!document.body.contains(ae))&&(ae=document.getElementById("whizGlassSelectPortal"),ae?(ae.style.zIndex="10005",ae.style.pointerEvents="none"):(ae=document.createElement("div"),ae.id="whizGlassSelectPortal",ae.className="whiz-glass-portal-root",ae.setAttribute("aria-hidden","false"),ae.style.cssText="position:fixed;top:0;left:0;width:100%;height:0;overflow:visible;pointer-events:none;z-index:10005;",document.body.appendChild(ae))),ae}function ot(s,t){if(!s||!t)return;const r=s.getBoundingClientRect();if(r.bottom<-30||r.top>window.innerHeight+30){le();return}const e=window.innerHeight,l=window.innerWidth,m=l<768?68:16,x=12,b=t.offsetHeight||t.scrollHeight||180,a=e-r.bottom-m,n=r.top-x;let d=!1,c=0,o=270;a<Math.min(b,155)&&n>a?(d=!0,o=Math.max(110,Math.min(270,n-10)),c=Math.max(x,r.top-Math.min(b,o)-6)):(d=!1,o=Math.max(110,Math.min(270,a-10)),c=r.bottom+6);let u=r.left,g=r.width||s.offsetWidth||240;const w=l-16;g>w?(g=w,u=8):u+g>l-8?u=Math.max(8,l-g-8):u<8&&(u=8),t.classList.toggle("dropup",d),t.style.position="fixed",t.style.top=Math.round(c)+"px",t.style.left=Math.round(u)+"px",t.style.width=Math.round(g)+"px",t.style.maxHeight=Math.round(o)+"px",t.style.zIndex="10010",t.style.pointerEvents="auto"}function le(){if(!se)return;const s=se,t=ve,r=rt;s.classList.remove("open","dropup"),s.style.display="none",t?.classList.remove("active"),t?.setAttribute("aria-expanded","false"),r&&s.parentNode!==r&&r.appendChild(s),s.style.position="",s.style.top="",s.style.left="",s.style.width="",s.style.maxHeight="",s.style.zIndex="",s.style.pointerEvents="",se=null,ve=null,rt=null}function H(){document.querySelectorAll("[data-glass-select]").forEach(t=>{const r=t.querySelector("select"),e=t.querySelector(".glass-select-trigger"),l=t.querySelector(".glass-select-menu")||document.getElementById("whizGlassSelectPortal")?.querySelector('[id="'+t.dataset.glassSelect+'Menu"]'),i=e?.querySelector(".select-label"),m=e?.querySelector(".select-icon");if(!e||!l)return;const x=()=>Array.from(l.querySelectorAll(".glass-select-option"));if(t.dataset.glassInitialized==="true"){const d=r?.value||"";x().forEach(o=>{const u=o.dataset.value===d;if(o.classList.toggle("selected",u),o.setAttribute("aria-selected",u?"true":"false"),u){if(i){const v=o.querySelector(".select-opt-text")?.textContent||o.querySelector("span:not(.currency-badge)")?.textContent||o.querySelector("span")?.textContent||o.textContent.trim();i.textContent=v}const g=o.querySelector(".option-icon");g&&m&&(m.className=g.className.replace("option-icon","select-icon"));const w=e.querySelector(".select-currency-symbol"),C=o.querySelector(".currency-badge");w&&C&&(w.textContent=C.textContent)}});return}t.dataset.glassInitialized="true";function b(d,c=!0){r&&(r.value=d),x().forEach(u=>{const g=u.dataset.value===d;if(u.classList.toggle("selected",g),u.setAttribute("aria-selected",g?"true":"false"),g){if(i){const v=u.querySelector(".select-opt-text")?.textContent||u.querySelector("span:not(.currency-badge)")?.textContent||u.querySelector("span")?.textContent||u.textContent.trim();i.textContent=v}if(m){const v=u.querySelector(".option-icon");v&&(m.className=v.className.replace("option-icon","select-icon"))}const w=e.querySelector(".select-currency-symbol"),C=u.querySelector(".currency-badge");w&&C&&(w.textContent=C.textContent)}}),c&&r&&r.dispatchEvent(new Event("change",{bubbles:!0}))}function a(d){(typeof d=="boolean"?d:l!==se||!l.classList.contains("open"))?(se&&se!==l&&le(),se=l,ve=e,rt=t,zt().appendChild(l),l.style.display="block",ot(e,l),requestAnimationFrame(()=>{l.classList.add("open"),e.classList.add("active"),e.setAttribute("aria-expanded","true"),ot(e,l);const u=x();(l.querySelector(".glass-select-option.selected")||u[0])?.focus()})):le()}e.addEventListener("click",d=>{d.preventDefault(),d.stopPropagation(),a()}),e.addEventListener("keydown",d=>{d.key==="ArrowDown"||d.key==="Enter"||d.key===" "?(d.preventDefault(),a(!0)):d.key==="Escape"&&a(!1)}),l.addEventListener("click",d=>{const c=d.target.closest(".glass-select-option");c&&(d.preventDefault(),d.stopPropagation(),b(c.dataset.value,!0),le(),e.focus())}),l.addEventListener("keydown",d=>{const c=d.target.closest(".glass-select-option");if(!c)return;const o=x(),u=o.indexOf(c);d.key==="Enter"||d.key===" "?(d.preventDefault(),b(c.dataset.value,!0),le(),e.focus()):d.key==="ArrowDown"?(d.preventDefault(),(o[u+1]||o[0])?.focus()):d.key==="ArrowUp"?(d.preventDefault(),(o[u-1]||o[o.length-1])?.focus()):d.key==="Escape"?(d.preventDefault(),le(),e.focus()):d.key==="Tab"&&le()}),r&&(r.addEventListener("change",()=>{b(r.value,!1)}),r.value&&b(r.value,!1));const n=t.closest("form");n&&n.addEventListener("reset",()=>{setTimeout(()=>{r&&b(r.value,!1)},10)})})}if(typeof window<"u"&&!window._glassSelectGlobalBound){window._glassSelectGlobalBound=!0;const s=()=>{se&&ve&&ot(ve,se)};window.addEventListener("scroll",s,{passive:!0,capture:!0}),window.addEventListener("resize",s,{passive:!0}),document.addEventListener("click",t=>{if(!se)return;const r=ve&&(ve===t.target||ve.contains(t.target)),e=se&&(se===t.target||se.contains(t.target));!r&&!e&&le()}),document.addEventListener("keydown",t=>{if(t.key==="Escape"&&se){const r=ve;le(),r?.focus()}})}function Bt(s,t){return t||s.role==="owner"||s.role==="super_admin"||s.is_owner===1||s.is_owner===!0?'<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-xs"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Super Admin</span>':s.role==="admin"?'<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200 shadow-xs"><i class="fa-solid fa-shield-halved text-[9px]"></i> Admin</span>':s.role==="accounts"?'<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200 shadow-xs"><i class="fa-solid fa-calculator text-[9px]"></i> Accounts</span>':s.role==="employee"||s.role==="project_manager"?'<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-teal-50 text-teal-700 border border-teal-200 shadow-xs"><i class="fa-solid fa-briefcase text-[9px]"></i> Employee</span>':'<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200 shadow-xs"><i class="fa-solid fa-user text-[9px]"></i> Client</span>'}function It(s){const t=(s||"active").toLowerCase();return t==="active"?'<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Active</span>':t==="suspended"?'<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Suspended</span>':t==="revoked"?'<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider text-rose-700 bg-rose-50 border border-rose-200"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Revoked</span>':'<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider text-slate-600 bg-slate-100 border border-slate-200"><span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> '+p(s||"Pending")+"</span>"}async function fe(){const s=document.getElementById("userDirectoryTableBody"),t=document.getElementById("adminUserCardsContainer");s&&(s.innerHTML='<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic"><i class="fa-solid fa-circle-notch fa-spin mr-2 text-[#147D64]"></i>Loading users directory...</td></tr>'),t&&(t.innerHTML='<div class="p-6 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 italic shadow-xs"><i class="fa-solid fa-circle-notch fa-spin mr-2 text-[#147D64]"></i>Loading users directory...</div>');try{const[r,e,l]=await Promise.allSettled([L("/portal/admin/users"),L("/portal/admin/role-history"),L("/portal/admin/team")]),i=r.status==="fulfilled"?r.value:null,m=e.status==="fulfilled"?e.value:null,x=l.status==="fulfilled"?l.value:null;if(i&&i.ok&&i.data&&i.data.data){y.usersCache=i.data.data.users||[],H();try{$e()}catch(b){console.error("renderUserDirectory error:",b)}}else{const b=i?.data?.error||(r.status==="rejected"?"Connection error":"Failed to load users directory.");s&&(s.innerHTML=`<tr><td colspan="6" class="px-6 py-6 text-center text-rose-500 font-medium">${p(b)}</td></tr>`),t&&(t.innerHTML=`<div class="p-6 rounded-2xl bg-white border border-rose-200 text-center text-xs text-rose-500 font-medium shadow-xs">${p(b)}</div>`)}if(m&&m.ok&&m.data){y.roleHistoryCache=m.data.data||[];try{Ut()}catch(b){console.error("renderRoleHistory error:",b)}}if(x&&x.ok&&x.data){const b=x.data.data||x.data;try{Wt(b)}catch(a){console.error("renderTeamManagement error:",a)}}}catch(r){console.error("User Directory Fetch Error:",r);const e="Failed to load user directory. Please retry.";s&&(s.innerHTML=`<tr><td colspan="6" class="px-6 py-6 text-center text-rose-500 font-medium">${e}</td></tr>`),t&&(t.innerHTML=`<div class="p-6 rounded-2xl bg-white border border-rose-200 text-center text-xs text-rose-500 font-medium shadow-xs">${e}</div>`)}}function $e(){const s=document.getElementById("userDirectoryTableBody"),t=document.getElementById("userDirectoryCount"),r=document.getElementById("adminUserCardsContainer");if(!s&&!r)return;const e=(document.getElementById("userDirectorySearch")?.value||"").toLowerCase().trim(),l=document.getElementById("userDirectoryRoleFilter")?.value||"all",i=document.getElementById("userDirectoryStatusFilter")?.value||"all",m=document.getElementById("userDirectorySearchClear");m&&m.classList.toggle("hidden",!e);let x=y.usersCache.filter(a=>{const n=(a.full_name||a.fullName||"").toLowerCase(),d=(a.email||"").toLowerCase(),c=(a.username||"").toLowerCase(),o=(a.clerk_user_id||a.clerkUserId||"").toLowerCase(),u=(a.company_name||a.companyName||"").toLowerCase(),g=(a.role||"").toLowerCase(),w=!e||n.includes(e)||d.includes(e)||c.includes(e)||o.includes(e)||u.includes(e)||g.includes(e),C=l==="all"||l==="client"&&a.role==="client"||l==="admin"&&a.role==="admin"||l==="accounts"&&a.role==="accounts"||l==="employee"&&(a.role==="employee"||a.role==="project_manager")||l==="owner"&&(a.role==="owner"||a.role==="super_admin"),v=i==="all"||a.status===i;return w&&C&&v});if(t&&(t.textContent=`${x.length} account${x.length===1?"":"s"}`),x.length===0){const a='<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">No users match the search filter.</td></tr>';s&&(s.innerHTML=a),r&&(r.innerHTML=`
           <div class="p-8 rounded-2xl sm:rounded-3xl bg-white border border-[#E3E9EF] text-center shadow-xs space-y-3">
             <div class="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-center mx-auto text-slate-400">
               <i class="fa-solid fa-users-slash text-lg"></i>
@@ -3017,109 +609,33 @@
               <span>Reset All Filters</span>
             </button>
           </div>
-        `;
-      }
-      return;
-    }
-
-    // Desktop Table
-    if (tbody) {
-      tbody.innerHTML = filtered.map(u => {
-        const email = u.email || '';
-        const isOwner = email.toLowerCase() === 'kaziaremon@gmail.com' || u.role === 'owner' || u.role === 'super_admin' || u.is_owner === 1 || u.is_owner === true;
-        const fullName = u.full_name || u.fullName || 'Registered User';
-        const initials = (fullName || email || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-        const clerkId = u.clerk_user_id || u.clerkUserId || '';
-        const companyName = u.company_name || u.companyName || '';
-        const createdAt = u.created_at || u.createdAt;
-
-        const roleBadge = getUserRoleBadge(u, isOwner);
-        const statusBadge = getUserStatusBadge(u.status);
-
-        const isSelf = isCurrentAdminSelf(u);
-        const isOwnerActor = isCurrentUserOwner();
-        const isTargetOwner = isOwner;
-
-        let actionsHtml = '';
-        if (isTargetOwner) {
-          actionsHtml = '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-mono font-bold text-emerald-800 bg-emerald-50 border border-emerald-300"><i class="fa-solid fa-crown text-[10px] text-amber-500"></i> Founding Owner</span>';
-        } else if (isSelf) {
-          actionsHtml = '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold text-slate-600 bg-slate-100 border border-slate-200"><i class="fa-solid fa-user-check text-[#087F70] text-[10px]"></i> Current Account</span>';
-        } else if (u.status === 'suspended') {
-          const canManageSuspended = u.role !== 'admin' || isOwnerActor;
-          actionsHtml = `
+        `);return}s&&(s.innerHTML=x.map(a=>{const n=a.email||"",d=n.toLowerCase()==="kaziaremon@gmail.com"||a.role==="owner"||a.role==="super_admin"||a.is_owner===1||a.is_owner===!0,c=a.full_name||a.fullName||"Registered User",o=(c||n||"U").split(" ").map(D=>D[0]).join("").slice(0,2).toUpperCase(),u=a.clerk_user_id||a.clerkUserId||"",g=a.company_name||a.companyName||"",w=a.created_at||a.createdAt,C=Bt(a,d),v=It(a.status),B=Ee(a),I=X(),F=d;let M="";if(F)M='<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-mono font-bold text-emerald-800 bg-emerald-50 border border-emerald-300"><i class="fa-solid fa-crown text-[10px] text-amber-500"></i> Founding Owner</span>';else if(B)M='<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold text-slate-600 bg-slate-100 border border-slate-200"><i class="fa-solid fa-user-check text-[#087F70] text-[10px]"></i> Current Account</span>';else if(a.status==="suspended"){const D=a.role!=="admin"||I;M=`
             <div class="flex items-center justify-end gap-1.5">
-              ${u.role === 'client' ? `<button type="button" class="btn-user-view-details px-2.5 py-1 rounded-lg text-xs font-bold bg-white hover:bg-slate-50 text-[#172B36] border border-[#E3E9EF] cursor-pointer" data-id="${u.id}"><i class="fa-solid fa-eye mr-1 text-[#087F70]"></i>Details</button>` : ''}
-              ${canManageSuspended ? `<button type="button" class="btn-user-reactivate px-2.5 py-1 rounded-lg text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 cursor-pointer" data-id="${u.id}"><i class="fa-solid fa-play mr-1"></i>Reactivate</button>` : ''}
-              ${canManageSuspended ? `<button type="button" class="btn-user-delete px-2.5 py-1 rounded-lg text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 cursor-pointer" data-id="${u.id}" data-name="${escapeHtml(fullName)}"><i class="fa-solid fa-trash-can mr-1"></i>Delete</button>` : ''}
+              ${a.role==="client"?`<button type="button" class="btn-user-view-details px-2.5 py-1 rounded-lg text-xs font-bold bg-white hover:bg-slate-50 text-[#172B36] border border-[#E3E9EF] cursor-pointer" data-id="${a.id}"><i class="fa-solid fa-eye mr-1 text-[#087F70]"></i>Details</button>`:""}
+              ${D?`<button type="button" class="btn-user-reactivate px-2.5 py-1 rounded-lg text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 cursor-pointer" data-id="${a.id}"><i class="fa-solid fa-play mr-1"></i>Reactivate</button>`:""}
+              ${D?`<button type="button" class="btn-user-delete px-2.5 py-1 rounded-lg text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 cursor-pointer" data-id="${a.id}" data-name="${p(c)}"><i class="fa-solid fa-trash-can mr-1"></i>Delete</button>`:""}
             </div>
-          `;
-        } else {
-          const canRevokeAdmin = isOwnerActor && u.role === 'admin';
-          const canDemoteStaff = isOwnerActor && (u.role === 'accounts' || u.role === 'employee');
-          const canSuspend = u.role === 'client' || ((u.role === 'admin' || u.role === 'accounts' || u.role === 'employee') && isOwnerActor);
-
-          const roleBtn = canRevokeAdmin
-            ? `<button type="button" class="btn-role-action px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition-all cursor-pointer" data-id="${u.id}" data-role="client" data-email="${escapeHtml(email)}" data-name="${escapeHtml(fullName)}"><i class="fa-solid fa-arrow-down mr-1 text-[10px]"></i>Revoke Admin</button>`
-            : (canDemoteStaff
-                ? `<button type="button" class="btn-role-action px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition-all cursor-pointer" data-id="${u.id}" data-role="client" data-email="${escapeHtml(email)}" data-name="${escapeHtml(fullName)}"><i class="fa-solid fa-arrow-down mr-1 text-[10px]"></i>Demote Role</button>`
-                : '');
-
-          const suspendBtn = canSuspend
-            ? `<button type="button" class="btn-user-suspend px-2.5 py-1 rounded-lg text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 cursor-pointer" data-id="${u.id}"><i class="fa-solid fa-pause mr-1"></i>Suspend</button>`
-            : '';
-
-          actionsHtml = (roleBtn || suspendBtn)
-            ? `<div class="flex items-center justify-end gap-1.5">${roleBtn}${suspendBtn}</div>`
-            : '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-slate-500 bg-slate-50 border border-slate-200">Active</span>';
-        }
-
-        return `
+          `}else{const D=I&&a.role==="admin",_=I&&(a.role==="accounts"||a.role==="employee"),N=a.role==="client"||(a.role==="admin"||a.role==="accounts"||a.role==="employee")&&I,j=D?`<button type="button" class="btn-role-action px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition-all cursor-pointer" data-id="${a.id}" data-role="client" data-email="${p(n)}" data-name="${p(c)}"><i class="fa-solid fa-arrow-down mr-1 text-[10px]"></i>Revoke Admin</button>`:_?`<button type="button" class="btn-role-action px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition-all cursor-pointer" data-id="${a.id}" data-role="client" data-email="${p(n)}" data-name="${p(c)}"><i class="fa-solid fa-arrow-down mr-1 text-[10px]"></i>Demote Role</button>`:"",W=N?`<button type="button" class="btn-user-suspend px-2.5 py-1 rounded-lg text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 cursor-pointer" data-id="${a.id}"><i class="fa-solid fa-pause mr-1"></i>Suspend</button>`:"";M=j||W?`<div class="flex items-center justify-end gap-1.5">${j}${W}</div>`:'<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-slate-500 bg-slate-50 border border-slate-200">Active</span>'}return`
           <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
             <td class="px-6 py-4">
               <div class="flex items-center space-x-3">
                 <div class="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-xs text-[#172B36] uppercase shrink-0">
-                  ${escapeHtml(initials)}
+                  ${p(o)}
                 </div>
                 <div class="min-w-0">
-                  <div class="font-bold text-[#172B36] truncate">${escapeHtml(fullName)}</div>
-                  <div class="text-xs text-slate-500 font-mono truncate">${escapeHtml(email)}</div>
-                  ${clerkId ? `<div class="inline-flex items-center gap-1 text-[10px] text-emerald-700 font-semibold mt-0.5"><i class="fa-solid fa-shield-check text-[9px]"></i>SSO Linked</div>` : '<div class="text-[10px] text-slate-400 mt-0.5">Direct Verified</div>'}
+                  <div class="font-bold text-[#172B36] truncate">${p(c)}</div>
+                  <div class="text-xs text-slate-500 font-mono truncate">${p(n)}</div>
+                  ${u?'<div class="inline-flex items-center gap-1 text-[10px] text-emerald-700 font-semibold mt-0.5"><i class="fa-solid fa-shield-check text-[9px]"></i>SSO Linked</div>':'<div class="text-[10px] text-slate-400 mt-0.5">Direct Verified</div>'}
                 </div>
               </div>
             </td>
-            <td class="px-6 py-4">${roleBadge}</td>
-            <td class="px-6 py-4">${statusBadge}</td>
-            <td class="px-6 py-4 text-slate-600 text-xs">${companyName ? escapeHtml(companyName) : '<span class="text-slate-400 italic">None</span>'}</td>
-            <td class="px-6 py-4 text-slate-500 text-xs font-mono">${createdAt ? new Date(createdAt).toLocaleDateString() : 'N/A'}</td>
-            <td class="px-6 py-4 text-right">${actionsHtml}</td>
+            <td class="px-6 py-4">${C}</td>
+            <td class="px-6 py-4">${v}</td>
+            <td class="px-6 py-4 text-slate-600 text-xs">${g?p(g):'<span class="text-slate-400 italic">None</span>'}</td>
+            <td class="px-6 py-4 text-slate-500 text-xs font-mono">${w?new Date(w).toLocaleDateString():"N/A"}</td>
+            <td class="px-6 py-4 text-right">${M}</td>
           </tr>
-        `;
-      }).join('');
-    }
-
-    // Mobile Cards (Task 3 & 7)
-    if (cardsContainer) {
-      cardsContainer.innerHTML = filtered.map(u => {
-        const email = u.email || '';
-        const isOwner = email.toLowerCase() === 'kaziaremon@gmail.com' || u.role === 'owner' || u.role === 'super_admin' || u.is_owner === 1 || u.is_owner === true;
-        const fullName = u.full_name || u.fullName || 'Registered User';
-        const initials = (fullName || email || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-        const clerkId = u.clerk_user_id || u.clerkUserId || '';
-        const companyName = u.company_name || u.companyName || '';
-        const createdAt = u.created_at || u.createdAt;
-        const formattedDate = createdAt ? new Date(createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
-
-        const roleBadge = getUserRoleBadge(u, isOwner);
-        const statusBadge = getUserStatusBadge(u.status);
-
-        const isSelf = isCurrentAdminSelf(u);
-        const isOwnerActor = isCurrentUserOwner();
-        const isTargetOwner = isOwner;
-
-        let actionsHtml = '';
-        if (isTargetOwner) {
-          actionsHtml = `
+        `}).join("")),r&&(r.innerHTML=x.map(a=>{const n=a.email||"",d=n.toLowerCase()==="kaziaremon@gmail.com"||a.role==="owner"||a.role==="super_admin"||a.is_owner===1||a.is_owner===!0,c=a.full_name||a.fullName||"Registered User",o=(c||n||"U").split(" ").map(_=>_[0]).join("").slice(0,2).toUpperCase(),u=a.clerk_user_id||a.clerkUserId||"",g=a.company_name||a.companyName||"",w=a.created_at||a.createdAt,C=w?new Date(w).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}):"N/A",v=Bt(a,d),B=It(a.status),I=Ee(a),F=X(),M=d;let D="";if(M)D=`
             <div class="p-3 rounded-xl bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200/80 flex items-center justify-between text-xs">
               <div class="flex items-center gap-2 font-bold text-emerald-800">
                 <i class="fa-solid fa-crown text-amber-500 text-xs"></i>
@@ -3127,9 +643,7 @@
               </div>
               <span class="text-[10px] font-mono font-extrabold uppercase bg-emerald-100/90 text-emerald-800 px-2.5 py-0.5 rounded-full border border-emerald-300">Protected</span>
             </div>
-          `;
-        } else if (isSelf) {
-          actionsHtml = `
+          `;else if(I)D=`
             <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
               <div class="flex items-center gap-2 font-bold text-slate-700">
                 <i class="fa-solid fa-user-check text-[#087F70] text-xs"></i>
@@ -3137,101 +651,83 @@
               </div>
               <span class="text-[10px] font-mono font-bold uppercase bg-white text-slate-600 px-2.5 py-0.5 rounded-full border border-slate-200">Current</span>
             </div>
-          `;
-        } else if (u.status === 'suspended') {
-          const canManageSuspended = u.role !== 'admin' || isOwnerActor;
-          actionsHtml = `
-            <div class="grid ${canManageSuspended ? 'grid-cols-2' : 'grid-cols-1'} gap-2">
-              ${canManageSuspended ? `
-                <button type="button" class="btn-user-reactivate h-11 px-3 rounded-xl text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs" data-id="${u.id}">
+          `;else if(a.status==="suspended"){const _=a.role!=="admin"||F;D=`
+            <div class="grid ${_?"grid-cols-2":"grid-cols-1"} gap-2">
+              ${_?`
+                <button type="button" class="btn-user-reactivate h-11 px-3 rounded-xl text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs" data-id="${a.id}">
                   <i class="fa-solid fa-play text-[10px]"></i>
                   <span>Reactivate</span>
                 </button>
-                <button type="button" class="btn-user-delete h-11 px-3 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs" data-id="${u.id}" data-name="${escapeHtml(fullName)}">
+                <button type="button" class="btn-user-delete h-11 px-3 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs" data-id="${a.id}" data-name="${p(c)}">
                   <i class="fa-solid fa-trash-can text-[10px]"></i>
                   <span>Delete</span>
                 </button>
-              ` : '<span class="text-xs text-slate-400 italic text-center py-2.5">Suspended Account</span>'}
+              `:'<span class="text-xs text-slate-400 italic text-center py-2.5">Suspended Account</span>'}
             </div>
-          `;
-        } else {
-          const canRevokeAdmin = isOwnerActor && u.role === 'admin';
-          const canDemoteStaff = isOwnerActor && (u.role === 'accounts' || u.role === 'employee');
-          const canSuspend = u.role === 'client' || ((u.role === 'admin' || u.role === 'accounts' || u.role === 'employee') && isOwnerActor);
-
-          if (u.role === 'client') {
-            actionsHtml = `
+          `}else{const _=F&&a.role==="admin",N=F&&(a.role==="accounts"||a.role==="employee"),j=a.role==="client"||(a.role==="admin"||a.role==="accounts"||a.role==="employee")&&F;a.role==="client"?D=`
               <div class="grid grid-cols-2 gap-2">
-                <button type="button" class="btn-user-view-details h-11 px-3 rounded-xl text-xs font-bold text-[#172B36] bg-white hover:bg-slate-50 border border-[#E3E9EF] transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs" data-id="${u.id}">
+                <button type="button" class="btn-user-view-details h-11 px-3 rounded-xl text-xs font-bold text-[#172B36] bg-white hover:bg-slate-50 border border-[#E3E9EF] transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs" data-id="${a.id}">
                   <i class="fa-solid fa-eye text-[#087F70] text-[11px]"></i>
                   <span>View Details</span>
                 </button>
-                ${canSuspend ? `
-                  <button type="button" class="btn-user-suspend h-11 px-3 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs" data-id="${u.id}">
+                ${j?`
+                  <button type="button" class="btn-user-suspend h-11 px-3 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs" data-id="${a.id}">
                     <i class="fa-solid fa-pause text-[10px]"></i>
                     <span>Suspend</span>
                   </button>
-                ` : ''}
+                `:""}
               </div>
-            `;
-          } else if (u.role === 'admin') {
-            actionsHtml = `
-              <div class="grid ${canRevokeAdmin && canSuspend ? 'grid-cols-2' : 'grid-cols-1'} gap-2">
-                ${canRevokeAdmin ? `
-                  <button type="button" class="btn-role-action h-11 px-3 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs" data-id="${u.id}" data-role="client" data-email="${escapeHtml(email)}" data-name="${escapeHtml(fullName)}">
+            `:a.role==="admin"?D=`
+              <div class="grid ${_&&j?"grid-cols-2":"grid-cols-1"} gap-2">
+                ${_?`
+                  <button type="button" class="btn-role-action h-11 px-3 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs" data-id="${a.id}" data-role="client" data-email="${p(n)}" data-name="${p(c)}">
                     <i class="fa-solid fa-user-minus text-[10px]"></i>
                     <span>Revoke Admin</span>
                   </button>
-                ` : ''}
-                ${canSuspend ? `
-                  <button type="button" class="btn-user-suspend h-11 px-3 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs" data-id="${u.id}">
+                `:""}
+                ${j?`
+                  <button type="button" class="btn-user-suspend h-11 px-3 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs" data-id="${a.id}">
                     <i class="fa-solid fa-pause text-[10px]"></i>
                     <span>Suspend</span>
                   </button>
-                ` : ''}
+                `:""}
               </div>
-            `;
-          } else {
-            actionsHtml = `
-              <div class="grid ${canDemoteStaff && canSuspend ? 'grid-cols-2' : 'grid-cols-1'} gap-2">
-                ${canDemoteStaff ? `
-                  <button type="button" class="btn-role-action h-11 px-3 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs" data-id="${u.id}" data-role="client" data-email="${escapeHtml(email)}" data-name="${escapeHtml(fullName)}">
+            `:D=`
+              <div class="grid ${N&&j?"grid-cols-2":"grid-cols-1"} gap-2">
+                ${N?`
+                  <button type="button" class="btn-role-action h-11 px-3 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs" data-id="${a.id}" data-role="client" data-email="${p(n)}" data-name="${p(c)}">
                     <i class="fa-solid fa-arrow-down text-[10px]"></i>
                     <span>Demote Role</span>
                   </button>
-                ` : ''}
-                ${canSuspend ? `
-                  <button type="button" class="btn-user-suspend h-11 px-3 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs" data-id="${u.id}">
+                `:""}
+                ${j?`
+                  <button type="button" class="btn-user-suspend h-11 px-3 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs" data-id="${a.id}">
                     <i class="fa-solid fa-pause text-[10px]"></i>
                     <span>Suspend</span>
                   </button>
-                ` : ''}
+                `:""}
               </div>
-            `;
-          }
-        }
-
-        return `
+            `}return`
           <div class="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white border border-[#E6ECE9] shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_24px_rgba(20,125,100,0.08)] transition-all space-y-3.5">
             <!-- Section A: User Identity -->
             <div class="flex items-start justify-between gap-3">
               <div class="flex items-center gap-3 min-w-0 flex-1">
                 <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#EAF5F1] to-[#D5EDE5] border border-[#087F70]/20 flex items-center justify-center font-black text-xs text-[#087F70] uppercase shrink-0 shadow-xs">
-                  ${escapeHtml(initials)}
+                  ${p(o)}
                 </div>
                 <div class="min-w-0 flex-1">
-                  <h4 class="text-sm font-black text-[#172B36] truncate leading-tight" title="${escapeHtml(fullName)}">
-                    ${escapeHtml(fullName)}
+                  <h4 class="text-sm font-black text-[#172B36] truncate leading-tight" title="${p(c)}">
+                    ${p(c)}
                   </h4>
-                  <p class="text-xs font-mono text-slate-500 truncate mt-0.5" title="${escapeHtml(email)}">
-                    ${escapeHtml(email)}
+                  <p class="text-xs font-mono text-slate-500 truncate mt-0.5" title="${p(n)}">
+                    ${p(n)}
                   </p>
                   <div class="flex items-center gap-1.5 mt-1">
-                    ${clerkId ? `
+                    ${u?`
                       <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/60">
                         <i class="fa-solid fa-shield-check text-[9px]"></i> SSO Linked
                       </span>
-                    ` : `
+                    `:`
                       <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200/60">
                         <i class="fa-solid fa-envelope-circle-check text-[9px]"></i> Direct Account
                       </span>
@@ -3241,8 +737,8 @@
               </div>
               
               <div class="shrink-0 flex flex-col items-end gap-1.5">
-                ${roleBadge}
-                ${statusBadge}
+                ${v}
+                ${B}
               </div>
             </div>
 
@@ -3250,1002 +746,216 @@
             <div class="p-3 rounded-xl bg-slate-50/70 border border-slate-100/80 grid grid-cols-2 gap-2 text-xs">
               <div class="min-w-0">
                 <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Workspace / Company</span>
-                <span class="font-bold text-[#172B36] truncate block mt-0.5" title="${escapeHtml(companyName || 'None')}">
-                  ${companyName ? escapeHtml(companyName) : '<span class="text-slate-400 font-normal italic">None</span>'}
+                <span class="font-bold text-[#172B36] truncate block mt-0.5" title="${p(g||"None")}">
+                  ${g?p(g):'<span class="text-slate-400 font-normal italic">None</span>'}
                 </span>
               </div>
               <div class="min-w-0">
                 <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Registered On</span>
-                <span class="font-mono text-slate-600 block mt-0.5">${escapeHtml(formattedDate)}</span>
+                <span class="font-mono text-slate-600 block mt-0.5">${p(C)}</span>
               </div>
             </div>
 
             <!-- Section C: Account Actions -->
             <div class="pt-1 border-t border-slate-100/80">
-              ${actionsHtml}
+              ${D}
             </div>
           </div>
-        `;
-      }).join('');
-    }
-
-    function openRoleChangeModal(id, targetRole, email, name) {
-      if (!isCurrentUserOwner()) {
-        showToast('Action denied: Only the Founding Super Admin may modify administrative roles.', 'error');
-        return;
-      }
-      if (email && email.toLowerCase() === 'kaziaremon@gmail.com') {
-        showToast('Protection violation: Founding Super Admin account cannot be altered.', 'error');
-        return;
-      }
-      if (isCurrentAdminSelf({ id, email })) {
-        showToast('Self-management violation: You cannot alter your own account permissions.', 'error');
-        return;
-      }
-      const modal = document.getElementById('modalRoleChange');
-      if (!modal) return;
-      const idInput = document.getElementById('roleChangeUserId');
-      const roleInput = document.getElementById('roleChangeTargetRole');
-      const newRoleSelect = document.getElementById('roleChangeNewRole');
-      const titleEl = document.getElementById('modalRoleChangeTitle');
-      const descEl = document.getElementById('modalRoleChangeDesc');
-      const submitBtn = document.getElementById('btnSubmitRoleChange');
-
-      if (idInput) idInput.value = id;
-      if (roleInput) roleInput.value = targetRole;
-      if (newRoleSelect) {
-        newRoleSelect.value = targetRole;
-        newRoleSelect.dispatchEvent(new Event('change'));
-      }
-      if (titleEl) titleEl.innerHTML = '<i class="fa-solid fa-user-gear text-[#087F70] mr-2"></i><span>Update Account Role & Permissions</span>';
-      if (descEl) descEl.textContent = `Configure new security role permissions for ${name} (${email}). An authoritative audit record will be registered.`;
-      if (submitBtn) {
-        submitBtn.innerHTML = '<i class="fa-solid fa-check text-xs mr-1"></i><span>Confirm & Update Role</span>';
-      }
-      modal.classList.remove('hidden');
-    }
-
-    // Bind action buttons
-    document.querySelectorAll('.btn-role-action').forEach(btn => {
-      btn.addEventListener('click', () => {
-        openRoleChangeModal(btn.dataset.id, btn.dataset.role, btn.dataset.email, btn.dataset.name);
-      });
-    });
-
-    document.querySelectorAll('.btn-user-view-details').forEach(btn => {
-      btn.addEventListener('click', () => {
-        openClientDetails(btn.dataset.id);
-      });
-    });
-
-    document.querySelectorAll('.btn-user-reactivate').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const uid = btn.dataset.id;
-        const res = await apiFetch(`/portal/admin/users/${uid}/status`, {
-          method: 'PUT',
-          body: JSON.stringify({ status: 'active' })
-        });
-        if (res.ok) {
-          showToast('Account reactivated.', 'success');
-          loadTeamData();
-        } else {
-          showToast('Failed to reactivate.', 'error');
-        }
-      });
-    });
-
-    document.querySelectorAll('.btn-user-suspend').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const uid = btn.dataset.id;
-        const targetUser = state.usersCache.find(u => u.id === uid);
-        if (isCurrentAdminSelf(targetUser)) {
-          showToast('Self-management violation: You cannot suspend your own account.', 'error');
-          return;
-        }
-        const isTargetOwner = targetUser?.email?.toLowerCase() === 'kaziaremon@gmail.com' || targetUser?.role === 'owner' || targetUser?.role === 'super_admin';
-        if (isTargetOwner) {
-          showToast('Protection violation: The Founding Super Admin account cannot be suspended.', 'error');
-          return;
-        }
-        if (targetUser?.role === 'admin' && !isCurrentUserOwner()) {
-          showToast('Action denied: Only the Founding Super Admin may suspend an Administrator.', 'error');
-          return;
-        }
-        if (!confirm('Suspend this user account?')) return;
-        const res = await apiFetch(`/portal/admin/users/${uid}/status`, {
-          method: 'PUT',
-          body: JSON.stringify({ status: 'suspended' })
-        });
-        if (res.ok) {
-          showToast('Account suspended.', 'success');
-          loadTeamData();
-        } else {
-          showToast('Failed to suspend.', 'error');
-        }
-      });
-    });
-
-    document.querySelectorAll('.btn-user-delete').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const uid = btn.dataset.id;
-        const uname = btn.dataset.name;
-        const targetUser = state.usersCache.find(u => u.id === uid);
-        if (isCurrentAdminSelf(targetUser)) {
-          showToast('Self-management violation: You cannot delete your own account.', 'error');
-          return;
-        }
-        const isTargetOwner = targetUser?.email?.toLowerCase() === 'kaziaremon@gmail.com' || targetUser?.role === 'owner' || targetUser?.role === 'super_admin';
-        if (isTargetOwner) {
-          showToast('Protection violation: The Founding Super Admin account cannot be deleted.', 'error');
-          return;
-        }
-        if (targetUser?.role === 'admin' && !isCurrentUserOwner()) {
-          showToast('Action denied: Only the Founding Super Admin may delete an Administrator.', 'error');
-          return;
-        }
-        if (!confirm(`Permanently delete user account for ${uname}? This action cannot be undone.`)) return;
-        const res = await apiFetch(`/portal/admin/users/${uid}`, {
-          method: 'DELETE'
-        });
-        if (res.ok) {
-          showToast('Account permanently removed.', 'success');
-          loadTeamData();
-        } else {
-          showToast('Failed to delete account.', 'error');
-        }
-      });
-    });
-  }
-
-  function renderRoleHistory() {
-    const tbody = document.getElementById('roleHistoryTableBody');
-    const cardsContainer = document.getElementById('roleHistoryCardsContainer');
-    if (!tbody) return;
-
-    const history = state.roleHistoryCache || [];
-
-    if (history.length === 0) {
-      const emptyMsg = '<tr><td colspan="6" class="px-6 py-6 text-center text-slate-500 italic">No role transition records yet.</td></tr>';
-      tbody.innerHTML = emptyMsg;
-      if (cardsContainer) {
-        cardsContainer.innerHTML = '<div class="p-6 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 italic shadow-xs">No role transition records yet.</div>';
-      }
-      return;
-    }
-
-    // Desktop Table
-    tbody.innerHTML = history.map(h => {
-      const dateStr = h.action_timestamp ? new Date(h.action_timestamp).toLocaleString('en-US', {
-        month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
-      }) : '—';
-      const target = resolveUserIdentity(h.target_email || h.target_name || h.target_clerk_user_id || h.user_name || 'User', 'target');
-      const actor = resolveUserIdentity(h.actor_email || h.actor_name || h.actor_clerk_user_id || h.changed_by, 'actor');
-      const prevRole = h.previous_role || 'client';
-      const nextRole = h.new_role || 'admin';
-      const result = h.action_result || 'success';
-      const reason = sanitizeAuditDetails(h.reason || 'Administrative role update');
-
-      return `
+        `}).join(""));function b(a,n,d,c){if(!X()){h("Action denied: Only the Founding Super Admin may modify administrative roles.","error");return}if(d&&d.toLowerCase()==="kaziaremon@gmail.com"){h("Protection violation: Founding Super Admin account cannot be altered.","error");return}if(Ee({id:a,email:d})){h("Self-management violation: You cannot alter your own account permissions.","error");return}const o=document.getElementById("modalRoleChange");if(!o)return;const u=document.getElementById("roleChangeUserId"),g=document.getElementById("roleChangeTargetRole"),w=document.getElementById("roleChangeNewRole"),C=document.getElementById("modalRoleChangeTitle"),v=document.getElementById("modalRoleChangeDesc"),B=document.getElementById("btnSubmitRoleChange");u&&(u.value=a),g&&(g.value=n),w&&(w.value=n,w.dispatchEvent(new Event("change"))),C&&(C.innerHTML='<i class="fa-solid fa-user-gear text-[#087F70] mr-2"></i><span>Update Account Role & Permissions</span>'),v&&(v.textContent=`Configure new security role permissions for ${c} (${d}). An authoritative audit record will be registered.`),B&&(B.innerHTML='<i class="fa-solid fa-check text-xs mr-1"></i><span>Confirm & Update Role</span>'),o.classList.remove("hidden")}document.querySelectorAll(".btn-role-action").forEach(a=>{a.addEventListener("click",()=>{b(a.dataset.id,a.dataset.role,a.dataset.email,a.dataset.name)})}),document.querySelectorAll(".btn-user-view-details").forEach(a=>{a.addEventListener("click",()=>{pe(a.dataset.id)})}),document.querySelectorAll(".btn-user-reactivate").forEach(a=>{a.addEventListener("click",async()=>{const n=a.dataset.id;(await L(`/portal/admin/users/${n}/status`,{method:"PUT",body:JSON.stringify({status:"active"})})).ok?(h("Account reactivated.","success"),fe()):h("Failed to reactivate.","error")})}),document.querySelectorAll(".btn-user-suspend").forEach(a=>{a.addEventListener("click",async()=>{const n=a.dataset.id,d=y.usersCache.find(u=>u.id===n);if(Ee(d)){h("Self-management violation: You cannot suspend your own account.","error");return}if(d?.email?.toLowerCase()==="kaziaremon@gmail.com"||d?.role==="owner"||d?.role==="super_admin"){h("Protection violation: The Founding Super Admin account cannot be suspended.","error");return}if(d?.role==="admin"&&!X()){h("Action denied: Only the Founding Super Admin may suspend an Administrator.","error");return}if(!confirm("Suspend this user account?"))return;(await L(`/portal/admin/users/${n}/status`,{method:"PUT",body:JSON.stringify({status:"suspended"})})).ok?(h("Account suspended.","success"),fe()):h("Failed to suspend.","error")})}),document.querySelectorAll(".btn-user-delete").forEach(a=>{a.addEventListener("click",async()=>{const n=a.dataset.id,d=a.dataset.name,c=y.usersCache.find(g=>g.id===n);if(Ee(c)){h("Self-management violation: You cannot delete your own account.","error");return}if(c?.email?.toLowerCase()==="kaziaremon@gmail.com"||c?.role==="owner"||c?.role==="super_admin"){h("Protection violation: The Founding Super Admin account cannot be deleted.","error");return}if(c?.role==="admin"&&!X()){h("Action denied: Only the Founding Super Admin may delete an Administrator.","error");return}if(!confirm(`Permanently delete user account for ${d}? This action cannot be undone.`))return;(await L(`/portal/admin/users/${n}`,{method:"DELETE"})).ok?(h("Account permanently removed.","success"),fe()):h("Failed to delete account.","error")})})}function Ut(){const s=document.getElementById("roleHistoryTableBody"),t=document.getElementById("roleHistoryCardsContainer");if(!s)return;const r=y.roleHistoryCache||[];if(r.length===0){const e='<tr><td colspan="6" class="px-6 py-6 text-center text-slate-500 italic">No role transition records yet.</td></tr>';s.innerHTML=e,t&&(t.innerHTML='<div class="p-6 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 italic shadow-xs">No role transition records yet.</div>');return}s.innerHTML=r.map(e=>{const l=e.action_timestamp?new Date(e.action_timestamp).toLocaleString("en-US",{month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit",hour12:!0}):"\u2014",i=be(e.target_email||e.target_name||e.target_clerk_user_id||e.user_name||"User","target"),m=be(e.actor_email||e.actor_name||e.actor_clerk_user_id||e.changed_by,"actor"),x=e.previous_role||"client",b=e.new_role||"admin",a=e.action_result||"success",n=He(e.reason||"Administrative role update");return`
         <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
-          <td class="px-6 py-4 font-mono text-[11px] text-slate-500">${escapeHtml(dateStr)}</td>
-          <td class="px-6 py-4 font-bold text-[#172B36] truncate max-w-[200px]">${escapeHtml(target)}</td>
+          <td class="px-6 py-4 font-mono text-[11px] text-slate-500">${p(l)}</td>
+          <td class="px-6 py-4 font-bold text-[#172B36] truncate max-w-[200px]">${p(i)}</td>
           <td class="px-6 py-4">
             <span class="inline-flex items-center gap-1.5 text-xs font-semibold">
-              <span class="capitalize px-2 py-0.5 rounded bg-slate-100 text-slate-700">${escapeHtml(prevRole)}</span>
+              <span class="capitalize px-2 py-0.5 rounded bg-slate-100 text-slate-700">${p(x)}</span>
               <i class="fa-solid fa-arrow-right text-[10px] text-slate-400"></i>
-              <span class="capitalize px-2 py-0.5 rounded font-bold ${nextRole === 'admin' || nextRole === 'owner' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-700'}">${escapeHtml(nextRole)}</span>
+              <span class="capitalize px-2 py-0.5 rounded font-bold ${b==="admin"||b==="owner"?"bg-emerald-50 text-emerald-700 border border-emerald-200":"bg-slate-100 text-slate-700"}">${p(b)}</span>
             </span>
           </td>
-          <td class="px-6 py-4 text-slate-600 text-xs">${escapeHtml(actor)}</td>
-          <td class="px-6 py-4 text-slate-500 text-xs truncate max-w-[180px]">${escapeHtml(reason)}</td>
+          <td class="px-6 py-4 text-slate-600 text-xs">${p(m)}</td>
+          <td class="px-6 py-4 text-slate-500 text-xs truncate max-w-[180px]">${p(n)}</td>
           <td class="px-6 py-4">
-            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${result === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}">${escapeHtml(result)}</span>
+            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${a==="success"?"bg-emerald-50 text-emerald-700 border border-emerald-200":"bg-rose-50 text-rose-700 border border-rose-200"}">${p(a)}</span>
           </td>
         </tr>
-      `;
-    }).join('');
-
-    // Mobile Cards
-    if (cardsContainer) {
-      cardsContainer.innerHTML = history.map(h => {
-        const dateStr = h.action_timestamp ? new Date(h.action_timestamp).toLocaleString('en-US', {
-          month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
-        }) : '—';
-        const target = resolveUserIdentity(h.target_email || h.target_name || h.target_clerk_user_id || h.user_name || 'User', 'target');
-        const actor = resolveUserIdentity(h.actor_email || h.actor_name || h.actor_clerk_user_id || h.changed_by, 'actor');
-        const prevRole = h.previous_role || 'client';
-        const nextRole = h.new_role || 'admin';
-        const result = h.action_result || 'success';
-        const reason = sanitizeAuditDetails(h.reason || 'Administrative role update');
-
-        return `
+      `}).join(""),t&&(t.innerHTML=r.map(e=>{const l=e.action_timestamp?new Date(e.action_timestamp).toLocaleString("en-US",{month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit",hour12:!0}):"\u2014",i=be(e.target_email||e.target_name||e.target_clerk_user_id||e.user_name||"User","target"),m=be(e.actor_email||e.actor_name||e.actor_clerk_user_id||e.changed_by,"actor"),x=e.previous_role||"client",b=e.new_role||"admin",a=e.action_result||"success",n=He(e.reason||"Administrative role update");return`
           <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs space-y-2.5">
             <div class="flex items-center justify-between text-xs">
-              <span class="font-mono text-[11px] text-slate-500">${escapeHtml(dateStr)}</span>
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${result === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}">${escapeHtml(result)}</span>
+              <span class="font-mono text-[11px] text-slate-500">${p(l)}</span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${a==="success"?"bg-emerald-50 text-emerald-700 border border-emerald-200":"bg-rose-50 text-rose-700 border border-rose-200"}">${p(a)}</span>
             </div>
-            <div class="text-xs font-bold text-[#172B36] truncate">${escapeHtml(target)}</div>
+            <div class="text-xs font-bold text-[#172B36] truncate">${p(i)}</div>
             <div class="flex items-center gap-1.5 text-xs">
-              <span class="capitalize px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[11px]">${escapeHtml(prevRole)}</span>
+              <span class="capitalize px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[11px]">${p(x)}</span>
               <i class="fa-solid fa-arrow-right text-[9px] text-slate-400"></i>
-              <span class="capitalize px-2 py-0.5 rounded font-bold text-[11px] ${nextRole === 'admin' || nextRole === 'owner' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-700'}">${escapeHtml(nextRole)}</span>
+              <span class="capitalize px-2 py-0.5 rounded font-bold text-[11px] ${b==="admin"||b==="owner"?"bg-emerald-50 text-emerald-700 border border-emerald-200":"bg-slate-100 text-slate-700"}">${p(b)}</span>
             </div>
             <div class="text-[11px] text-slate-500 pt-1.5 border-t border-slate-100 flex items-center justify-between gap-2">
-              <span>By <strong>${escapeHtml(actor)}</strong></span>
-              <span class="truncate max-w-[160px] text-slate-400">${escapeHtml(reason)}</span>
+              <span>By <strong>${p(m)}</strong></span>
+              <span class="truncate max-w-[160px] text-slate-400">${p(n)}</span>
             </div>
           </div>
-        `;
-      }).join('');
-    }
-  }
-
-  function renderTeamManagement(teamData) {
-    const pendingTbody = document.getElementById('pendingApprovalsTableBody');
-    const pendingCards = document.getElementById('pendingApprovalsCardsContainer');
-    const pendingCount = document.getElementById('pendingApprovalsCount');
-
-    const activeTbody = document.getElementById('activeAdminsTableBody');
-    const activeCards = document.getElementById('activeAdminsCardsContainer');
-    const activeCount = document.getElementById('activeAdminsCount');
-
-    const rawAdmins = teamData.admins || [];
-    const pendingInvs = teamData.pendingInvitations || [];
-
-    const isOwnerActor = isCurrentUserOwner();
-
-    // Enable staff pre-approval form for Super Admin and Admin
-    const inviteForm = document.getElementById('adminInviteForm');
-    if (inviteForm) {
-      const canInvite = isOwnerActor || state.adminProfile?.role === 'admin';
-      const inputs = inviteForm.querySelectorAll('input, select, button');
-      inputs.forEach(el => el.disabled = !canInvite);
-      const submitBtn = inviteForm.querySelector('button[type="submit"]');
-      if (submitBtn) {
-        if (!canInvite) {
-          submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
-          submitBtn.title = 'Only Super Admin and Admin may authorize staff accounts';
-        } else {
-          submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-          submitBtn.title = '';
-        }
-      }
-    }
-
-    const pendingList = pendingInvs.length > 0
-      ? pendingInvs
-      : rawAdmins.filter(a => a.status === 'pending');
-
-    const activeList = rawAdmins.filter(a => a.status === 'active' || (a.clerk_user_id && a.status !== 'revoked' && a.status !== 'pending'));
-
-    if (pendingCount) pendingCount.textContent = `${pendingList.length} pending`;
-    if (activeCount) activeCount.textContent = `${activeList.length} active`;
-
-    // 1. Render Pending Approvals
-    if (pendingList.length === 0) {
-      const emptyPending = '<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">No pending administrator pre-approvals.</td></tr>';
-      if (pendingTbody) pendingTbody.innerHTML = emptyPending;
-      if (pendingCards) pendingCards.innerHTML = '<div class="p-6 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 italic shadow-xs">No pending administrator pre-approvals.</div>';
-    } else {
-      if (pendingTbody) {
-        pendingTbody.innerHTML = pendingList.map(p => {
-          const name = p.full_name || 'Approved Staff Member';
-          const email = p.email || p.approved_email || '';
-          const roleName = typeof formatRoleName === 'function' ? formatRoleName(p.role) : (p.role || 'Staff');
-          const roleBadge = typeof getRoleBadgeForRole === 'function' ? getRoleBadgeForRole(p.role, false) : `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-50 text-slate-700 border border-slate-200 uppercase">${escapeHtml(roleName)}</span>`;
-          const createdAt = p.created_at ? new Date(p.created_at).toLocaleDateString() : 'N/A';
-          const actionCol = isOwnerActor
-            ? `<button type="button" class="btn-revoke-invitation px-2.5 py-1 rounded-lg text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 cursor-pointer transition-all" data-id="${p.id}" data-email="${escapeHtml(email)}">
+        `}).join(""))}function Wt(s){const t=document.getElementById("pendingApprovalsTableBody"),r=document.getElementById("pendingApprovalsCardsContainer"),e=document.getElementById("pendingApprovalsCount"),l=document.getElementById("activeAdminsTableBody"),i=document.getElementById("activeAdminsCardsContainer"),m=document.getElementById("activeAdminsCount"),x=s.admins||[],b=s.pendingInvitations||[],a=X(),n=document.getElementById("adminInviteForm");if(n){const o=a||y.adminProfile?.role==="admin";n.querySelectorAll("input, select, button").forEach(w=>w.disabled=!o);const g=n.querySelector('button[type="submit"]');g&&(o?(g.classList.remove("opacity-50","cursor-not-allowed"),g.title=""):(g.classList.add("opacity-50","cursor-not-allowed"),g.title="Only Super Admin and Admin may authorize staff accounts"))}const d=b.length>0?b:x.filter(o=>o.status==="pending"),c=x.filter(o=>o.status==="active"||o.clerk_user_id&&o.status!=="revoked"&&o.status!=="pending");if(e&&(e.textContent=`${d.length} pending`),m&&(m.textContent=`${c.length} active`),d.length===0){const o='<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">No pending administrator pre-approvals.</td></tr>';t&&(t.innerHTML=o),r&&(r.innerHTML='<div class="p-6 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 italic shadow-xs">No pending administrator pre-approvals.</div>')}else t&&(t.innerHTML=d.map(o=>{const u=o.full_name||"Approved Staff Member",g=o.email||o.approved_email||"",w=typeof je=="function"?je(o.role):o.role||"Staff",C=typeof ge=="function"?ge(o.role,!1):`<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-50 text-slate-700 border border-slate-200 uppercase">${p(w)}</span>`,v=o.created_at?new Date(o.created_at).toLocaleDateString():"N/A",B=a?`<button type="button" class="btn-revoke-invitation px-2.5 py-1 rounded-lg text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 cursor-pointer transition-all" data-id="${o.id}" data-email="${p(g)}">
                 <i class="fa-solid fa-ban mr-1 text-[10px]"></i>Revoke Approval
-              </button>`
-            : '<span class="text-xs font-medium text-slate-400 italic">Owner Only</span>';
-
-          return `
+              </button>`:'<span class="text-xs font-medium text-slate-400 italic">Owner Only</span>';return`
             <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
-              <td class="px-6 py-4 font-bold text-[#172B36]">${escapeHtml(name)}</td>
-              <td class="px-6 py-4 font-mono text-xs text-slate-600">${escapeHtml(email)}</td>
-              <td class="px-6 py-4">${roleBadge}</td>
-              <td class="px-6 py-4 font-mono text-xs text-slate-500">${escapeHtml(createdAt)}</td>
+              <td class="px-6 py-4 font-bold text-[#172B36]">${p(u)}</td>
+              <td class="px-6 py-4 font-mono text-xs text-slate-600">${p(g)}</td>
+              <td class="px-6 py-4">${C}</td>
+              <td class="px-6 py-4 font-mono text-xs text-slate-500">${p(v)}</td>
               <td class="px-6 py-4"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 uppercase">Pending Verification</span></td>
-              <td class="px-6 py-4 text-right">${actionCol}</td>
+              <td class="px-6 py-4 text-right">${B}</td>
             </tr>
-          `;
-        }).join('');
-      }
-
-      if (pendingCards) {
-        pendingCards.innerHTML = pendingList.map(p => {
-          const name = p.full_name || 'Approved Administrator';
-          const email = p.email || p.approved_email || '';
-          const roleName = typeof formatRoleName === 'function' ? formatRoleName(p.role) : (p.role || 'Staff');
-          const createdAt = p.created_at ? new Date(p.created_at).toLocaleDateString() : 'N/A';
-          return `
+          `}).join("")),r&&(r.innerHTML=d.map(o=>{const u=o.full_name||"Approved Administrator",g=o.email||o.approved_email||"",w=typeof je=="function"?je(o.role):o.role||"Staff",C=o.created_at?new Date(o.created_at).toLocaleDateString():"N/A";return`
             <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E6ECE9] shadow-xs space-y-3">
               <div class="flex items-center justify-between text-xs gap-2">
-                <span class="font-bold text-[#172B36] text-sm truncate">${escapeHtml(name)}</span>
+                <span class="font-bold text-[#172B36] text-sm truncate">${p(u)}</span>
                 <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider text-slate-600 bg-slate-100 border border-slate-200"><span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> Pending</span>
               </div>
-              <div class="font-mono text-xs text-slate-500 break-all">${escapeHtml(email)}</div>
+              <div class="font-mono text-xs text-slate-500 break-all">${p(g)}</div>
               <div class="p-2.5 rounded-xl bg-slate-50/80 border border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                <span>Role: <strong class="text-slate-700">${escapeHtml(roleName)}</strong></span>
-                <span class="font-mono text-[11px]">${escapeHtml(createdAt)}</span>
+                <span>Role: <strong class="text-slate-700">${p(w)}</strong></span>
+                <span class="font-mono text-[11px]">${p(C)}</span>
               </div>
-              ${isOwnerActor ? `
-                <button type="button" class="btn-revoke-invitation w-full h-11 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-center cursor-pointer transition-all flex items-center justify-center gap-1.5 shadow-xs" data-id="${p.id}" data-email="${escapeHtml(email)}">
+              ${a?`
+                <button type="button" class="btn-revoke-invitation w-full h-11 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-center cursor-pointer transition-all flex items-center justify-center gap-1.5 shadow-xs" data-id="${o.id}" data-email="${p(g)}">
                   <i class="fa-solid fa-ban text-[10px]"></i>
                   <span>Revoke Pre-Approval</span>
                 </button>
-              ` : ''}
+              `:""}
             </div>
-          `;
-        }).join('');
-      }
-    }
-
-    // 2. Render Active Administrators
-    if (activeList.length === 0) {
-      const emptyActive = '<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">No active administrators found.</td></tr>';
-      if (activeTbody) activeTbody.innerHTML = emptyActive;
-      if (activeCards) activeCards.innerHTML = '<div class="p-6 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 italic shadow-xs">No active administrators found.</div>';
-    } else {
-      if (activeTbody) {
-        activeTbody.innerHTML = activeList.map(a => {
-          const email = a.approved_email || a.email || '';
-          const isOwner = email.toLowerCase() === 'kaziaremon@gmail.com';
-          const name = a.full_name || (isOwner ? 'Kazi Emon' : 'Administrator');
-          const clerkId = a.clerk_user_id || '—';
-          const isSelf = isCurrentAdminSelf(a);
-
-          const isActualOwner = email.toLowerCase() === 'kaziaremon@gmail.com' || a.role === 'owner' || a.role === 'super_admin';
-          const roleBadge = typeof getRoleBadgeForRole === 'function' ? getRoleBadgeForRole(a.role, isActualOwner) : (isActualOwner ? '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Owner</span>' : '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-blue-50 text-blue-700 border border-blue-200"><i class="fa-solid fa-shield-halved text-[9px]"></i> Admin</span>');
-          const activatedAt = a.activated_at ? new Date(a.activated_at).toLocaleDateString() : (a.created_at ? new Date(a.created_at).toLocaleDateString() : 'N/A');
-
-          let actionHtml = '';
-          if (isOwner) {
-            actionHtml = '<span class="px-2.5 py-1 rounded-lg text-xs font-bold text-emerald-800 bg-emerald-100 border border-emerald-300"><i class="fa-solid fa-shield mr-1"></i>Founding Super Admin</span>';
-          } else if (isSelf) {
-            actionHtml = '<span class="px-2.5 py-1 rounded-lg text-xs font-bold text-slate-600 bg-slate-100 border border-slate-200"><i class="fa-solid fa-user-check text-brand-whiz mr-1 text-[10px]"></i>Current Account (You)</span>';
-          } else if (isOwnerActor) {
-            actionHtml = `<button type="button" class="btn-revoke-admin-access px-2.5 py-1 rounded-lg text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 cursor-pointer transition-all" data-id="${a.id}" data-email="${escapeHtml(email)}" data-name="${escapeHtml(name)}"><i class="fa-solid fa-user-xmark mr-1 text-[10px]"></i>Revoke Admin Access</button>`;
-          } else {
-            actionHtml = '<span class="text-xs font-medium text-slate-400 italic">Protected</span>';
-          }
-
-          return `
+          `}).join(""));if(c.length===0){const o='<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">No active administrators found.</td></tr>';l&&(l.innerHTML=o),i&&(i.innerHTML='<div class="p-6 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 italic shadow-xs">No active administrators found.</div>')}else l&&(l.innerHTML=c.map(o=>{const u=o.approved_email||o.email||"",g=u.toLowerCase()==="kaziaremon@gmail.com",w=o.full_name||(g?"Kazi Emon":"Administrator"),C=o.clerk_user_id||"\u2014",v=Ee(o),B=u.toLowerCase()==="kaziaremon@gmail.com"||o.role==="owner"||o.role==="super_admin",I=typeof ge=="function"?ge(o.role,B):B?'<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Owner</span>':'<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-blue-50 text-blue-700 border border-blue-200"><i class="fa-solid fa-shield-halved text-[9px]"></i> Admin</span>',F=o.activated_at?new Date(o.activated_at).toLocaleDateString():o.created_at?new Date(o.created_at).toLocaleDateString():"N/A";let M="";return g?M='<span class="px-2.5 py-1 rounded-lg text-xs font-bold text-emerald-800 bg-emerald-100 border border-emerald-300"><i class="fa-solid fa-shield mr-1"></i>Founding Super Admin</span>':v?M='<span class="px-2.5 py-1 rounded-lg text-xs font-bold text-slate-600 bg-slate-100 border border-slate-200"><i class="fa-solid fa-user-check text-brand-whiz mr-1 text-[10px]"></i>Current Account (You)</span>':a?M=`<button type="button" class="btn-revoke-admin-access px-2.5 py-1 rounded-lg text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 cursor-pointer transition-all" data-id="${o.id}" data-email="${p(u)}" data-name="${p(w)}"><i class="fa-solid fa-user-xmark mr-1 text-[10px]"></i>Revoke Admin Access</button>`:M='<span class="text-xs font-medium text-slate-400 italic">Protected</span>',`
             <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
-              <td class="px-6 py-4 font-bold text-[#172B36]">${escapeHtml(name)}</td>
-              <td class="px-6 py-4 font-mono text-xs text-slate-600">${escapeHtml(email)}</td>
-              <td class="px-6 py-4 font-mono text-[11px]">${clerkId && clerkId !== '—' ? '<span class="inline-flex items-center gap-1 text-emerald-700 font-semibold text-[11px]"><i class="fa-solid fa-shield-check text-[10px]"></i> SSO Linked</span>' : '<span class="text-slate-400">Direct Pending</span>'}</td>
-              <td class="px-6 py-4">${roleBadge}</td>
-              <td class="px-6 py-4 font-mono text-xs text-slate-500">${escapeHtml(activatedAt)}</td>
-              <td class="px-6 py-4 text-right">${actionHtml}</td>
+              <td class="px-6 py-4 font-bold text-[#172B36]">${p(w)}</td>
+              <td class="px-6 py-4 font-mono text-xs text-slate-600">${p(u)}</td>
+              <td class="px-6 py-4 font-mono text-[11px]">${C&&C!=="\u2014"?'<span class="inline-flex items-center gap-1 text-emerald-700 font-semibold text-[11px]"><i class="fa-solid fa-shield-check text-[10px]"></i> SSO Linked</span>':'<span class="text-slate-400">Direct Pending</span>'}</td>
+              <td class="px-6 py-4">${I}</td>
+              <td class="px-6 py-4 font-mono text-xs text-slate-500">${p(F)}</td>
+              <td class="px-6 py-4 text-right">${M}</td>
             </tr>
-          `;
-        }).join('');
-      }
-
-      if (activeCards) {
-        activeCards.innerHTML = activeList.map(a => {
-          const email = a.approved_email || a.email || '';
-          const isOwner = email.toLowerCase() === 'kaziaremon@gmail.com' || a.role === 'owner' || a.role === 'super_admin';
-          const name = a.full_name || (isOwner ? 'Kazi Emon' : 'Administrator');
-          const clerkId = a.clerk_user_id || '';
-          const isSelf = isCurrentAdminSelf(a);
-          const activatedAt = a.activated_at ? new Date(a.activated_at).toLocaleDateString() : (a.created_at ? new Date(a.created_at).toLocaleDateString() : 'N/A');
-
-          let cardActionHtml = '';
-          if (isOwner) {
-            cardActionHtml = '<div class="p-2.5 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 flex items-center justify-between text-xs w-full"><span class="font-bold text-emerald-800"><i class="fa-solid fa-crown text-amber-500 mr-1.5"></i>Founding Owner</span><span class="text-[10px] font-mono font-extrabold uppercase bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">Immune</span></div>';
-          } else if (isSelf) {
-            cardActionHtml = '<div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs w-full"><span class="font-bold text-slate-700"><i class="fa-solid fa-user-check text-[#087F70] mr-1.5"></i>Current Account (You)</span><span class="text-[10px] font-mono font-bold uppercase bg-white text-slate-600 px-2 py-0.5 rounded-full border border-slate-200">Session</span></div>';
-          } else if (isOwnerActor) {
-            cardActionHtml = `<button type="button" class="btn-revoke-admin-access w-full h-11 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 cursor-pointer flex items-center justify-center gap-1.5 transition-all shadow-xs" data-id="${a.id}" data-email="${escapeHtml(email)}" data-name="${escapeHtml(name)}"><i class="fa-solid fa-user-minus text-[10px]"></i><span>Revoke Admin Access</span></button>`;
-          } else {
-            cardActionHtml = '<span class="text-xs font-medium text-slate-400 italic">Protected Administrator</span>';
-          }
-
-          return `
+          `}).join("")),i&&(i.innerHTML=c.map(o=>{const u=o.approved_email||o.email||"",g=u.toLowerCase()==="kaziaremon@gmail.com"||o.role==="owner"||o.role==="super_admin",w=o.full_name||(g?"Kazi Emon":"Administrator"),C=o.clerk_user_id||"",v=Ee(o),B=o.activated_at?new Date(o.activated_at).toLocaleDateString():o.created_at?new Date(o.created_at).toLocaleDateString():"N/A";let I="";return g?I='<div class="p-2.5 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 flex items-center justify-between text-xs w-full"><span class="font-bold text-emerald-800"><i class="fa-solid fa-crown text-amber-500 mr-1.5"></i>Founding Owner</span><span class="text-[10px] font-mono font-extrabold uppercase bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">Immune</span></div>':v?I='<div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs w-full"><span class="font-bold text-slate-700"><i class="fa-solid fa-user-check text-[#087F70] mr-1.5"></i>Current Account (You)</span><span class="text-[10px] font-mono font-bold uppercase bg-white text-slate-600 px-2 py-0.5 rounded-full border border-slate-200">Session</span></div>':a?I=`<button type="button" class="btn-revoke-admin-access w-full h-11 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 cursor-pointer flex items-center justify-center gap-1.5 transition-all shadow-xs" data-id="${o.id}" data-email="${p(u)}" data-name="${p(w)}"><i class="fa-solid fa-user-minus text-[10px]"></i><span>Revoke Admin Access</span></button>`:I='<span class="text-xs font-medium text-slate-400 italic">Protected Administrator</span>',`
             <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E6ECE9] shadow-xs space-y-3">
               <div class="flex items-center justify-between gap-2">
-                <span class="font-bold text-[#172B36] text-sm truncate">${escapeHtml(name)}</span>
-                ${typeof getRoleBadgeForRole === 'function' ? getRoleBadgeForRole(a.role, isOwner) : (isOwner ? '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-xs"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Super Admin</span>' : '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200 shadow-xs"><i class="fa-solid fa-shield-halved text-[9px]"></i> Admin</span>')}
+                <span class="font-bold text-[#172B36] text-sm truncate">${p(w)}</span>
+                ${typeof ge=="function"?ge(o.role,g):g?'<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-xs"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Super Admin</span>':'<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200 shadow-xs"><i class="fa-solid fa-shield-halved text-[9px]"></i> Admin</span>'}
               </div>
-              <div class="font-mono text-xs text-slate-500 break-all">${escapeHtml(email)}</div>
+              <div class="font-mono text-xs text-slate-500 break-all">${p(u)}</div>
               <div class="p-2.5 rounded-xl bg-slate-50/80 border border-slate-100 flex items-center justify-between text-xs text-slate-500">
                 <span>Active Since</span>
-                <span class="font-mono text-slate-700 font-semibold">${escapeHtml(activatedAt)}</span>
+                <span class="font-mono text-slate-700 font-semibold">${p(B)}</span>
               </div>
               <div class="pt-1 border-t border-slate-100">
-                ${cardActionHtml}
+                ${I}
               </div>
             </div>
-          `;
-        }).join('');
-      }
-    }
-
-    // Attach listeners for Revoke Pre-Approval
-    document.querySelectorAll('.btn-revoke-invitation').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        if (!isCurrentUserOwner()) {
-          showToast('Action denied: Only the Founding Super Admin may revoke administrator pre-approvals.', 'error');
-          return;
-        }
-        const id = btn.dataset.id;
-        const email = btn.dataset.email;
-        if (!confirm(`Are you sure you want to revoke administrator pre-approval for ${email}?`)) return;
-
-        setBtnLoading(btn, true, 'Revoking...');
-        const res = await apiFetch('/portal/admin/team/revoke', {
-          method: 'POST',
-          body: JSON.stringify({ invitationId: id, email })
-        });
-        setBtnLoading(btn, false);
-
-        if (res.ok && res.data && res.data.success) {
-          showToast(res.data.message || `Pre-approval for ${email} revoked.`, 'success');
-          loadTeamData();
-        } else {
-          showToast(res.data?.error || 'Failed to revoke pre-approval.', 'error');
-        }
-      });
-    });
-
-    // Attach listeners for Revoke Admin Access
-    document.querySelectorAll('.btn-revoke-admin-access').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const id = btn.dataset.id;
-        const email = btn.dataset.email;
-        const name = btn.dataset.name;
-        if (!isCurrentUserOwner()) {
-          showToast('Action denied: Only the Founding Super Admin may revoke administrator access.', 'error');
-          return;
-        }
-        if (isCurrentAdminSelf({ id, email })) {
-          showToast('Self-management violation: You cannot revoke your own account.', 'error');
-          return;
-        }
-        openRoleChangeModal(id, 'client', email, name);
-      });
-    });
-  }
-
-  // =========================================================================
-  // 9. AUDIT & HISTORY DATA (Redesigned Light-Themed Activity Feed - Priority 7)
-  // =========================================================================
-  let auditLogsCache = [];
-
-  const ACTION_CONFIG = {
-    'PAYMENT_RECORDED': { label: 'Payment Recorded', category: 'payments', badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: 'fa-receipt' },
-    'PAYMENT_CORRECTED': { label: 'Payment Corrected', category: 'payments', badgeClass: 'bg-amber-50 text-amber-700 border-amber-200', icon: 'fa-pen-to-square' },
-    'PAYMENT_VOIDED': { label: 'Payment Voided', category: 'payments', badgeClass: 'bg-rose-50 text-rose-700 border-rose-200', icon: 'fa-ban' },
-    'PAYMENT_DELETED': { label: 'Payment Removed', category: 'payments', badgeClass: 'bg-rose-50 text-rose-700 border-rose-200', icon: 'fa-trash' },
-    'CLIENT_CREATED': { label: 'Client Registered', category: 'clients', badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: 'fa-user-plus' },
-    'CLIENT_STATUS_UPDATED': { label: 'Client Status Changed', category: 'clients', badgeClass: 'bg-amber-50 text-amber-700 border-amber-200', icon: 'fa-user-gear' },
-    'CLIENT_SUSPENDED': { label: 'Client Suspended', category: 'clients', badgeClass: 'bg-amber-50 text-amber-700 border-amber-200', icon: 'fa-user-lock' },
-    'CLIENT_REACTIVATED': { label: 'Client Reactivated', category: 'clients', badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: 'fa-user-check' },
-    'CLIENT_DELETED': { label: 'Client Permanently Deleted', category: 'clients', badgeClass: 'bg-rose-50 text-rose-700 border-rose-200', icon: 'fa-user-xmark' },
-    'ROLE_ASSIGNED': { label: 'Access Role Assigned', category: 'access', badgeClass: 'bg-sky-50 text-sky-700 border-sky-200', icon: 'fa-shield-halved' },
-    'ROLE_REVOKED': { label: 'Access Role Revoked', category: 'access', badgeClass: 'bg-slate-100 text-slate-700 border-slate-200', icon: 'fa-user-shield' },
-    'SERVICE_PROVISIONED': { label: 'Service Provisioned', category: 'services', badgeClass: 'bg-blue-50 text-blue-700 border-blue-200', icon: 'fa-layer-group' },
-    'TASK_COMPLETED': { label: 'Task Milestone Delivered', category: 'tasks', badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: 'fa-circle-check' },
-    'TASK_CREATED': { label: 'Task Created', category: 'tasks', badgeClass: 'bg-slate-100 text-slate-700 border-slate-200', icon: 'fa-list-check' },
-    'PROJECT_CREATED': { label: 'Project Created', category: 'services', badgeClass: 'bg-indigo-50 text-indigo-700 border-indigo-200', icon: 'fa-folder-plus' }
-  };
-
-  async function loadHistoryData() {
-    const container = document.getElementById('adminFullHistoryList');
-    if (!container) return;
-
-    // Strict RBAC Guard: Audit & Operational History is strictly restricted to Admin and Super Admin
-    const userRole = state.adminProfile?.role || '';
-    const normRole = typeof normalizeRole === 'function' ? normalizeRole(userRole) : userRole.toLowerCase();
-    const isOwner = typeof isCurrentUserOwner === 'function' ? isCurrentUserOwner() : false;
-    if (!isOwner && normRole !== 'admin' && normRole !== 'super_admin') {
-      console.warn('[RBAC Guard] Unauthorized attempt to load Audit & History by role:', userRole);
-      container.innerHTML = `
+          `}).join(""));document.querySelectorAll(".btn-revoke-invitation").forEach(o=>{o.addEventListener("click",async()=>{if(!X()){h("Action denied: Only the Founding Super Admin may revoke administrator pre-approvals.","error");return}const u=o.dataset.id,g=o.dataset.email;if(!confirm(`Are you sure you want to revoke administrator pre-approval for ${g}?`))return;S(o,!0,"Revoking...");const w=await L("/portal/admin/team/revoke",{method:"POST",body:JSON.stringify({invitationId:u,email:g})});S(o,!1),w.ok&&w.data&&w.data.success?(h(w.data.message||`Pre-approval for ${g} revoked.`,"success"),fe()):h(w.data?.error||"Failed to revoke pre-approval.","error")})}),document.querySelectorAll(".btn-revoke-admin-access").forEach(o=>{o.addEventListener("click",()=>{const u=o.dataset.id,g=o.dataset.email,w=o.dataset.name;if(!X()){h("Action denied: Only the Founding Super Admin may revoke administrator access.","error");return}if(Ee({id:u,email:g})){h("Self-management violation: You cannot revoke your own account.","error");return}openRoleChangeModal(u,"client",g,w)})})}let it=[];const Lt={PAYMENT_RECORDED:{label:"Payment Recorded",category:"payments",badgeClass:"bg-emerald-50 text-emerald-700 border-emerald-200",icon:"fa-receipt"},PAYMENT_CORRECTED:{label:"Payment Corrected",category:"payments",badgeClass:"bg-amber-50 text-amber-700 border-amber-200",icon:"fa-pen-to-square"},PAYMENT_VOIDED:{label:"Payment Voided",category:"payments",badgeClass:"bg-rose-50 text-rose-700 border-rose-200",icon:"fa-ban"},PAYMENT_DELETED:{label:"Payment Removed",category:"payments",badgeClass:"bg-rose-50 text-rose-700 border-rose-200",icon:"fa-trash"},CLIENT_CREATED:{label:"Client Registered",category:"clients",badgeClass:"bg-emerald-50 text-emerald-700 border-emerald-200",icon:"fa-user-plus"},CLIENT_STATUS_UPDATED:{label:"Client Status Changed",category:"clients",badgeClass:"bg-amber-50 text-amber-700 border-amber-200",icon:"fa-user-gear"},CLIENT_SUSPENDED:{label:"Client Suspended",category:"clients",badgeClass:"bg-amber-50 text-amber-700 border-amber-200",icon:"fa-user-lock"},CLIENT_REACTIVATED:{label:"Client Reactivated",category:"clients",badgeClass:"bg-emerald-50 text-emerald-700 border-emerald-200",icon:"fa-user-check"},CLIENT_DELETED:{label:"Client Permanently Deleted",category:"clients",badgeClass:"bg-rose-50 text-rose-700 border-rose-200",icon:"fa-user-xmark"},ROLE_ASSIGNED:{label:"Access Role Assigned",category:"access",badgeClass:"bg-sky-50 text-sky-700 border-sky-200",icon:"fa-shield-halved"},ROLE_REVOKED:{label:"Access Role Revoked",category:"access",badgeClass:"bg-slate-100 text-slate-700 border-slate-200",icon:"fa-user-shield"},SERVICE_PROVISIONED:{label:"Service Provisioned",category:"services",badgeClass:"bg-blue-50 text-blue-700 border-blue-200",icon:"fa-layer-group"},TASK_COMPLETED:{label:"Task Milestone Delivered",category:"tasks",badgeClass:"bg-emerald-50 text-emerald-700 border-emerald-200",icon:"fa-circle-check"},TASK_CREATED:{label:"Task Created",category:"tasks",badgeClass:"bg-slate-100 text-slate-700 border-slate-200",icon:"fa-list-check"},PROJECT_CREATED:{label:"Project Created",category:"services",badgeClass:"bg-indigo-50 text-indigo-700 border-indigo-200",icon:"fa-folder-plus"}};async function dt(){const s=document.getElementById("adminFullHistoryList");if(!s)return;const t=y.adminProfile?.role||"",r=typeof Le=="function"?Le(t):t.toLowerCase();if(!(typeof X=="function"?X():!1)&&r!=="admin"&&r!=="super_admin"){console.warn("[RBAC Guard] Unauthorized attempt to load Audit & History by role:",t),s.innerHTML=`
         <div class="p-8 rounded-2xl bg-white border border-rose-200 text-center text-rose-600 font-semibold shadow-xs">
           <i class="fa-solid fa-shield-halved text-2xl mb-2 text-rose-500 block"></i>
           Access Restricted: Audit & Operational History is strictly restricted to Administrators.
         </div>
-      `;
-      return;
-    }
-
-    container.innerHTML = `
+      `;return}s.innerHTML=`
       <div class="p-8 rounded-2xl bg-white border border-[#E3E9EF] text-center text-slate-500 italic shadow-xs">
         Loading immutable audit trail...
       </div>
-    `;
-
-    // Fetch up to 100 immutable audit entries
-    const res = await apiFetch('/audit-logs?limit=100');
-    if (res.ok && res.data && res.data.data) {
-      auditLogsCache = res.data.data;
-    } else {
-      // Fallback to recentActivity from stats
-      const statsRes = await apiFetch('/portal/admin/stats');
-      if (statsRes.ok && statsRes.data && statsRes.data.data?.recentActivity) {
-        auditLogsCache = statsRes.data.data.recentActivity;
-      }
-    }
-
-    renderAuditHistoryList();
-  }
-
-  function renderAuditHistoryList() {
-    const container = document.getElementById('adminFullHistoryList');
-    const countBadge = document.getElementById('auditLogCount');
-    if (!container) return;
-
-    const searchTerm = (document.getElementById('auditSearchInput')?.value || '').toLowerCase().trim();
-    const category = document.getElementById('auditCategoryFilter')?.value || 'all';
-
-    const filtered = auditLogsCache.filter(l => {
-      const conf = ACTION_CONFIG[l.action] || {};
-      const cat = conf.category || 'all';
-
-      const matchesCat = category === 'all' || cat === category;
-      if (!matchesCat) return false;
-
-      if (!searchTerm) return true;
-
-      const actText = (conf.label || l.action || '').toLowerCase();
-      const emailText = (l.user_email || '').toLowerCase();
-      const resText = (l.resource_type || '').toLowerCase();
-      const resId = (l.resource_id || '').toLowerCase();
-
-      return actText.includes(searchTerm) || emailText.includes(searchTerm) || resText.includes(searchTerm) || resId.includes(searchTerm);
-    });
-
-    if (countBadge) {
-      countBadge.textContent = `${filtered.length} Event${filtered.length === 1 ? '' : 's'}`;
-    }
-
-    if (filtered.length === 0) {
-      container.innerHTML = `
+    `;const l=await L("/audit-logs?limit=100");if(l.ok&&l.data&&l.data.data)it=l.data.data;else{const i=await L("/portal/admin/stats");i.ok&&i.data&&i.data.data?.recentActivity&&(it=i.data.data.recentActivity)}lt()}function lt(){const s=document.getElementById("adminFullHistoryList"),t=document.getElementById("auditLogCount");if(!s)return;const r=(document.getElementById("auditSearchInput")?.value||"").toLowerCase().trim(),e=document.getElementById("auditCategoryFilter")?.value||"all",l=it.filter(i=>{const m=Lt[i.action]||{},x=m.category||"all";if(!(e==="all"||x===e))return!1;if(!r)return!0;const a=(m.label||i.action||"").toLowerCase(),n=(i.user_email||"").toLowerCase(),d=(i.resource_type||"").toLowerCase(),c=(i.resource_id||"").toLowerCase();return a.includes(r)||n.includes(r)||d.includes(r)||c.includes(r)});if(t&&(t.textContent=`${l.length} Event${l.length===1?"":"s"}`),l.length===0){s.innerHTML=`
         <div class="p-8 rounded-2xl bg-white border border-[#E3E9EF] text-center text-slate-500 italic shadow-xs">
           No audit log events match the current filter.
         </div>
-      `;
-      return;
-    }
-
-    container.innerHTML = filtered.map(l => {
-      const conf = ACTION_CONFIG[l.action] || {
-        label: (l.action || 'ACTIVITY').replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase()),
-        badgeClass: 'bg-slate-100 text-slate-700 border-slate-200',
-        icon: 'fa-clock-rotate-left'
-      };
-
-      const dateStr = l.created_at ? new Date(l.created_at).toLocaleString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-      }) : '—';
-
-      const actorEmail = resolveUserIdentity(l.user_email || l.user_id || l.actor_id || 'System', 'actor');
-      let resourceInfo = '';
-      if (l.resource_type) {
-        let resId = l.resource_id ? String(l.resource_id) : '';
-        if (resId.startsWith('user_') || resId.startsWith('usr_')) {
-          resId = resolveUserIdentity(resId, 'target');
-          resourceInfo = `${l.resource_type} (${resId})`;
-        } else if (resId.startsWith('org_')) {
-          resourceInfo = `${l.resource_type} (Workspace)`;
-        } else if (resId) {
-          resourceInfo = `${l.resource_type} #${resId.slice(0, 10)}`;
-        } else {
-          resourceInfo = l.resource_type;
-        }
-      }
-
-      let detailsHtml = '';
-      if (l.details) {
-        const detailsFormatted = sanitizeAuditDetails(l.details);
-
-        detailsHtml = `
+      `;return}s.innerHTML=l.map(i=>{const m=Lt[i.action]||{label:(i.action||"ACTIVITY").replace(/_/g," ").toLowerCase().replace(/\b\w/g,d=>d.toUpperCase()),badgeClass:"bg-slate-100 text-slate-700 border-slate-200",icon:"fa-clock-rotate-left"},x=i.created_at?new Date(i.created_at).toLocaleString("en-US",{month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit",hour12:!0}):"\u2014",b=be(i.user_email||i.user_id||i.actor_id||"System","actor");let a="";if(i.resource_type){let d=i.resource_id?String(i.resource_id):"";d.startsWith("user_")||d.startsWith("usr_")?(d=be(d,"target"),a=`${i.resource_type} (${d})`):d.startsWith("org_")?a=`${i.resource_type} (Workspace)`:d?a=`${i.resource_type} #${d.slice(0,10)}`:a=i.resource_type}let n="";if(i.details){const d=He(i.details);n=`
           <details class="mt-2.5 pt-2 border-t border-slate-100 text-slate-600">
             <summary class="cursor-pointer text-[#147D64] hover:underline font-semibold text-[11px] select-none inline-flex items-center gap-1">
               <i class="fa-solid fa-code text-[10px]"></i>
               <span>Inspection Details</span>
             </summary>
-            <pre class="mt-2 p-2.5 rounded-xl bg-slate-50 border border-slate-200 overflow-x-auto text-[10px] font-mono text-slate-700 leading-relaxed">${escapeHtml(detailsFormatted)}</pre>
+            <pre class="mt-2 p-2.5 rounded-xl bg-slate-50 border border-slate-200 overflow-x-auto text-[10px] font-mono text-slate-700 leading-relaxed">${p(d)}</pre>
           </details>
-        `;
-      }
-
-      return `
+        `}return`
         <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs hover:border-[#147D64]/30 hover:shadow-sm transition-all duration-150">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             <div class="flex items-center space-x-3 min-w-0">
               <div class="w-9 h-9 rounded-xl bg-slate-50 border border-[#E3E9EF] flex items-center justify-center text-slate-600 shrink-0">
-                <i class="fa-solid ${conf.icon || 'fa-clock-rotate-left'} text-xs text-[#147D64]"></i>
+                <i class="fa-solid ${m.icon||"fa-clock-rotate-left"} text-xs text-[#147D64]"></i>
               </div>
               <div class="min-w-0">
                 <div class="flex items-center gap-2 flex-wrap">
-                  <span class="font-bold text-xs text-[#172B36]">${escapeHtml(conf.label)}</span>
-                  <span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase border ${conf.badgeClass}">
-                    ${escapeHtml(l.action)}
+                  <span class="font-bold text-xs text-[#172B36]">${p(m.label)}</span>
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase border ${m.badgeClass}">
+                    ${p(i.action)}
                   </span>
                 </div>
                 <div class="text-[11px] text-slate-500 mt-0.5 flex items-center gap-2 flex-wrap">
-                  <span>By <strong class="text-slate-700">${escapeHtml(actorEmail)}</strong></span>
-                  ${resourceInfo ? `<span class="text-slate-300">•</span><span class="font-mono text-slate-600">${escapeHtml(resourceInfo)}</span>` : ''}
+                  <span>By <strong class="text-slate-700">${p(b)}</strong></span>
+                  ${a?`<span class="text-slate-300">\u2022</span><span class="font-mono text-slate-600">${p(a)}</span>`:""}
                 </div>
               </div>
             </div>
             <div class="text-left sm:text-right shrink-0">
-              <span class="text-[11px] font-mono text-slate-500">${escapeHtml(dateStr)}</span>
+              <span class="text-[11px] font-mono text-slate-500">${p(x)}</span>
             </div>
           </div>
-          ${detailsHtml}
+          ${n}
         </div>
-      `;
-    }).join('');
-  }
-
-  // Admin Panel: Pure ledger data-entry and management interface. Zero admin PDF generation.
-
-  // Finance Subtab Loaders
-  async function loadInvoicesData() {
-    const tbody = document.getElementById('adminInvoicesTableBody');
-    if (!tbody) return;
-
-    try {
-      const res = await apiFetch('/finance/invoices');
-      if (res.ok && res.data && res.data.data) {
-        const invoices = res.data.data;
-        if (invoices.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">No invoices created yet. Recording payments will auto-link invoices.</td></tr>';
-          return;
-        }
-
-        tbody.innerHTML = invoices.map(inv => {
-          const isPaid = inv.outstanding_balance_cents === 0 || inv.status === 'paid';
-          return `
+      `}).join("")}async function St(){const s=document.getElementById("adminInvoicesTableBody");if(s)try{const t=await L("/finance/invoices");if(t.ok&&t.data&&t.data.data){const r=t.data.data;if(r.length===0){s.innerHTML='<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">No invoices created yet. Recording payments will auto-link invoices.</td></tr>';return}s.innerHTML=r.map(e=>{const l=e.outstanding_balance_cents===0||e.status==="paid";return`
             <tr class="hover:bg-slate-50/80 transition-colors border-b border-[#E3E9EF]">
-              <td class="px-6 py-4 font-mono font-bold text-[#172B36]">${escapeHtml(inv.invoice_number)}</td>
+              <td class="px-6 py-4 font-mono font-bold text-[#172B36]">${p(e.invoice_number)}</td>
               <td class="px-6 py-4">
-                <div class="font-bold text-[#172B36]">${escapeHtml(inv.organization_name || 'Client')}</div>
-                <div class="text-[11px] text-slate-400">Due: ${escapeHtml(inv.due_date || 'N/A')}</div>
+                <div class="font-bold text-[#172B36]">${p(e.organization_name||"Client")}</div>
+                <div class="text-[11px] text-slate-400">Due: ${p(e.due_date||"N/A")}</div>
               </td>
-              <td class="px-6 py-4 font-mono font-bold text-[#172B36]">${formatCurrency(inv.total_cents || 0, inv.currency || 'USD')}</td>
-              <td class="px-6 py-4 font-mono font-bold ${isPaid ? 'text-emerald-600' : 'text-amber-600'}">${formatCurrency(inv.outstanding_balance_cents || 0, inv.currency || 'USD')}</td>
+              <td class="px-6 py-4 font-mono font-bold text-[#172B36]">${Y(e.total_cents||0,e.currency||"USD")}</td>
+              <td class="px-6 py-4 font-mono font-bold ${l?"text-emerald-600":"text-amber-600"}">${Y(e.outstanding_balance_cents||0,e.currency||"USD")}</td>
               <td class="px-6 py-4">
-                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${isPaid ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}">
-                  ${isPaid ? 'Paid in Full' : 'Pending'}
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${l?"bg-emerald-50 text-emerald-700 border border-emerald-200":"bg-amber-50 text-amber-700 border border-amber-200"}">
+                  ${l?"Paid in Full":"Pending"}
                 </span>
               </td>
               <td class="px-6 py-4 text-right">
                 <span class="text-xs font-mono text-slate-400 font-semibold">Recorded</span>
               </td>
             </tr>
-          `;
-        }).join('');
-      }
-    } catch (e) {
-      console.warn('Error loading invoices:', e);
-    }
-  }
-
-  async function loadPaymentMethodsData() {
-    const container = document.getElementById('paymentMethodsConfigList');
-    if (!container) return;
-
-    try {
-      const res = await apiFetch('/finance/payment-methods');
-      if (res.ok && res.data && res.data.data) {
-        const methods = res.data.data;
-        container.innerHTML = methods.map(m => {
-          return `
+          `}).join("")}}catch(t){console.warn("Error loading invoices:",t)}}async function ct(){const s=document.getElementById("paymentMethodsConfigList");if(s)try{const t=await L("/finance/payment-methods");if(t.ok&&t.data&&t.data.data){const r=t.data.data;s.innerHTML=r.map(e=>`
             <div class="p-4 rounded-2xl bg-slate-50 border border-[#E3E9EF] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div class="space-y-1">
                 <div class="flex items-center gap-2">
-                  <span class="font-bold text-xs text-[#172B36]">${escapeHtml(m.display_name)}</span>
-                  <span class="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-white border border-[#E3E9EF] text-slate-600">${escapeHtml(m.method_key)}</span>
+                  <span class="font-bold text-xs text-[#172B36]">${p(e.display_name)}</span>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-white border border-[#E3E9EF] text-slate-600">${p(e.method_key)}</span>
                 </div>
                 <div class="text-[11px] text-slate-500">
-                  <span>Provider: <strong class="text-slate-700">${escapeHtml(m.provider_name || 'N/A')}</strong></span>
-                  <span class="mx-1.5">•</span>
-                  <span>Account: <strong class="text-slate-700">${escapeHtml(m.account_name || 'N/A')}</strong> (${escapeHtml(m.account_number || 'N/A')})</span>
-                  ${m.bank_name ? `<span class="mx-1.5">•</span><span>Bank: ${escapeHtml(m.bank_name)}</span>` : ''}
+                  <span>Provider: <strong class="text-slate-700">${p(e.provider_name||"N/A")}</strong></span>
+                  <span class="mx-1.5">\u2022</span>
+                  <span>Account: <strong class="text-slate-700">${p(e.account_name||"N/A")}</strong> (${p(e.account_number||"N/A")})</span>
+                  ${e.bank_name?`<span class="mx-1.5">\u2022</span><span>Bank: ${p(e.bank_name)}</span>`:""}
                 </div>
               </div>
-              <button type="button" class="btn-edit-method px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-[#E3E9EF] text-xs font-bold transition-all shadow-xs cursor-pointer shrink-0 self-start sm:self-auto" data-key="${m.method_key}">
+              <button type="button" class="btn-edit-method px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-[#E3E9EF] text-xs font-bold transition-all shadow-xs cursor-pointer shrink-0 self-start sm:self-auto" data-key="${e.method_key}">
                 <i class="fa-solid fa-pen-to-square mr-1 text-[#147D64]"></i> Configure Details
               </button>
             </div>
-          `;
-        }).join('');
-
-        container.querySelectorAll('.btn-edit-method').forEach(btn => {
-          btn.addEventListener('click', () => {
-            const m = methods.find(x => x.method_key === btn.dataset.key);
-            if (!m) return;
-            document.getElementById('editMethodKey').value = m.method_key;
-            document.getElementById('editMethodModalTitle').textContent = `Configure ${m.display_name}`;
-            document.getElementById('editMethodDisplayName').value = m.display_name;
-            document.getElementById('editMethodProvider').value = m.provider_name || '';
-            document.getElementById('editMethodAccountName').value = m.account_name || '';
-            document.getElementById('editMethodAccountNumber').value = m.account_number || '';
-            document.getElementById('editMethodBankName').value = m.bank_name || '';
-            document.getElementById('editMethodBranchName').value = m.branch_name || '';
-            document.getElementById('editMethodInstructions').value = m.instructions || '';
-            document.getElementById('modalEditPaymentMethod')?.classList.remove('hidden');
-          });
-        });
-      }
-    } catch (e) {
-      console.warn('Error loading payment methods:', e);
-    }
-  }
-
-  function initFinanceSubtabs() {
-    const tabPay = document.getElementById('subtabPayments');
-    const tabInv = document.getElementById('subtabInvoices');
-    const tabMet = document.getElementById('subtabMethods');
-    const secPay = document.getElementById('sectionFinancePayments');
-    const secInv = document.getElementById('sectionFinanceInvoices');
-    const secMet = document.getElementById('sectionFinanceMethods');
-
-    const setActive = (activeTab, activeSec) => {
-      [tabPay, tabInv, tabMet].forEach(t => {
-        if (!t) return;
-        t.className = (t === activeTab)
-          ? 'px-3 py-1.5 rounded-lg text-xs font-bold bg-[#147D64] text-white transition-all cursor-pointer'
-          : 'px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all cursor-pointer';
-      });
-      [secPay, secInv, secMet].forEach(s => {
-        if (!s) return;
-        s.classList.toggle('hidden', s !== activeSec);
-      });
-    };
-
-    if (tabPay) tabPay.onclick = () => { setActive(tabPay, secPay); loadFinanceData(); };
-    if (tabInv) tabInv.onclick = () => { setActive(tabInv, secInv); loadInvoicesData(); };
-    if (tabMet) tabMet.onclick = () => { setActive(tabMet, secMet); loadPaymentMethodsData(); };
-
-    // Method settings modal save
-    const formMethod = document.getElementById('formEditPaymentMethod');
-    if (formMethod && !formMethod.dataset.bound) {
-      formMethod.dataset.bound = 'true';
-      formMethod.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const key = document.getElementById('editMethodKey').value;
-        const payload = {
-          displayName: document.getElementById('editMethodDisplayName').value.trim(),
-          providerName: document.getElementById('editMethodProvider').value.trim(),
-          accountName: document.getElementById('editMethodAccountName').value.trim(),
-          accountNumber: document.getElementById('editMethodAccountNumber').value.trim(),
-          bankName: document.getElementById('editMethodBankName').value.trim() || null,
-          branchName: document.getElementById('editMethodBranchName').value.trim() || null,
-          instructions: document.getElementById('editMethodInstructions').value.trim() || null
-        };
-
-        const res = await apiFetch(`/finance/payment-methods/${key}`, {
-          method: 'PUT',
-          body: JSON.stringify(payload)
-        });
-
-        if (res.ok && res.data && res.data.success) {
-          showToast('Payment method configuration updated!', 'success');
-          document.getElementById('modalEditPaymentMethod')?.classList.add('hidden');
-          loadPaymentMethodsData();
-        } else {
-          showToast(res.data?.error || 'Failed to update payment method.', 'error');
-        }
-      });
-    }
-
-    const btnOpenMethods = document.getElementById('btnOpenPaymentMethodsModal');
-    if (btnOpenMethods) {
-      btnOpenMethods.onclick = () => {
-        setActive(tabMet, secMet);
-        loadPaymentMethodsData();
-      };
-    }
-  }
-
-  // CLERK AUTHENTICATED PASSWORD CHANGE WORKFLOW
-  // =========================================================================
-  async function handleAdminPasswordChange(e) {
-    e.preventDefault();
-    const btn = document.getElementById('adminUpdatePasswordBtn');
-    const currentPassEl = document.getElementById('adminCurrentPassword');
-    const newPassEl = document.getElementById('adminNewPassword');
-    const confirmPassEl = document.getElementById('adminConfirmNewPassword');
-    const signOthersEl = document.getElementById('adminSignOutOfOthers');
-
-    const currentPassword = currentPassEl.value;
-    const newPassword = newPassEl.value;
-    const confirmPassword = confirmPassEl.value;
-    const signOutOfOtherSessions = signOthersEl ? signOthersEl.checked : true;
-
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      showToast('Please complete all password fields.', 'warn');
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      showToast('New passwords do not match. Please verify.', 'error');
-      return;
-    }
-
-    if (newPassword.length < 8) {
-      showToast('New password must be at least 8 characters long.', 'warn');
-      return;
-    }
-
-    setBtnLoading(btn, true, 'Updating via Clerk...');
-
-    try {
-      const user = window.Clerk.user;
-      if (!user) throw new Error('No active Clerk authentication session.');
-
-      await user.updatePassword({
-        currentPassword,
-        newPassword,
-        signOutOfOtherSessions
-      });
-
-      showToast('Password updated successfully! All other sessions signed out.', 'success');
-      e.target.reset();
-    } catch (err) {
-      console.error('Password change error:', err);
-      const msg = err.errors?.[0]?.longMessage || err.errors?.[0]?.message || err.message || 'Failed to update password.';
-      showToast(msg, 'error');
-    } finally {
-      setBtnLoading(btn, false);
-    }
-  }
-
-
-  // =========================================================================
-  // 10. CLIENT SUPPORT DESK DATA & WORKFLOWS
-  // =========================================================================
-  async function loadSupportData(showNotification = false) {
-    const tbody = document.getElementById('adminSupportTableBody');
-    const cards = document.getElementById('adminSupportCardsContainer');
-    const emptyState = document.getElementById('supportEmptyState');
-    const tableCard = document.getElementById('adminSupportTableCard');
-    const refreshBtn = document.getElementById('btnRefreshSupport');
-
-    if (refreshBtn) {
-      const icon = refreshBtn.querySelector('i');
-      if (icon) icon.classList.add('fa-spin');
-    }
-
-    // Loading State
-    if (tbody) {
-      tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic"><i class="fa-solid fa-circle-notch fa-spin mr-2 text-[#087F70]"></i>Loading support tickets...</td></tr>';
-    }
-    if (cards) {
-      cards.innerHTML = '<div class="p-8 rounded-2xl bg-white border border-[#E3E9EF] text-center shadow-xs space-y-2"><i class="fa-solid fa-circle-notch fa-spin text-[#087F70] text-lg"></i><p class="text-xs text-slate-500 font-medium">Loading support requests...</p></div>';
-    }
-
-    try {
-      const res = await apiFetch('/portal/admin/support');
-      if (refreshBtn) {
-        const icon = refreshBtn.querySelector('i');
-        if (icon) icon.classList.remove('fa-spin');
-      }
-
-      if (res.ok && res.data) {
-        state.supportCache = Array.isArray(res.data.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
-        initGlassSelects();
-        renderSupport();
-        if (showNotification) showToast('Support tickets synchronized.', 'success');
-      } else {
-        const err = res.data?.error || 'Failed to retrieve support requests.';
-        console.error('Support Fetch Error:', err);
-        const errorCard = `
+          `).join(""),s.querySelectorAll(".btn-edit-method").forEach(e=>{e.addEventListener("click",()=>{const l=r.find(i=>i.method_key===e.dataset.key);l&&(document.getElementById("editMethodKey").value=l.method_key,document.getElementById("editMethodModalTitle").textContent=`Configure ${l.display_name}`,document.getElementById("editMethodDisplayName").value=l.display_name,document.getElementById("editMethodProvider").value=l.provider_name||"",document.getElementById("editMethodAccountName").value=l.account_name||"",document.getElementById("editMethodAccountNumber").value=l.account_number||"",document.getElementById("editMethodBankName").value=l.bank_name||"",document.getElementById("editMethodBranchName").value=l.branch_name||"",document.getElementById("editMethodInstructions").value=l.instructions||"",document.getElementById("modalEditPaymentMethod")?.classList.remove("hidden"))})})}}catch(t){console.warn("Error loading payment methods:",t)}}function Vt(){const s=document.getElementById("subtabPayments"),t=document.getElementById("subtabInvoices"),r=document.getElementById("subtabMethods"),e=document.getElementById("sectionFinancePayments"),l=document.getElementById("sectionFinanceInvoices"),i=document.getElementById("sectionFinanceMethods"),m=(a,n)=>{[s,t,r].forEach(d=>{d&&(d.className=d===a?"px-3 py-1.5 rounded-lg text-xs font-bold bg-[#147D64] text-white transition-all cursor-pointer":"px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all cursor-pointer")}),[e,l,i].forEach(d=>{d&&d.classList.toggle("hidden",d!==n)})};s&&(s.onclick=()=>{m(s,e),ye()}),t&&(t.onclick=()=>{m(t,l),St()}),r&&(r.onclick=()=>{m(r,i),ct()});const x=document.getElementById("formEditPaymentMethod");x&&!x.dataset.bound&&(x.dataset.bound="true",x.addEventListener("submit",async a=>{a.preventDefault();const n=document.getElementById("editMethodKey").value,d={displayName:document.getElementById("editMethodDisplayName").value.trim(),providerName:document.getElementById("editMethodProvider").value.trim(),accountName:document.getElementById("editMethodAccountName").value.trim(),accountNumber:document.getElementById("editMethodAccountNumber").value.trim(),bankName:document.getElementById("editMethodBankName").value.trim()||null,branchName:document.getElementById("editMethodBranchName").value.trim()||null,instructions:document.getElementById("editMethodInstructions").value.trim()||null},c=await L(`/finance/payment-methods/${n}`,{method:"PUT",body:JSON.stringify(d)});c.ok&&c.data&&c.data.success?(h("Payment method configuration updated!","success"),document.getElementById("modalEditPaymentMethod")?.classList.add("hidden"),ct()):h(c.data?.error||"Failed to update payment method.","error")}));const b=document.getElementById("btnOpenPaymentMethodsModal");b&&(b.onclick=()=>{m(r,i),ct()})}async function Gt(s){s.preventDefault();const t=document.getElementById("adminUpdatePasswordBtn"),r=document.getElementById("adminCurrentPassword"),e=document.getElementById("adminNewPassword"),l=document.getElementById("adminConfirmNewPassword"),i=document.getElementById("adminSignOutOfOthers"),m=r.value,x=e.value,b=l.value,a=i?i.checked:!0;if(!m||!x||!b){h("Please complete all password fields.","warn");return}if(x!==b){h("New passwords do not match. Please verify.","error");return}if(x.length<8){h("New password must be at least 8 characters long.","warn");return}S(t,!0,"Updating via Clerk...");try{const n=window.Clerk.user;if(!n)throw new Error("No active Clerk authentication session.");await n.updatePassword({currentPassword:m,newPassword:x,signOutOfOtherSessions:a}),h("Password updated successfully! All other sessions signed out.","success"),s.target.reset()}catch(n){console.error("Password change error:",n);const d=n.errors?.[0]?.longMessage||n.errors?.[0]?.message||n.message||"Failed to update password.";h(d,"error")}finally{S(t,!1)}}async function Oe(s=!1){const t=document.getElementById("adminSupportTableBody"),r=document.getElementById("adminSupportCardsContainer"),e=document.getElementById("supportEmptyState"),l=document.getElementById("adminSupportTableCard"),i=document.getElementById("btnRefreshSupport");if(i){const m=i.querySelector("i");m&&m.classList.add("fa-spin")}t&&(t.innerHTML='<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic"><i class="fa-solid fa-circle-notch fa-spin mr-2 text-[#087F70]"></i>Loading support tickets...</td></tr>'),r&&(r.innerHTML='<div class="p-8 rounded-2xl bg-white border border-[#E3E9EF] text-center shadow-xs space-y-2"><i class="fa-solid fa-circle-notch fa-spin text-[#087F70] text-lg"></i><p class="text-xs text-slate-500 font-medium">Loading support requests...</p></div>');try{const m=await L("/portal/admin/support");if(i){const x=i.querySelector("i");x&&x.classList.remove("fa-spin")}if(m.ok&&m.data)y.supportCache=Array.isArray(m.data.data)?m.data.data:Array.isArray(m.data)?m.data:[],H(),ze(),s&&h("Support tickets synchronized.","success");else{const x=m.data?.error||"Failed to retrieve support requests.";console.error("Support Fetch Error:",x);const b=`
           <div class="p-6 rounded-2xl sm:rounded-3xl bg-white border border-rose-200 text-center space-y-3 shadow-xs">
             <div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto text-base">
               <i class="fa-solid fa-triangle-exclamation"></i>
             </div>
-            <h4 class="text-xs font-bold text-rose-600">${escapeHtml(err)}</h4>
+            <h4 class="text-xs font-bold text-rose-600">${p(x)}</h4>
             <p class="text-xs text-slate-500 max-w-xs mx-auto">Unable to retrieve support tickets from the backend. Please check connection and retry.</p>
             <button type="button" class="btn-retry-support h-10 px-4 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-all inline-flex items-center gap-2 cursor-pointer shadow-xs">
               <i class="fa-solid fa-arrows-rotate text-xs text-[#087F70]"></i>
               <span>Retry Connection</span>
             </button>
           </div>
-        `;
-        if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-6 text-center text-rose-500 font-medium">${escapeHtml(err)} <button type="button" class="btn-retry-support ml-2 px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold cursor-pointer"><i class="fa-solid fa-arrows-rotate mr-1"></i>Retry</button></td></tr>`;
-        if (cards) cards.innerHTML = errorCard;
-        if (showNotification) showToast(err, 'error');
-      }
-    } catch (e) {
-      console.error('loadSupportData exception:', e);
-      if (refreshBtn) {
-        const icon = refreshBtn.querySelector('i');
-        if (icon) icon.classList.remove('fa-spin');
-      }
-      const failMsg = 'Network error fetching support tickets. Please retry.';
-      const errorCard = `
+        `;t&&(t.innerHTML=`<tr><td colspan="6" class="px-6 py-6 text-center text-rose-500 font-medium">${p(x)} <button type="button" class="btn-retry-support ml-2 px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold cursor-pointer"><i class="fa-solid fa-arrows-rotate mr-1"></i>Retry</button></td></tr>`),r&&(r.innerHTML=b),s&&h(x,"error")}}catch(m){if(console.error("loadSupportData exception:",m),i){const a=i.querySelector("i");a&&a.classList.remove("fa-spin")}const x="Network error fetching support tickets. Please retry.",b=`
         <div class="p-6 rounded-2xl sm:rounded-3xl bg-white border border-rose-200 text-center space-y-3 shadow-xs">
           <div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto text-base">
             <i class="fa-solid fa-triangle-exclamation"></i>
           </div>
-          <h4 class="text-xs font-bold text-rose-600">${failMsg}</h4>
+          <h4 class="text-xs font-bold text-rose-600">${x}</h4>
           <p class="text-xs text-slate-500 max-w-xs mx-auto">Unable to reach the support service. Please check connection and retry.</p>
           <button type="button" class="btn-retry-support h-10 px-4 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-all inline-flex items-center gap-2 cursor-pointer shadow-xs">
             <i class="fa-solid fa-arrows-rotate text-xs text-[#087F70]"></i>
             <span>Retry Connection</span>
           </button>
         </div>
-      `;
-      if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-6 text-center text-rose-500 font-medium">${failMsg} <button type="button" class="btn-retry-support ml-2 px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold cursor-pointer"><i class="fa-solid fa-arrows-rotate mr-1"></i>Retry</button></td></tr>`;
-      if (cards) cards.innerHTML = errorCard;
-      if (showNotification) showToast(failMsg, 'error');
-    }
-  }
-
-  function renderSupport() {
-    const tbody = document.getElementById('adminSupportTableBody');
-    const cards = document.getElementById('adminSupportCardsContainer');
-    const emptyState = document.getElementById('supportEmptyState');
-    const tableCard = document.getElementById('adminSupportTableCard');
-
-    const totalEl = document.getElementById('supportTotalCount');
-    const openEl = document.getElementById('supportOpenCount');
-    const inProgEl = document.getElementById('supportInProgressCount');
-    const resolvedEl = document.getElementById('supportResolvedCount');
-
-    const tickets = state.supportCache || [];
-
-    const totalCount = tickets.length;
-    const openCount = tickets.filter(t => t.status === 'open').length;
-    const inProgCount = tickets.filter(t => t.status === 'in_progress').length;
-    const resolvedCount = tickets.filter(t => t.status === 'resolved' || t.status === 'closed').length;
-
-    if (totalEl) totalEl.textContent = totalCount;
-    if (openEl) openEl.textContent = openCount;
-    if (inProgEl) inProgEl.textContent = inProgCount;
-    if (resolvedEl) resolvedEl.textContent = resolvedCount;
-
-    // Empty state when 0 tickets exist in DB
-    if (totalCount === 0) {
-      if (emptyState) emptyState.classList.remove('hidden');
-      if (tableCard) tableCard.classList.add('hidden');
-      if (cards) cards.innerHTML = '';
-      return;
-    } else {
-      if (emptyState) emptyState.classList.add('hidden');
-      if (tableCard) tableCard.classList.remove('hidden');
-    }
-
-    const query = (document.getElementById('supportSearchInput')?.value || '').toLowerCase().trim();
-    const statusFilter = document.getElementById('supportStatusFilter')?.value || 'all';
-
-    // Toggle search clear button
-    const searchClearBtn = document.getElementById('supportSearchClear');
-    if (searchClearBtn) {
-      searchClearBtn.classList.toggle('hidden', !query);
-    }
-
-    const filtered = tickets.filter(t => {
-      const matchQuery = !query ||
-        (t.full_name || '').toLowerCase().includes(query) ||
-        (t.email || '').toLowerCase().includes(query) ||
-        (t.organization_name || '').toLowerCase().includes(query) ||
-        (t.subject || '').toLowerCase().includes(query) ||
-        (t.message || '').toLowerCase().includes(query) ||
-        (t.id || '').toLowerCase().includes(query);
-
-      const matchStatus = statusFilter === 'all' || t.status === statusFilter;
-      return matchQuery && matchStatus;
-    });
-
-    if (filtered.length === 0) {
-      const noMatchMsg = '<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">No support requests match your search criteria.</td></tr>';
-      if (tbody) tbody.innerHTML = noMatchMsg;
-      if (cards) {
-        cards.innerHTML = `
+      `;t&&(t.innerHTML=`<tr><td colspan="6" class="px-6 py-6 text-center text-rose-500 font-medium">${x} <button type="button" class="btn-retry-support ml-2 px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold cursor-pointer"><i class="fa-solid fa-arrows-rotate mr-1"></i>Retry</button></td></tr>`),r&&(r.innerHTML=b),s&&h(x,"error")}}function ze(){const s=document.getElementById("adminSupportTableBody"),t=document.getElementById("adminSupportCardsContainer"),r=document.getElementById("supportEmptyState"),e=document.getElementById("adminSupportTableCard"),l=document.getElementById("supportTotalCount"),i=document.getElementById("supportOpenCount"),m=document.getElementById("supportInProgressCount"),x=document.getElementById("supportResolvedCount"),b=y.supportCache||[],a=b.length,n=b.filter(v=>v.status==="open").length,d=b.filter(v=>v.status==="in_progress").length,c=b.filter(v=>v.status==="resolved"||v.status==="closed").length;if(l&&(l.textContent=a),i&&(i.textContent=n),m&&(m.textContent=d),x&&(x.textContent=c),a===0){r&&r.classList.remove("hidden"),e&&e.classList.add("hidden"),t&&(t.innerHTML="");return}else r&&r.classList.add("hidden"),e&&e.classList.remove("hidden");const o=(document.getElementById("supportSearchInput")?.value||"").toLowerCase().trim(),u=document.getElementById("supportStatusFilter")?.value||"all",g=document.getElementById("supportSearchClear");g&&g.classList.toggle("hidden",!o);const w=b.filter(v=>{const B=!o||(v.full_name||"").toLowerCase().includes(o)||(v.email||"").toLowerCase().includes(o)||(v.organization_name||"").toLowerCase().includes(o)||(v.subject||"").toLowerCase().includes(o)||(v.message||"").toLowerCase().includes(o)||(v.id||"").toLowerCase().includes(o),I=u==="all"||v.status===u;return B&&I});if(w.length===0){const v='<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">No support requests match your search criteria.</td></tr>';s&&(s.innerHTML=v),t&&(t.innerHTML=`
           <div class="p-8 rounded-2xl sm:rounded-3xl bg-white border border-[#E3E9EF] text-center shadow-xs space-y-3">
             <div class="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-center mx-auto text-slate-400">
               <i class="fa-solid fa-filter-circle-xmark text-lg"></i>
@@ -4257,273 +967,80 @@
               <span>Reset All Filters</span>
             </button>
           </div>
-        `;
-      }
-      return;
-    }
-
-    const STATUS_BADGES = {
-      open: '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200 shadow-xs"><span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Open</span>',
-      in_progress: '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200 shadow-xs"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> In Progress</span>',
-      resolved: '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-xs"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Resolved</span>',
-      closed: '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200 shadow-xs"><span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Closed</span>'
-    };
-
-    // Desktop Table View
-    if (tbody) {
-      tbody.innerHTML = filtered.map(t => {
-        const dateStr = t.created_at ? new Date(t.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
-        const excerpt = (t.message || '').length > 65 ? (t.message.slice(0, 65) + '...') : t.message;
-        const orgBadge = t.organization_name ? `<span class="text-[10px] text-slate-400 font-medium">(${escapeHtml(t.organization_name)})</span>` : '';
-        const badge = STATUS_BADGES[t.status] || STATUS_BADGES.open;
-
-        return `
+        `);return}const C={open:'<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200 shadow-xs"><span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Open</span>',in_progress:'<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200 shadow-xs"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> In Progress</span>',resolved:'<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-xs"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Resolved</span>',closed:'<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200 shadow-xs"><span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Closed</span>'};s&&(s.innerHTML=w.map(v=>{const B=v.created_at?new Date(v.created_at).toLocaleDateString(void 0,{month:"short",day:"numeric",year:"numeric"}):"N/A",I=(v.message||"").length>65?v.message.slice(0,65)+"...":v.message,F=v.organization_name?`<span class="text-[10px] text-slate-400 font-medium">(${p(v.organization_name)})</span>`:"",M=C[v.status]||C.open;return`
           <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
             <td class="px-6 py-4">
               <div class="font-bold text-[#172B36] flex items-center gap-1.5">
-                <span>${escapeHtml(t.full_name || 'Client')}</span>
-                ${orgBadge}
+                <span>${p(v.full_name||"Client")}</span>
+                ${F}
               </div>
-              <div class="font-mono text-xs text-slate-500">${escapeHtml(t.email)}</div>
+              <div class="font-mono text-xs text-slate-500">${p(v.email)}</div>
             </td>
-            <td class="px-6 py-4 font-semibold text-[#172B36] max-w-[200px] truncate">${escapeHtml(t.subject)}</td>
-            <td class="px-6 py-4 text-xs text-slate-600 max-w-[260px] truncate">${escapeHtml(excerpt)}</td>
-            <td class="px-6 py-4 font-mono text-xs text-slate-500">${escapeHtml(dateStr)}</td>
-            <td class="px-6 py-4">${badge}</td>
+            <td class="px-6 py-4 font-semibold text-[#172B36] max-w-[200px] truncate">${p(v.subject)}</td>
+            <td class="px-6 py-4 text-xs text-slate-600 max-w-[260px] truncate">${p(I)}</td>
+            <td class="px-6 py-4 font-mono text-xs text-slate-500">${p(B)}</td>
+            <td class="px-6 py-4">${M}</td>
             <td class="px-6 py-4 text-right">
-              <button type="button" class="btn-view-support-ticket h-9 px-3 rounded-xl text-xs font-bold bg-[#087F70]/10 text-[#087F70] hover:bg-[#087F70]/20 border border-[#087F70]/20 transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-xs" data-id="${t.id}">
+              <button type="button" class="btn-view-support-ticket h-9 px-3 rounded-xl text-xs font-bold bg-[#087F70]/10 text-[#087F70] hover:bg-[#087F70]/20 border border-[#087F70]/20 transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-xs" data-id="${v.id}">
                 <i class="fa-solid fa-eye text-[10px]"></i>
                 <span>View Request</span>
               </button>
             </td>
           </tr>
-        `;
-      }).join('');
-    }
-
-    // Mobile Cards View (Task 5: WHIZ Premium Support Command Center)
-    if (cards) {
-      cards.innerHTML = filtered.map(t => {
-        const dateStr = t.created_at ? new Date(t.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
-        const excerpt = (t.message || '').length > 120 ? (t.message.slice(0, 120) + '...') : t.message;
-        const badge = STATUS_BADGES[t.status] || STATUS_BADGES.open;
-        const rawId = t.id || '';
-        const ticketRef = rawId.length > 10 ? ('#' + rawId.slice(0, 8).toUpperCase()) : ('#' + rawId);
-        const name = t.full_name || 'Client';
-        const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'CL';
-
-        return `
+        `}).join("")),t&&(t.innerHTML=w.map(v=>{const B=v.created_at?new Date(v.created_at).toLocaleDateString(void 0,{month:"short",day:"numeric",year:"numeric"}):"N/A",I=(v.message||"").length>120?v.message.slice(0,120)+"...":v.message,F=C[v.status]||C.open,M=v.id||"",D=M.length>10?"#"+M.slice(0,8).toUpperCase():"#"+M,_=v.full_name||"Client",N=_.split(" ").map(j=>j[0]).join("").slice(0,2).toUpperCase()||"CL";return`
           <div class="support-ticket-card p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white border border-[#E6ECE9] shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_24px_rgba(20,125,100,0.08)] transition-all space-y-3.5">
             <!-- Header: Reference ID + Organization Tag + Status Badge -->
             <div class="flex items-center justify-between gap-2 pb-2.5 border-b border-slate-100">
               <div class="flex items-center gap-2 min-w-0">
                 <span class="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 font-mono text-[11px] font-bold shrink-0">
-                  ${escapeHtml(ticketRef)}
+                  ${p(D)}
                 </span>
-                ${t.organization_name ? `
-                  <span class="text-[11px] font-semibold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200/60 truncate" title="${escapeHtml(t.organization_name)}">
-                    ${escapeHtml(t.organization_name)}
+                ${v.organization_name?`
+                  <span class="text-[11px] font-semibold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200/60 truncate" title="${p(v.organization_name)}">
+                    ${p(v.organization_name)}
                   </span>
-                ` : ''}
+                `:""}
               </div>
               <div class="shrink-0 flex items-center gap-2">
-                ${badge}
+                ${F}
               </div>
             </div>
 
             <!-- Client Identity & Submission Date -->
             <div class="flex items-start gap-3">
               <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#EAF5F1] to-[#D5EDE5] border border-[#087F70]/20 flex items-center justify-center font-black text-xs text-[#087F70] uppercase shrink-0 shadow-xs">
-                ${escapeHtml(initials)}
+                ${p(N)}
               </div>
               <div class="min-w-0 flex-1">
-                <h4 class="text-sm font-black text-[#172B36] truncate leading-tight">${escapeHtml(name)}</h4>
-                <p class="text-xs font-mono text-slate-500 truncate mt-0.5">${escapeHtml(t.email)}</p>
+                <h4 class="text-sm font-black text-[#172B36] truncate leading-tight">${p(_)}</h4>
+                <p class="text-xs font-mono text-slate-500 truncate mt-0.5">${p(v.email)}</p>
                 <div class="flex items-center gap-1.5 text-[10px] text-slate-400 font-mono mt-1">
                   <i class="fa-regular fa-clock text-[9px]"></i>
-                  <span>${escapeHtml(dateStr)}</span>
+                  <span>${p(B)}</span>
                 </div>
               </div>
             </div>
 
             <!-- Ticket Subject & Message Content Excerpt -->
             <div class="p-3 rounded-xl bg-slate-50/70 border border-slate-100/80 space-y-1">
-              <div class="text-xs font-bold text-[#172B36] break-words line-clamp-1">${escapeHtml(t.subject)}</div>
-              <p class="text-xs text-slate-600 line-clamp-2 leading-relaxed">${escapeHtml(excerpt)}</p>
+              <div class="text-xs font-bold text-[#172B36] break-words line-clamp-1">${p(v.subject)}</div>
+              <p class="text-xs text-slate-600 line-clamp-2 leading-relaxed">${p(I)}</p>
             </div>
 
             <!-- Action Area (44px touch target) -->
             <div class="pt-1 flex items-center justify-end">
-              <button type="button" class="btn-view-support-ticket w-full sm:w-auto h-11 px-5 rounded-xl text-xs font-bold btn-glass-primary shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer" data-id="${t.id}">
+              <button type="button" class="btn-view-support-ticket w-full sm:w-auto h-11 px-5 rounded-xl text-xs font-bold btn-glass-primary shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer" data-id="${v.id}">
                 <i class="fa-solid fa-eye text-xs"></i>
                 <span>View &amp; Resolve Ticket</span>
               </button>
             </div>
           </div>
-        `;
-      }).join('');
-    }
-
-    // Bind View Detail Buttons
-    document.querySelectorAll('.btn-view-support-ticket').forEach(btn => {
-      btn.addEventListener('click', () => {
-        openSupportDetailModal(btn.dataset.id);
-      });
-    });
-  }
-
-  function openSupportDetailModal(ticketId) {
-    const ticket = (state.supportCache || []).find(t => t.id === ticketId);
-    if (!ticket) return;
-
-    const modal = document.getElementById('modalSupportDetail');
-    if (!modal) return;
-
-    const idEl = document.getElementById('modalSupportTicketId');
-    const nameEl = document.getElementById('modalSupportClientName');
-    const emailEl = document.getElementById('modalSupportClientEmail');
-    const orgEl = document.getElementById('modalSupportOrgName');
-    const dateEl = document.getElementById('modalSupportCreatedAt');
-    const subjEl = document.getElementById('modalSupportSubject');
-    const msgEl = document.getElementById('modalSupportMessage');
-    const statusSelect = document.getElementById('modalSupportNewStatus');
-    const notesEl = document.getElementById('modalSupportAdminNotes');
-    const hiddenId = document.getElementById('modalSupportHiddenId');
-    const badgeEl = document.getElementById('modalSupportStatusBadge');
-
-    if (idEl) idEl.textContent = ticket.id;
-    if (nameEl) nameEl.textContent = ticket.full_name || 'Client';
-    if (emailEl) emailEl.textContent = ticket.email;
-    if (orgEl) orgEl.textContent = ticket.organization_name || 'Individual Client';
-    if (dateEl) dateEl.textContent = ticket.created_at ? new Date(ticket.created_at).toLocaleString() : 'N/A';
-    if (subjEl) subjEl.textContent = ticket.subject;
-    if (msgEl) msgEl.textContent = ticket.message;
-    if (statusSelect) {
-      statusSelect.value = ticket.status || 'open';
-      statusSelect.dispatchEvent(new Event('change'));
-    }
-    if (notesEl) notesEl.value = ticket.admin_notes || '';
-    if (hiddenId) hiddenId.value = ticket.id;
-
-    if (badgeEl) {
-      badgeEl.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ' +
-        (ticket.status === 'resolved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-         ticket.status === 'in_progress' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-         'bg-blue-50 text-blue-700 border-blue-200');
-      badgeEl.textContent = (ticket.status || 'open').replace('_', ' ');
-    }
-
-    modal.classList.remove('hidden');
-  }
-
-  // =========================================================================
-  // 11. ACCOUNT SECURITY & TRUSTED DEVICES WORKFLOWS
-  // =========================================================================
-  async function loadSecurityData() {
-    const user = window.Clerk?.user || state.currentUser;
-    const profile = state.adminProfile || {};
-
-    const fullName = user?.fullName || profile.full_name || 'Administrator';
-    const email = user?.primaryEmailAddress?.emailAddress || profile.email || 'admin@example.com';
-    const username = user?.username ? `@${user.username}` : (profile.email ? `@${profile.email.split('@')[0]}` : '@admin');
-    const clerkId = user?.id || profile.clerkUserId || 'user_...';
-    const isOwner = isCurrentUserOwner();
-
-    const fullNameEl = document.getElementById('secFullName');
-    const emailEl = document.getElementById('secUserEmail');
-    const usernameEl = document.getElementById('secUsername');
-    const clerkIdEl = document.getElementById('secClerkUserId');
-    const clerkIdShortEl = document.getElementById('secClerkIdShort');
-    const roleBadgeEl = document.getElementById('secRoleBadge');
-    const authProviderEl = document.getElementById('secAuthProvider');
-    const currentDeviceEl = document.getElementById('secCurrentDevice');
-    const lastActiveEl = document.getElementById('secLastActiveTime');
-
-    if (fullNameEl) fullNameEl.textContent = fullName;
-    if (emailEl) emailEl.textContent = email;
-    if (usernameEl) usernameEl.textContent = username;
-    if (clerkIdEl) clerkIdEl.innerHTML = '<i class="fa-solid fa-shield-halved text-[#147D64]"></i> Hardware-Backed SSO Token Active';
-    if (clerkIdShortEl) clerkIdShortEl.innerHTML = '<i class="fa-solid fa-shield-halved text-[10px] mr-1"></i>SSO Session Verified';
-    if (lastActiveEl) lastActiveEl.textContent = `Session Active (${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`;
-
-    if (roleBadgeEl) {
-      roleBadgeEl.innerHTML = isOwner
-        ? '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Founding Owner</span>'
-        : (typeof getRoleBadgeForRole === 'function' ? getRoleBadgeForRole(profile.role, false) : '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-blue-50 text-blue-700 border border-blue-200"><i class="fa-solid fa-shield-halved text-[9px]"></i> ' + escapeHtml(profile.role || 'Staff') + '</span>');
-    }
-
-    const hasGoogle = user?.externalAccounts?.some(a => a.provider === 'google');
-    if (authProviderEl) {
-      if (hasGoogle) {
-        authProviderEl.innerHTML = '<i class="fa-brands fa-google text-slate-700 text-xs"></i><span>Google OAuth SSO</span>';
-      } else {
-        authProviderEl.innerHTML = '<i class="fa-solid fa-key text-slate-700 text-xs"></i><span>Clerk Password</span>';
-      }
-    }
-
-    const googleNotice = document.getElementById('adminGoogleOnlyNotice');
-    const currentPassDiv = document.getElementById('divCurrentPassword');
-    const hasPassword = user?.passwordEnabled ?? true;
-
-    if (!hasPassword && hasGoogle) {
-      if (googleNotice) googleNotice.classList.remove('hidden');
-      if (currentPassDiv) currentPassDiv.classList.add('hidden');
-    } else {
-      if (googleNotice) googleNotice.classList.add('hidden');
-      if (currentPassDiv) currentPassDiv.classList.remove('hidden');
-    }
-
-    if (currentDeviceEl) {
-      const ua = navigator.userAgent;
-      let dev = 'Desktop Browser';
-      if (/Android/i.test(ua)) dev = 'Android Device';
-      else if (/iPhone/i.test(ua)) dev = 'Apple iPhone';
-      else if (/iPad/i.test(ua)) dev = 'Apple iPad';
-      else if (/Macintosh/i.test(ua)) dev = 'macOS Workstation';
-      else if (/Windows/i.test(ua)) dev = 'Windows PC';
-      currentDeviceEl.textContent = dev;
-    }
-
-    await loadTrustedDevices();
-  }
-
-  async function loadTrustedDevices() {
-    const container = document.getElementById('trustedDevicesList');
-    if (!container) return;
-
-    try {
-      const res = await apiFetch('/security/trusted-devices');
-      if (res.ok && res.data) {
-        state.trustedDevicesCache = Array.isArray(res.data.data) ? res.data.data : [];
-        renderTrustedDevices();
-      } else {
-        container.innerHTML = `<div class="p-6 rounded-2xl bg-slate-50 border border-slate-100 text-center text-xs text-slate-500 italic">No application-trusted devices registered yet.</div>`;
-      }
-    } catch (e) {
-      console.error('loadTrustedDevices error:', e);
-      container.innerHTML = `<div class="p-6 rounded-2xl bg-rose-50 border border-rose-100 text-center text-xs text-rose-500 font-medium">Failed to load recognized devices.</div>`;
-    }
-  }
-
-  function renderTrustedDevices() {
-    const container = document.getElementById('trustedDevicesList');
-    if (!container) return;
-
-    const devices = state.trustedDevicesCache || [];
-
-    if (devices.length === 0) {
-      container.innerHTML = `
+        `}).join("")),document.querySelectorAll(".btn-view-support-ticket").forEach(v=>{v.addEventListener("click",()=>{Jt(v.dataset.id)})})}function Jt(s){const t=(y.supportCache||[]).find(u=>u.id===s);if(!t)return;const r=document.getElementById("modalSupportDetail");if(!r)return;const e=document.getElementById("modalSupportTicketId"),l=document.getElementById("modalSupportClientName"),i=document.getElementById("modalSupportClientEmail"),m=document.getElementById("modalSupportOrgName"),x=document.getElementById("modalSupportCreatedAt"),b=document.getElementById("modalSupportSubject"),a=document.getElementById("modalSupportMessage"),n=document.getElementById("modalSupportNewStatus"),d=document.getElementById("modalSupportAdminNotes"),c=document.getElementById("modalSupportHiddenId"),o=document.getElementById("modalSupportStatusBadge");e&&(e.textContent=t.id),l&&(l.textContent=t.full_name||"Client"),i&&(i.textContent=t.email),m&&(m.textContent=t.organization_name||"Individual Client"),x&&(x.textContent=t.created_at?new Date(t.created_at).toLocaleString():"N/A"),b&&(b.textContent=t.subject),a&&(a.textContent=t.message),n&&(n.value=t.status||"open",n.dispatchEvent(new Event("change"))),d&&(d.value=t.admin_notes||""),c&&(c.value=t.id),o&&(o.className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border "+(t.status==="resolved"?"bg-emerald-50 text-emerald-700 border-emerald-200":t.status==="in_progress"?"bg-amber-50 text-amber-700 border-amber-200":"bg-blue-50 text-blue-700 border-blue-200"),o.textContent=(t.status||"open").replace("_"," ")),r.classList.remove("hidden")}async function At(){const s=window.Clerk?.user||y.currentUser,t=y.adminProfile||{},r=s?.fullName||t.full_name||"Administrator",e=s?.primaryEmailAddress?.emailAddress||t.email||"admin@example.com",l=s?.username?`@${s.username}`:t.email?`@${t.email.split("@")[0]}`:"@admin",i=s?.id||t.clerkUserId||"user_...",m=X(),x=document.getElementById("secFullName"),b=document.getElementById("secUserEmail"),a=document.getElementById("secUsername"),n=document.getElementById("secClerkUserId"),d=document.getElementById("secClerkIdShort"),c=document.getElementById("secRoleBadge"),o=document.getElementById("secAuthProvider"),u=document.getElementById("secCurrentDevice"),g=document.getElementById("secLastActiveTime");x&&(x.textContent=r),b&&(b.textContent=e),a&&(a.textContent=l),n&&(n.innerHTML='<i class="fa-solid fa-shield-halved text-[#147D64]"></i> Hardware-Backed SSO Token Active'),d&&(d.innerHTML='<i class="fa-solid fa-shield-halved text-[10px] mr-1"></i>SSO Session Verified'),g&&(g.textContent=`Session Active (${new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})})`),c&&(c.innerHTML=m?'<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Founding Owner</span>':typeof ge=="function"?ge(t.role,!1):'<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-blue-50 text-blue-700 border border-blue-200"><i class="fa-solid fa-shield-halved text-[9px]"></i> '+p(t.role||"Staff")+"</span>");const w=s?.externalAccounts?.some(I=>I.provider==="google");o&&(w?o.innerHTML='<i class="fa-brands fa-google text-slate-700 text-xs"></i><span>Google OAuth SSO</span>':o.innerHTML='<i class="fa-solid fa-key text-slate-700 text-xs"></i><span>Clerk Password</span>');const C=document.getElementById("adminGoogleOnlyNotice"),v=document.getElementById("divCurrentPassword");if(!(s?.passwordEnabled??!0)&&w?(C&&C.classList.remove("hidden"),v&&v.classList.add("hidden")):(C&&C.classList.add("hidden"),v&&v.classList.remove("hidden")),u){const I=navigator.userAgent;let F="Desktop Browser";/Android/i.test(I)?F="Android Device":/iPhone/i.test(I)?F="Apple iPhone":/iPad/i.test(I)?F="Apple iPad":/Macintosh/i.test(I)?F="macOS Workstation":/Windows/i.test(I)&&(F="Windows PC"),u.textContent=F}await Je()}async function Je(){const s=document.getElementById("trustedDevicesList");if(s)try{const t=await L("/security/trusted-devices");t.ok&&t.data?(y.trustedDevicesCache=Array.isArray(t.data.data)?t.data.data:[],Yt()):s.innerHTML='<div class="p-6 rounded-2xl bg-slate-50 border border-slate-100 text-center text-xs text-slate-500 italic">No application-trusted devices registered yet.</div>'}catch(t){console.error("loadTrustedDevices error:",t),s.innerHTML='<div class="p-6 rounded-2xl bg-rose-50 border border-rose-100 text-center text-xs text-rose-500 font-medium">Failed to load recognized devices.</div>'}}function Yt(){const s=document.getElementById("trustedDevicesList");if(!s)return;const t=y.trustedDevicesCache||[];if(t.length===0){s.innerHTML=`
         <div class="p-6 rounded-2xl bg-slate-50 border border-slate-100 text-center space-y-2">
           <div class="text-xs font-bold text-[#172B36]">No Trusted Devices Registered</div>
           <p class="text-[11px] text-slate-500 max-w-sm mx-auto">Click "Trust Current Device" above to register this browser into Cloudflare security policies.</p>
         </div>
-      `;
-      return;
-    }
-
-    container.innerHTML = devices.map(d => {
-      const dateStr = d.last_used_at ? new Date(d.last_used_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recently';
-      return `
+      `;return}s.innerHTML=t.map(r=>{const e=r.last_used_at?new Date(r.last_used_at).toLocaleDateString(void 0,{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}):"Recently";return`
         <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div class="flex items-center space-x-3">
             <div class="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600">
@@ -4531,882 +1048,37 @@
             </div>
             <div>
               <div class="text-xs font-bold text-[#172B36] flex items-center gap-2">
-                <span>${escapeHtml(d.device_name || 'Browser Device')}</span>
+                <span>${p(r.device_name||"Browser Device")}</span>
                 <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase">Trusted</span>
               </div>
-              <div class="text-[11px] font-mono text-slate-400 mt-0.5">${escapeHtml(d.ip_address || '127.0.0.1')} • Last active: ${escapeHtml(dateStr)}</div>
+              <div class="text-[11px] font-mono text-slate-400 mt-0.5">${p(r.ip_address||"127.0.0.1")} \u2022 Last active: ${p(e)}</div>
             </div>
           </div>
-          <button type="button" class="btn-revoke-device px-3 py-1.5 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-all self-start sm:self-auto cursor-pointer" data-id="${d.id}" data-name="${escapeHtml(d.device_name || 'Device')}">
+          <button type="button" class="btn-revoke-device px-3 py-1.5 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-all self-start sm:self-auto cursor-pointer" data-id="${r.id}" data-name="${p(r.device_name||"Device")}">
             <i class="fa-solid fa-trash-can mr-1 text-[10px]"></i>Revoke
           </button>
         </div>
-      `;
-    }).join('');
-
-    document.querySelectorAll('.btn-revoke-device').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const id = btn.dataset.id;
-        const name = btn.dataset.name;
-        if (!confirm(`Are you sure you want to revoke trust for '${name}'?`)) return;
-
-        setBtnLoading(btn, true, 'Revoking...');
-        const res = await apiFetch(`/security/trusted-devices/${id}`, { method: 'DELETE' });
-        setBtnLoading(btn, false);
-
-        if (res.ok && res.data?.success) {
-          showToast(`Device '${name}' revoked successfully.`, 'success');
-          loadTrustedDevices();
-        } else {
-          showToast(res.data?.error || 'Failed to revoke device.', 'error');
-        }
-      });
-    });
-  }
-
-  // =========================================================================
-  // MODALS & EVENT HANDLERS
-  // =========================================================================
-  function initModals() {
-    // 1. Open Add Client Modal
-    const renderAddClientServices = () => {
-      const box = document.getElementById('addClientServicesCheckboxes');
-      if (!box) return;
-      if (state.servicesCache && state.servicesCache.length > 0) {
-        box.innerHTML = state.servicesCache.map(s => {
-          const code = escapeHtml(s.code || (s.id || '').toUpperCase());
-          const name = escapeHtml(s.name || '');
-          const cat = escapeHtml(s.category || '');
-          const id = escapeHtml(s.id || '');
-          return `
+      `}).join(""),document.querySelectorAll(".btn-revoke-device").forEach(r=>{r.addEventListener("click",async()=>{const e=r.dataset.id,l=r.dataset.name;if(!confirm(`Are you sure you want to revoke trust for '${l}'?`))return;S(r,!0,"Revoking...");const i=await L(`/security/trusted-devices/${e}`,{method:"DELETE"});S(r,!1),i.ok&&i.data?.success?(h(`Device '${l}' revoked successfully.`,"success"),Je()):h(i.data?.error||"Failed to revoke device.","error")})})}function Kt(){const s=()=>{const a=document.getElementById("addClientServicesCheckboxes");a&&y.servicesCache&&y.servicesCache.length>0&&(a.innerHTML=y.servicesCache.map(n=>{const d=p(n.code||(n.id||"").toUpperCase()),c=p(n.name||""),o=p(n.category||"");return`
             <label class="service-checkbox-card group flex items-center justify-between gap-1.5 px-2.5 py-1.5 rounded-xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
               <div class="flex items-center gap-2 min-w-0">
-                <input type="checkbox" name="services" value="${id}" class="service-checkbox-input w-3.5 h-3.5 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] cursor-pointer shrink-0">
-                <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">${name}</span>
+                <input type="checkbox" name="services" value="${p(n.id||"")}" class="service-checkbox-input w-3.5 h-3.5 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] cursor-pointer shrink-0">
+                <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">${c}</span>
               </div>
-              <span class="service-card-badge text-[9px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-1.5 py-0.5 rounded border border-[#087F70]/20 shrink-0">${code}</span>
+              <span class="service-card-badge text-[9px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-1.5 py-0.5 rounded border border-[#087F70]/20 shrink-0">${d}</span>
             </label>
-          `;
-        }).join('');
-      }
-    };
-
-    // Wire up live service card highlight sync
-    const serviceBox = document.getElementById('addClientServicesCheckboxes');
-    serviceBox?.addEventListener('change', (e) => {
-      if (e.target && e.target.name === 'services') {
-        const card = e.target.closest('.service-checkbox-card');
-        if (card) {
-          card.classList.toggle('is-checked', e.target.checked);
-        }
-      }
-    });
-
-    const openAddClient = () => {
-      const modal = document.getElementById('modalAddClient');
-      if (modal) {
-        modal.classList.remove('hidden');
-        renderAddClientServices();
-        initGlassSelects();
-      }
-    };
-
-    document.getElementById('btnOpenAddClientModal')?.addEventListener('click', openAddClient);
-    document.getElementById('btnQuickAddClient')?.addEventListener('click', openAddClient);
-
-    // Form Add Client Submit
-    document.getElementById('formAddClient')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const f = e.target;
-      const submitBtn = f.querySelector('button[type="submit"]');
-      const selectedServices = Array.from(f.querySelectorAll('input[name="services"]:checked')).map(i => i.value);
-
-      const payload = {
-        fullName: f.fullName.value,
-        companyName: f.companyName.value,
-        email: f.email.value,
-        phone: f.phone.value,
-        city: f.city.value,
-        country: f.country.value,
-        address: f.address.value,
-        currency: f.currency ? f.currency.value : 'BDT',
-        selectedServiceIds: selectedServices
-      };
-
-      setBtnLoading(submitBtn, true, 'Creating client & provisioning tasks...');
-
-      const res = await apiFetch('/clients', {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      });
-
-      setBtnLoading(submitBtn, false);
-
-      if (res.ok && res.data && res.data.success) {
-        showToast(res.data.message || 'Client created successfully!', 'success');
-        f.reset();
-        initGlassSelects();
-        document.querySelectorAll('#addClientServicesCheckboxes .service-checkbox-card').forEach(c => c.classList.remove('is-checked'));
-        document.getElementById('modalAddClient')?.classList.add('hidden');
-        loadClientsData();
-        loadProjectsData();
-        loadTasksData();
-        if (res.data.data?.clientId) {
-          openClientDetails(res.data.data.clientId);
-        }
-      } else {
-        showToast(res.data?.error || 'Failed to create client.', 'error');
-      }
-    });
-
-    // 2. Client Details Workspace Handlers
-    document.getElementById('btnBackToClients')?.addEventListener('click', () => {
-      switchTab('clients');
-    });
-
-    // Client Search & Status Filter
-    document.getElementById('adminClientSearchInput')?.addEventListener('input', () => {
-      loadClientsData();
-    });
-
-    document.getElementById('adminClientStatusFilter')?.addEventListener('change', () => {
-      loadClientsData();
-    });
-
-    // Edit Client Profile & Authoritative CIF Modal
-    // Reset Client Receipt Download Limit (Phase 1 Flexibility Control & Quota Recovery)
-    document.getElementById('btnResetClientReceiptLimit')?.addEventListener('click', async () => {
-      const clientId = state.selectedClientId;
-      if (!clientId) {
-        showToast('Please select a client first.', 'error');
-        return;
-      }
-      const clientName = document.getElementById('clientCardFullName')?.textContent?.trim() || 'Client';
-      const btn = document.getElementById('btnResetClientReceiptLimit');
-      setBtnLoading(btn, true, 'Restoring limit...');
-      try {
-        const payload = {
-          clientId,
-          daily_pdf_downloads: 0,
-          organizationId: state.selectedClient?.organization_id || null,
-          userId: state.selectedClient?.id || null,
-          clerkUserId: state.selectedClient?.clerk_user_id || null,
-          email: state.selectedClient?.email || null
-        };
-        // Use POST for universal preflight and proxy compatibility
-        const res = await apiFetch(`/pdf/quota/reset/${encodeURIComponent(clientId)}`, {
-          method: 'POST',
-          body: JSON.stringify(payload)
-        });
-        setBtnLoading(btn, false);
-        if (res.ok && res.data && res.data.success) {
-          if (state.selectedClient) {
-            state.selectedClient.receiptQuota = { used: 0, max: 2, remaining: 2, isLimitReached: false };
-            state.selectedClient.dailyPdfDownloads = 0;
-          }
-          showToast(`Receipt download limit for ${clientName} has been successfully restored (2/2 allowance available).`, 'success');
-        } else {
-          showToast(res.data?.error || 'Failed to reset download limit.', 'error');
-        }
-      } catch (err) {
-        setBtnLoading(btn, false);
-        showToast('Network error while resetting quota.', 'error');
-      }
-    });
-
-    document.getElementById('btnOpenEditClientModal')?.addEventListener('click', async () => {
-      const clientId = state.selectedClientId;
-      if (!clientId) return;
-
-      const res = await apiFetch(`/clients/${clientId}`);
-      if (!res.ok || !res.data || !res.data.data?.client) return;
-
-      const c = res.data.data.client;
-      const cif = c.cif || {};
-
-      document.getElementById('editClientId').value = c.id;
-      document.getElementById('editClientFullName').value = cif.fullName || c.full_name || '';
-      document.getElementById('editClientBillingName').value = cif.billingName || cif.fullName || c.full_name || '';
-      document.getElementById('editClientCompanyName').value = cif.companyName || c.company_name || '';
-      document.getElementById('editClientEmail').value = c.email || '';
-      document.getElementById('editClientPhone').value = cif.phone || c.phone || '';
-      document.getElementById('editClientAddress').value = cif.address || c.address || '';
-      document.getElementById('editClientCity').value = cif.city || c.city || 'Dhaka';
-      document.getElementById('editClientPostalCode').value = cif.postalCode || '';
-      document.getElementById('editClientCountry').value = cif.country || c.country || 'Bangladesh';
-      document.getElementById('editClientCurrency').value = cif.currency || c.currency || 'USD';
-      document.getElementById('editClientTaxId').value = cif.taxId || '';
-
-      const lockSelect = document.getElementById('editClientIsLocked');
-      if (lockSelect) {
-        lockSelect.value = cif.isLocked ? '1' : '0';
-      }
-
-      document.getElementById('editClientStatus').value = c.status || 'active';
-
-      // Completion badge
-      const badge = document.getElementById('editClientCompletionBadge');
-      if (badge) {
-        const pct = cif.completionPercentage !== undefined ? cif.completionPercentage : (c.cif_completion_percentage || 0);
-        const locked = Boolean(cif.isLocked);
-        if (pct === 100 && locked) {
-          badge.className = 'text-xs px-2.5 py-1 rounded-full font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/60';
-          badge.textContent = '100% (Verified & Locked)';
-        } else if (pct === 100) {
-          badge.className = 'text-xs px-2.5 py-1 rounded-full font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800/60';
-          badge.textContent = '100% (Unlocked Draft)';
-        } else {
-          badge.className = 'text-xs px-2.5 py-1 rounded-full font-bold bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800/60';
-          badge.textContent = `${pct}% (Incomplete)`;
-        }
-      }
-
-      // Audit trail note
-      const auditText = document.getElementById('editClientAuditText');
-      if (auditText) {
-        const parts = [];
-        if (cif.lastModifiedBy) {
-          parts.push(`Last modified by ${cif.lastModifiedBy} (${cif.lastModifiedAt ? new Date(cif.lastModifiedAt).toLocaleDateString() : 'N/A'})`);
-        }
-        if (cif.lockedAt) {
-          parts.push(`Locked by ${cif.lockedBy || 'System'} on ${new Date(cif.lockedAt).toLocaleDateString()}`);
-        }
-        auditText.textContent = parts.length > 0 ? parts.join(' • ') : 'No modifications recorded yet.';
-      }
-
-      initGlassSelects();
-      document.getElementById('modalEditClient')?.classList.remove('hidden');
-    });
-
-    document.getElementById('formEditClient')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const f = e.target;
-      const clientId = f.clientId.value;
-      const submitBtn = f.querySelector('button[type="submit"]');
-
-      setBtnLoading(submitBtn, true, 'Saving changes...');
-
-      const payload = {
-        fullName: f.fullName.value.trim(),
-        billingName: f.billingName.value.trim(),
-        companyName: f.companyName.value.trim(),
-        phone: f.phone.value.trim(),
-        address: f.address.value.trim(),
-        city: f.city.value.trim(),
-        postalCode: f.postalCode.value.trim(),
-        country: f.country.value.trim(),
-        currency: f.currency.value,
-        taxId: f.taxId.value.trim(),
-        isLocked: f.isLocked.value === '1',
-        status: f.status.value
-      };
-
-      const res = await apiFetch(`/clients/${clientId}`, {
-        method: 'PUT',
-        body: JSON.stringify(payload)
-      });
-
-      setBtnLoading(submitBtn, false);
-
-      if (res.ok && res.data && res.data.success) {
-        showToast('Client profile and CIF updated successfully!', 'success');
-        document.getElementById('modalEditClient')?.classList.add('hidden');
-        openClientDetails(clientId);
-        loadClientsData();
-      } else {
-        showToast(res.data?.error || 'Failed to update profile.', 'error');
-      }
-    });
-
-    // Assign Service to Client
-    document.getElementById('btnOpenAssignServiceClientModal')?.addEventListener('click', () => {
-      const clientId = state.selectedClientId;
-      if (!clientId) return;
-
-      document.getElementById('assignServiceClientId').value = clientId;
-      const select = document.getElementById('assignServiceSelect');
-      const menu = document.getElementById('assignServiceMenu');
-      const triggerLabel = document.getElementById('assignServiceCurrentLabel');
-
-      if (select) {
-        select.innerHTML = '<option value="">Choose a service...</option>' + state.servicesCache.map(s => `
-          <option value="${s.id}" data-price="${(s.standard_price_cents || 100000) / 100}" data-pkg="${s.default_package || 'Standard Retainer'}">[${s.code}] ${s.name}</option>
-        `).join('');
-
-        select.addEventListener('change', () => {
-          const opt = select.selectedOptions[0];
-          if (opt) {
-            const price = opt.dataset.price;
-            if (price) document.getElementById('assignServicePrice').value = price;
-          }
-        });
-      }
-
-      if (triggerLabel) triggerLabel.textContent = 'Choose a service...';
-      if (menu) {
-        menu.innerHTML = '<button type="button" class="custom-assign-service-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-500 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left" data-value="" data-label="Choose a service..."><span>Choose a service...</span></button>' + state.servicesCache.map(s => `
-          <button type="button" class="custom-assign-service-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left" data-value="${s.id}" data-price="${(s.standard_price_cents || 100000) / 100}" data-pkg="${escapeHtml(s.default_package || 'Standard Retainer')}" data-label="[${s.code}] ${escapeHtml(s.name)}">
+          `}).join(""))};document.getElementById("addClientServicesCheckboxes")?.addEventListener("change",a=>{if(a.target&&a.target.name==="services"){const n=a.target.closest(".service-checkbox-card");n&&n.classList.toggle("is-checked",a.target.checked)}});const r=()=>{const a=document.getElementById("modalAddClient");a&&(a.classList.remove("hidden"),s(),H())};document.getElementById("btnOpenAddClientModal")?.addEventListener("click",r),document.getElementById("btnQuickAddClient")?.addEventListener("click",r),document.getElementById("formAddClient")?.addEventListener("submit",async a=>{a.preventDefault();const n=a.target,d=n.querySelector('button[type="submit"]'),c=Array.from(n.querySelectorAll('input[name="services"]:checked')).map(g=>g.value),o={fullName:n.fullName.value,companyName:n.companyName.value,email:n.email.value,phone:n.phone.value,city:n.city.value,country:n.country.value,address:n.address.value,currency:n.currency?n.currency.value:"BDT",selectedServiceIds:c};S(d,!0,"Creating client & provisioning tasks...");const u=await L("/clients",{method:"POST",body:JSON.stringify(o)});S(d,!1),u.ok&&u.data&&u.data.success?(h(u.data.message||"Client created successfully!","success"),n.reset(),H(),document.querySelectorAll("#addClientServicesCheckboxes .service-checkbox-card").forEach(g=>g.classList.remove("is-checked")),document.getElementById("modalAddClient")?.classList.add("hidden"),de(),ke(),Be(),u.data.data?.clientId&&pe(u.data.data.clientId)):h(u.data?.error||"Failed to create client.","error")}),document.getElementById("btnBackToClients")?.addEventListener("click",()=>{Z("clients")}),document.getElementById("adminClientSearchInput")?.addEventListener("input",()=>{de()}),document.getElementById("adminClientStatusFilter")?.addEventListener("change",()=>{de()}),document.getElementById("btnResetClientReceiptLimit")?.addEventListener("click",async()=>{const a=y.selectedClientId;if(!a){h("Please select a client first.","error");return}const n=document.getElementById("clientCardFullName")?.textContent?.trim()||"Client",d=document.getElementById("btnResetClientReceiptLimit");S(d,!0,"Restoring limit...");try{const c={clientId:a,daily_pdf_downloads:0,organizationId:y.selectedClient?.organization_id||null,userId:y.selectedClient?.id||null,clerkUserId:y.selectedClient?.clerk_user_id||null,email:y.selectedClient?.email||null},o=await L(`/pdf/quota/reset/${encodeURIComponent(a)}`,{method:"POST",body:JSON.stringify(c)});S(d,!1),o.ok&&o.data&&o.data.success?(y.selectedClient&&(y.selectedClient.receiptQuota={used:0,max:2,remaining:2,isLimitReached:!1},y.selectedClient.dailyPdfDownloads=0),h(`Receipt download limit for ${n} has been successfully restored (2/2 allowance available).`,"success")):h(o.data?.error||"Failed to reset download limit.","error")}catch{S(d,!1),h("Network error while resetting quota.","error")}}),document.getElementById("btnOpenEditClientModal")?.addEventListener("click",async()=>{const a=y.selectedClientId;if(!a)return;const n=await L(`/clients/${a}`);if(!n.ok||!n.data||!n.data.data?.client)return;const d=n.data.data.client,c=d.cif||{};document.getElementById("editClientId").value=d.id,document.getElementById("editClientFullName").value=c.fullName||d.full_name||"",document.getElementById("editClientBillingName").value=c.billingName||c.fullName||d.full_name||"",document.getElementById("editClientCompanyName").value=c.companyName||d.company_name||"",document.getElementById("editClientEmail").value=d.email||"",document.getElementById("editClientPhone").value=c.phone||d.phone||"",document.getElementById("editClientAddress").value=c.address||d.address||"",document.getElementById("editClientCity").value=c.city||d.city||"Dhaka",document.getElementById("editClientPostalCode").value=c.postalCode||"",document.getElementById("editClientCountry").value=c.country||d.country||"Bangladesh",document.getElementById("editClientCurrency").value=c.currency||d.currency||"USD",document.getElementById("editClientTaxId").value=c.taxId||"";const o=document.getElementById("editClientIsLocked");o&&(o.value=c.isLocked?"1":"0"),document.getElementById("editClientStatus").value=d.status||"active";const u=document.getElementById("editClientCompletionBadge");if(u){const w=c.completionPercentage!==void 0?c.completionPercentage:d.cif_completion_percentage||0,C=!!c.isLocked;w===100&&C?(u.className="text-xs px-2.5 py-1 rounded-full font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/60",u.textContent="100% (Verified & Locked)"):w===100?(u.className="text-xs px-2.5 py-1 rounded-full font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800/60",u.textContent="100% (Unlocked Draft)"):(u.className="text-xs px-2.5 py-1 rounded-full font-bold bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800/60",u.textContent=`${w}% (Incomplete)`)}const g=document.getElementById("editClientAuditText");if(g){const w=[];c.lastModifiedBy&&w.push(`Last modified by ${c.lastModifiedBy} (${c.lastModifiedAt?new Date(c.lastModifiedAt).toLocaleDateString():"N/A"})`),c.lockedAt&&w.push(`Locked by ${c.lockedBy||"System"} on ${new Date(c.lockedAt).toLocaleDateString()}`),g.textContent=w.length>0?w.join(" \u2022 "):"No modifications recorded yet."}H(),document.getElementById("modalEditClient")?.classList.remove("hidden")}),document.getElementById("formEditClient")?.addEventListener("submit",async a=>{a.preventDefault();const n=a.target,d=n.clientId.value,c=n.querySelector('button[type="submit"]');S(c,!0,"Saving changes...");const o={fullName:n.fullName.value.trim(),billingName:n.billingName.value.trim(),companyName:n.companyName.value.trim(),phone:n.phone.value.trim(),address:n.address.value.trim(),city:n.city.value.trim(),postalCode:n.postalCode.value.trim(),country:n.country.value.trim(),currency:n.currency.value,taxId:n.taxId.value.trim(),isLocked:n.isLocked.value==="1",status:n.status.value},u=await L(`/clients/${d}`,{method:"PUT",body:JSON.stringify(o)});S(c,!1),u.ok&&u.data&&u.data.success?(h("Client profile and CIF updated successfully!","success"),document.getElementById("modalEditClient")?.classList.add("hidden"),pe(d),de()):h(u.data?.error||"Failed to update profile.","error")}),document.getElementById("btnOpenAssignServiceClientModal")?.addEventListener("click",()=>{const a=y.selectedClientId;if(!a)return;document.getElementById("assignServiceClientId").value=a;const n=document.getElementById("assignServiceSelect"),d=document.getElementById("assignServiceMenu"),c=document.getElementById("assignServiceCurrentLabel");n&&(n.innerHTML='<option value="">Choose a service...</option>'+y.servicesCache.map(v=>`
+          <option value="${v.id}" data-price="${(v.standard_price_cents||1e5)/100}" data-pkg="${v.default_package||"Standard Retainer"}">[${v.code}] ${v.name}</option>
+        `).join(""),n.addEventListener("change",()=>{const v=n.selectedOptions[0];if(v){const B=v.dataset.price;B&&(document.getElementById("assignServicePrice").value=B)}})),c&&(c.textContent="Choose a service..."),d&&(d.innerHTML='<button type="button" class="custom-assign-service-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-500 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left" data-value="" data-label="Choose a service..."><span>Choose a service...</span></button>'+y.servicesCache.map(v=>`
+          <button type="button" class="custom-assign-service-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left" data-value="${v.id}" data-price="${(v.standard_price_cents||1e5)/100}" data-pkg="${p(v.default_package||"Standard Retainer")}" data-label="[${v.code}] ${p(v.name)}">
             <div class="flex items-center gap-2 min-w-0">
               <span class="w-1.5 h-1.5 rounded-full bg-[#087F70]"></span>
-              <span class="truncate">[${s.code}] ${escapeHtml(s.name)}</span>
+              <span class="truncate">[${v.code}] ${p(v.name)}</span>
             </div>
-            <span class="font-mono text-[11px] text-slate-400 group-hover:text-[#087F70] shrink-0">$${((s.standard_price_cents || 100000) / 100).toFixed(2)}</span>
+            <span class="font-mono text-[11px] text-slate-400 group-hover:text-[#087F70] shrink-0">$${((v.standard_price_cents||1e5)/100).toFixed(2)}</span>
           </button>
-        `).join('');
-
-        menu.querySelectorAll('.custom-assign-service-option').forEach(btn => {
-          btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const val = btn.dataset.value;
-            const label = btn.dataset.label;
-            const price = btn.dataset.price;
-            const pkg = btn.dataset.pkg;
-            if (triggerLabel) triggerLabel.textContent = label;
-            if (select) {
-              select.value = val;
-              select.dispatchEvent(new Event('change', { bubbles: true }));
-            }
-            if (price) {
-              const priceInput = document.getElementById('assignServicePrice');
-              if (priceInput) priceInput.value = price;
-            }
-            if (pkg) {
-              const pkgInput = document.querySelector('#formAssignService input[name="packageName"]');
-              if (pkgInput) pkgInput.value = pkg;
-            }
-            closeAssignServiceMenu();
-          });
-        });
-      }
-
-      // Sync active client's preferred currency into modal
-      const activeClient = state.clientsCache?.find(c => c.id === clientId);
-      const clientCur = (activeClient?.currency || 'USD').toUpperCase();
-      if (typeof syncAssignCurrencyDropdown === 'function') {
-        syncAssignCurrencyDropdown(clientCur);
-      }
-
-      // Sync start date & deadline datepicker displays
-      const todayIso = new Date().toISOString().split('T')[0];
-      const startInput = document.getElementById('assignServiceStartDate');
-      if (startInput) {
-        startInput.value = todayIso;
-        if (typeof updateDatePickerTrigger === 'function') updateDatePickerTrigger(startInput);
-      }
-      const deadlineInput = document.getElementById('assignServiceDeadline');
-      if (deadlineInput) {
-        deadlineInput.value = '';
-        if (typeof updateDatePickerTrigger === 'function') updateDatePickerTrigger(deadlineInput);
-      }
-      initGlassSelects();
-
-      document.getElementById('modalAssignService')?.classList.remove('hidden');
-    });
-
-    document.getElementById('formAssignService')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const f = e.target;
-      const clientId = f.clientId.value;
-      const submitBtn = f.querySelector('button[type="submit"]');
-
-      const payload = {
-        serviceId: f.serviceId.value,
-        packageName: f.packageName.value,
-        priceCents: Math.round(parseFloat(f.priceDollars.value) * 100),
-        startDate: f.startDate.value,
-        deadline: f.deadline.value || null
-      };
-
-      setBtnLoading(submitBtn, true, 'Provisioning service & tasks...');
-
-      const res = await apiFetch(`/clients/${clientId}/services`, {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      });
-
-      setBtnLoading(submitBtn, false);
-
-      if (res.ok && res.data && res.data.success) {
-        showToast(res.data.message || 'Service assigned with auto-generated SOP tasks!', 'success');
-        document.getElementById('modalAssignService')?.classList.add('hidden');
-        openClientDetails(clientId);
-        loadProjectsData();
-        loadTasksData();
-      } else {
-        showToast(res.data?.error || 'Failed to assign service.', 'error');
-      }
-    });
-
-    // Suspend Client Action
-    document.getElementById('btnSuspendClientAction')?.addEventListener('click', async () => {
-      const clientId = state.selectedClientId;
-      if (!clientId) return;
-      if (!confirm('Are you sure you want to suspend this client? The client will lose access to the portal until reactivated.')) return;
-
-      const btn = document.getElementById('btnSuspendClientAction');
-      setBtnLoading(btn, true, 'Suspending...');
-
-      const res = await apiFetch(`/clients/${clientId}/suspend`, { method: 'POST' });
-      setBtnLoading(btn, false);
-
-      if (res.ok && res.data && res.data.success) {
-        showToast(res.data.message || 'Client account suspended.', 'success');
-        openClientDetails(clientId);
-        loadClientsData();
-      } else {
-        showToast(res.data?.error || 'Failed to suspend client.', 'error');
-      }
-    });
-
-    // Reactivate Client Action
-    document.getElementById('btnReactivateClientAction')?.addEventListener('click', async () => {
-      const clientId = state.selectedClientId;
-      if (!clientId) return;
-
-      const btn = document.getElementById('btnReactivateClientAction');
-      setBtnLoading(btn, true, 'Reactivating...');
-
-      const res = await apiFetch(`/clients/${clientId}/reactivate`, { method: 'POST' });
-      setBtnLoading(btn, false);
-
-      if (res.ok && res.data && res.data.success) {
-        showToast(res.data.message || 'Client account reactivated successfully.', 'success');
-        openClientDetails(clientId);
-        loadClientsData();
-      } else {
-        showToast(res.data?.error || 'Failed to reactivate client.', 'error');
-      }
-    });
-
-    // Delete Client Action (opens modal)
-    document.getElementById('btnDeleteClientAction')?.addEventListener('click', () => {
-      const clientId = state.selectedClientId;
-      if (!clientId) return;
-      const nameEl = document.getElementById('clientCardFullName') || document.getElementById('clientDetailTitle');
-      const targetNameEl = document.getElementById('deleteClientTargetName');
-      if (targetNameEl && nameEl) targetNameEl.textContent = nameEl.textContent;
-
-      // Ensure Clerk deletion option is unchecked by default
-      const clerkOpt = document.getElementById('deleteClientClerkOption');
-      if (clerkOpt) clerkOpt.checked = false;
-
-      // Ensure delete button is reset and ready
-      const confirmBtn = document.getElementById('btnConfirmDeleteClient');
-      if (confirmBtn) {
-        confirmBtn.disabled = false;
-        confirmBtn.classList.remove('opacity-75', 'cursor-not-allowed');
-        confirmBtn.innerHTML = '<i class="fa-solid fa-trash-can text-xs"></i> <span>Permanently Delete Client</span>';
-      }
-
-      document.getElementById('modalDeleteClient')?.classList.remove('hidden');
-    });
-
-    // Confirm Permanent Delete Client
-    document.getElementById('btnConfirmDeleteClient')?.addEventListener('click', async () => {
-      const clientId = state.selectedClientId;
-      if (!clientId) return;
-
-      const btn = document.getElementById('btnConfirmDeleteClient');
-      if (btn.disabled) return;
-      setBtnLoading(btn, true, 'Deleting client...');
-
-      const deleteClerk = document.getElementById('deleteClientClerkOption')?.checked === true;
-
-      try {
-        const res = await apiFetch(`/clients/${clientId}?delete_clerk=${deleteClerk}`, { method: 'DELETE' });
-        setBtnLoading(btn, false);
-
-        if (res.ok && res.data && res.data.success) {
-          showToast(res.data.message || 'Client deleted successfully.', 'success');
-          document.getElementById('modalDeleteClient')?.classList.add('hidden');
-          switchTab('clients');
-          loadClientsData();
-          loadTeamData();
-        } else {
-          showToast(res.data?.error || 'Unable to delete this client. No changes were completed. Please retry or review the account records.', 'error');
-        }
-      } catch (err) {
-        setBtnLoading(btn, false);
-        showToast('Network error while processing client deletion. Please retry.', 'error');
-      }
-    });
-
-    // 3. Service Management Modals
-    document.getElementById('btnOpenAddServiceModal')?.addEventListener('click', () => {
-      initGlassSelects();
-      document.getElementById('modalAddService')?.classList.remove('hidden');
-    });
-
-    document.getElementById('formAddService')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const f = e.target;
-      const submitBtn = f.querySelector('button[type="submit"]');
-
-      const payload = {
-        name: f.name.value,
-        code: f.code.value,
-        category: f.category.value,
-        defaultPackage: f.defaultPackage.value,
-        standardPriceCents: Math.round(parseFloat(f.standardPriceDollars.value) * 100),
-        description: f.description.value
-      };
-
-      setBtnLoading(submitBtn, true, 'Creating service...');
-
-      const res = await apiFetch('/services', {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      });
-
-      setBtnLoading(submitBtn, false);
-
-      if (res.ok && res.data && res.data.success) {
-        showToast(res.data.message || 'Service created successfully!', 'success');
-        f.reset();
-        document.getElementById('modalAddService')?.classList.add('hidden');
-        loadServicesData();
-      } else {
-        showToast(res.data?.error || 'Failed to create service.', 'error');
-      }
-    });
-
-    document.getElementById('formEditService')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const f = e.target;
-      const srvId = f.serviceId.value;
-      const submitBtn = f.querySelector('button[type="submit"]');
-
-      const payload = {
-        name: f.name.value,
-        code: f.code.value,
-        category: f.category.value,
-        defaultPackage: f.defaultPackage.value,
-        standardPriceCents: Math.round(parseFloat(f.standardPriceDollars.value) * 100),
-        description: f.description.value,
-        isActive: f.isActive.checked
-      };
-
-      setBtnLoading(submitBtn, true, 'Saving changes & version snapshot...');
-
-      const res = await apiFetch(`/services/${srvId}`, {
-        method: 'PUT',
-        body: JSON.stringify(payload)
-      });
-
-      setBtnLoading(submitBtn, false);
-
-      if (res.ok && res.data && res.data.success) {
-        showToast(res.data.message || 'Service updated successfully!', 'success');
-        document.getElementById('modalEditService')?.classList.add('hidden');
-        loadServicesData();
-      } else {
-        showToast(res.data?.error || 'Failed to update service.', 'error');
-      }
-    });
-
-    // Delete Service Triggers & Confirmation
-    document.getElementById('btnDeleteFromEditServiceModal')?.addEventListener('click', () => {
-      const srvId = document.getElementById('editServiceId')?.value;
-      if (!srvId) return;
-      document.getElementById('modalEditService')?.classList.add('hidden');
-      openDeleteServiceModal(srvId);
-    });
-
-    document.getElementById('deleteServiceConfirmInput')?.addEventListener('input', (e) => {
-      const val = e.target.value.trim();
-      const service = state.servicesCache.find(s => s.id === state.selectedServiceId);
-      const confirmBtn = document.getElementById('btnConfirmDeleteService');
-      if (!confirmBtn || !service) return;
-
-      const isMatch = val.toUpperCase() === 'DELETE' || val.toLowerCase() === service.name.trim().toLowerCase();
-      confirmBtn.disabled = !isMatch;
-    });
-
-    document.getElementById('btnConfirmDeleteService')?.addEventListener('click', async () => {
-      const serviceId = state.selectedServiceId;
-      if (!serviceId) return;
-
-      const btn = document.getElementById('btnConfirmDeleteService');
-      if (btn.disabled) return;
-
-      const service = state.servicesCache.find(s => s.id === serviceId);
-      const serviceName = service ? service.name : 'Service';
-
-      setBtnLoading(btn, true, 'Permanently purging service & blueprints...');
-
-      try {
-        const res = await apiFetch(`/services/${serviceId}`, { method: 'DELETE' });
-        setBtnLoading(btn, false);
-
-        if (res.ok && res.data && res.data.success) {
-          showToast(`Service "${serviceName}" and all SOP blueprints permanently deleted.`, 'success');
-          document.getElementById('modalDeleteService')?.classList.add('hidden');
-
-          state.servicesCache = state.servicesCache.filter(s => s.id !== serviceId);
-          loadServicesData();
-
-          if (state.activeTab === 'service_tasks') {
-            switchTab('services');
-          }
-        } else {
-          showToast(res.data?.error || 'Failed to delete service. Check dependencies.', 'error');
-        }
-      } catch (err) {
-        setBtnLoading(btn, false);
-        showToast('Network error while deleting service.', 'error');
-      }
-    });
-
-    // 4. SOP Task Blueprint Workspace Handlers
-    document.getElementById('btnBackToServices')?.addEventListener('click', () => {
-      switchTab('services');
-    });
-
-    document.getElementById('btnOpenAddBlueprintModal')?.addEventListener('click', () => {
-      document.getElementById('addBlueprintServiceId').value = state.selectedServiceId;
-      initGlassSelects();
-      document.getElementById('modalAddBlueprint')?.classList.remove('hidden');
-    });
-
-    document.getElementById('formAddBlueprint')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const f = e.target;
-      const serviceId = f.serviceId.value;
-      const submitBtn = f.querySelector('button[type="submit"]');
-
-      const payload = {
-        taskCode: f.taskCode.value,
-        title: f.title.value,
-        phase: f.phase.value,
-        priority: f.priority.value,
-        estimatedMinutes: parseInt(f.estimatedMinutes.value) || 60,
-        steps: f.steps.value,
-        instructions: f.steps.value,
-        qaCriteria: f.qaCriteria.value
-      };
-
-      setBtnLoading(submitBtn, true, 'Adding task blueprint...');
-
-      const res = await apiFetch(`/services/${serviceId}/blueprints`, {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      });
-
-      setBtnLoading(submitBtn, false);
-
-      if (res.ok && res.data && res.data.success) {
-        showToast(res.data.message || 'Blueprint added successfully!', 'success');
-        f.reset();
-        document.getElementById('modalAddBlueprint')?.classList.add('hidden');
-        openServiceTasksWorkspace(serviceId);
-      } else {
-        showToast(res.data?.error || 'Failed to add blueprint.', 'error');
-      }
-    });
-
-    document.getElementById('formEditBlueprint')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const f = e.target;
-      const bpId = f.blueprintId.value;
-      const submitBtn = f.querySelector('button[type="submit"]');
-
-      const payload = {
-        taskCode: f.taskCode.value,
-        title: f.title.value,
-        phase: f.phase.value,
-        priority: f.priority.value,
-        sortOrder: parseInt(f.sortOrder.value) || 1,
-        estimatedMinutes: parseInt(f.estimatedMinutes.value) || 60,
-        why: f.why.value,
-        whereLocation: f.whereLocation.value,
-        steps: f.steps.value,
-        instructions: f.steps.value,
-        doneWhen: f.doneWhen.value,
-        qaCriteria: f.qaCriteria.value
-      };
-
-      setBtnLoading(submitBtn, true, 'Saving changes...');
-
-      const res = await apiFetch(`/services/blueprints/${bpId}`, {
-        method: 'PUT',
-        body: JSON.stringify(payload)
-      });
-
-      setBtnLoading(submitBtn, false);
-
-      if (res.ok && res.data && res.data.success) {
-        showToast('Task blueprint updated successfully!', 'success');
-        document.getElementById('modalEditBlueprint')?.classList.add('hidden');
-        openServiceTasksWorkspace(state.selectedServiceId);
-      } else {
-        showToast(res.data?.error || 'Failed to update blueprint.', 'error');
-      }
-    });
-
-    // Delete Task Blueprint Triggers & Confirmation
-    document.getElementById('btnDeleteFromEditBlueprintModal')?.addEventListener('click', () => {
-      const bpId = document.getElementById('editBlueprintId')?.value;
-      if (!bpId) return;
-      document.getElementById('modalEditBlueprint')?.classList.add('hidden');
-      openDeleteBlueprintModal(bpId);
-    });
-
-    document.getElementById('btnConfirmDeleteBlueprint')?.addEventListener('click', async () => {
-      const bpId = state.selectedBlueprintId;
-      if (!bpId) return;
-
-      const btn = document.getElementById('btnConfirmDeleteBlueprint');
-      if (btn.disabled) return;
-
-      setBtnLoading(btn, true, 'Permanently deleting task...');
-
-      try {
-        const res = await apiFetch(`/services/blueprints/${bpId}`, { method: 'DELETE' });
-        setBtnLoading(btn, false);
-
-        if (res.ok && res.data && res.data.success) {
-          showToast(res.data.message || 'Task blueprint permanently deleted.', 'success');
-          document.getElementById('modalDeleteBlueprint')?.classList.add('hidden');
-
-          state.currentBlueprints = state.currentBlueprints.filter(b => b.id !== bpId);
-          renderBlueprintsWorkspace();
-
-          const serviceId = state.selectedServiceId;
-          const service = state.servicesCache.find(s => s.id === serviceId);
-          if (service) {
-            service.blueprint_count = Math.max(0, (service.blueprint_count || 1) - 1);
-          }
-        } else {
-          showToast(res.data?.error || 'Unable to delete task. It may be referenced by active projects.', 'error');
-        }
-      } catch (err) {
-        setBtnLoading(btn, false);
-        showToast('Network error while deleting task blueprint.', 'error');
-      }
-    });
-
-    // Apply Template to Active Projects Modal
-    document.getElementById('btnOpenApplyTemplateModal')?.addEventListener('click', () => {
-      document.getElementById('modalApplyTemplate')?.classList.remove('hidden');
-    });
-
-    document.getElementById('btnConfirmApplyTemplate')?.addEventListener('click', async () => {
-      const serviceId = state.selectedServiceId;
-      if (!serviceId) return;
-
-      const btn = document.getElementById('btnConfirmApplyTemplate');
-      setBtnLoading(btn, true, 'Synchronizing projects...');
-
-      const res = await apiFetch(`/services/${serviceId}/apply-to-projects`, { method: 'POST' });
-      setBtnLoading(btn, false);
-
-      if (res.ok && res.data && res.data.success) {
-        showToast(res.data.message || 'Template synchronized across active client projects!', 'success');
-        document.getElementById('modalApplyTemplate')?.classList.add('hidden');
-        loadProjectsData();
-        loadTasksData();
-      } else {
-        showToast(res.data?.error || 'Failed to apply template.', 'error');
-      }
-    });
-
-    // 5. Live Task Details Form
-    document.getElementById('formLiveTaskDetail')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const f = e.target;
-      const taskId = f.taskId.value;
-      const submitBtn = f.querySelector('button[type="submit"]');
-
-      const payload = {
-        status: f.status.value,
-        priority: f.priority.value,
-        internalNotes: f.internalNotes.value
-      };
-
-      setBtnLoading(submitBtn, true, 'Updating task...');
-
-      const res = await apiFetch(`/projects/tasks/${taskId}`, {
-        method: 'PUT',
-        body: JSON.stringify(payload)
-      });
-
-      setBtnLoading(submitBtn, false);
-
-      if (res.ok && res.data && res.data.success) {
-        showToast(`Task updated! Project progress is now ${res.data.data.newProgressPercent}%.`, 'success');
-        document.getElementById('modalLiveTaskDetail')?.classList.add('hidden');
-        loadTasksData();
-        loadProjectsData();
-      } else {
-        showToast(res.data?.error || 'Failed to update task.', 'error');
-      }
-    });
-
-    // 6. Task Filter Buttons & Search Controls (WHIZ Smart Task Workspace)
-    document.querySelectorAll('.task-filter-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const filter = btn.dataset.filter;
-        state.currentTaskStatus = filter;
-        updateStatusFilterButtons(filter);
-        renderFilteredTasks();
-      });
-    });
-
-    const taskSearch = document.getElementById('taskSearchInput');
-    const taskPriority = document.getElementById('taskPriorityFilter');
-    const clearSearchBtn = document.getElementById('btnClearTaskSearch');
-
-    if (taskSearch) {
-      taskSearch.addEventListener('input', () => {
-        renderFilteredTasks();
-      });
-    }
-
-    if (clearSearchBtn) {
-      clearSearchBtn.addEventListener('click', () => {
-        if (taskSearch) {
-          taskSearch.value = '';
-          taskSearch.focus();
-        }
-        renderFilteredTasks();
-      });
-    }
-
-    if (taskPriority) {
-      taskPriority.addEventListener('change', () => {
-        renderFilteredTasks();
-      });
-    }
-
-    // 7. Open Record Payment Modal
-    const openRecordPayment = () => {
-      const modal = document.getElementById('modalRecordPayment');
-      const select = document.getElementById('paymentClientSelect');
-      const clientMenu = document.getElementById('paymentClientSelectMenu') || document.querySelector('#whizGlassSelectPortal #paymentClientSelectMenu');
-      const invSelect = document.getElementById('paymentInvoiceSelect');
-      const invMenu = document.getElementById('paymentInvoiceSelectMenu') || document.querySelector('#whizGlassSelectPortal #paymentInvoiceSelectMenu');
-      const dateInput = document.getElementById('paymentDateInput');
-      const refInput = document.getElementById('paymentReferenceInput');
-
-      if (dateInput) {
-        dateInput.value = new Date().toISOString().split('T')[0];
-        if (typeof updateDatePickerTrigger === 'function') {
-          updateDatePickerTrigger(dateInput);
-        }
-      }
-      if (refInput && !refInput.value) refInput.value = 'TXN-' + Math.floor(100000 + Math.random() * 900000);
-
-      if (modal && select) {
-        modal.classList.remove('hidden');
-
-        // Populate native select
-        select.innerHTML = '<option value="">Select client...</option>' + state.clientsCache.map(c => `
-          <option value="${c.organization_id || c.id}">${escapeHtml(c.company_name || c.full_name)} (${escapeHtml(c.email)})</option>
-        `).join('');
-
-        // Populate custom searchable glass select menu
-        if (clientMenu) {
-          clientMenu.innerHTML = `
+        `).join(""),d.querySelectorAll(".custom-assign-service-option").forEach(v=>{v.addEventListener("click",B=>{B.stopPropagation();const I=v.dataset.value,F=v.dataset.label,M=v.dataset.price,D=v.dataset.pkg;if(c&&(c.textContent=F),n&&(n.value=I,n.dispatchEvent(new Event("change",{bubbles:!0}))),M){const _=document.getElementById("assignServicePrice");_&&(_.value=M)}if(D){const _=document.querySelector('#formAssignService input[name="packageName"]');_&&(_.value=D)}closeAssignServiceMenu()})}));const u=(y.clientsCache?.find(v=>v.id===a)?.currency||"USD").toUpperCase();typeof syncAssignCurrencyDropdown=="function"&&syncAssignCurrencyDropdown(u);const g=new Date().toISOString().split("T")[0],w=document.getElementById("assignServiceStartDate");w&&(w.value=g,typeof updateDatePickerTrigger=="function"&&updateDatePickerTrigger(w));const C=document.getElementById("assignServiceDeadline");C&&(C.value="",typeof updateDatePickerTrigger=="function"&&updateDatePickerTrigger(C)),H(),document.getElementById("modalAssignService")?.classList.remove("hidden")}),document.getElementById("formAssignService")?.addEventListener("submit",async a=>{a.preventDefault();const n=a.target,d=n.clientId.value,c=n.querySelector('button[type="submit"]'),o={serviceId:n.serviceId.value,packageName:n.packageName.value,priceCents:Math.round(parseFloat(n.priceDollars.value)*100),startDate:n.startDate.value,deadline:n.deadline.value||null};S(c,!0,"Provisioning service & tasks...");const u=await L(`/clients/${d}/services`,{method:"POST",body:JSON.stringify(o)});S(c,!1),u.ok&&u.data&&u.data.success?(h(u.data.message||"Service assigned with auto-generated SOP tasks!","success"),document.getElementById("modalAssignService")?.classList.add("hidden"),pe(d),ke(),Be()):h(u.data?.error||"Failed to assign service.","error")}),document.getElementById("btnSuspendClientAction")?.addEventListener("click",async()=>{const a=y.selectedClientId;if(!a||!confirm("Are you sure you want to suspend this client? The client will lose access to the portal until reactivated."))return;const n=document.getElementById("btnSuspendClientAction");S(n,!0,"Suspending...");const d=await L(`/clients/${a}/suspend`,{method:"POST"});S(n,!1),d.ok&&d.data&&d.data.success?(h(d.data.message||"Client account suspended.","success"),pe(a),de()):h(d.data?.error||"Failed to suspend client.","error")}),document.getElementById("btnReactivateClientAction")?.addEventListener("click",async()=>{const a=y.selectedClientId;if(!a)return;const n=document.getElementById("btnReactivateClientAction");S(n,!0,"Reactivating...");const d=await L(`/clients/${a}/reactivate`,{method:"POST"});S(n,!1),d.ok&&d.data&&d.data.success?(h(d.data.message||"Client account reactivated successfully.","success"),pe(a),de()):h(d.data?.error||"Failed to reactivate client.","error")}),document.getElementById("btnDeleteClientAction")?.addEventListener("click",()=>{if(!y.selectedClientId)return;const n=document.getElementById("clientCardFullName")||document.getElementById("clientDetailTitle"),d=document.getElementById("deleteClientTargetName");d&&n&&(d.textContent=n.textContent);const c=document.getElementById("deleteClientClerkOption");c&&(c.checked=!1);const o=document.getElementById("btnConfirmDeleteClient");o&&(o.disabled=!1,o.classList.remove("opacity-75","cursor-not-allowed"),o.innerHTML='<i class="fa-solid fa-trash-can text-xs"></i> <span>Permanently Delete Client</span>'),document.getElementById("modalDeleteClient")?.classList.remove("hidden")}),document.getElementById("btnConfirmDeleteClient")?.addEventListener("click",async()=>{const a=y.selectedClientId;if(!a)return;const n=document.getElementById("btnConfirmDeleteClient");if(n.disabled)return;S(n,!0,"Deleting client...");const d=document.getElementById("deleteClientClerkOption")?.checked===!0;try{const c=await L(`/clients/${a}?delete_clerk=${d}`,{method:"DELETE"});S(n,!1),c.ok&&c.data&&c.data.success?(h(c.data.message||"Client deleted successfully.","success"),document.getElementById("modalDeleteClient")?.classList.add("hidden"),Z("clients"),de(),fe()):h(c.data?.error||"Unable to delete this client. No changes were completed. Please retry or review the account records.","error")}catch{S(n,!1),h("Network error while processing client deletion. Please retry.","error")}}),document.getElementById("btnOpenAddServiceModal")?.addEventListener("click",()=>{H(),document.getElementById("modalAddService")?.classList.remove("hidden")}),document.getElementById("formAddService")?.addEventListener("submit",async a=>{a.preventDefault();const n=a.target,d=n.querySelector('button[type="submit"]'),c={name:n.name.value,code:n.code.value,category:n.category.value,defaultPackage:n.defaultPackage.value,standardPriceCents:Math.round(parseFloat(n.standardPriceDollars.value)*100),description:n.description.value};S(d,!0,"Creating service...");const o=await L("/services",{method:"POST",body:JSON.stringify(c)});S(d,!1),o.ok&&o.data&&o.data.success?(h(o.data.message||"Service created successfully!","success"),n.reset(),document.getElementById("modalAddService")?.classList.add("hidden"),Ce()):h(o.data?.error||"Failed to create service.","error")}),document.getElementById("formEditService")?.addEventListener("submit",async a=>{a.preventDefault();const n=a.target,d=n.serviceId.value,c=n.querySelector('button[type="submit"]'),o={name:n.name.value,code:n.code.value,category:n.category.value,defaultPackage:n.defaultPackage.value,standardPriceCents:Math.round(parseFloat(n.standardPriceDollars.value)*100),description:n.description.value,isActive:n.isActive.checked};S(c,!0,"Saving changes & version snapshot...");const u=await L(`/services/${d}`,{method:"PUT",body:JSON.stringify(o)});S(c,!1),u.ok&&u.data&&u.data.success?(h(u.data.message||"Service updated successfully!","success"),document.getElementById("modalEditService")?.classList.add("hidden"),Ce()):h(u.data?.error||"Failed to update service.","error")}),document.getElementById("btnDeleteFromEditServiceModal")?.addEventListener("click",()=>{const a=document.getElementById("editServiceId")?.value;a&&(document.getElementById("modalEditService")?.classList.add("hidden"),kt(a))}),document.getElementById("deleteServiceConfirmInput")?.addEventListener("input",a=>{const n=a.target.value.trim(),d=y.servicesCache.find(u=>u.id===y.selectedServiceId),c=document.getElementById("btnConfirmDeleteService");if(!c||!d)return;const o=n.toUpperCase()==="DELETE"||n.toLowerCase()===d.name.trim().toLowerCase();c.disabled=!o}),document.getElementById("btnConfirmDeleteService")?.addEventListener("click",async()=>{const a=y.selectedServiceId;if(!a)return;const n=document.getElementById("btnConfirmDeleteService");if(n.disabled)return;const d=y.servicesCache.find(o=>o.id===a),c=d?d.name:"Service";S(n,!0,"Permanently purging service & blueprints...");try{const o=await L(`/services/${a}`,{method:"DELETE"});S(n,!1),o.ok&&o.data&&o.data.success?(h(`Service "${c}" and all SOP blueprints permanently deleted.`,"success"),document.getElementById("modalDeleteService")?.classList.add("hidden"),y.servicesCache=y.servicesCache.filter(u=>u.id!==a),Ce(),y.activeTab==="service_tasks"&&Z("services")):h(o.data?.error||"Failed to delete service. Check dependencies.","error")}catch{S(n,!1),h("Network error while deleting service.","error")}}),document.getElementById("btnBackToServices")?.addEventListener("click",()=>{Z("services")}),document.getElementById("btnOpenAddBlueprintModal")?.addEventListener("click",()=>{document.getElementById("addBlueprintServiceId").value=y.selectedServiceId,H(),document.getElementById("modalAddBlueprint")?.classList.remove("hidden")}),document.getElementById("formAddBlueprint")?.addEventListener("submit",async a=>{a.preventDefault();const n=a.target,d=n.serviceId.value,c=n.querySelector('button[type="submit"]'),o={taskCode:n.taskCode.value,title:n.title.value,phase:n.phase.value,priority:n.priority.value,estimatedMinutes:parseInt(n.estimatedMinutes.value)||60,steps:n.steps.value,instructions:n.steps.value,qaCriteria:n.qaCriteria.value};S(c,!0,"Adding task blueprint...");const u=await L(`/services/${d}/blueprints`,{method:"POST",body:JSON.stringify(o)});S(c,!1),u.ok&&u.data&&u.data.success?(h(u.data.message||"Blueprint added successfully!","success"),n.reset(),document.getElementById("modalAddBlueprint")?.classList.add("hidden"),De(d)):h(u.data?.error||"Failed to add blueprint.","error")}),document.getElementById("formEditBlueprint")?.addEventListener("submit",async a=>{a.preventDefault();const n=a.target,d=n.blueprintId.value,c=n.querySelector('button[type="submit"]'),o={taskCode:n.taskCode.value,title:n.title.value,phase:n.phase.value,priority:n.priority.value,sortOrder:parseInt(n.sortOrder.value)||1,estimatedMinutes:parseInt(n.estimatedMinutes.value)||60,why:n.why.value,whereLocation:n.whereLocation.value,steps:n.steps.value,instructions:n.steps.value,doneWhen:n.doneWhen.value,qaCriteria:n.qaCriteria.value};S(c,!0,"Saving changes...");const u=await L(`/services/blueprints/${d}`,{method:"PUT",body:JSON.stringify(o)});S(c,!1),u.ok&&u.data&&u.data.success?(h("Task blueprint updated successfully!","success"),document.getElementById("modalEditBlueprint")?.classList.add("hidden"),De(y.selectedServiceId)):h(u.data?.error||"Failed to update blueprint.","error")}),document.getElementById("btnDeleteFromEditBlueprintModal")?.addEventListener("click",()=>{const a=document.getElementById("editBlueprintId")?.value;a&&(document.getElementById("modalEditBlueprint")?.classList.add("hidden"),Ct(a))}),document.getElementById("btnConfirmDeleteBlueprint")?.addEventListener("click",async()=>{const a=y.selectedBlueprintId;if(!a)return;const n=document.getElementById("btnConfirmDeleteBlueprint");if(!n.disabled){S(n,!0,"Permanently deleting task...");try{const d=await L(`/services/blueprints/${a}`,{method:"DELETE"});if(S(n,!1),d.ok&&d.data&&d.data.success){h(d.data.message||"Task blueprint permanently deleted.","success"),document.getElementById("modalDeleteBlueprint")?.classList.add("hidden"),y.currentBlueprints=y.currentBlueprints.filter(u=>u.id!==a),Et();const c=y.selectedServiceId,o=y.servicesCache.find(u=>u.id===c);o&&(o.blueprint_count=Math.max(0,(o.blueprint_count||1)-1))}else h(d.data?.error||"Unable to delete task. It may be referenced by active projects.","error")}catch{S(n,!1),h("Network error while deleting task blueprint.","error")}}}),document.getElementById("btnOpenApplyTemplateModal")?.addEventListener("click",()=>{document.getElementById("modalApplyTemplate")?.classList.remove("hidden")}),document.getElementById("btnConfirmApplyTemplate")?.addEventListener("click",async()=>{const a=y.selectedServiceId;if(!a)return;const n=document.getElementById("btnConfirmApplyTemplate");S(n,!0,"Synchronizing projects...");const d=await L(`/services/${a}/apply-to-projects`,{method:"POST"});S(n,!1),d.ok&&d.data&&d.data.success?(h(d.data.message||"Template synchronized across active client projects!","success"),document.getElementById("modalApplyTemplate")?.classList.add("hidden"),ke(),Be()):h(d.data?.error||"Failed to apply template.","error")}),document.getElementById("formLiveTaskDetail")?.addEventListener("submit",async a=>{a.preventDefault();const n=a.target,d=n.taskId.value,c=n.querySelector('button[type="submit"]'),o={status:n.status.value,priority:n.priority.value,internalNotes:n.internalNotes.value};S(c,!0,"Updating task...");const u=await L(`/projects/tasks/${d}`,{method:"PUT",body:JSON.stringify(o)});S(c,!1),u.ok&&u.data&&u.data.success?(h(`Task updated! Project progress is now ${u.data.data.newProgressPercent}%.`,"success"),document.getElementById("modalLiveTaskDetail")?.classList.add("hidden"),Be(),ke()):h(u.data?.error||"Failed to update task.","error")}),document.querySelectorAll(".task-filter-btn").forEach(a=>{a.addEventListener("click",()=>{const n=a.dataset.filter;y.currentTaskStatus=n,Ge(n),Se()})});const e=document.getElementById("taskSearchInput"),l=document.getElementById("taskPriorityFilter"),i=document.getElementById("btnClearTaskSearch");e&&e.addEventListener("input",()=>{Se()}),i&&i.addEventListener("click",()=>{e&&(e.value="",e.focus()),Se()}),l&&l.addEventListener("change",()=>{Se()});const m=()=>{const a=document.getElementById("modalRecordPayment"),n=document.getElementById("paymentClientSelect"),d=document.getElementById("paymentClientSelectMenu")||document.querySelector("#whizGlassSelectPortal #paymentClientSelectMenu"),c=document.getElementById("paymentInvoiceSelect"),o=document.getElementById("paymentInvoiceSelectMenu")||document.querySelector("#whizGlassSelectPortal #paymentInvoiceSelectMenu"),u=document.getElementById("paymentDateInput"),g=document.getElementById("paymentReferenceInput");if(u&&(u.value=new Date().toISOString().split("T")[0],typeof updateDatePickerTrigger=="function"&&updateDatePickerTrigger(u)),g&&!g.value&&(g.value="TXN-"+Math.floor(1e5+Math.random()*9e5)),a&&n){if(a.classList.remove("hidden"),n.innerHTML='<option value="">Select client...</option>'+y.clientsCache.map(w=>`
+          <option value="${w.organization_id||w.id}">${p(w.company_name||w.full_name)} (${p(w.email)})</option>
+        `).join(""),d){d.innerHTML=`
             <div class="p-2 border-b border-[#E3E9EF] sticky top-0 bg-white z-10" onclick="event.stopPropagation()">
               <div class="relative">
                 <i class="fa-solid fa-magnifying-glass text-slate-400 text-xs absolute left-2.5 top-1/2 -translate-y-1/2"></i>
@@ -5419,588 +1091,47 @@
                 <span class="select-opt-text truncate font-sans font-medium text-slate-500">Select client...</span>
                 <i class="fa-solid fa-check check-icon"></i>
               </button>
-              ${state.clientsCache.map(c => `
-                <button type="button" class="glass-select-option" data-value="${escapeHtml(c.organization_id || c.id)}" role="option" aria-selected="false">
+              ${y.clientsCache.map(C=>`
+                <button type="button" class="glass-select-option" data-value="${p(C.organization_id||C.id)}" role="option" aria-selected="false">
                   <i class="fa-solid fa-building text-[#087F70] text-xs shrink-0 option-icon"></i>
                   <div class="flex-1 min-w-0 text-left">
-                    <span class="select-opt-text truncate block font-sans font-medium text-[#172B36]">${escapeHtml(c.company_name || c.full_name)}</span>
-                    <span class="text-[11px] text-slate-400 truncate block">${escapeHtml(c.email)}</span>
+                    <span class="select-opt-text truncate block font-sans font-medium text-[#172B36]">${p(C.company_name||C.full_name)}</span>
+                    <span class="text-[11px] text-slate-400 truncate block">${p(C.email)}</span>
                   </div>
                   <i class="fa-solid fa-check check-icon"></i>
                 </button>
-              `).join('')}
+              `).join("")}
             </div>
-          `;
-
-          const searchInput = clientMenu.querySelector('#paymentClientSearchInput');
-          searchInput?.addEventListener('input', (e) => {
-            const q = e.target.value.toLowerCase().trim();
-            clientMenu.querySelectorAll('#paymentClientOptionsList .glass-select-option').forEach(opt => {
-              if (!opt.dataset.value) return; // Keep "Select client..."
-              const text = opt.textContent.toLowerCase();
-              opt.style.display = text.includes(q) ? '' : 'none';
-            });
-          });
-          searchInput?.addEventListener('keydown', (e) => e.stopPropagation());
-        }
-
-        if (invSelect) {
-          invSelect.innerHTML = '<option value="">Auto-create or match client contract...</option>';
-        }
-        if (invMenu) {
-          invMenu.innerHTML = `
+          `;const w=d.querySelector("#paymentClientSearchInput");w?.addEventListener("input",C=>{const v=C.target.value.toLowerCase().trim();d.querySelectorAll("#paymentClientOptionsList .glass-select-option").forEach(B=>{if(!B.dataset.value)return;const I=B.textContent.toLowerCase();B.style.display=I.includes(v)?"":"none"})}),w?.addEventListener("keydown",C=>C.stopPropagation())}c&&(c.innerHTML='<option value="">Auto-create or match client contract...</option>'),o&&(o.innerHTML=`
             <button type="button" class="glass-select-option selected" data-value="" role="option" aria-selected="true">
               <i class="fa-solid fa-file-invoice-dollar text-[#087F70] text-xs shrink-0 option-icon"></i>
               <span class="select-opt-text truncate font-sans font-medium text-slate-500">Auto-create or match client contract...</span>
               <i class="fa-solid fa-check check-icon"></i>
             </button>
-          `;
-        }
-
-        initGlassSelects();
-
-        if (!select.dataset.bound) {
-          select.dataset.bound = 'true';
-          select.addEventListener('change', async () => {
-            const orgId = select.value;
-            const targetInvMenu = document.getElementById('paymentInvoiceSelectMenu') || document.querySelector('#whizGlassSelectPortal #paymentInvoiceSelectMenu');
-            if (!orgId || !invSelect) return;
-            invSelect.innerHTML = '<option value="">Loading client invoices...</option>';
-            if (targetInvMenu) {
-              targetInvMenu.innerHTML = '<div class="p-2.5 text-xs text-slate-400 italic">Loading client invoices...</div>';
-            }
-            try {
-              const res = await apiFetch(`/finance/invoices?organizationId=${orgId}`);
-              if (res.ok && res.data && res.data.data) {
-                const invs = res.data.data;
-                if (invs.length === 0) {
-                  invSelect.innerHTML = '<option value="">Auto-create new invoice on commitment</option>';
-                  if (targetInvMenu) {
-                    targetInvMenu.innerHTML = `
+          `),H(),n.dataset.bound||(n.dataset.bound="true",n.addEventListener("change",async()=>{const w=n.value,C=document.getElementById("paymentInvoiceSelectMenu")||document.querySelector("#whizGlassSelectPortal #paymentInvoiceSelectMenu");if(!(!w||!c)){c.innerHTML='<option value="">Loading client invoices...</option>',C&&(C.innerHTML='<div class="p-2.5 text-xs text-slate-400 italic">Loading client invoices...</div>');try{const v=await L(`/finance/invoices?organizationId=${w}`);if(v.ok&&v.data&&v.data.data){const B=v.data.data;B.length===0?(c.innerHTML='<option value="">Auto-create new invoice on commitment</option>',C&&(C.innerHTML=`
                       <button type="button" class="glass-select-option selected" data-value="" role="option" aria-selected="true">
                         <i class="fa-solid fa-file-invoice text-slate-400 text-xs shrink-0 option-icon"></i>
                         <span class="select-opt-text truncate font-sans font-medium">Auto-create new invoice on commitment</span>
                         <i class="fa-solid fa-check check-icon"></i>
                       </button>
-                    `;
-                  }
-                } else {
-                  invSelect.innerHTML = '<option value="">Auto-create new invoice on commitment</option>' + invs.map(i => `
-                    <option value="${i.id}">${i.invoice_number} — Due: ${formatCurrency(i.outstanding_balance_cents || 0, i.currency || 'USD')}</option>
-                  `).join('');
-                  if (targetInvMenu) {
-                    targetInvMenu.innerHTML = `
+                    `)):(c.innerHTML='<option value="">Auto-create new invoice on commitment</option>'+B.map(I=>`
+                    <option value="${I.id}">${I.invoice_number} \u2014 Due: ${Y(I.outstanding_balance_cents||0,I.currency||"USD")}</option>
+                  `).join(""),C&&(C.innerHTML=`
                       <button type="button" class="glass-select-option selected" data-value="" role="option" aria-selected="true">
                         <i class="fa-solid fa-file-invoice text-slate-400 text-xs shrink-0 option-icon"></i>
                         <span class="select-opt-text truncate font-sans font-medium">Auto-create new invoice on commitment</span>
                         <i class="fa-solid fa-check check-icon"></i>
                       </button>
-                    ` + invs.map(i => `
-                      <button type="button" class="glass-select-option" data-value="${escapeHtml(i.id)}" role="option" aria-selected="false">
+                    `+B.map(I=>`
+                      <button type="button" class="glass-select-option" data-value="${p(I.id)}" role="option" aria-selected="false">
                         <i class="fa-solid fa-file-invoice-dollar text-[#087F70] text-xs shrink-0 option-icon"></i>
                         <div class="flex-1 min-w-0 text-left">
-                          <span class="select-opt-text truncate block font-sans font-medium text-[#172B36]">${escapeHtml(i.invoice_number)}</span>
-                          <span class="text-[11px] text-[#087F70] font-mono block">Due: ${formatCurrency(i.outstanding_balance_cents || 0, i.currency || 'USD')}</span>
+                          <span class="select-opt-text truncate block font-sans font-medium text-[#172B36]">${p(I.invoice_number)}</span>
+                          <span class="text-[11px] text-[#087F70] font-mono block">Due: ${Y(I.outstanding_balance_cents||0,I.currency||"USD")}</span>
                         </div>
                         <i class="fa-solid fa-check check-icon"></i>
                       </button>
-                    `).join('');
-                  }
-                }
-              } else {
-                invSelect.innerHTML = '<option value="">Auto-create new invoice on commitment</option>';
-              }
-            } catch (e) {
-              invSelect.innerHTML = '<option value="">Auto-create new invoice on commitment</option>';
-            }
-            initGlassSelects();
-          });
-        }
-      }
-    };
-
-    document.getElementById('btnOpenRecordPaymentModal')?.addEventListener('click', openRecordPayment);
-    document.getElementById('btnQuickRecordPayment')?.addEventListener('click', openRecordPayment);
-
-    // Form Record Payment Submit (Financial & Receipt Ledger Architecture)
-    document.getElementById('formRecordPayment')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const f = e.target;
-      const submitBtn = f.querySelector('button[type="submit"]');
-      const orgId = f.organizationId ? f.organizationId.value : '';
-      const serviceProvided = (f.serviceProvided ? f.serviceProvided.value.trim() : '') || 'Whiz Studio Retainer Service';
-      const amountDollars = parseFloat(f.amount.value) || 0;
-      const currency = f.currency ? f.currency.value : 'USD';
-      const rawPaymentDate = f.paymentDate ? f.paymentDate.value.trim() : '';
-      const paymentMethod = f.paymentMethod ? f.paymentMethod.value : 'bank_transfer';
-      const paymentReference = f.paymentReference ? f.paymentReference.value : ('TXN-' + Math.floor(100000 + Math.random() * 900000));
-      const financialNotes = f.financialNotes ? f.financialNotes.value.trim() : null;
-      let selectedInvoiceId = f.invoiceId ? f.invoiceId.value.trim() : '';
-
-      // Strict Frontend Validations
-      if (!orgId) {
-        showToast('Please select a client organization.', 'error');
-        return;
-      }
-
-      if (!rawPaymentDate || !/^\d{4}-\d{2}-\d{2}$/.test(rawPaymentDate) || isNaN(Date.parse(rawPaymentDate))) {
-        showToast('Please select a valid payment date.', 'error');
-        const dateTrigger = document.querySelector('[data-datepicker-target="paymentDateInput"] .custom-datepicker-trigger');
-        if (dateTrigger) {
-          dateTrigger.classList.add('ring-2', 'ring-rose-500', 'border-rose-400');
-          dateTrigger.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-          setTimeout(() => dateTrigger.classList.remove('ring-2', 'ring-rose-500', 'border-rose-400'), 3000);
-        }
-        return;
-      }
-      const paymentDate = rawPaymentDate;
-
-      if (amountDollars <= 0) {
-        showToast('Please enter a valid payment amount greater than zero.', 'error');
-        f.amount?.focus();
-        return;
-      }
-
-      if (!f.serviceProvided || !f.serviceProvided.value.trim()) {
-        showToast('Please specify the service provided for this ledger entry.', 'error');
-        f.serviceProvided?.focus();
-        return;
-      }
-
-      setBtnLoading(submitBtn, true, 'Recording payment to ledger...');
-
-      // Determine if Auto-Create is selected or needed
-      const isAutoCreate = !selectedInvoiceId || selectedInvoiceId === 'auto' || selectedInvoiceId.toLowerCase().includes('auto');
-
-      const payRes = await apiFetch('/finance/payments', {
-        method: 'POST',
-        body: JSON.stringify({
-          invoiceId: isAutoCreate ? null : selectedInvoiceId,
-          autoCreate: isAutoCreate,
-          organizationId: orgId,
-          serviceProvided,
-          amountCents: Math.round(amountDollars * 100),
-          currency,
-          paymentDate,
-          paymentMethod,
-          paymentReference,
-          financialNotes,
-          idempotencyKey: `adm_pay_${paymentReference}_${Date.now()}`
-        })
-      });
-
-      setBtnLoading(submitBtn, false);
-
-      if (payRes.ok && payRes.data && payRes.data.success) {
-        // Instant Client Ledger Synchronization
-        try {
-          const clientOption = document.querySelector(`#paymentClientSelect option[value="${orgId}"]`);
-          const clientName = clientOption ? clientOption.textContent.split('(')[0].trim() : (state.clients.find(c => c.id === orgId)?.name || 'Valued Client');
-          const receiptNumber = payRes.data.data?.receiptNumber || payRes.data.data?.receipt_no || `RCPT-2026-${Math.floor(100 + Math.random() * 900)}`;
-          const invoiceNumber = payRes.data.data?.invoiceNumber || payRes.data.data?.invoice_no || `INV-2026-${Math.floor(100 + Math.random() * 900)}`;
-          const realInvoiceId = payRes.data.data?.invoiceId || selectedInvoiceId || ('inv_' + Date.now());
-
-          const newLedgerItem = {
-            id: payRes.data.data?.id || `pay_${Date.now()}`,
-            invoice_id: realInvoiceId,
-            invoice_no: invoiceNumber,
-            invoice_number: invoiceNumber,
-            receipt_number: receiptNumber,
-            receipt_no: receiptNumber,
-            organization_id: orgId,
-            client_name: clientName,
-            service_name: serviceProvided,
-            title: serviceProvided,
-            description: serviceProvided,
-            amount_cents: Math.round(amountDollars * 100),
-            total_cents: Math.round(amountDollars * 100),
-            amount_paid_cents: Math.round(amountDollars * 100),
-            outstanding_balance_cents: 0,
-            currency: currency,
-            payment_date: paymentDate,
-            issue_date: paymentDate,
-            due_date: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
-            payment_method: paymentMethod,
-            payment_reference: paymentReference,
-            status: 'paid',
-            created_at: new Date().toISOString()
-          };
-
-          const synced = JSON.parse(localStorage.getItem('whiz_synced_ledger_records') || '[]');
-          synced.unshift(newLedgerItem);
-          localStorage.setItem('whiz_synced_ledger_records', JSON.stringify(synced));
-        } catch (syncErr) {
-          console.warn('[Ledger Sync] Failed to cache synced ledger record:', syncErr);
-        }
-
-        showToast(`Payment of ${formatCurrency(amountDollars * 100, currency)} committed! Client ledger updated instantly.`, 'success');
-        f.reset();
-        initGlassSelects();
-        document.getElementById('modalRecordPayment')?.classList.add('hidden');
-        loadFinanceData();
-        loadInvoicesData();
-      } else {
-        showToast(payRes.data?.error || 'Failed to record payment.', 'error');
-      }
-    });
-
-
-    // Form Edit Payment Submit
-    document.getElementById('formEditPayment')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const f = e.target;
-      const submitBtn = f.querySelector('button[type="submit"]');
-      const pid = f.paymentId.value;
-      const paymentDate = f.paymentDate.value;
-      const paymentMethod = f.paymentMethod.value;
-      const paymentReference = f.paymentReference.value;
-      const financialNotes = f.financialNotes.value;
-
-      setBtnLoading(submitBtn, true, 'Updating payment...');
-      const res = await apiFetch(`/finance/payments/${pid}`, {
-        method: 'PUT',
-        body: JSON.stringify({ paymentDate, paymentMethod, paymentReference, financialNotes })
-      });
-      setBtnLoading(submitBtn, false);
-
-      if (res.ok && res.data && res.data.success) {
-        showToast('Payment details updated successfully.', 'success');
-        document.getElementById('modalEditPayment')?.classList.add('hidden');
-        loadFinanceData();
-      } else {
-        showToast(res.data?.error || 'Failed to update payment details.', 'error');
-      }
-    });
-
-    // Form Correct Payment Submit
-    document.getElementById('formCorrectPayment')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const f = e.target;
-      const submitBtn = f.querySelector('button[type="submit"]');
-      const pid = f.paymentId.value;
-      const amountDollars = parseFloat(f.amount.value) || 0;
-      const currency = f.currency.value;
-      const reason = f.reason.value;
-
-      if (amountDollars <= 0) {
-        showToast('Please enter a valid positive corrected amount.', 'error');
-        return;
-      }
-      if (!reason || reason.trim().length < 3) {
-        showToast('A reason for the financial correction is required.', 'error');
-        return;
-      }
-
-      const p = paymentsCache.find(x => x.id === pid);
-      const newAmountCents = Math.round(amountDollars * 100);
-      if (state.adminProfile?.role === 'accounts' && p && newAmountCents < (p.amount_cents || 0)) {
-        showToast('Accounts Restriction: You cannot reduce a previously recorded payment amount. Reductions require Admin or Super Admin authorization.', 'error');
-        return;
-      }
-
-      setBtnLoading(submitBtn, true, 'Committing correction...');
-      const res = await apiFetch(`/finance/payments/${pid}/correct`, {
-        method: 'POST',
-        body: JSON.stringify({
-          amountCents: Math.round(amountDollars * 100),
-          currency,
-          reason
-        })
-      });
-      setBtnLoading(submitBtn, false);
-
-      if (res.ok && res.data && res.data.success) {
-        showToast('Financial correction committed! Invoice balance recalculated.', 'success');
-        document.getElementById('modalCorrectPayment')?.classList.add('hidden');
-        loadFinanceData();
-      } else {
-        showToast(res.data?.error || 'Failed to commit financial correction.', 'error');
-      }
-    });
-
-    // 8. Authorize Staff Pre-Approval Form (Phase 12)
-    document.getElementById('adminInviteForm')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const isOwner = isCurrentUserOwner();
-      const isAdmin = state.adminProfile?.role === 'admin';
-      if (!isOwner && !isAdmin) {
-        showToast('Action denied: Only Super Admin and Admin may authorize staff pre-approvals.', 'error');
-        return;
-      }
-      const f = e.target;
-      const submitBtn = f.querySelector('button[type="submit"]');
-      const fullName = (f.fullName?.value || '').trim();
-      const email = (f.email?.value || '').trim();
-      const selectedRole = (document.getElementById('inviteRole')?.value || 'employee').toLowerCase();
-
-      if (!fullName || !email) {
-        showToast('Please provide both staff member full name and email.', 'warning');
-        return;
-      }
-
-      if (isAdmin && !isOwner && (selectedRole === 'admin' || selectedRole === 'super_admin' || selectedRole === 'owner')) {
-        showToast('Hierarchy Restriction: Admins may only invite Accounts or Employee team members.', 'error');
-        return;
-      }
-
-      setBtnLoading(submitBtn, true, 'Authorizing staff member...');
-
-      const res = await apiFetch('/portal/admin/team/invite', {
-        method: 'POST',
-        body: JSON.stringify({ fullName, email, role: selectedRole })
-      });
-
-      setBtnLoading(submitBtn, false);
-
-      if (res.ok && res.data && res.data.success) {
-        showToast(res.data.message || `Administrator pre-approval granted for ${email}!`, 'success');
-        f.reset();
-        loadTeamData();
-      } else {
-        showToast(res.data?.error || 'Failed to authorize administrator.', 'error');
-      }
-    });
-
-    // 9. Role Change Form Submit
-    document.getElementById('formRoleChange')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const submitBtn = document.getElementById('btnSubmitRoleChange');
-      const userId = document.getElementById('roleChangeUserId')?.value;
-      const targetRole = document.getElementById('roleChangeNewRole')?.value || document.getElementById('roleChangeTargetRole')?.value;
-      const reason = document.getElementById('roleChangeReason')?.value || 'Role updated by Super Admin';
-
-      if (!userId || !targetRole) return;
-
-      setBtnLoading(submitBtn, true, 'Updating role...');
-
-      const res = await apiFetch(`/portal/admin/users/${userId}/role`, {
-        method: 'PUT',
-        body: JSON.stringify({ role: targetRole, reason })
-      });
-
-      setBtnLoading(submitBtn, false);
-
-      if (res.ok && res.data && res.data.success) {
-        showToast(res.data.message || 'User role successfully updated.', 'success');
-        document.getElementById('modalRoleChange')?.classList.add('hidden');
-        loadTeamData();
-      } else {
-        showToast(res.data?.error || 'Failed to update user role.', 'error');
-      }
-    });
-
-    // Refresh User Directory Button
-    document.getElementById('btnRefreshUserDir')?.addEventListener('click', async () => {
-      const icon = document.getElementById('btnRefreshUserDirIcon');
-      if (icon) icon.classList.add('fa-spin');
-      try {
-        await loadTeamData();
-        showToast('User directory refreshed.', 'success');
-      } catch (e) {
-        showToast('Failed to refresh user directory.', 'error');
-      } finally {
-        if (icon) icon.classList.remove('fa-spin');
-      }
-    });
-
-    // Search and Filter Listeners
-    document.getElementById('userDirectorySearch')?.addEventListener('input', () => renderUserDirectory());
-    document.getElementById('userDirectoryRoleFilter')?.addEventListener('change', () => renderUserDirectory());
-    document.getElementById('userDirectoryStatusFilter')?.addEventListener('change', () => renderUserDirectory());
-
-    // User Directory Search Clear Button
-    document.getElementById('userDirectorySearchClear')?.addEventListener('click', () => {
-      const searchInput = document.getElementById('userDirectorySearch');
-      if (searchInput) {
-        searchInput.value = '';
-        renderUserDirectory();
-        searchInput.focus();
-      }
-    });
-
-    // Delegated Reset Filters Button
-    document.addEventListener('click', (e) => {
-      if (e.target.closest('#btnClearUserFilters')) {
-        const searchInput = document.getElementById('userDirectorySearch');
-        if (searchInput) searchInput.value = '';
-        const roleFilter = document.getElementById('userDirectoryRoleFilter');
-        if (roleFilter) {
-          roleFilter.value = 'all';
-          roleFilter.dispatchEvent(new Event('change'));
-        }
-        const statusFilter = document.getElementById('userDirectoryStatusFilter');
-        if (statusFilter) {
-          statusFilter.value = 'all';
-          statusFilter.dispatchEvent(new Event('change'));
-        }
-        renderUserDirectory();
-      }
-    });
-
-    // =========================================================================
-    // STANDARDIZED MODAL DISMISSAL & CLOSE EVENT HANDLERS
-    // =========================================================================
-    // 1. Direct Binding for Record Payment Modal 'X' Close Button
-    const btnCloseRecordPayment = document.getElementById('btnCloseRecordPaymentModal');
-    if (btnCloseRecordPayment) {
-      btnCloseRecordPayment.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const m = document.getElementById('modalRecordPayment');
-        if (m) m.classList.add('hidden');
-        document.body.classList.remove('overflow-hidden');
-      });
-    }
-
-    // 2. Direct Binding for Record Payment Modal 'Cancel' Button
-    const btnCancelRecordPayment = document.getElementById('btnCancelRecordPaymentModal');
-    if (btnCancelRecordPayment) {
-      btnCancelRecordPayment.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const m = document.getElementById('modalRecordPayment');
-        if (m) m.classList.add('hidden');
-        document.body.classList.remove('overflow-hidden');
-      });
-    }
-
-    // 3. Global Event Delegation for ALL .btn-close-modal & [data-modal] buttons
-    document.addEventListener('click', (e) => {
-      const closeBtn = e.target.closest('.btn-close-modal, .whiz-modal-close-btn, [data-modal]');
-      if (!closeBtn) return;
-      
-      const modalId = closeBtn.dataset.modal || closeBtn.getAttribute('data-modal');
-      const isCloseAction = closeBtn.classList.contains('btn-close-modal') ||
-                            closeBtn.classList.contains('whiz-modal-close-btn') ||
-                            closeBtn.textContent.trim().toLowerCase() === 'cancel' ||
-                            closeBtn.textContent.trim().toLowerCase() === 'close';
-      
-      if (isCloseAction) {
-        e.preventDefault();
-        e.stopPropagation();
-        if (modalId) {
-          const m = document.getElementById(modalId);
-          if (m) {
-            m.classList.add('hidden');
-            document.body.classList.remove('overflow-hidden');
-          }
-        } else {
-          const parentModal = closeBtn.closest('.fixed[id^="modal"], [id^="modal"]');
-          if (parentModal) {
-            parentModal.classList.add('hidden');
-            document.body.classList.remove('overflow-hidden');
-          }
-        }
-      }
-    });
-
-    // 4. Backdrop Click Dismissal on all Modal Overlays
-    document.querySelectorAll('.fixed[id^="modal"], [id^="modal"]').forEach(modalEl => {
-      modalEl.addEventListener('click', (e) => {
-        if (e.target === modalEl) {
-          modalEl.classList.add('hidden');
-          document.body.classList.remove('overflow-hidden');
-        }
-      });
-    });
-
-    // 5. Global Keyboard ESC Dismissal
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        document.querySelectorAll('.fixed[id^="modal"]:not(.hidden), [id^="modal"]:not(.hidden)').forEach(modalEl => {
-          modalEl.classList.add('hidden');
-        });
-        document.body.classList.remove('overflow-hidden');
-      }
-    });
-
-    
-  }
-
-  function initPasswordToggles() {
-    document.querySelectorAll('.password-toggle-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const targetId = btn.dataset.target;
-        const input = document.getElementById(targetId);
-        if (input) {
-          const isPass = input.type === 'password';
-          input.type = isPass ? 'text' : 'password';
-          btn.innerHTML = `<i class="fa-solid ${isPass ? 'fa-eye-slash' : 'fa-eye'} text-xs"></i>`;
-        }
-      });
-    });
-  }
-
-  // =========================================================================
-  // CLERK AUTHENTICATION & INITIALIZATION
-  // =========================================================================
-  let clerkCheckAttempts = 0;
-  async function checkAuthAndInit() {
-    // PREVIEW & DEMO BYPASS GUARD (For isolated testing & simulator)
-    const urlParams = new URLSearchParams(window.location.search);
-    const isPreview = urlParams.get('preview') === '1' || urlParams.get('demo') === '1' || (window.self !== window.top && urlParams.get('preview') !== '0');
-
-    if (isPreview) {
-      state.isPreview = true;
-      const roleName = urlParams.get('role') || 'super_admin';
-      const profile = {
-        id: 'usr_super_admin_01',
-        fullName: 'Kazi Emon',
-        full_name: 'Kazi Emon',
-        email: (roleName === 'super_admin' || roleName === 'owner') ? 'kaziaremon@gmail.com' : `${roleName}@whizstudio.io`,
-        username: 'kaziaremon',
-        role: roleName === 'super_admin' ? 'owner' : roleName,
-        isSuperAdmin: roleName === 'super_admin' || roleName === 'owner'
-      };
-
-      state.currentUser = profile;
-      state.adminProfile = profile;
-
-      applyRoleAdaptiveUI(profile);
-      updateOverviewGreeting();
-      initGlassSelects(); // Initial setup on load
-
-      const name = profile.fullName;
-      const username = '@' + profile.username;
-      const initials = 'KE';
-
-      document.querySelectorAll('.admin-display-name').forEach(el => el.textContent = name);
-      document.querySelectorAll('.admin-display-username').forEach(el => el.textContent = username);
-      document.querySelectorAll('.admin-display-initials').forEach(el => el.textContent = initials);
-
-      const emailEl = document.getElementById('secUserEmail');
-      if (emailEl) emailEl.textContent = profile.email;
-      const emailHeaderEl = document.getElementById('secUserEmailHeader');
-      if (emailHeaderEl) emailHeaderEl.textContent = profile.email;
-      const userEl = document.getElementById('secClerkUserId');
-      if (userEl) userEl.innerHTML = '<span class="inline-flex items-center gap-1.5 text-xs text-emerald-700 font-semibold"><i class="fa-solid fa-shield-check text-[#147D64]"></i> Preview Session Active</span>';
-
-      const authGuard = document.getElementById('dashboardAuthGuard');
-      const accessDenied = document.getElementById('dashboardAccessDenied');
-      const mainLayout = document.getElementById('dashboardMainLayout');
-
-      if (authGuard) authGuard.classList.add('hidden');
-      if (accessDenied) accessDenied.classList.add('hidden');
-      if (mainLayout) mainLayout.classList.remove('hidden');
-
-      const hash = (window.location.hash || '').replace('#', '');
-      const validTabs = ['overview', 'clients', 'services', 'projects', 'tasks', 'finance', 'team', 'support', 'history', 'security'];
-      const initialTab = validTabs.includes(hash) ? hash : 'overview';
-      switchTab(initialTab, false);
-
-      loadServicesData();
-      return;
-    }
-    const authGuard = document.getElementById('dashboardAuthGuard');
-    const accessDenied = document.getElementById('dashboardAccessDenied');
-    const mainLayout = document.getElementById('dashboardMainLayout');
-
-    if (!window.Clerk) {
-      clerkCheckAttempts++;
-      if (clerkCheckAttempts > 50) {
-        console.error('Clerk SDK load timeout in admin dashboard');
-        if (authGuard) {
-          authGuard.innerHTML = `
+                    `).join("")))}else c.innerHTML='<option value="">Auto-create new invoice on commitment</option>'}catch{c.innerHTML='<option value="">Auto-create new invoice on commitment</option>'}H()}}))}};document.getElementById("btnOpenRecordPaymentModal")?.addEventListener("click",m),document.getElementById("btnQuickRecordPayment")?.addEventListener("click",m),document.getElementById("formRecordPayment")?.addEventListener("submit",async a=>{a.preventDefault();const n=a.target,d=n.querySelector('button[type="submit"]'),c=n.organizationId?n.organizationId.value:"",o=(n.serviceProvided?n.serviceProvided.value.trim():"")||"Whiz Studio Retainer Service",u=parseFloat(n.amount.value)||0,g=n.currency?n.currency.value:"USD",w=n.paymentDate?n.paymentDate.value.trim():"",C=n.paymentMethod?n.paymentMethod.value:"bank_transfer",v=n.paymentReference?n.paymentReference.value:"TXN-"+Math.floor(1e5+Math.random()*9e5),B=n.financialNotes?n.financialNotes.value.trim():null;let I=n.invoiceId?n.invoiceId.value.trim():"";if(!c){h("Please select a client organization.","error");return}if(!w||!/^\d{4}-\d{2}-\d{2}$/.test(w)||isNaN(Date.parse(w))){h("Please select a valid payment date.","error");const _=document.querySelector('[data-datepicker-target="paymentDateInput"] .custom-datepicker-trigger');_&&(_.classList.add("ring-2","ring-rose-500","border-rose-400"),_.scrollIntoView({behavior:"smooth",block:"nearest"}),setTimeout(()=>_.classList.remove("ring-2","ring-rose-500","border-rose-400"),3e3));return}const F=w;if(u<=0){h("Please enter a valid payment amount greater than zero.","error"),n.amount?.focus();return}if(!n.serviceProvided||!n.serviceProvided.value.trim()){h("Please specify the service provided for this ledger entry.","error"),n.serviceProvided?.focus();return}S(d,!0,"Recording payment to ledger...");const M=!I||I==="auto"||I.toLowerCase().includes("auto"),D=await L("/finance/payments",{method:"POST",body:JSON.stringify({invoiceId:M?null:I,autoCreate:M,organizationId:c,serviceProvided:o,amountCents:Math.round(u*100),currency:g,paymentDate:F,paymentMethod:C,paymentReference:v,financialNotes:B,idempotencyKey:`adm_pay_${v}_${Date.now()}`})});if(S(d,!1),D.ok&&D.data&&D.data.success){try{const _=document.querySelector(`#paymentClientSelect option[value="${c}"]`),N=_?_.textContent.split("(")[0].trim():y.clients.find(O=>O.id===c)?.name||"Valued Client",j=D.data.data?.receiptNumber||D.data.data?.receipt_no||`RCPT-2026-${Math.floor(100+Math.random()*900)}`,W=D.data.data?.invoiceNumber||D.data.data?.invoice_no||`INV-2026-${Math.floor(100+Math.random()*900)}`,ee=D.data.data?.invoiceId||I||"inv_"+Date.now(),G={id:D.data.data?.id||`pay_${Date.now()}`,invoice_id:ee,invoice_no:W,invoice_number:W,receipt_number:j,receipt_no:j,organization_id:c,client_name:N,service_name:o,title:o,description:o,amount_cents:Math.round(u*100),total_cents:Math.round(u*100),amount_paid_cents:Math.round(u*100),outstanding_balance_cents:0,currency:g,payment_date:F,issue_date:F,due_date:new Date(Date.now()+30*864e5).toISOString().split("T")[0],payment_method:C,payment_reference:v,status:"paid",created_at:new Date().toISOString()},U=JSON.parse(localStorage.getItem("whiz_synced_ledger_records")||"[]");U.unshift(G),localStorage.setItem("whiz_synced_ledger_records",JSON.stringify(U))}catch(_){console.warn("[Ledger Sync] Failed to cache synced ledger record:",_)}h(`Payment of ${Y(u*100,g)} committed! Client ledger updated instantly.`,"success"),n.reset(),H(),document.getElementById("modalRecordPayment")?.classList.add("hidden"),ye(),St()}else h(D.data?.error||"Failed to record payment.","error")}),document.getElementById("formEditPayment")?.addEventListener("submit",async a=>{a.preventDefault();const n=a.target,d=n.querySelector('button[type="submit"]'),c=n.paymentId.value,o=n.paymentDate.value,u=n.paymentMethod.value,g=n.paymentReference.value,w=n.financialNotes.value;S(d,!0,"Updating payment...");const C=await L(`/finance/payments/${c}`,{method:"PUT",body:JSON.stringify({paymentDate:o,paymentMethod:u,paymentReference:g,financialNotes:w})});S(d,!1),C.ok&&C.data&&C.data.success?(h("Payment details updated successfully.","success"),document.getElementById("modalEditPayment")?.classList.add("hidden"),ye()):h(C.data?.error||"Failed to update payment details.","error")}),document.getElementById("formCorrectPayment")?.addEventListener("submit",async a=>{a.preventDefault();const n=a.target,d=n.querySelector('button[type="submit"]'),c=n.paymentId.value,o=parseFloat(n.amount.value)||0,u=n.currency.value,g=n.reason.value;if(o<=0){h("Please enter a valid positive corrected amount.","error");return}if(!g||g.trim().length<3){h("A reason for the financial correction is required.","error");return}const w=_e.find(B=>B.id===c),C=Math.round(o*100);if(y.adminProfile?.role==="accounts"&&w&&C<(w.amount_cents||0)){h("Accounts Restriction: You cannot reduce a previously recorded payment amount. Reductions require Admin or Super Admin authorization.","error");return}S(d,!0,"Committing correction...");const v=await L(`/finance/payments/${c}/correct`,{method:"POST",body:JSON.stringify({amountCents:Math.round(o*100),currency:u,reason:g})});S(d,!1),v.ok&&v.data&&v.data.success?(h("Financial correction committed! Invoice balance recalculated.","success"),document.getElementById("modalCorrectPayment")?.classList.add("hidden"),ye()):h(v.data?.error||"Failed to commit financial correction.","error")}),document.getElementById("adminInviteForm")?.addEventListener("submit",async a=>{a.preventDefault();const n=X(),d=y.adminProfile?.role==="admin";if(!n&&!d){h("Action denied: Only Super Admin and Admin may authorize staff pre-approvals.","error");return}const c=a.target,o=c.querySelector('button[type="submit"]'),u=(c.fullName?.value||"").trim(),g=(c.email?.value||"").trim(),w=(document.getElementById("inviteRole")?.value||"employee").toLowerCase();if(!u||!g){h("Please provide both staff member full name and email.","warning");return}if(d&&!n&&(w==="admin"||w==="super_admin"||w==="owner")){h("Hierarchy Restriction: Admins may only invite Accounts or Employee team members.","error");return}S(o,!0,"Authorizing staff member...");const C=await L("/portal/admin/team/invite",{method:"POST",body:JSON.stringify({fullName:u,email:g,role:w})});S(o,!1),C.ok&&C.data&&C.data.success?(h(C.data.message||`Administrator pre-approval granted for ${g}!`,"success"),c.reset(),fe()):h(C.data?.error||"Failed to authorize administrator.","error")}),document.getElementById("formRoleChange")?.addEventListener("submit",async a=>{a.preventDefault();const n=document.getElementById("btnSubmitRoleChange"),d=document.getElementById("roleChangeUserId")?.value,c=document.getElementById("roleChangeNewRole")?.value||document.getElementById("roleChangeTargetRole")?.value,o=document.getElementById("roleChangeReason")?.value||"Role updated by Super Admin";if(!d||!c)return;S(n,!0,"Updating role...");const u=await L(`/portal/admin/users/${d}/role`,{method:"PUT",body:JSON.stringify({role:c,reason:o})});S(n,!1),u.ok&&u.data&&u.data.success?(h(u.data.message||"User role successfully updated.","success"),document.getElementById("modalRoleChange")?.classList.add("hidden"),fe()):h(u.data?.error||"Failed to update user role.","error")}),document.getElementById("btnRefreshUserDir")?.addEventListener("click",async()=>{const a=document.getElementById("btnRefreshUserDirIcon");a&&a.classList.add("fa-spin");try{await fe(),h("User directory refreshed.","success")}catch{h("Failed to refresh user directory.","error")}finally{a&&a.classList.remove("fa-spin")}}),document.getElementById("userDirectorySearch")?.addEventListener("input",()=>$e()),document.getElementById("userDirectoryRoleFilter")?.addEventListener("change",()=>$e()),document.getElementById("userDirectoryStatusFilter")?.addEventListener("change",()=>$e()),document.getElementById("userDirectorySearchClear")?.addEventListener("click",()=>{const a=document.getElementById("userDirectorySearch");a&&(a.value="",$e(),a.focus())}),document.addEventListener("click",a=>{if(a.target.closest("#btnClearUserFilters")){const n=document.getElementById("userDirectorySearch");n&&(n.value="");const d=document.getElementById("userDirectoryRoleFilter");d&&(d.value="all",d.dispatchEvent(new Event("change")));const c=document.getElementById("userDirectoryStatusFilter");c&&(c.value="all",c.dispatchEvent(new Event("change"))),$e()}});const x=document.getElementById("btnCloseRecordPaymentModal");x&&x.addEventListener("click",a=>{a.preventDefault(),a.stopPropagation();const n=document.getElementById("modalRecordPayment");n&&n.classList.add("hidden"),document.body.classList.remove("overflow-hidden")});const b=document.getElementById("btnCancelRecordPaymentModal");b&&b.addEventListener("click",a=>{a.preventDefault(),a.stopPropagation();const n=document.getElementById("modalRecordPayment");n&&n.classList.add("hidden"),document.body.classList.remove("overflow-hidden")}),document.addEventListener("click",a=>{const n=a.target.closest(".btn-close-modal, .whiz-modal-close-btn, [data-modal]");if(!n)return;const d=n.dataset.modal||n.getAttribute("data-modal");if(n.classList.contains("btn-close-modal")||n.classList.contains("whiz-modal-close-btn")||n.textContent.trim().toLowerCase()==="cancel"||n.textContent.trim().toLowerCase()==="close")if(a.preventDefault(),a.stopPropagation(),d){const o=document.getElementById(d);o&&(o.classList.add("hidden"),document.body.classList.remove("overflow-hidden"))}else{const o=n.closest('.fixed[id^="modal"], [id^="modal"]');o&&(o.classList.add("hidden"),document.body.classList.remove("overflow-hidden"))}}),document.querySelectorAll('.fixed[id^="modal"], [id^="modal"]').forEach(a=>{a.addEventListener("click",n=>{n.target===a&&(a.classList.add("hidden"),document.body.classList.remove("overflow-hidden"))})}),document.addEventListener("keydown",a=>{a.key==="Escape"&&(document.querySelectorAll('.fixed[id^="modal"]:not(.hidden), [id^="modal"]:not(.hidden)').forEach(n=>{n.classList.add("hidden")}),document.body.classList.remove("overflow-hidden"))})}function Qt(){document.querySelectorAll(".password-toggle-btn").forEach(s=>{s.addEventListener("click",()=>{const t=s.dataset.target,r=document.getElementById(t);if(r){const e=r.type==="password";r.type=e?"text":"password",s.innerHTML=`<i class="fa-solid ${e?"fa-eye-slash":"fa-eye"} text-xs"></i>`}})})}let Dt=0;async function _t(){const s=new URLSearchParams(window.location.search);if(s.get("preview")==="1"||s.get("demo")==="1"||window.self!==window.top&&s.get("preview")!=="0"){y.isPreview=!0;const i=s.get("role")||"super_admin",m={id:"usr_super_admin_01",fullName:"Kazi Emon",full_name:"Kazi Emon",email:i==="super_admin"||i==="owner"?"kaziaremon@gmail.com":`${i}@whizstudio.io`,username:"kaziaremon",role:i==="super_admin"?"owner":i,isSuperAdmin:i==="super_admin"||i==="owner"};y.currentUser=m,y.adminProfile=m,ht(m),st(),H();const x=m.fullName,b="@"+m.username,a="KE";document.querySelectorAll(".admin-display-name").forEach(B=>B.textContent=x),document.querySelectorAll(".admin-display-username").forEach(B=>B.textContent=b),document.querySelectorAll(".admin-display-initials").forEach(B=>B.textContent=a);const n=document.getElementById("secUserEmail");n&&(n.textContent=m.email);const d=document.getElementById("secUserEmailHeader");d&&(d.textContent=m.email);const c=document.getElementById("secClerkUserId");c&&(c.innerHTML='<span class="inline-flex items-center gap-1.5 text-xs text-emerald-700 font-semibold"><i class="fa-solid fa-shield-check text-[#147D64]"></i> Preview Session Active</span>');const o=document.getElementById("dashboardAuthGuard"),u=document.getElementById("dashboardAccessDenied"),g=document.getElementById("dashboardMainLayout");o&&o.classList.add("hidden"),u&&u.classList.add("hidden"),g&&g.classList.remove("hidden");const w=(window.location.hash||"").replace("#",""),v=["overview","clients","services","projects","tasks","finance","team","support","history","security"].includes(w)?w:"overview";Z(v,!1),Ce();return}const r=document.getElementById("dashboardAuthGuard"),e=document.getElementById("dashboardAccessDenied"),l=document.getElementById("dashboardMainLayout");if(!window.Clerk){if(Dt++,Dt>50){console.error("Clerk SDK load timeout in admin dashboard"),r&&(r.innerHTML=`
             <div class="mb-5 flex items-center justify-center">
               <img src="/assets/images/whiz-logo-v2.png?v=202611" alt="Whiz Studio" class="h-12 w-auto object-contain">
             </div>
@@ -6010,241 +1141,17 @@
               <button onclick="window.location.reload()" class="px-4 py-2 bg-[#147D64] text-white text-xs font-bold rounded-xl hover:bg-[#12694f] cursor-pointer">Retry Connection</button>
               <a href="/?login=admin" class="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-200 cursor-pointer">Return to Login</a>
             </div>
-          `;
-        }
-        return;
-      }
-      setTimeout(checkAuthAndInit, 100);
-      return;
-    }
-
-    try {
-      if (!window.Clerk.loaded) {
-        await Promise.race([
-          window.Clerk.load({
-            publishableKey: CLERK_PUBLISHABLE_KEY
-          }),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Authentication system connection timeout')), 8000))
-        ]);
-      }
-
-      const user = window.Clerk.user;
-      if (!user) {
-        console.warn('No active Clerk user found, redirecting to login...');
-        window.location.href = '/?login=admin';
-        return;
-      }
-
-      state.currentUser = user;
-
-      // Verify Administrator Authorization with Cloudflare Backend API
-      const res = await apiFetch('/portal/me');
-      if (!res.ok || !res.data || !res.data.success || !res.data.data || !res.data.data.user) {
-        console.error('Admin verification failed from API:', res);
-        if (authGuard) authGuard.classList.add('hidden');
-        if (accessDenied) accessDenied.classList.remove('hidden');
-        return;
-      }
-
-      const profile = res.data.data.user;
-      state.adminProfile = profile;
-
-      const isAuthorized = 
-        profile.role === 'owner' || 
-        profile.role === 'admin' || 
-        profile.role === 'super_admin' || 
-        profile.role === 'accounts' || 
-        profile.role === 'employee' || 
-        Boolean(profile.isSuperAdmin) ||
-        Boolean(profile.isStaff);
-
-      if (!isAuthorized) {
-        if (profile.role === 'client') {
-          console.warn('[Route Guard] Client user attempted to access admin portal. Redirecting to client dashboard...');
-          window.location.replace('/client/dashboard/');
-          return;
-        }
-        console.warn('Authenticated user does not possess staff permissions:', profile);
-        if (authGuard) authGuard.classList.add('hidden');
-        if (accessDenied) accessDenied.classList.remove('hidden');
-        return;
-      }
-
-      applyRoleAdaptiveUI(profile);
-      updateOverviewGreeting();
-
-      // Populate user info in UI
-      const name = profile.fullName || profile.full_name || user.fullName || 'Super Admin';
-      const email = profile.email || (user.primaryEmailAddress ? user.primaryEmailAddress.emailAddress : '');
-      const username = user.username ? `@${user.username}` : (email ? `@${email.split('@')[0]}` : '@admin');
-      const initials = (name || 'SA').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-
-      document.querySelectorAll('.admin-display-name').forEach(el => el.textContent = name);
-      document.querySelectorAll('.admin-display-username').forEach(el => el.textContent = username);
-      document.querySelectorAll('.admin-display-initials').forEach(el => el.textContent = initials);
-
-      const emailEl = document.getElementById('secUserEmail');
-      if (emailEl) emailEl.textContent = email;
-      const userEl = document.getElementById('secClerkUserId');
-      if (userEl) userEl.innerHTML = '<span class="inline-flex items-center gap-1.5 text-xs text-emerald-700 font-semibold"><i class="fa-solid fa-shield-check text-[#147D64]"></i> SSO Session Active</span>';
-
-      // Show Main Layout
-      if (authGuard) authGuard.classList.add('hidden');
-      if (accessDenied) accessDenied.classList.add('hidden');
-      if (mainLayout) mainLayout.classList.remove('hidden');
-      if (typeof initGlassSelects === 'function') initGlassSelects();
-
-      // Initialize initial tab or deep-linked view
-      const hash = (window.location.hash || '').replace('#', '');
-      if (hash.startsWith('client-')) {
-        const cId = hash.replace('client-', '');
-        openClientDetails(cId);
-      } else if (hash.startsWith('service-tasks-')) {
-        const sId = hash.replace('service-tasks-', '');
-        openServiceTasksWorkspace(sId);
-      } else {
-        const validTabs = ['overview', 'clients', 'services', 'projects', 'tasks', 'finance', 'team', 'support', 'history', 'security', 'settings'];
-        const initialTab = validTabs.includes(hash) ? hash : 'overview';
-        switchTab(initialTab);
-      }
-
-      // Preload catalog
-      loadServicesData();
-    } catch (err) {
-      console.error('Console Auth Error:', err);
-      if (authGuard) {
-        authGuard.innerHTML = `
+          `);return}setTimeout(_t,100);return}try{window.Clerk.loaded||await Promise.race([window.Clerk.load({publishableKey:Mt}),new Promise((w,C)=>setTimeout(()=>C(new Error("Authentication system connection timeout")),8e3))]);const i=window.Clerk.user;if(!i){console.warn("No active Clerk user found, redirecting to login..."),window.location.href="/?login=admin";return}y.currentUser=i;const m=await L("/portal/me");if(!m.ok||!m.data||!m.data.success||!m.data.data||!m.data.data.user){console.error("Admin verification failed from API:",m),r&&r.classList.add("hidden"),e&&e.classList.remove("hidden");return}const x=m.data.data.user;if(y.adminProfile=x,!(x.role==="owner"||x.role==="admin"||x.role==="super_admin"||x.role==="accounts"||x.role==="employee"||!!x.isSuperAdmin||!!x.isStaff)){if(x.role==="client"){console.warn("[Route Guard] Client user attempted to access admin portal. Redirecting to client dashboard..."),window.location.replace("/client/dashboard/");return}console.warn("Authenticated user does not possess staff permissions:",x),r&&r.classList.add("hidden"),e&&e.classList.remove("hidden");return}ht(x),st();const a=x.fullName||x.full_name||i.fullName||"Super Admin",n=x.email||(i.primaryEmailAddress?i.primaryEmailAddress.emailAddress:""),d=i.username?`@${i.username}`:n?`@${n.split("@")[0]}`:"@admin",c=(a||"SA").split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();document.querySelectorAll(".admin-display-name").forEach(w=>w.textContent=a),document.querySelectorAll(".admin-display-username").forEach(w=>w.textContent=d),document.querySelectorAll(".admin-display-initials").forEach(w=>w.textContent=c);const o=document.getElementById("secUserEmail");o&&(o.textContent=n);const u=document.getElementById("secClerkUserId");u&&(u.innerHTML='<span class="inline-flex items-center gap-1.5 text-xs text-emerald-700 font-semibold"><i class="fa-solid fa-shield-check text-[#147D64]"></i> SSO Session Active</span>'),r&&r.classList.add("hidden"),e&&e.classList.add("hidden"),l&&l.classList.remove("hidden"),typeof H=="function"&&H();const g=(window.location.hash||"").replace("#","");if(g.startsWith("client-")){const w=g.replace("client-","");pe(w)}else if(g.startsWith("service-tasks-")){const w=g.replace("service-tasks-","");De(w)}else{const C=["overview","clients","services","projects","tasks","finance","team","support","history","security","settings"].includes(g)?g:"overview";Z(C)}Ce()}catch(i){console.error("Console Auth Error:",i),r&&(r.innerHTML=`
           <div class="mb-5 flex items-center justify-center">
             <img src="/assets/images/whiz-logo-v2.png?v=202611" alt="Whiz Studio" class="h-12 w-auto object-contain">
           </div>
           <h2 class="text-xl font-bold text-[#172B36] tracking-tight">Workspace Initialization Failed</h2>
-          <p class="text-xs text-rose-500 mt-2 max-w-sm">${escapeHtml(err.message || 'An unexpected error occurred while preparing your workspace.')}</p>
+          <p class="text-xs text-rose-500 mt-2 max-w-sm">${p(i.message||"An unexpected error occurred while preparing your workspace.")}</p>
           <div class="mt-5 flex items-center justify-center gap-3">
             <button onclick="window.location.reload()" class="px-4 py-2 bg-[#147D64] text-white text-xs font-bold rounded-xl hover:bg-[#12694f] cursor-pointer">Retry</button>
             <a href="/" class="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-200 cursor-pointer">Return Home</a>
           </div>
-        `;
-      }
-    }
-  }
-
-  // =========================================================================
-  // 12. INQUIRIES & INBOUND CRM ENGINE (SUPER ADMIN EXCLUSIVE)
-  // =========================================================================
-  async function loadInquiriesData(showToastNotice = false) {
-    const tbody = document.getElementById('inquiriesTableBody');
-    const refreshBtn = document.getElementById('btnRefreshInquiries');
-    if (refreshBtn) {
-      const icon = refreshBtn.querySelector('i');
-      if (icon) icon.classList.add('fa-spin');
-    }
-
-    if (tbody) {
-      tbody.innerHTML = '<tr><td colspan="7" class="py-12 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin text-xl text-[#087F70] mb-2"></i><p class="text-xs font-medium">Fetching inbound leads from database...</p></td></tr>';
-    }
-
-    try {
-      const res = await apiFetch('/api/inquiries');
-      if (refreshBtn) {
-        const icon = refreshBtn.querySelector('i');
-        if (icon) icon.classList.remove('fa-spin');
-      }
-
-      if (res.ok && res.data && res.data.success) {
-        state.inquiries = res.data.inquiries || [];
-        updateInquiriesBadges();
-        renderInquiries();
-        if (showToastNotice) {
-          showToast(`Synchronized ${state.inquiries.length} inquiries from database.`, 'success');
-        }
-      } else {
-        if (tbody) {
-          tbody.innerHTML = `<tr><td colspan="7" class="py-10 text-center text-rose-500 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>${escapeHtml(res.data?.error || 'Failed to load inquiries.')}</td></tr>`;
-        }
-      }
-    } catch (err) {
-      console.error('Inquiries Load Error:', err);
-      if (refreshBtn) {
-        const icon = refreshBtn.querySelector('i');
-        if (icon) icon.classList.remove('fa-spin');
-      }
-      if (tbody) {
-        tbody.innerHTML = '<tr><td colspan="7" class="py-10 text-center text-rose-500 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Network error loading inquiries.</td></tr>';
-      }
-    }
-  }
-
-  function updateInquiriesBadges() {
-    const newCount = (state.inquiries || []).filter(i => (i.status || 'new') === 'new').length;
-    const dockBadge = document.getElementById('dockBadgeInquiries');
-    const tooltipBadge = document.getElementById('dockTooltipBadgeInquiries');
-    const drawerBadge = document.getElementById('drawerBadgeInquiries');
-
-    const updateBadgeEl = (el) => {
-      if (!el) return;
-      if (newCount > 0) {
-        el.textContent = `${newCount} New`;
-        el.classList.remove('hidden');
-      } else {
-        el.classList.add('hidden');
-      }
-    };
-
-    updateBadgeEl(dockBadge);
-    updateBadgeEl(tooltipBadge);
-    updateBadgeEl(drawerBadge);
-  }
-
-  function renderInquiries() {
-    const tbody = document.getElementById('inquiriesTableBody');
-    if (!tbody) return;
-
-    const list = state.inquiries || [];
-
-    // KPI Counters
-    const total = list.length;
-    const newCount = list.filter(i => (i.status || 'new') === 'new').length;
-    const inProgressCount = list.filter(i => i.status === 'in_progress' || i.status === 'contacted').length;
-    const closedCount = list.filter(i => i.status === 'closed').length;
-
-    const elTotal = document.getElementById('statTotalInquiries');
-    const elNew = document.getElementById('statNewInquiries');
-    const elProg = document.getElementById('statInProgressInquiries');
-    const elClosed = document.getElementById('statClosedInquiries');
-
-    if (elTotal) elTotal.textContent = total;
-    if (elNew) elNew.textContent = newCount;
-    if (elProg) elProg.textContent = inProgressCount;
-    if (elClosed) elClosed.textContent = closedCount;
-
-    // Filters & Search
-    const searchVal = (document.getElementById('searchInquiriesInput')?.value || '').toLowerCase().trim();
-    const filterVal = state.activeInquiryFilter || 'all';
-
-    const filtered = list.filter(item => {
-      if (filterVal === 'new' && (item.status || 'new') !== 'new') return false;
-      if (filterVal === 'contacted' && item.status !== 'contacted') return false;
-      if (filterVal === 'in_progress' && item.status !== 'in_progress') return false;
-      if (filterVal === 'closed' && item.status !== 'closed') return false;
-
-      if (searchVal) {
-        const textToSearch = [
-          item.name,
-          item.email,
-          item.phone,
-          item.service,
-          item.details,
-          item.notes
-        ].filter(Boolean).join(' ').toLowerCase();
-
-        if (!textToSearch.includes(searchVal)) return false;
-      }
-
-      return true;
-    });
-
-    if (filtered.length === 0) {
-      tbody.innerHTML = `
+        `)}}async function ut(s=!1){const t=document.getElementById("inquiriesTableBody"),r=document.getElementById("btnRefreshInquiries");if(r){const e=r.querySelector("i");e&&e.classList.add("fa-spin")}t&&(t.innerHTML='<tr><td colspan="7" class="py-12 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin text-xl text-[#087F70] mb-2"></i><p class="text-xs font-medium">Fetching inbound leads from database...</p></td></tr>');try{const e=await L("/api/inquiries");if(r){const l=r.querySelector("i");l&&l.classList.remove("fa-spin")}e.ok&&e.data&&e.data.success?(y.inquiries=e.data.inquiries||[],mt(),Ue(),s&&h(`Synchronized ${y.inquiries.length} inquiries from database.`,"success")):t&&(t.innerHTML=`<tr><td colspan="7" class="py-10 text-center text-rose-500 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>${p(e.data?.error||"Failed to load inquiries.")}</td></tr>`)}catch(e){if(console.error("Inquiries Load Error:",e),r){const l=r.querySelector("i");l&&l.classList.remove("fa-spin")}t&&(t.innerHTML='<tr><td colspan="7" class="py-10 text-center text-rose-500 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Network error loading inquiries.</td></tr>')}}function mt(){const s=(y.inquiries||[]).filter(i=>(i.status||"new")==="new").length,t=document.getElementById("dockBadgeInquiries"),r=document.getElementById("dockTooltipBadgeInquiries"),e=document.getElementById("drawerBadgeInquiries"),l=i=>{i&&(s>0?(i.textContent=`${s} New`,i.classList.remove("hidden")):i.classList.add("hidden"))};l(t),l(r),l(e)}function Ue(){const s=document.getElementById("inquiriesTableBody");if(!s)return;const t=y.inquiries||[],r=t.length,e=t.filter(o=>(o.status||"new")==="new").length,l=t.filter(o=>o.status==="in_progress"||o.status==="contacted").length,i=t.filter(o=>o.status==="closed").length,m=document.getElementById("statTotalInquiries"),x=document.getElementById("statNewInquiries"),b=document.getElementById("statInProgressInquiries"),a=document.getElementById("statClosedInquiries");m&&(m.textContent=r),x&&(x.textContent=e),b&&(b.textContent=l),a&&(a.textContent=i);const n=(document.getElementById("searchInquiriesInput")?.value||"").toLowerCase().trim(),d=y.activeInquiryFilter||"all",c=t.filter(o=>!(d==="new"&&(o.status||"new")!=="new"||d==="contacted"&&o.status!=="contacted"||d==="in_progress"&&o.status!=="in_progress"||d==="closed"&&o.status!=="closed"||n&&![o.name,o.email,o.phone,o.service,o.details,o.notes].filter(Boolean).join(" ").toLowerCase().includes(n)));if(c.length===0){s.innerHTML=`
         <tr>
           <td colspan="7" class="py-12 text-center text-slate-400">
             <div class="flex flex-col items-center justify-center gap-2">
@@ -6256,415 +1163,55 @@
             </div>
           </td>
         </tr>
-      `;
-      return;
-    }
-
-    tbody.innerHTML = filtered.map(item => {
-      const name = item.name || 'Anonymous Prospect';
-      const email = item.email || '';
-      const phone = item.phone || '';
-      const cleanPhone = phone.replace(/[^0-9]/g, '');
-      const service = item.service || 'General Inquiry';
-      const details = item.details || '';
-      const detailsSnippet = details.length > 70 ? `${details.substring(0, 70)}...` : details;
-      const status = item.status || 'new';
-      const dateStr = item.created_at || item.timestamp;
-      const formattedDate = dateStr
-        ? new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-        : 'Recent';
-
-      const initials = name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() || 'IN';
-
-      let statusBadge = '';
-      if (status === 'new') {
-        statusBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-300 shadow-2xs"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>New</span>';
-      } else if (status === 'contacted') {
-        statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs"><i class="fa-solid fa-phone text-[9px]"></i>Contacted</span>';
-      } else if (status === 'in_progress') {
-        statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-purple-50 text-purple-700 border border-purple-200 shadow-2xs"><i class="fa-solid fa-comments text-[9px]"></i>In Progress</span>';
-      } else if (status === 'closed') {
-        statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-slate-100 text-slate-600 border border-slate-200 shadow-2xs"><i class="fa-solid fa-check text-[9px]"></i>Closed</span>';
-      }
-
-      const waBtn = cleanPhone
-        ? `<a href="https://wa.me/${cleanPhone}" target="_blank" rel="noopener" class="w-7 h-7 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 flex items-center justify-center transition-colors" title="Chat on WhatsApp"><i class="fa-brands fa-whatsapp text-xs"></i></a>`
-        : '';
-
-      const mailBtn = email
-        ? `<a href="mailto:${encodeURIComponent(email)}" class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-colors" title="Send Email"><i class="fa-solid fa-envelope text-xs"></i></a>`
-        : '';
-
-      return `
-        <tr class="hover:bg-slate-50/80 transition-colors" data-inquiry-row="${escapeHtml(item.id)}">
+      `;return}s.innerHTML=c.map(o=>{const u=o.name||"Anonymous Prospect",g=o.email||"",w=o.phone||"",C=w.replace(/[^0-9]/g,""),v=o.service||"General Inquiry",B=o.details||"",I=B.length>70?`${B.substring(0,70)}...`:B,F=o.status||"new",M=o.created_at||o.timestamp,D=M?new Date(M).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}):"Recent",_=u.split(" ").map(ee=>ee[0]).slice(0,2).join("").toUpperCase()||"IN";let N="";F==="new"?N='<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-300 shadow-2xs"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>New</span>':F==="contacted"?N='<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs"><i class="fa-solid fa-phone text-[9px]"></i>Contacted</span>':F==="in_progress"?N='<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-purple-50 text-purple-700 border border-purple-200 shadow-2xs"><i class="fa-solid fa-comments text-[9px]"></i>In Progress</span>':F==="closed"&&(N='<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-slate-100 text-slate-600 border border-slate-200 shadow-2xs"><i class="fa-solid fa-check text-[9px]"></i>Closed</span>');const j=C?`<a href="https://wa.me/${C}" target="_blank" rel="noopener" class="w-7 h-7 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 flex items-center justify-center transition-colors" title="Chat on WhatsApp"><i class="fa-brands fa-whatsapp text-xs"></i></a>`:"",W=g?`<a href="mailto:${encodeURIComponent(g)}" class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-colors" title="Send Email"><i class="fa-solid fa-envelope text-xs"></i></a>`:"";return`
+        <tr class="hover:bg-slate-50/80 transition-colors" data-inquiry-row="${p(o.id)}">
           <td class="py-3.5 px-4 sm:px-6">
             <div class="flex items-center gap-3">
               <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-[#087F70] to-[#DDB92F] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
-                ${escapeHtml(initials)}
+                ${p(_)}
               </div>
               <div class="min-w-0">
-                <div class="font-extrabold text-[#172B36] text-xs truncate">${escapeHtml(name)}</div>
-                <div class="text-[11px] text-slate-500 font-mono truncate">${escapeHtml(email || 'No email')}</div>
+                <div class="font-extrabold text-[#172B36] text-xs truncate">${p(u)}</div>
+                <div class="text-[11px] text-slate-500 font-mono truncate">${p(g||"No email")}</div>
               </div>
             </div>
           </td>
           <td class="py-3.5 px-4 whitespace-nowrap">
             <div class="flex items-center gap-1.5">
-              ${waBtn}
-              ${mailBtn}
-              <span class="text-[11px] font-mono text-slate-600">${escapeHtml(phone || '—')}</span>
+              ${j}
+              ${W}
+              <span class="text-[11px] font-mono text-slate-600">${p(w||"\u2014")}</span>
             </div>
           </td>
           <td class="py-3.5 px-4 whitespace-nowrap">
             <span class="inline-block px-2.5 py-1 rounded-md text-[10px] font-bold bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20 max-w-[160px] truncate">
-              ${escapeHtml(service)}
+              ${p(v)}
             </span>
           </td>
           <td class="py-3.5 px-4 max-w-xs">
-            <div class="text-[11px] text-slate-600 truncate cursor-pointer hover:text-[#087F70]" onclick="window.__whizOpenInquiryModal('${escapeHtml(item.id)}')" title="Click to view full scope">
-              ${escapeHtml(detailsSnippet)}
+            <div class="text-[11px] text-slate-600 truncate cursor-pointer hover:text-[#087F70]" onclick="window.__whizOpenInquiryModal('${p(o.id)}')" title="Click to view full scope">
+              ${p(I)}
             </div>
           </td>
           <td class="py-3.5 px-4 whitespace-nowrap">
-            ${statusBadge}
+            ${N}
           </td>
           <td class="py-3.5 px-4 whitespace-nowrap text-slate-400 text-[11px] font-mono">
-            ${escapeHtml(formattedDate)}
+            ${p(D)}
           </td>
           <td class="py-3.5 px-4 text-right pr-6 whitespace-nowrap">
             <div class="flex items-center justify-end gap-1.5">
-              <button type="button" class="btn-view-inquiry px-3 py-1.5 rounded-lg text-xs font-bold bg-white hover:bg-slate-50 text-[#087F70] border border-[#087F70]/25 transition-all shadow-2xs flex items-center gap-1 cursor-pointer" data-inquiry-id="${escapeHtml(item.id)}">
+              <button type="button" class="btn-view-inquiry px-3 py-1.5 rounded-lg text-xs font-bold bg-white hover:bg-slate-50 text-[#087F70] border border-[#087F70]/25 transition-all shadow-2xs flex items-center gap-1 cursor-pointer" data-inquiry-id="${p(o.id)}">
                 <i class="fa-solid fa-eye text-[11px]"></i>
                 <span>View</span>
               </button>
-              <button type="button" class="btn-delete-inquiry w-7 h-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors flex items-center justify-center cursor-pointer" data-inquiry-id="${escapeHtml(item.id)}" onclick="window.__whizDeleteInquiry('${escapeHtml(item.id)}', event)" title="Delete inquiry permanently">
+              <button type="button" class="btn-delete-inquiry w-7 h-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors flex items-center justify-center cursor-pointer" data-inquiry-id="${p(o.id)}" onclick="window.__whizDeleteInquiry('${p(o.id)}', event)" title="Delete inquiry permanently">
                 <i class="fa-solid fa-trash-can text-xs"></i>
               </button>
             </div>
           </td>
         </tr>
-      `;
-    }).join('');
-
-    // Directly bind action buttons in inquiries table
-    tbody.querySelectorAll('.btn-view-inquiry').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        const id = btn.dataset.inquiryId;
-        if (id) openInquiryDetailsModal(id);
-      });
-    });
-
-    tbody.querySelectorAll('.btn-delete-inquiry').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        const id = btn.dataset.inquiryId;
-        if (id) deleteInquiry(id, e);
-      });
-    });
-  }
-
-  function openInquiryDetailsModal(id) {
-    const item = (state.inquiries || []).find(i => i.id === id);
-    if (!item) return;
-
-    state.activeInquiryModalId = id;
-
-    const modal = document.getElementById('modalInquiryDetails');
-    if (!modal) return;
-
-    const elTitle = document.getElementById('inquiryModalTitle');
-    const elDate = document.getElementById('inquiryModalDate');
-    const elClientName = document.getElementById('inquiryModalClientName');
-    const elService = document.getElementById('inquiryModalService');
-    const elEmail = document.getElementById('inquiryModalEmail');
-    const elEmailText = document.getElementById('inquiryModalEmailText');
-    const elPhoneText = document.getElementById('inquiryModalPhoneText');
-    const elWhatsAppBtn = document.getElementById('inquiryModalWhatsAppBtn');
-    const elDetails = document.getElementById('inquiryModalDetails');
-    const elNotes = document.getElementById('inquiryModalNotes');
-
-    if (elTitle) elTitle.textContent = item.name ? `Inquiry from ${item.name}` : 'Client Inquiry Details';
-    if (elDate) {
-      const dt = item.created_at || item.timestamp;
-      elDate.textContent = dt ? `Received on ${new Date(dt).toLocaleString()}` : 'Date unknown';
-    }
-    if (elClientName) elClientName.textContent = item.name || 'Anonymous';
-    if (elService) elService.textContent = item.service || 'General Inquiry';
-
-    if (elEmailText) elEmailText.textContent = item.email || 'Not provided';
-    if (elEmail) elEmail.href = item.email ? `mailto:${item.email}` : '#';
-
-    if (elPhoneText) elPhoneText.textContent = item.phone || 'Not provided';
-    const cleanPhone = (item.phone || '').replace(/[^0-9]/g, '');
-    if (elWhatsAppBtn) {
-      if (cleanPhone) {
-        elWhatsAppBtn.href = `https://wa.me/${cleanPhone}`;
-        elWhatsAppBtn.classList.remove('hidden');
-      } else {
-        elWhatsAppBtn.classList.add('hidden');
-      }
-    }
-
-    if (elDetails) elDetails.textContent = item.details || 'No project scope details provided.';
-    if (elNotes) elNotes.value = item.notes || '';
-
-    // Status Buttons Highlight
-    const currentStatus = item.status || 'new';
-    document.querySelectorAll('.inquiry-status-btn').forEach(btn => {
-      const btnStatus = btn.dataset.setStatus;
-      if (btnStatus === currentStatus) {
-        btn.className = 'inquiry-status-btn py-2 px-3 rounded-xl border text-center font-bold text-xs transition-all bg-[#087F70] text-white border-[#087F70] shadow-xs';
-        btn.setAttribute('data-active', 'true');
-      } else {
-        btn.className = 'inquiry-status-btn py-2 px-3 rounded-xl border text-center font-bold text-xs transition-all bg-slate-50 text-slate-700 border-[#E3E9EF] hover:bg-slate-100';
-        btn.removeAttribute('data-active');
-      }
-    });
-
-    modal.classList.remove('hidden');
-  }
-
-  function closeInquiryDetailsModal() {
-    state.activeInquiryModalId = null;
-    document.getElementById('modalInquiryDetails')?.classList.add('hidden');
-  }
-
-  async function saveInquiryDetails() {
-    const id = state.activeInquiryModalId;
-    if (!id) return;
-
-    const item = (state.inquiries || []).find(i => i.id === id);
-    if (!item) return;
-
-    const activeStatusBtn = document.querySelector('.inquiry-status-btn[data-active="true"]');
-    const selectedStatus = activeStatusBtn ? activeStatusBtn.dataset.setStatus : (item.status || 'new');
-    const notes = document.getElementById('inquiryModalNotes')?.value || '';
-
-    const saveBtn = document.getElementById('btnSaveInquiryModal');
-    setBtnLoading(saveBtn, true, 'Saving...');
-
-    try {
-      const res = await apiFetch('/api/inquiries', {
-        method: 'PATCH',
-        body: JSON.stringify({ id, status: selectedStatus, notes })
-      });
-
-      setBtnLoading(saveBtn, false);
-
-      if (res.ok && res.data && res.data.success) {
-        item.status = selectedStatus;
-        item.notes = notes;
-        item.updated_at = new Date().toISOString();
-        showToast('Inquiry status and notes saved successfully!', 'success');
-        closeInquiryDetailsModal();
-        updateInquiriesBadges();
-        renderInquiries();
-      } else {
-        showToast(res.data?.error || 'Failed to save inquiry changes.', 'error');
-      }
-    } catch (e) {
-      setBtnLoading(saveBtn, false);
-      showToast('Network error saving inquiry.', 'error');
-    }
-  }
-
-  async function deleteInquiry(id, event = null) {
-    if (event) {
-      if (typeof event.stopPropagation === 'function') event.stopPropagation();
-      if (typeof event.preventDefault === 'function') event.preventDefault();
-    }
-
-    if (!id) return;
-
-    if (!window.confirm('Are you sure you want to permanently delete this client inquiry? This action cannot be undone.')) {
-      return;
-    }
-
-    const btn = (event && event.currentTarget) || document.querySelector(`button.btn-delete-inquiry[data-inquiry-id="${id}"]`);
-    const row = btn?.closest('tr') || document.querySelector(`tr[data-inquiry-row="${id}"]`);
-
-    if (btn) {
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs text-rose-500"></i>';
-    }
-    if (row) {
-      row.classList.add('opacity-40', 'pointer-events-none');
-    }
-
-    try {
-      const res = await apiFetch(`/api/inquiries?id=${encodeURIComponent(id)}`, {
-        method: 'DELETE',
-        body: JSON.stringify({ id })
-      });
-
-      if (res.ok && (res.data?.success || res.status === 200 || res.status === 204)) {
-        // Real-time local state update
-        state.inquiries = (state.inquiries || []).filter(i => i.id !== id && i.id !== ('inquiry_' + id) && ('inquiry_' + i.id) !== id);
-
-        if (window.__whizAdminMock && window.__whizAdminMock.getData) {
-          const md = window.__whizAdminMock.getData();
-          if (md && md.inquiries) {
-            md.inquiries = md.inquiries.filter(i => i.id !== id && i.id !== ('inquiry_' + id) && ('inquiry_' + i.id) !== id);
-          }
-        }
-
-        // Real-time DOM removal (row disappears immediately from screen)
-        if (row) row.remove();
-
-        // Update badges and re-render remaining items
-        updateInquiriesBadges();
-        renderInquiries();
-
-        if (state.activeInquiryModalId === id) {
-          closeInquiryDetailsModal();
-        }
-
-        showToast('Inquiry permanently deleted.', 'info');
-      } else {
-        if (btn) {
-          btn.disabled = false;
-          btn.innerHTML = '<i class="fa-solid fa-trash-can text-xs"></i>';
-        }
-        if (row) {
-          row.classList.remove('opacity-40', 'pointer-events-none');
-        }
-        showToast(res.data?.error || 'Failed to delete inquiry.', 'error');
-      }
-    } catch (e) {
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-trash-can text-xs"></i>';
-      }
-      if (row) {
-        row.classList.remove('opacity-40', 'pointer-events-none');
-      }
-      showToast('Network error deleting inquiry.', 'error');
-    }
-  }
-
-  window.__whizDeleteInquiry = deleteInquiry;
-  window.__whizOpenInquiryModal = openInquiryDetailsModal;
-
-  // =========================================================================
-  // 13. REVIEW MODERATION SYSTEM ENGINE (SUPER ADMIN EXCLUSIVE)
-  // =========================================================================
-  async function loadAdminReviewsData(showToastNotice = false) {
-    const tbody = document.getElementById('reviewsTableBody');
-    const refreshBtn = document.getElementById('btnRefreshReviewsAdmin');
-    if (refreshBtn) {
-      const icon = refreshBtn.querySelector('i');
-      if (icon) icon.classList.add('fa-spin');
-    }
-
-    if (tbody) {
-      tbody.innerHTML = '<tr><td colspan="7" class="py-12 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin text-xl text-[#087F70] mb-2"></i><p class="text-xs font-medium">Fetching client reviews from database...</p></td></tr>';
-    }
-
-    try {
-      const res = await apiFetch('/api/admin-reviews');
-      if (refreshBtn) {
-        const icon = refreshBtn.querySelector('i');
-        if (icon) icon.classList.remove('fa-spin');
-      }
-
-      if (res.ok && res.data && res.data.success) {
-        state.adminReviews = res.data.reviews || [];
-        updateReviewsBadges();
-        renderAdminReviews();
-        if (showToastNotice) {
-          showToast(`Synchronized ${state.adminReviews.length} client reviews from database.`, 'success');
-        }
-      } else {
-        if (tbody) {
-          tbody.innerHTML = `<tr><td colspan="7" class="py-10 text-center text-rose-500 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>${escapeHtml(res.data?.error || 'Failed to load reviews.')}</td></tr>`;
-        }
-      }
-    } catch (err) {
-      console.error('Reviews Load Error:', err);
-      if (refreshBtn) {
-        const icon = refreshBtn.querySelector('i');
-        if (icon) icon.classList.remove('fa-spin');
-      }
-      if (tbody) {
-        tbody.innerHTML = '<tr><td colspan="7" class="py-10 text-center text-rose-500 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Network error loading reviews.</td></tr>';
-      }
-    }
-  }
-
-  function updateReviewsBadges() {
-    const pendCount = (state.adminReviews || []).filter(r => (r.moderation_status || 'pending') === 'pending').length;
-    const dockBadge = document.getElementById('dockBadgeReviews');
-    const tooltipBadge = document.getElementById('dockTooltipBadgeReviews');
-    const drawerBadge = document.getElementById('drawerBadgeReviews');
-
-    const updateBadgeEl = (el) => {
-      if (!el) return;
-      if (pendCount > 0) {
-        el.textContent = `${pendCount} Pend`;
-        el.classList.remove('hidden');
-      } else {
-        el.classList.add('hidden');
-      }
-    };
-
-    updateBadgeEl(dockBadge);
-    updateBadgeEl(tooltipBadge);
-    updateBadgeEl(drawerBadge);
-  }
-
-  function renderAdminReviews() {
-    const tbody = document.getElementById('reviewsTableBody');
-    if (!tbody) return;
-
-    const list = state.adminReviews || [];
-
-    // Counters
-    const total = list.length;
-    const pendingCount = list.filter(r => (r.moderation_status || 'pending') === 'pending').length;
-    const approvedCount = list.filter(r => (r.moderation_status === 'approved' || r.moderation_status === 'accepted') && r.visibility === 'show').length;
-    const hiddenCount = list.filter(r => r.moderation_status === 'rejected' || r.moderation_status === 'declined' || r.visibility === 'hidden').length;
-
-    const elTotal = document.getElementById('statTotalReviews');
-    const elPend = document.getElementById('statPendingReviews');
-    const elAppr = document.getElementById('statApprovedReviews');
-    const elHidd = document.getElementById('statHiddenReviews');
-
-    if (elTotal) elTotal.textContent = total;
-    if (elPend) elPend.textContent = pendingCount;
-    if (elAppr) elAppr.textContent = approvedCount;
-    if (elHidd) elHidd.textContent = hiddenCount;
-
-    // Filters & Search
-    const searchVal = (document.getElementById('searchReviewsInput')?.value || '').toLowerCase().trim();
-    const filterVal = state.activeReviewFilter || 'all';
-
-    const filtered = list.filter(item => {
-      if (filterVal === 'pending' && (item.moderation_status || 'pending') !== 'pending') return false;
-      if (filterVal === 'approved' && item.moderation_status !== 'approved' && item.moderation_status !== 'accepted') return false;
-      if (filterVal === 'rejected' && item.moderation_status !== 'rejected' && item.moderation_status !== 'declined') return false;
-      if (filterVal === 'hidden' && item.visibility !== 'hidden') return false;
-
-      if (searchVal) {
-        const textToSearch = [
-          item.clientName,
-          item.name,
-          item.role,
-          item.service,
-          item.reviewText,
-          item.text
-        ].filter(Boolean).join(' ').toLowerCase();
-
-        if (!textToSearch.includes(searchVal)) return false;
-      }
-
-      return true;
-    });
-
-    if (filtered.length === 0) {
-      tbody.innerHTML = `
+      `}).join(""),s.querySelectorAll(".btn-view-inquiry").forEach(o=>{o.addEventListener("click",u=>{u.stopPropagation(),u.preventDefault();const g=o.dataset.inquiryId;g&&pt(g)})}),s.querySelectorAll(".btn-delete-inquiry").forEach(o=>{o.addEventListener("click",u=>{u.stopPropagation(),u.preventDefault();const g=o.dataset.inquiryId;g&&Ke(g,u)})})}function pt(s){const t=(y.inquiries||[]).find(g=>g.id===s);if(!t)return;y.activeInquiryModalId=s;const r=document.getElementById("modalInquiryDetails");if(!r)return;const e=document.getElementById("inquiryModalTitle"),l=document.getElementById("inquiryModalDate"),i=document.getElementById("inquiryModalClientName"),m=document.getElementById("inquiryModalService"),x=document.getElementById("inquiryModalEmail"),b=document.getElementById("inquiryModalEmailText"),a=document.getElementById("inquiryModalPhoneText"),n=document.getElementById("inquiryModalWhatsAppBtn"),d=document.getElementById("inquiryModalDetails"),c=document.getElementById("inquiryModalNotes");if(e&&(e.textContent=t.name?`Inquiry from ${t.name}`:"Client Inquiry Details"),l){const g=t.created_at||t.timestamp;l.textContent=g?`Received on ${new Date(g).toLocaleString()}`:"Date unknown"}i&&(i.textContent=t.name||"Anonymous"),m&&(m.textContent=t.service||"General Inquiry"),b&&(b.textContent=t.email||"Not provided"),x&&(x.href=t.email?`mailto:${t.email}`:"#"),a&&(a.textContent=t.phone||"Not provided");const o=(t.phone||"").replace(/[^0-9]/g,"");n&&(o?(n.href=`https://wa.me/${o}`,n.classList.remove("hidden")):n.classList.add("hidden")),d&&(d.textContent=t.details||"No project scope details provided."),c&&(c.value=t.notes||"");const u=t.status||"new";document.querySelectorAll(".inquiry-status-btn").forEach(g=>{g.dataset.setStatus===u?(g.className="inquiry-status-btn py-2 px-3 rounded-xl border text-center font-bold text-xs transition-all bg-[#087F70] text-white border-[#087F70] shadow-xs",g.setAttribute("data-active","true")):(g.className="inquiry-status-btn py-2 px-3 rounded-xl border text-center font-bold text-xs transition-all bg-slate-50 text-slate-700 border-[#E3E9EF] hover:bg-slate-100",g.removeAttribute("data-active"))}),r.classList.remove("hidden")}function Ye(){y.activeInquiryModalId=null,document.getElementById("modalInquiryDetails")?.classList.add("hidden")}async function Xt(){const s=y.activeInquiryModalId;if(!s)return;const t=(y.inquiries||[]).find(m=>m.id===s);if(!t)return;const r=document.querySelector('.inquiry-status-btn[data-active="true"]'),e=r?r.dataset.setStatus:t.status||"new",l=document.getElementById("inquiryModalNotes")?.value||"",i=document.getElementById("btnSaveInquiryModal");S(i,!0,"Saving...");try{const m=await L("/api/inquiries",{method:"PATCH",body:JSON.stringify({id:s,status:e,notes:l})});S(i,!1),m.ok&&m.data&&m.data.success?(t.status=e,t.notes=l,t.updated_at=new Date().toISOString(),h("Inquiry status and notes saved successfully!","success"),Ye(),mt(),Ue()):h(m.data?.error||"Failed to save inquiry changes.","error")}catch{S(i,!1),h("Network error saving inquiry.","error")}}async function Ke(s,t=null){if(t&&(typeof t.stopPropagation=="function"&&t.stopPropagation(),typeof t.preventDefault=="function"&&t.preventDefault()),!s||!window.confirm("Are you sure you want to permanently delete this client inquiry? This action cannot be undone."))return;const r=t&&t.currentTarget||document.querySelector(`button.btn-delete-inquiry[data-inquiry-id="${s}"]`),e=r?.closest("tr")||document.querySelector(`tr[data-inquiry-row="${s}"]`);r&&(r.disabled=!0,r.innerHTML='<i class="fa-solid fa-spinner fa-spin text-xs text-rose-500"></i>'),e&&e.classList.add("opacity-40","pointer-events-none");try{const l=await L(`/api/inquiries?id=${encodeURIComponent(s)}`,{method:"DELETE",body:JSON.stringify({id:s})});if(l.ok&&(l.data?.success||l.status===200||l.status===204)){if(y.inquiries=(y.inquiries||[]).filter(i=>i.id!==s&&i.id!=="inquiry_"+s&&"inquiry_"+i.id!==s),window.__whizAdminMock&&window.__whizAdminMock.getData){const i=window.__whizAdminMock.getData();i&&i.inquiries&&(i.inquiries=i.inquiries.filter(m=>m.id!==s&&m.id!=="inquiry_"+s&&"inquiry_"+m.id!==s))}e&&e.remove(),mt(),Ue(),y.activeInquiryModalId===s&&Ye(),h("Inquiry permanently deleted.","info")}else r&&(r.disabled=!1,r.innerHTML='<i class="fa-solid fa-trash-can text-xs"></i>'),e&&e.classList.remove("opacity-40","pointer-events-none"),h(l.data?.error||"Failed to delete inquiry.","error")}catch{r&&(r.disabled=!1,r.innerHTML='<i class="fa-solid fa-trash-can text-xs"></i>'),e&&e.classList.remove("opacity-40","pointer-events-none"),h("Network error deleting inquiry.","error")}}window.__whizDeleteInquiry=Ke,window.__whizOpenInquiryModal=pt;async function ft(s=!1){const t=document.getElementById("reviewsTableBody"),r=document.getElementById("btnRefreshReviewsAdmin");if(r){const e=r.querySelector("i");e&&e.classList.add("fa-spin")}t&&(t.innerHTML='<tr><td colspan="7" class="py-12 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin text-xl text-[#087F70] mb-2"></i><p class="text-xs font-medium">Fetching client reviews from database...</p></td></tr>');try{const e=await L("/api/admin-reviews");if(r){const l=r.querySelector("i");l&&l.classList.remove("fa-spin")}e.ok&&e.data&&e.data.success?(y.adminReviews=e.data.reviews||[],xt(),We(),s&&h(`Synchronized ${y.adminReviews.length} client reviews from database.`,"success")):t&&(t.innerHTML=`<tr><td colspan="7" class="py-10 text-center text-rose-500 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>${p(e.data?.error||"Failed to load reviews.")}</td></tr>`)}catch(e){if(console.error("Reviews Load Error:",e),r){const l=r.querySelector("i");l&&l.classList.remove("fa-spin")}t&&(t.innerHTML='<tr><td colspan="7" class="py-10 text-center text-rose-500 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Network error loading reviews.</td></tr>')}}function xt(){const s=(y.adminReviews||[]).filter(i=>(i.moderation_status||"pending")==="pending").length,t=document.getElementById("dockBadgeReviews"),r=document.getElementById("dockTooltipBadgeReviews"),e=document.getElementById("drawerBadgeReviews"),l=i=>{i&&(s>0?(i.textContent=`${s} Pend`,i.classList.remove("hidden")):i.classList.add("hidden"))};l(t),l(r),l(e)}function We(){const s=document.getElementById("reviewsTableBody");if(!s)return;const t=y.adminReviews||[],r=t.length,e=t.filter(o=>(o.moderation_status||"pending")==="pending").length,l=t.filter(o=>(o.moderation_status==="approved"||o.moderation_status==="accepted")&&o.visibility==="show").length,i=t.filter(o=>o.moderation_status==="rejected"||o.moderation_status==="declined"||o.visibility==="hidden").length,m=document.getElementById("statTotalReviews"),x=document.getElementById("statPendingReviews"),b=document.getElementById("statApprovedReviews"),a=document.getElementById("statHiddenReviews");m&&(m.textContent=r),x&&(x.textContent=e),b&&(b.textContent=l),a&&(a.textContent=i);const n=(document.getElementById("searchReviewsInput")?.value||"").toLowerCase().trim(),d=y.activeReviewFilter||"all",c=t.filter(o=>!(d==="pending"&&(o.moderation_status||"pending")!=="pending"||d==="approved"&&o.moderation_status!=="approved"&&o.moderation_status!=="accepted"||d==="rejected"&&o.moderation_status!=="rejected"&&o.moderation_status!=="declined"||d==="hidden"&&o.visibility!=="hidden"||n&&![o.clientName,o.name,o.role,o.service,o.reviewText,o.text].filter(Boolean).join(" ").toLowerCase().includes(n)));if(c.length===0){s.innerHTML=`
         <tr>
           <td colspan="7" class="py-12 text-center text-slate-400">
             <div class="flex flex-col items-center justify-center gap-2">
@@ -6676,1396 +1223,64 @@
             </div>
           </td>
         </tr>
-      `;
-      return;
-    }
-
-    tbody.innerHTML = filtered.map(item => {
-      const name = item.clientName || item.name || 'Verified Client';
-      const role = item.role || item.service || 'Verified Ad Account Client';
-      const text = item.reviewText || item.text || '';
-      const textSnippet = text.length > 90 ? `${text.substring(0, 90)}...` : text;
-      const rating = Math.min(5, Math.max(1, Number(item.rating) || 5));
-      const modStatus = item.moderation_status || 'pending';
-      const visStatus = item.visibility || 'hidden';
-      const dateStr = item.created_at || item.timestamp;
-      const formattedDate = dateStr
-        ? new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-        : 'Recent';
-
-      const initials = name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() || 'CL';
-      const starIcons = '★'.repeat(rating) + '☆'.repeat(5 - rating);
-
-      let modBadge = '';
-      if (modStatus === 'approved' || modStatus === 'accepted') {
-        modBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-300 shadow-2xs"><i class="fa-solid fa-circle-check text-[9px]"></i>Approved</span>';
-      } else if (modStatus === 'rejected' || modStatus === 'declined') {
-        modBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-rose-50 text-rose-700 border border-rose-300 shadow-2xs"><i class="fa-solid fa-circle-xmark text-[9px]"></i>Rejected</span>';
-      } else {
-        modBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-300 shadow-2xs"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>Pending</span>';
-      }
-
-      let visBadge = '';
-      if (visStatus === 'show') {
-        visBadge = '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200"><i class="fa-solid fa-eye text-[9px]"></i>Live</span>';
-      } else {
-        visBadge = '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200"><i class="fa-solid fa-eye-slash text-[9px]"></i>Hidden</span>';
-      }
-
-      return `
-        <tr class="hover:bg-slate-50/80 transition-colors" data-review-row="${escapeHtml(item.id)}">
+      `;return}s.innerHTML=c.map(o=>{const u=o.clientName||o.name||"Verified Client",g=o.role||o.service||"Verified Ad Account Client",w=o.reviewText||o.text||"",C=w.length>90?`${w.substring(0,90)}...`:w,v=Math.min(5,Math.max(1,Number(o.rating)||5)),B=o.moderation_status||"pending",I=o.visibility||"hidden",F=o.created_at||o.timestamp,M=F?new Date(F).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}):"Recent",D=u.split(" ").map(W=>W[0]).slice(0,2).join("").toUpperCase()||"CL",_="\u2605".repeat(v)+"\u2606".repeat(5-v);let N="";B==="approved"||B==="accepted"?N='<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-300 shadow-2xs"><i class="fa-solid fa-circle-check text-[9px]"></i>Approved</span>':B==="rejected"||B==="declined"?N='<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-rose-50 text-rose-700 border border-rose-300 shadow-2xs"><i class="fa-solid fa-circle-xmark text-[9px]"></i>Rejected</span>':N='<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-300 shadow-2xs"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>Pending</span>';let j="";return I==="show"?j='<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200"><i class="fa-solid fa-eye text-[9px]"></i>Live</span>':j='<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200"><i class="fa-solid fa-eye-slash text-[9px]"></i>Hidden</span>',`
+        <tr class="hover:bg-slate-50/80 transition-colors" data-review-row="${p(o.id)}">
           <td class="py-3.5 px-4 sm:px-6">
             <div class="flex items-center gap-3">
               <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-[#087F70] to-[#DDB92F] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
-                ${escapeHtml(initials)}
+                ${p(D)}
               </div>
               <div class="min-w-0">
-                <div class="font-extrabold text-[#172B36] text-xs truncate">${escapeHtml(name)}</div>
-                <div class="text-[11px] text-slate-500 truncate">${escapeHtml(role)}</div>
+                <div class="font-extrabold text-[#172B36] text-xs truncate">${p(u)}</div>
+                <div class="text-[11px] text-slate-500 truncate">${p(g)}</div>
               </div>
             </div>
           </td>
           <td class="py-3.5 px-4 whitespace-nowrap">
             <div class="flex items-center space-x-1 text-[#DDB92F] font-bold text-xs">
-              <span>${starIcons}</span>
-              <span class="text-slate-600 text-[10px] ml-1">(${rating}/5)</span>
+              <span>${_}</span>
+              <span class="text-slate-600 text-[10px] ml-1">(${v}/5)</span>
             </div>
           </td>
           <td class="py-3.5 px-4 max-w-sm">
             <p class="text-[11px] text-slate-700 font-medium italic line-clamp-2">
-              "${escapeHtml(textSnippet)}"
+              "${p(C)}"
             </p>
           </td>
           <td class="py-3.5 px-4 whitespace-nowrap">
-            ${modBadge}
+            ${N}
           </td>
           <td class="py-3.5 px-4 whitespace-nowrap">
-            ${visBadge}
+            ${j}
           </td>
           <td class="py-3.5 px-4 whitespace-nowrap text-slate-400 text-[11px] font-mono">
-            ${escapeHtml(formattedDate)}
+            ${p(M)}
           </td>
           <td class="py-3.5 px-4 text-right pr-6 whitespace-nowrap">
             <div class="flex items-center justify-end gap-1.5">
               <!-- Approve Button -->
-              <button type="button" class="btn-approve-review px-2.5 py-1.5 rounded-lg text-xs font-bold ${modStatus === 'approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700'} border border-emerald-300 transition-all shadow-2xs flex items-center gap-1 cursor-pointer" data-review-id="${escapeHtml(item.id)}" title="Approve & Show on Homepage">
+              <button type="button" class="btn-approve-review px-2.5 py-1.5 rounded-lg text-xs font-bold ${B==="approved"?"bg-emerald-100 text-emerald-800":"bg-emerald-50 hover:bg-emerald-100 text-emerald-700"} border border-emerald-300 transition-all shadow-2xs flex items-center gap-1 cursor-pointer" data-review-id="${p(o.id)}" title="Approve & Show on Homepage">
                 <i class="fa-solid fa-check text-[10px]"></i>
                 <span>Approve</span>
               </button>
 
               <!-- Reject Button -->
-              <button type="button" class="btn-reject-review px-2.5 py-1.5 rounded-lg text-xs font-bold ${modStatus === 'rejected' ? 'bg-rose-100 text-rose-800' : 'bg-rose-50 hover:bg-rose-100 text-rose-700'} border border-rose-300 transition-all shadow-2xs flex items-center gap-1 cursor-pointer" data-review-id="${escapeHtml(item.id)}" title="Reject & Hide">
+              <button type="button" class="btn-reject-review px-2.5 py-1.5 rounded-lg text-xs font-bold ${B==="rejected"?"bg-rose-100 text-rose-800":"bg-rose-50 hover:bg-rose-100 text-rose-700"} border border-rose-300 transition-all shadow-2xs flex items-center gap-1 cursor-pointer" data-review-id="${p(o.id)}" title="Reject & Hide">
                 <i class="fa-solid fa-xmark text-[10px]"></i>
                 <span>Reject</span>
               </button>
 
               <!-- Toggle Visibility Button -->
-              <button type="button" class="btn-toggle-vis-review px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 transition-all shadow-2xs flex items-center gap-1 cursor-pointer" data-review-id="${escapeHtml(item.id)}" title="${visStatus === 'show' ? 'Hide from homepage' : 'Make visible on homepage'}">
-                <i class="fa-solid ${visStatus === 'show' ? 'fa-eye-slash text-slate-500' : 'fa-eye text-emerald-600'} text-[10px]"></i>
-                <span>${visStatus === 'show' ? 'Hide' : 'Show'}</span>
+              <button type="button" class="btn-toggle-vis-review px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 transition-all shadow-2xs flex items-center gap-1 cursor-pointer" data-review-id="${p(o.id)}" title="${I==="show"?"Hide from homepage":"Make visible on homepage"}">
+                <i class="fa-solid ${I==="show"?"fa-eye-slash text-slate-500":"fa-eye text-emerald-600"} text-[10px]"></i>
+                <span>${I==="show"?"Hide":"Show"}</span>
               </button>
 
               <!-- Delete Button -->
-              <button type="button" class="btn-delete-review w-7 h-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors flex items-center justify-center cursor-pointer" data-review-id="${escapeHtml(item.id)}" onclick="window.__whizDeleteReview('${escapeHtml(item.id)}', event)" title="Delete review permanently">
+              <button type="button" class="btn-delete-review w-7 h-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors flex items-center justify-center cursor-pointer" data-review-id="${p(o.id)}" onclick="window.__whizDeleteReview('${p(o.id)}', event)" title="Delete review permanently">
                 <i class="fa-solid fa-trash-can text-xs"></i>
               </button>
             </div>
           </td>
         </tr>
-      `;
-    }).join('');
-
-    // Directly bind action buttons in reviews table
-    tbody.querySelectorAll('.btn-approve-review').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        const id = btn.dataset.reviewId;
-        if (id) moderateReview(id, 'approve');
-      });
-    });
-
-    tbody.querySelectorAll('.btn-reject-review').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        const id = btn.dataset.reviewId;
-        if (id) moderateReview(id, 'reject');
-      });
-    });
-
-    tbody.querySelectorAll('.btn-toggle-vis-review').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        const id = btn.dataset.reviewId;
-        if (id) moderateReview(id, 'toggle_visibility');
-      });
-    });
-
-    tbody.querySelectorAll('.btn-delete-review').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        const id = btn.dataset.reviewId;
-        if (id) deleteReviewAdmin(id, e);
-      });
-    });
-  }
-
-  async function moderateReview(id, action) {
-    const item = (state.adminReviews || []).find(r => r.id === id);
-    if (!item) return;
-
-    try {
-      const res = await apiFetch('/api/admin-reviews', {
-        method: 'PATCH',
-        body: JSON.stringify({ id, action })
-      });
-
-      if (res.ok && res.data && res.data.success) {
-        if (action === 'approve') {
-          item.moderation_status = 'approved';
-          item.visibility = 'show';
-          showToast('Review approved and live on homepage!', 'success');
-        } else if (action === 'reject') {
-          item.moderation_status = 'rejected';
-          item.visibility = 'hidden';
-          showToast('Review rejected and hidden from site.', 'info');
-        } else if (action === 'toggle_visibility') {
-          item.visibility = item.visibility === 'show' ? 'hidden' : 'show';
-          showToast(`Review visibility set to ${item.visibility}.`, 'info');
-        }
-
-        item.updated_at = new Date().toISOString();
-        updateReviewsBadges();
-        renderAdminReviews();
-      } else {
-        showToast(res.data?.error || 'Failed to update review moderation.', 'error');
-      }
-    } catch (e) {
-      showToast('Network error moderating review.', 'error');
-    }
-  }
-
-  async function deleteReviewAdmin(id, event = null) {
-    if (event) {
-      if (typeof event.stopPropagation === 'function') event.stopPropagation();
-      if (typeof event.preventDefault === 'function') event.preventDefault();
-    }
-
-    if (!id) return;
-
-    if (!window.confirm('Are you sure you want to permanently delete this client review from the database? This action cannot be undone.')) {
-      return;
-    }
-
-    const btn = (event && event.currentTarget) || document.querySelector(`button.btn-delete-review[data-review-id="${id}"]`);
-    const row = btn?.closest('tr') || document.querySelector(`tr[data-review-row="${id}"]`);
-
-    if (btn) {
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs text-rose-500"></i>';
-    }
-    if (row) {
-      row.classList.add('opacity-40', 'pointer-events-none');
-    }
-
-    try {
-      const res = await apiFetch(`/api/admin-reviews?id=${encodeURIComponent(id)}`, {
-        method: 'DELETE',
-        body: JSON.stringify({ id })
-      });
-
-      if (res.ok && (res.data?.success || res.status === 200 || res.status === 204)) {
-        // Real-time local state update
-        state.adminReviews = (state.adminReviews || []).filter(r => r.id !== id && r.id !== ('review_' + id) && ('review_' + r.id) !== id);
-
-        if (window.__whizAdminMock && window.__whizAdminMock.getData) {
-          const md = window.__whizAdminMock.getData();
-          if (md && md.reviews) {
-            md.reviews = md.reviews.filter(r => r.id !== id && r.id !== ('review_' + id) && ('review_' + r.id) !== id);
-          }
-        }
-
-        // Real-time DOM removal (row disappears immediately from screen)
-        if (row) row.remove();
-
-        // Update badges and re-render remaining items
-        updateReviewsBadges();
-        renderAdminReviews();
-
-        showToast('Review permanently deleted.', 'info');
-      } else {
-        if (btn) {
-          btn.disabled = false;
-          btn.innerHTML = '<i class="fa-solid fa-trash-can text-xs"></i>';
-        }
-        if (row) {
-          row.classList.remove('opacity-40', 'pointer-events-none');
-        }
-        showToast(res.data?.error || 'Failed to delete review.', 'error');
-      }
-    } catch (e) {
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-trash-can text-xs"></i>';
-      }
-      if (row) {
-        row.classList.remove('opacity-40', 'pointer-events-none');
-      }
-      showToast('Network error deleting review.', 'error');
-    }
-  }
-
-  window.__whizDeleteReview = deleteReviewAdmin;
-
-  // =========================================================================
-  // BOOTSTRAP EVENT LISTENERS
-  // =========================================================================
-  function init() {
-    // Tab switching
-    document.querySelectorAll('[data-dash-tab]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const tab = btn.dataset.dashTab;
-        switchTab(tab);
-        const drawer = document.getElementById('mobileDrawer');
-        const backdrop = document.getElementById('mobileDrawerBackdrop');
-        if (drawer) drawer.classList.add('-translate-x-full');
-        if (backdrop) backdrop.classList.add('hidden');
-        document.body.classList.remove('overflow-hidden');
-      });
-    });
-
-    // KPI Metric Cards Navigation Mapping (Priority 1)
-    document.querySelectorAll('[data-kpi-nav]').forEach(card => {
-      const handleKpiNavigation = () => {
-        const targetTab = card.dataset.kpiNav;
-        const targetFilter = card.dataset.kpiFilter;
-        if (!targetTab) return;
-
-        // Switch to the target view
-        switchTab(targetTab);
-
-        // Apply tab-specific filters & load data
-        if (targetTab === 'clients') {
-          const filterSelect = document.getElementById('adminClientStatusFilter');
-          if (filterSelect) {
-            filterSelect.value = targetFilter || 'active';
-            syncClientStatusDropdown(filterSelect.value);
-          }
-          loadClientsData();
-        } else if (targetTab === 'projects') {
-          loadProjectsData();
-        } else if (targetTab === 'services') {
-          loadServicesData();
-        } else if (targetTab === 'tasks') {
-          const targetStatus = targetFilter || 'all';
-          document.querySelectorAll('.task-filter-btn').forEach(b => {
-            const matches = b.dataset.filter === targetStatus || (targetFilter === 'pending' && b.dataset.filter === 'in_progress');
-            if (matches) {
-              b.classList.add('bg-slate-800', 'text-white', 'font-bold');
-              b.classList.remove('text-slate-400', 'font-medium');
-            } else {
-              b.classList.remove('bg-slate-800', 'text-white', 'font-bold');
-              b.classList.add('text-slate-400', 'font-medium');
-            }
-          });
-          state.currentTaskStatus = targetStatus; updateStatusFilterButtons(targetStatus); loadTasksData(targetStatus);
-        } else if (targetTab === 'finance') {
-          loadFinanceData();
-        }
-      };
-
-      card.addEventListener('click', handleKpiNavigation);
-      card.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          handleKpiNavigation();
-        }
-      });
-    });
-
-    // Audit & History Filters & Refresh (Priority 7)
-    document.getElementById('auditSearchInput')?.addEventListener('input', () => {
-      renderAuditHistoryList();
-    });
-    document.getElementById('auditCategoryFilter')?.addEventListener('change', () => {
-      renderAuditHistoryList();
-    });
-
-    // Custom Glassmorphic Audit Category Dropdown Component
-    const auditCatTrigger = document.getElementById('btnAuditCategoryDropdown');
-    const auditCatMenu = document.getElementById('auditCategoryDropdownMenu');
-    const auditCatChevron = document.getElementById('auditCategoryDropdownChevron');
-    const auditCatLabel = document.getElementById('auditCategoryDropdownCurrentLabel');
-    const nativeAuditCatSelect = document.getElementById('auditCategoryFilter');
-
-    function toggleAuditCatMenu() {
-      if (!auditCatMenu) return;
-      const isHidden = auditCatMenu.classList.contains('hidden');
-      if (isHidden) {
-        auditCatMenu.classList.remove('hidden');
-        if (auditCatChevron) auditCatChevron.classList.add('rotate-180');
-        if (auditCatTrigger) auditCatTrigger.setAttribute('aria-expanded', 'true');
-      } else {
-        closeAuditCatMenu();
-      }
-    }
-
-    function closeAuditCatMenu() {
-      if (!auditCatMenu) return;
-      auditCatMenu.classList.add('hidden');
-      if (auditCatChevron) auditCatChevron.classList.remove('rotate-180');
-      if (auditCatTrigger) auditCatTrigger.setAttribute('aria-expanded', 'false');
-    }
-
-    if (auditCatTrigger) {
-      auditCatTrigger.addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggleAuditCatMenu();
-      });
-    }
-
-    document.querySelectorAll('.custom-audit-cat-option').forEach(opt => {
-      opt.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const val = opt.getAttribute('data-value') || 'all';
-        const labelText = opt.querySelector('span')?.textContent || 'All Categories';
-
-        if (auditCatLabel) auditCatLabel.textContent = labelText;
-
-        document.querySelectorAll('.custom-audit-cat-option').forEach(o => {
-          const isSelected = o === opt;
-          o.setAttribute('aria-selected', isSelected ? 'true' : 'false');
-          const check = o.querySelector('.audit-option-check');
-          const icon = o.querySelector('i:first-child');
-          if (isSelected) {
-            o.className = 'custom-audit-cat-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-[#087F70] bg-[#087F70]/10 hover:bg-[#087F70]/15 cursor-pointer transition-colors select-none font-sans text-left';
-            if (check) check.classList.remove('hidden');
-            if (icon) {
-              icon.classList.remove('text-slate-400');
-              icon.classList.add('text-[#087F70]');
-            }
-          } else {
-            o.className = 'custom-audit-cat-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left';
-            if (check) check.classList.add('hidden');
-            if (icon && !icon.classList.contains('fa-layer-group')) {
-              icon.classList.add('text-slate-400');
-              icon.classList.remove('text-[#087F70]');
-            }
-          }
-        });
-
-        if (nativeAuditCatSelect) {
-          nativeAuditCatSelect.value = val;
-          nativeAuditCatSelect.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-
-        closeAuditCatMenu();
-      });
-    });
-
-    document.addEventListener('click', (e) => {
-      if (auditCatMenu && !auditCatMenu.classList.contains('hidden')) {
-        if (!auditCatMenu.contains(e.target) && !auditCatTrigger?.contains(e.target)) {
-          closeAuditCatMenu();
-        }
-      }
-    });
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && auditCatMenu && !auditCatMenu.classList.contains('hidden')) {
-        closeAuditCatMenu();
-      }
-    });
-    document.getElementById('btnRefreshAuditHistory')?.addEventListener('click', async () => {
-      await loadHistoryData();
-      showToast('Audit feed updated.', 'success');
-    });
-
-    // Custom Glassmorphic Client Status Filter Dropdown Component
-    const clientStatusTrigger = document.getElementById('btnClientStatusDropdown');
-    const clientStatusMenu = document.getElementById('clientStatusDropdownMenu');
-    const clientStatusChevron = document.getElementById('clientStatusDropdownChevron');
-    const clientStatusLabel = document.getElementById('clientStatusDropdownCurrentLabel');
-    const nativeClientStatusSelect = document.getElementById('adminClientStatusFilter');
-
-    function toggleClientStatusMenu() {
-      if (!clientStatusMenu) return;
-      const isHidden = clientStatusMenu.classList.contains('hidden');
-      if (isHidden) {
-        clientStatusMenu.classList.remove('hidden');
-        if (clientStatusChevron) clientStatusChevron.classList.add('rotate-180');
-        if (clientStatusTrigger) clientStatusTrigger.setAttribute('aria-expanded', 'true');
-      } else {
-        closeClientStatusMenu();
-      }
-    }
-
-    function closeClientStatusMenu() {
-      if (!clientStatusMenu) return;
-      clientStatusMenu.classList.add('hidden');
-      if (clientStatusChevron) clientStatusChevron.classList.remove('rotate-180');
-      if (clientStatusTrigger) clientStatusTrigger.setAttribute('aria-expanded', 'false');
-    }
-
-    function syncClientStatusDropdown(val) {
-      document.querySelectorAll('.custom-client-status-option').forEach(opt => {
-        const optVal = opt.getAttribute('data-value');
-        const isSelected = optVal === val;
-        opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
-        const check = opt.querySelector('.client-status-option-check');
-        if (isSelected) {
-          opt.className = 'custom-client-status-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-[#087F70] bg-[#087F70]/10 hover:bg-[#087F70]/15 cursor-pointer transition-colors select-none font-sans text-left';
-          if (check) check.classList.remove('hidden');
-          const labelSpan = opt.querySelector('span:last-child');
-          const labelText = labelSpan ? labelSpan.textContent.trim() : (val === 'active' ? 'Active Clients Only' : (val === 'suspended' ? 'Suspended Clients' : 'All Clients'));
-          if (clientStatusLabel) clientStatusLabel.textContent = labelText;
-        } else {
-          opt.className = 'custom-client-status-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left';
-          if (check) check.classList.add('hidden');
-        }
-      });
-    }
-
-    if (clientStatusTrigger) {
-      clientStatusTrigger.addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggleClientStatusMenu();
-      });
-    }
-
-    document.querySelectorAll('.custom-client-status-option').forEach(opt => {
-      opt.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const val = opt.getAttribute('data-value') || 'active';
-        syncClientStatusDropdown(val);
-
-        if (nativeClientStatusSelect) {
-          nativeClientStatusSelect.value = val;
-          nativeClientStatusSelect.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-
-        closeClientStatusMenu();
-      });
-    });
-
-    document.addEventListener('click', (e) => {
-      if (clientStatusMenu && !clientStatusMenu.classList.contains('hidden')) {
-        if (!clientStatusMenu.contains(e.target) && !clientStatusTrigger?.contains(e.target)) {
-          closeClientStatusMenu();
-        }
-      }
-    });
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && clientStatusMenu && !clientStatusMenu.classList.contains('hidden')) {
-        closeClientStatusMenu();
-      }
-    });
-
-    if (nativeClientStatusSelect) {
-      nativeClientStatusSelect.addEventListener('change', () => {
-        syncClientStatusDropdown(nativeClientStatusSelect.value);
-      });
-      syncClientStatusDropdown(nativeClientStatusSelect.value || 'active');
-    }
-
-    // -------------------------------------------------------------------------
-    // Custom Glassmorphic Client Preferred Currency Dropdown Component
-    // -------------------------------------------------------------------------
-    const clientCurrTrigger = document.getElementById('btnClientCurrencyDropdown');
-    const clientCurrMenu = document.getElementById('clientCurrencyDropdownMenu');
-    const clientCurrChevron = document.getElementById('clientCurrencyDropdownChevron');
-    const clientCurrLabel = document.getElementById('clientCurrencyDropdownCurrentLabel');
-    const nativeClientCurrSelect = document.getElementById('clientPreferredCurrencySelect');
-
-    function toggleClientCurrMenu() {
-      if (!clientCurrMenu) return;
-      const isHidden = clientCurrMenu.classList.contains('hidden');
-      if (isHidden) {
-        clientCurrMenu.classList.remove('hidden');
-        if (clientCurrChevron) clientCurrChevron.classList.add('rotate-180');
-        if (clientCurrTrigger) clientCurrTrigger.setAttribute('aria-expanded', 'true');
-      } else {
-        closeClientCurrMenu();
-      }
-    }
-
-    function closeClientCurrMenu() {
-      if (!clientCurrMenu) return;
-      clientCurrMenu.classList.add('hidden');
-      if (clientCurrChevron) clientCurrChevron.classList.remove('rotate-180');
-      if (clientCurrTrigger) clientCurrTrigger.setAttribute('aria-expanded', 'false');
-    }
-
-    function syncClientPreferredCurrencyDropdown(val) {
-      if (!val) return;
-      const cleanVal = val.toUpperCase();
-      document.querySelectorAll('.custom-client-currency-option').forEach(opt => {
-        const optVal = (opt.getAttribute('data-value') || '').toUpperCase();
-        const isSelected = optVal === cleanVal;
-        opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
-        const check = opt.querySelector('.currency-option-check');
-        if (isSelected) {
-          opt.className = 'custom-client-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-[#087F70] bg-[#087F70]/10 hover:bg-[#087F70]/15 cursor-pointer transition-colors select-none font-sans text-left';
-          if (check) check.classList.remove('hidden');
-          const optText = opt.querySelector('span')?.textContent || opt.textContent.trim();
-          if (clientCurrLabel) clientCurrLabel.textContent = optText;
-        } else {
-          opt.className = 'custom-client-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left';
-          if (check) check.classList.add('hidden');
-        }
-      });
-      if (nativeClientCurrSelect && nativeClientCurrSelect.value !== cleanVal) {
-        nativeClientCurrSelect.value = cleanVal;
-      }
-    }
-
-    if (clientCurrTrigger) {
-      clientCurrTrigger.addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggleClientCurrMenu();
-      });
-    }
-
-    document.querySelectorAll('.custom-client-currency-option').forEach(opt => {
-      opt.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const val = opt.getAttribute('data-value') || 'USD';
-        syncClientPreferredCurrencyDropdown(val);
-        if (nativeClientCurrSelect) {
-          nativeClientCurrSelect.value = val;
-          nativeClientCurrSelect.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-        closeClientCurrMenu();
-      });
-    });
-
-    if (nativeClientCurrSelect) {
-      nativeClientCurrSelect.addEventListener('change', () => {
-        syncClientPreferredCurrencyDropdown(nativeClientCurrSelect.value);
-      });
-    }
-
-    // -------------------------------------------------------------------------
-    // Custom Glassmorphic Assign Service Modal Dropdowns
-    // -------------------------------------------------------------------------
-    const assignServiceTrigger = document.getElementById('btnAssignServiceTrigger');
-    const assignServiceMenu = document.getElementById('assignServiceMenu');
-    const assignServiceChevron = document.getElementById('assignServiceChevron');
-    const assignServiceLabel = document.getElementById('assignServiceCurrentLabel');
-    const nativeAssignServiceSelect = document.getElementById('assignServiceSelect');
-
-    function toggleAssignServiceMenu() {
-      if (!assignServiceMenu) return;
-      const isHidden = assignServiceMenu.classList.contains('hidden');
-      if (isHidden) {
-        assignServiceMenu.classList.remove('hidden');
-        if (assignServiceChevron) assignServiceChevron.classList.add('rotate-180');
-        if (assignServiceTrigger) assignServiceTrigger.setAttribute('aria-expanded', 'true');
-      } else {
-        closeAssignServiceMenu();
-      }
-    }
-
-    function closeAssignServiceMenu() {
-      if (!assignServiceMenu) return;
-      assignServiceMenu.classList.add('hidden');
-      if (assignServiceChevron) assignServiceChevron.classList.remove('rotate-180');
-      if (assignServiceTrigger) assignServiceTrigger.setAttribute('aria-expanded', 'false');
-    }
-
-    if (assignServiceTrigger) {
-      assignServiceTrigger.addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggleAssignServiceMenu();
-      });
-    }
-
-    // Assign Currency Dropdown
-    const assignCurrTrigger = document.getElementById('btnAssignCurrencyTrigger');
-    const assignCurrMenu = document.getElementById('assignCurrencyMenu');
-    const assignCurrChevron = document.getElementById('assignCurrencyChevron');
-    const assignCurrLabel = document.getElementById('assignCurrencyCurrentLabel');
-    const nativeAssignCurrSelect = document.getElementById('assignServiceCurrency');
-
-    function toggleAssignCurrencyMenu() {
-      if (!assignCurrMenu) return;
-      const isHidden = assignCurrMenu.classList.contains('hidden');
-      if (isHidden) {
-        assignCurrMenu.classList.remove('hidden');
-        if (assignCurrChevron) assignCurrChevron.classList.add('rotate-180');
-        if (assignCurrTrigger) assignCurrTrigger.setAttribute('aria-expanded', 'true');
-      } else {
-        closeAssignCurrencyMenu();
-      }
-    }
-
-    function closeAssignCurrencyMenu() {
-      if (!assignCurrMenu) return;
-      assignCurrMenu.classList.add('hidden');
-      if (assignCurrChevron) assignCurrChevron.classList.remove('rotate-180');
-      if (assignCurrTrigger) assignCurrTrigger.setAttribute('aria-expanded', 'false');
-    }
-
-    function syncAssignCurrencyDropdown(val) {
-      if (!val) return;
-      const cleanVal = val.toUpperCase();
-      document.querySelectorAll('.custom-assign-currency-option').forEach(opt => {
-        const optVal = (opt.getAttribute('data-value') || '').toUpperCase();
-        const isSelected = optVal === cleanVal;
-        opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
-        const check = opt.querySelector('.assign-currency-check');
-        if (isSelected) {
-          opt.className = 'custom-assign-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-[#087F70] bg-[#087F70]/10 hover:bg-[#087F70]/15 cursor-pointer transition-colors select-none font-sans text-left';
-          if (check) check.classList.remove('hidden');
-          const optText = opt.querySelector('span')?.textContent || opt.textContent.trim();
-          if (assignCurrLabel) assignCurrLabel.textContent = optText;
-        } else {
-          opt.className = 'custom-assign-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left';
-          if (check) check.classList.add('hidden');
-        }
-      });
-      if (nativeAssignCurrSelect && nativeAssignCurrSelect.value !== cleanVal) {
-        nativeAssignCurrSelect.value = cleanVal;
-      }
-    }
-
-    if (assignCurrTrigger) {
-      assignCurrTrigger.addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggleAssignCurrencyMenu();
-      });
-    }
-
-    document.querySelectorAll('.custom-assign-currency-option').forEach(opt => {
-      opt.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const val = opt.getAttribute('data-value') || 'USD';
-        syncAssignCurrencyDropdown(val);
-        if (nativeAssignCurrSelect) {
-          nativeAssignCurrSelect.value = val;
-          nativeAssignCurrSelect.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-        closeAssignCurrencyMenu();
-      });
-    });
-
-    // -------------------------------------------------------------------------
-    // Universal Custom Glassmorphic Date Picker Controller
-    // -------------------------------------------------------------------------
-    let _activeDatePickerTarget = null;
-    let _activeDatePickerTrigger = null;
-    let _calendarYear = new Date().getFullYear();
-    let _calendarMonth = new Date().getMonth();
-
-    function formatDisplayDate(isoDateStr) {
-      if (!isoDateStr) return 'Select date...';
-      const parts = isoDateStr.split('-').map(Number);
-      if (parts.length !== 3 || isNaN(parts[0])) return isoDateStr;
-      const [y, m, d] = parts;
-      const dateObj = new Date(y, m - 1, d);
-      return dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    }
-
-    function updateDatePickerTrigger(inputEl) {
-      if (!inputEl) return;
-      const wrapper = inputEl.closest('.custom-datepicker-wrapper') || document.querySelector(`[data-datepicker-target="${inputEl.id}"]`);
-      if (!wrapper) return;
-      const label = wrapper.querySelector('.datepicker-label');
-      if (!label) return;
-      const val = inputEl.value;
-      if (!val) {
-        label.textContent = 'Select date...';
-        label.classList.add('text-slate-400');
-        label.classList.remove('text-[#172B36]');
-      } else {
-        label.textContent = formatDisplayDate(val);
-        label.classList.remove('text-slate-400');
-        label.classList.add('text-[#172B36]');
-      }
-    }
-
-    function positionDatePicker(triggerEl, popoverEl) {
-      if (!triggerEl || !popoverEl) return;
-      const rect = triggerEl.getBoundingClientRect();
-      const popoverWidth = Math.min(300, window.innerWidth - 24);
-      popoverEl.style.width = `${popoverWidth}px`;
-      const popoverHeight = 330;
-
-      let left = rect.left;
-      if (left + popoverWidth > window.innerWidth - 12) {
-        left = Math.max(12, window.innerWidth - popoverWidth - 12);
-      }
-      if (left < 12) left = 12;
-
-      let top = rect.bottom + 6;
-      if (top + popoverHeight > window.innerHeight - 12) {
-        if (rect.top - popoverHeight - 6 >= 12) {
-          top = rect.top - popoverHeight - 6; // Flip above trigger
-        } else {
-          top = Math.max(12, window.innerHeight - popoverHeight - 12);
-        }
-      }
-
-      popoverEl.style.left = `${Math.round(left)}px`;
-      popoverEl.style.top = `${Math.round(top)}px`;
-      popoverEl.style.zIndex = '10000';
-    }
-
-    function renderCalendarGrid() {
-      const popover = document.getElementById('whizCustomDatePickerPopover');
-      const label = document.getElementById('datepickerMonthYearLabel');
-      const grid = document.getElementById('datepickerDaysGrid');
-      if (!popover || !label || !grid) return;
-
-      const monthNames = [
-        'January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'
-      ];
-      label.textContent = `${monthNames[_calendarMonth]} ${_calendarYear}`;
-
-      grid.innerHTML = '';
-
-      const firstDayIndex = new Date(_calendarYear, _calendarMonth, 1).getDay();
-      const lastDayOfMonth = new Date(_calendarYear, _calendarMonth + 1, 0).getDate();
-      const prevMonthLastDay = new Date(_calendarYear, _calendarMonth, 0).getDate();
-
-      const selectedVal = _activeDatePickerTarget ? _activeDatePickerTarget.value : '';
-      const today = new Date();
-      const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-
-      // Previous month filler days
-      for (let i = firstDayIndex - 1; i >= 0; i--) {
-        const dayNum = prevMonthLastDay - i;
-        const filler = document.createElement('div');
-        filler.className = 'w-8 h-8 rounded-lg text-xs font-normal text-slate-300 flex items-center justify-center pointer-events-none select-none';
-        filler.textContent = dayNum;
-        grid.appendChild(filler);
-      }
-
-      // Current month days
-      for (let day = 1; day <= lastDayOfMonth; day++) {
-        const isoString = `${_calendarYear}-${String(_calendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        const isSelected = selectedVal === isoString;
-        const isToday = todayIso === isoString;
-
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.textContent = day;
-        btn.dataset.isoDate = isoString;
-
-        let cls = 'w-8 h-8 rounded-lg text-xs font-medium flex items-center justify-center cursor-pointer transition-colors select-none font-sans ';
-        if (isSelected) {
-          cls += 'bg-[#087F70] text-white font-bold shadow-xs hover:bg-[#066559]';
-        } else if (isToday) {
-          cls += 'ring-1.5 ring-[#087F70] font-bold text-[#087F70] hover:bg-[#087F70]/10';
-        } else {
-          cls += 'text-[#172B36] hover:bg-[#087F70]/10 hover:text-[#087F70]';
-        }
-        btn.className = cls;
-
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          if (_activeDatePickerTarget) {
-            _activeDatePickerTarget.value = isoString;
-            _activeDatePickerTarget.dispatchEvent(new Event('input', { bubbles: true }));
-            _activeDatePickerTarget.dispatchEvent(new Event('change', { bubbles: true }));
-            updateDatePickerTrigger(_activeDatePickerTarget);
-          }
-          closeDatePicker();
-        });
-
-        grid.appendChild(btn);
-      }
-
-      // Next month filler days
-      const totalCells = firstDayIndex + lastDayOfMonth;
-      const remainingCells = (7 - (totalCells % 7)) % 7;
-      for (let j = 1; j <= remainingCells; j++) {
-        const filler = document.createElement('div');
-        filler.className = 'w-8 h-8 rounded-lg text-xs font-normal text-slate-300 flex items-center justify-center pointer-events-none select-none';
-        filler.textContent = j;
-        grid.appendChild(filler);
-      }
-    }
-
-    function openDatePicker(targetInput, triggerBtn) {
-      const popover = document.getElementById('whizCustomDatePickerPopover');
-      if (!popover || !targetInput) return;
-
-      _activeDatePickerTarget = targetInput;
-      _activeDatePickerTrigger = triggerBtn;
-
-      const currentVal = targetInput.value;
-      if (currentVal && /^\d{4}-\d{2}-\d{2}$/.test(currentVal)) {
-        const [y, m] = currentVal.split('-').map(Number);
-        _calendarYear = y;
-        _calendarMonth = m - 1;
-      } else {
-        const today = new Date();
-        _calendarYear = today.getFullYear();
-        _calendarMonth = today.getMonth();
-      }
-
-      positionDatePicker(triggerBtn, popover);
-      popover.classList.remove('hidden');
-      renderCalendarGrid();
-      positionDatePicker(triggerBtn, popover);
-      triggerBtn?.classList.add('border-[#087F70]', 'ring-2', 'ring-[#087F70]/20');
-    }
-
-    window.addEventListener('resize', () => {
-      const popover = document.getElementById('whizCustomDatePickerPopover');
-      if (_activeDatePickerTrigger && popover && !popover.classList.contains('hidden')) {
-        positionDatePicker(_activeDatePickerTrigger, popover);
-      }
-    });
-    window.addEventListener('scroll', () => {
-      const popover = document.getElementById('whizCustomDatePickerPopover');
-      if (_activeDatePickerTrigger && popover && !popover.classList.contains('hidden')) {
-        positionDatePicker(_activeDatePickerTrigger, popover);
-      }
-    }, true);
-
-    function closeDatePicker() {
-      const popover = document.getElementById('whizCustomDatePickerPopover');
-      if (popover) popover.classList.add('hidden');
-      if (_activeDatePickerTrigger) {
-        _activeDatePickerTrigger.classList.remove('border-[#087F70]', 'ring-2', 'ring-[#087F70]/20');
-      }
-      _activeDatePickerTarget = null;
-      _activeDatePickerTrigger = null;
-    }
-
-    document.getElementById('btnDatepickerPrevMonth')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      _calendarMonth--;
-      if (_calendarMonth < 0) {
-        _calendarMonth = 11;
-        _calendarYear--;
-      }
-      renderCalendarGrid();
-    });
-
-    document.getElementById('btnDatepickerNextMonth')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      _calendarMonth++;
-      if (_calendarMonth > 11) {
-        _calendarMonth = 0;
-        _calendarYear++;
-      }
-      renderCalendarGrid();
-    });
-
-    document.getElementById('btnDatepickerToday')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const today = new Date();
-      const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-      if (_activeDatePickerTarget) {
-        _activeDatePickerTarget.value = todayIso;
-        _activeDatePickerTarget.dispatchEvent(new Event('input', { bubbles: true }));
-        _activeDatePickerTarget.dispatchEvent(new Event('change', { bubbles: true }));
-        updateDatePickerTrigger(_activeDatePickerTarget);
-      }
-      closeDatePicker();
-    });
-
-    document.getElementById('btnDatepickerClear')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (_activeDatePickerTarget) {
-        _activeDatePickerTarget.value = '';
-        _activeDatePickerTarget.dispatchEvent(new Event('input', { bubbles: true }));
-        _activeDatePickerTarget.dispatchEvent(new Event('change', { bubbles: true }));
-        updateDatePickerTrigger(_activeDatePickerTarget);
-      }
-      closeDatePicker();
-    });
-
-    // Wire all datepicker triggers
-    document.querySelectorAll('.custom-datepicker-wrapper').forEach(wrapper => {
-      const targetId = wrapper.dataset.datepickerTarget;
-      const targetInput = targetId ? document.getElementById(targetId) : wrapper.querySelector('input');
-      const triggerBtn = wrapper.querySelector('.custom-datepicker-trigger');
-      if (triggerBtn && targetInput) {
-        triggerBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const popover = document.getElementById('whizCustomDatePickerPopover');
-          if (popover && !popover.classList.contains('hidden') && _activeDatePickerTarget === targetInput) {
-            closeDatePicker();
-          } else {
-            openDatePicker(targetInput, triggerBtn);
-          }
-        });
-        targetInput.addEventListener('change', () => updateDatePickerTrigger(targetInput));
-        updateDatePickerTrigger(targetInput);
-      }
-    });
-
-    // Global click outside and escape handlers for custom popovers
-    document.addEventListener('click', (e) => {
-      // Date Picker
-      const dpPopover = document.getElementById('whizCustomDatePickerPopover');
-      if (dpPopover && !dpPopover.classList.contains('hidden')) {
-        if (!dpPopover.contains(e.target) && !_activeDatePickerTrigger?.contains(e.target)) {
-          closeDatePicker();
-        }
-      }
-      // Client Currency Menu
-      if (clientCurrMenu && !clientCurrMenu.classList.contains('hidden')) {
-        if (!clientCurrMenu.contains(e.target) && !clientCurrTrigger?.contains(e.target)) {
-          closeClientCurrMenu();
-        }
-      }
-      // Assign Service Menu
-      if (assignServiceMenu && !assignServiceMenu.classList.contains('hidden')) {
-        if (!assignServiceMenu.contains(e.target) && !assignServiceTrigger?.contains(e.target)) {
-          closeAssignServiceMenu();
-        }
-      }
-      // Assign Currency Menu
-      if (assignCurrMenu && !assignCurrMenu.classList.contains('hidden')) {
-        if (!assignCurrMenu.contains(e.target) && !assignCurrTrigger?.contains(e.target)) {
-          closeAssignCurrencyMenu();
-        }
-      }
-    });
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        closeDatePicker();
-        closeClientCurrMenu();
-        closeAssignServiceMenu();
-        closeAssignCurrencyMenu();
-      }
-    });
-
-    // Hash change handler for deep linking & back/forward
-    window.addEventListener('hashchange', () => {
-      const hash = (window.location.hash || '').replace('#', '');
-      if (hash.startsWith('client-')) {
-        const cId = hash.replace('client-', '');
-        openClientDetails(cId);
-      } else if (hash.startsWith('service-tasks-')) {
-        const sId = hash.replace('service-tasks-', '');
-        openServiceTasksWorkspace(sId);
-      } else if (hash) {
-        switchTab(hash, false);
-      }
-    });
-
-    // Desktop Dock Collapse/Expand Controller & Persistence (WHIZ Adaptive Dock)
-    const desktopSidebar = document.getElementById('adminDesktopSidebar');
-    const collapseToggleBtn = document.getElementById('sidebarCollapseToggleBtn');
-    const collapseIcon = document.getElementById('sidebarCollapseIcon');
-
-    function applySidebarState(isCollapsed) {
-      if (!desktopSidebar) return;
-      if (isCollapsed) {
-        desktopSidebar.setAttribute('data-collapsed', 'true');
-        document.documentElement.classList.add('dock-init-collapsed');
-        if (collapseToggleBtn) {
-          collapseToggleBtn.setAttribute('title', 'Expand sidebar (260px)');
-          collapseToggleBtn.setAttribute('aria-label', 'Expand sidebar');
-        }
-        if (collapseIcon) {
-          collapseIcon.className = 'fa-solid fa-angles-right text-xs transition-transform duration-200';
-        }
-      } else {
-        desktopSidebar.removeAttribute('data-collapsed');
-        document.documentElement.classList.remove('dock-init-collapsed');
-        if (collapseToggleBtn) {
-          collapseToggleBtn.setAttribute('title', 'Collapse sidebar (72px)');
-          collapseToggleBtn.setAttribute('aria-label', 'Collapse sidebar');
-        }
-        if (collapseIcon) {
-          collapseIcon.className = 'fa-solid fa-angles-left text-xs transition-transform duration-200';
-        }
-      }
-    }
-
-    try {
-      const savedState = localStorage.getItem('whiz_sidebar_state');
-      applySidebarState(savedState === 'collapsed');
-    } catch (e) {
-      applySidebarState(false);
-    }
-
-    if (collapseToggleBtn) {
-      collapseToggleBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const isCollapsed = desktopSidebar?.getAttribute('data-collapsed') === 'true';
-        const nextState = !isCollapsed;
-        applySidebarState(nextState);
-        try {
-          localStorage.setItem('whiz_sidebar_state', nextState ? 'collapsed' : 'expanded');
-        } catch (err) {}
-      });
-    }
-
-    // Keyboard shortcut '[' or 'Ctrl+B' to toggle sidebar
-    document.addEventListener('keydown', (e) => {
-      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
-      if (e.key === '[' || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b')) {
-        e.preventDefault();
-        collapseToggleBtn?.click();
-      }
-    });
-
-    // Mobile Drawer Toggle with Body Scroll Locking
-    const toggleBtn = document.getElementById('mobileMenuToggleBtn');
-    const closeBtn = document.getElementById('mobileDrawerCloseBtn');
-    const drawer = document.getElementById('mobileDrawer');
-    const backdrop = document.getElementById('mobileDrawerBackdrop');
-
-    function openMobileDrawer() {
-      if (drawer && backdrop) {
-        drawer.classList.remove('-translate-x-full');
-        backdrop.classList.remove('hidden');
-        document.body.classList.add('overflow-hidden');
-      }
-    }
-
-    function closeMobileDrawer() {
-      if (drawer && backdrop) {
-        drawer.classList.add('-translate-x-full');
-        backdrop.classList.add('hidden');
-        document.body.classList.remove('overflow-hidden');
-      }
-    }
-
-    if (toggleBtn) toggleBtn.addEventListener('click', openMobileDrawer);
-    if (closeBtn) closeBtn.addEventListener('click', closeMobileDrawer);
-    if (backdrop) backdrop.addEventListener('click', closeMobileDrawer);
-
-    if (drawer) {
-      drawer.querySelectorAll('[data-dash-tab]').forEach(tabBtn => {
-        tabBtn.addEventListener('click', closeMobileDrawer);
-      });
-    }
-
-    // Interactive Profile Dropdown Menu Wiring
-    const userMenuBtn = document.getElementById('userMenuBtn');
-    const userDropdown = document.getElementById('userAccountDropdown');
-    const userChevron = document.getElementById('userMenuChevron');
-
-    function toggleUserDropdown() {
-      if (!userDropdown) return;
-      const isHidden = userDropdown.classList.contains('hidden');
-      if (isHidden) {
-        userDropdown.classList.remove('hidden');
-        if (userChevron) userChevron.classList.add('rotate-180');
-        if (userMenuBtn) userMenuBtn.setAttribute('aria-expanded', 'true');
-      } else {
-        closeUserDropdown();
-      }
-    }
-
-    function closeUserDropdown() {
-      if (!userDropdown) return;
-      userDropdown.classList.add('hidden');
-      if (userChevron) userChevron.classList.remove('rotate-180');
-      if (userMenuBtn) userMenuBtn.setAttribute('aria-expanded', 'false');
-    }
-
-    if (userMenuBtn) {
-      userMenuBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggleUserDropdown();
-      });
-    }
-
-    // Close dropdown on outside click or Escape key
-    document.addEventListener('click', (e) => {
-      if (userDropdown && !userDropdown.classList.contains('hidden')) {
-        if (!userDropdown.contains(e.target) && !userMenuBtn?.contains(e.target)) {
-          closeUserDropdown();
-        }
-      }
-    });
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        closeUserDropdown();
-        closeMobileDrawer();
-      }
-    });
-
-    // Dropdown Navigation Links
-    document.getElementById('dropdownLinkProfile')?.addEventListener('click', () => {
-      closeUserDropdown();
-      switchTab('overview');
-    });
-
-    document.getElementById('dropdownLinkSettings')?.addEventListener('click', () => {
-      closeUserDropdown();
-      switchTab('team');
-    });
-
-    document.getElementById('dropdownLinkSecurity')?.addEventListener('click', () => {
-      closeUserDropdown();
-      switchTab('security');
-    });
-
-    // Support Requests Event Listeners
-    document.getElementById('btnRefreshSupport')?.addEventListener('click', () => loadSupportData(true));
-    document.getElementById('supportSearchInput')?.addEventListener('input', () => renderSupport());
-    document.getElementById('supportStatusFilter')?.addEventListener('change', () => renderSupport());
-
-    // =========================================================================
-    // INQUIRIES & LEADS CRM EVENT LISTENERS
-    // =========================================================================
-    document.getElementById('btnRefreshInquiries')?.addEventListener('click', () => loadInquiriesData(true));
-    document.getElementById('searchInquiriesInput')?.addEventListener('input', () => renderInquiries());
-
-    document.querySelectorAll('#inquiriesStatusFilterGroup .inquiry-filter-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        state.activeInquiryFilter = btn.dataset.inquiryFilter || 'all';
-        document.querySelectorAll('#inquiriesStatusFilterGroup .inquiry-filter-btn').forEach(b => {
-          if (b === btn) {
-            b.className = 'inquiry-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/25 transition-all';
-          } else {
-            b.className = 'inquiry-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 border border-transparent transition-all';
-          }
-        });
-        renderInquiries();
-      });
-    });
-
-    // Delegated Inquiries Table Actions
-    document.addEventListener('click', (e) => {
-      const viewBtn = e.target.closest('.btn-view-inquiry');
-      if (viewBtn) {
-        const id = viewBtn.dataset.inquiryId;
-        if (id) openInquiryDetailsModal(id);
-        return;
-      }
-
-      const delBtn = e.target.closest('.btn-delete-inquiry');
-      if (delBtn) {
-        const id = delBtn.dataset.inquiryId;
-        if (id) deleteInquiry(id);
-        return;
-      }
-    });
-
-    // Inquiry Modal Buttons
-    document.getElementById('btnCloseInquiryModal')?.addEventListener('click', closeInquiryDetailsModal);
-    document.getElementById('btnCloseInquiryModalBottom')?.addEventListener('click', closeInquiryDetailsModal);
-    document.getElementById('btnSaveInquiryModal')?.addEventListener('click', saveInquiryDetails);
-    document.getElementById('btnDeleteInquiryModal')?.addEventListener('click', (e) => {
-      if (state.activeInquiryModalId) deleteInquiry(state.activeInquiryModalId, e);
-    });
-
-    // Inquiry Status Buttons inside Modal
-    document.querySelectorAll('#inquiryStatusButtonsGroup .inquiry-status-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('#inquiryStatusButtonsGroup .inquiry-status-btn').forEach(b => {
-          b.className = 'inquiry-status-btn py-2 px-3 rounded-xl border text-center font-bold text-xs transition-all bg-slate-50 text-slate-700 border-[#E3E9EF] hover:bg-slate-100';
-          b.removeAttribute('data-active');
-        });
-        btn.className = 'inquiry-status-btn py-2 px-3 rounded-xl border text-center font-bold text-xs transition-all bg-[#087F70] text-white border-[#087F70] shadow-xs';
-        btn.setAttribute('data-active', 'true');
-      });
-    });
-
-    // =========================================================================
-    // REVIEW MODERATION EVENT LISTENERS
-    // =========================================================================
-    document.getElementById('btnRefreshReviewsAdmin')?.addEventListener('click', () => loadAdminReviewsData(true));
-    document.getElementById('searchReviewsInput')?.addEventListener('input', () => renderAdminReviews());
-
-    document.querySelectorAll('#reviewsStatusFilterGroup .review-filter-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        state.activeReviewFilter = btn.dataset.reviewFilter || 'all';
-        document.querySelectorAll('#reviewsStatusFilterGroup .review-filter-btn').forEach(b => {
-          if (b === btn) {
-            b.className = 'review-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/25 transition-all';
-          } else {
-            b.className = 'review-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 border border-transparent transition-all';
-          }
-        });
-        renderAdminReviews();
-      });
-    });
-
-    // Delegated Reviews Moderation Actions
-    document.addEventListener('click', (e) => {
-      const approveBtn = e.target.closest('.btn-approve-review');
-      if (approveBtn) {
-        const id = approveBtn.dataset.reviewId;
-        if (id) moderateReview(id, 'approve');
-        return;
-      }
-
-      const rejectBtn = e.target.closest('.btn-reject-review');
-      if (rejectBtn) {
-        const id = rejectBtn.dataset.reviewId;
-        if (id) moderateReview(id, 'reject');
-        return;
-      }
-
-      const visBtn = e.target.closest('.btn-toggle-vis-review');
-      if (visBtn) {
-        const id = visBtn.dataset.reviewId;
-        if (id) moderateReview(id, 'toggle_visibility');
-        return;
-      }
-
-      const delRevBtn = e.target.closest('.btn-delete-review');
-      if (delRevBtn) {
-        const id = delRevBtn.dataset.reviewId;
-        if (id) deleteReviewAdmin(id);
-        return;
-      }
-    });
-
-    // Support Search Clear Button
-    document.getElementById('supportSearchClear')?.addEventListener('click', () => {
-      const input = document.getElementById('supportSearchInput');
-      if (input) {
-        input.value = '';
-        renderSupport();
-        input.focus();
-      }
-    });
-
-    // Delegated Reset Support Filters
-    document.addEventListener('click', (e) => {
-      if (e.target.closest('#btnClearSupportFilters')) {
-        const input = document.getElementById('supportSearchInput');
-        if (input) input.value = '';
-        const filter = document.getElementById('supportStatusFilter');
-        if (filter) {
-          filter.value = 'all';
-          filter.dispatchEvent(new Event('change'));
-        }
-        renderSupport();
-      } else if (e.target.closest('.btn-retry-support')) {
-        loadSupportData(true);
-      }
-    });
-
-    // Support Modal Close Listeners
-    const closeSupportModal = () => {
-      document.getElementById('modalSupportDetail')?.classList.add('hidden');
-    };
-    document.getElementById('btnCloseSupportModal')?.addEventListener('click', closeSupportModal);
-    document.getElementById('btnCancelSupportModal')?.addEventListener('click', closeSupportModal);
-
-    // Support Status Form Submit
-    document.getElementById('formUpdateSupportStatus')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const ticketId = document.getElementById('modalSupportHiddenId')?.value;
-      const status = document.getElementById('modalSupportNewStatus')?.value;
-      const adminNotes = document.getElementById('modalSupportAdminNotes')?.value;
-      const submitBtn = document.getElementById('btnSubmitSupportStatus');
-
-      if (!ticketId) return;
-
-      setBtnLoading(submitBtn, true, 'Saving...');
-      const res = await apiFetch(`/portal/admin/support/${ticketId}/status`, {
-        method: 'PUT',
-        body: JSON.stringify({ status, adminNotes })
-      });
-      setBtnLoading(submitBtn, false);
-
-      if (res.ok && res.data?.success) {
-        showToast(`Support request marked as ${status.replace('_', ' ')}!`, 'success');
-        closeSupportModal();
-        loadSupportData();
-      } else {
-        showToast(res.data?.error || 'Failed to update ticket status.', 'error');
-      }
-    });
-
-    // Trusted Devices Actions
-    document.getElementById('btnTrustThisDevice')?.addEventListener('click', async () => {
-      const devName = prompt('Enter a label for this trusted device (e.g. Work Laptop, Chrome on Windows):', `Device ${new Date().toLocaleDateString()}`);
-      if (!devName) return;
-
-      const res = await apiFetch('/security/trusted-devices', {
-        method: 'POST',
-        body: JSON.stringify({ deviceName: devName.trim() })
-      });
-
-      if (res.ok && res.data?.success) {
-        showToast('Device added to trusted devices!', 'success');
-        loadTrustedDevices();
-      } else {
-        showToast(res.data?.error || 'Failed to register trusted device.', 'error');
-      }
-    });
-
-    document.getElementById('btnRevokeAllDevices')?.addEventListener('click', async () => {
-      if (!confirm('Are you sure you want to revoke ALL trusted devices for your account?')) return;
-
-      const res = await apiFetch('/security/trusted-devices', { method: 'DELETE' });
-      if (res.ok && res.data?.success) {
-        showToast('All trusted devices revoked.', 'success');
-        loadTrustedDevices();
-      } else {
-        showToast(res.data?.error || 'Failed to revoke devices.', 'error');
-      }
-    });
-
-    // Mobile Quick Refresh Button
-    document.getElementById('mobileQuickRefreshBtn')?.addEventListener('click', () => {
-      const icon = document.getElementById('mobileQuickRefreshIcon');
-      if (icon) icon.classList.add('fa-spin');
-      const tabId = state.activeTab || 'overview';
-      if (tabId === 'overview') loadOverviewData();
-      else if (tabId === 'clients') loadClientsData();
-      else if (tabId === 'services') loadServicesData();
-      else if (tabId === 'projects') loadProjectsData();
-      else if (tabId === 'tasks') loadTasksData();
-      else if (tabId === 'finance') loadFinanceData();
-      else if (tabId === 'team') loadTeamData();
-      else if (tabId === 'support') loadSupportData();
-      else if (tabId === 'history') loadHistoryData();
-      else if (tabId === 'security') loadSecurityData();
-      else if (tabId === 'inquiries') loadInquiriesData();
-      else if (tabId === 'reviews_admin') loadAdminReviewsData();
-      setTimeout(() => {
-        if (icon) icon.classList.remove('fa-spin');
-        showToast('Console synchronized successfully.', 'success');
-      }, 500);
-    });
-
-    // Sign out buttons
-    document.querySelectorAll('.btn-admin-signout').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        document.cookie = 'whiz_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax; Secure';
-        try {
-          localStorage.removeItem('whiz_last_role');
-          sessionStorage.clear();
-        } catch (e) {}
-        if (window.Clerk) {
-          await window.Clerk.signOut();
-        }
-        window.location.replace('/');
-      });
-    });
-
-    // Password change form
-    const changePasswordForm = document.getElementById('adminChangePasswordForm');
-    if (changePasswordForm) {
-      changePasswordForm.addEventListener('submit', handleAdminPasswordChange);
-    }
-
-    initPasswordToggles();
-    initModals();
-    if (typeof initGlassSelects === 'function') initGlassSelects();
-
-    // Start Auth check
-    checkAuthAndInit();
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
-})();
+      `}).join(""),s.querySelectorAll(".btn-approve-review").forEach(o=>{o.addEventListener("click",u=>{u.stopPropagation(),u.preventDefault();const g=o.dataset.reviewId;g&&Te(g,"approve")})}),s.querySelectorAll(".btn-reject-review").forEach(o=>{o.addEventListener("click",u=>{u.stopPropagation(),u.preventDefault();const g=o.dataset.reviewId;g&&Te(g,"reject")})}),s.querySelectorAll(".btn-toggle-vis-review").forEach(o=>{o.addEventListener("click",u=>{u.stopPropagation(),u.preventDefault();const g=o.dataset.reviewId;g&&Te(g,"toggle_visibility")})}),s.querySelectorAll(".btn-delete-review").forEach(o=>{o.addEventListener("click",u=>{u.stopPropagation(),u.preventDefault();const g=o.dataset.reviewId;g&&gt(g,u)})})}async function Te(s,t){const r=(y.adminReviews||[]).find(e=>e.id===s);if(r)try{const e=await L("/api/admin-reviews",{method:"PATCH",body:JSON.stringify({id:s,action:t})});e.ok&&e.data&&e.data.success?(t==="approve"?(r.moderation_status="approved",r.visibility="show",h("Review approved and live on homepage!","success")):t==="reject"?(r.moderation_status="rejected",r.visibility="hidden",h("Review rejected and hidden from site.","info")):t==="toggle_visibility"&&(r.visibility=r.visibility==="show"?"hidden":"show",h(`Review visibility set to ${r.visibility}.`,"info")),r.updated_at=new Date().toISOString(),xt(),We()):h(e.data?.error||"Failed to update review moderation.","error")}catch{h("Network error moderating review.","error")}}async function gt(s,t=null){if(t&&(typeof t.stopPropagation=="function"&&t.stopPropagation(),typeof t.preventDefault=="function"&&t.preventDefault()),!s||!window.confirm("Are you sure you want to permanently delete this client review from the database? This action cannot be undone."))return;const r=t&&t.currentTarget||document.querySelector(`button.btn-delete-review[data-review-id="${s}"]`),e=r?.closest("tr")||document.querySelector(`tr[data-review-row="${s}"]`);r&&(r.disabled=!0,r.innerHTML='<i class="fa-solid fa-spinner fa-spin text-xs text-rose-500"></i>'),e&&e.classList.add("opacity-40","pointer-events-none");try{const l=await L(`/api/admin-reviews?id=${encodeURIComponent(s)}`,{method:"DELETE",body:JSON.stringify({id:s})});if(l.ok&&(l.data?.success||l.status===200||l.status===204)){if(y.adminReviews=(y.adminReviews||[]).filter(i=>i.id!==s&&i.id!=="review_"+s&&"review_"+i.id!==s),window.__whizAdminMock&&window.__whizAdminMock.getData){const i=window.__whizAdminMock.getData();i&&i.reviews&&(i.reviews=i.reviews.filter(m=>m.id!==s&&m.id!=="review_"+s&&"review_"+m.id!==s))}e&&e.remove(),xt(),We(),h("Review permanently deleted.","info")}else r&&(r.disabled=!1,r.innerHTML='<i class="fa-solid fa-trash-can text-xs"></i>'),e&&e.classList.remove("opacity-40","pointer-events-none"),h(l.data?.error||"Failed to delete review.","error")}catch{r&&(r.disabled=!1,r.innerHTML='<i class="fa-solid fa-trash-can text-xs"></i>'),e&&e.classList.remove("opacity-40","pointer-events-none"),h("Network error deleting review.","error")}}window.__whizDeleteReview=gt;function $t(){document.querySelectorAll("[data-dash-tab]").forEach(f=>{f.addEventListener("click",()=>{const E=f.dataset.dashTab;Z(E);const k=document.getElementById("mobileDrawer"),P=document.getElementById("mobileDrawerBackdrop");k&&k.classList.add("-translate-x-full"),P&&P.classList.add("hidden"),document.body.classList.remove("overflow-hidden")})}),document.querySelectorAll("[data-kpi-nav]").forEach(f=>{const E=()=>{const k=f.dataset.kpiNav,P=f.dataset.kpiFilter;if(k)if(Z(k),k==="clients"){const T=document.getElementById("adminClientStatusFilter");T&&(T.value=P||"active",u(T.value)),de()}else if(k==="projects")ke();else if(k==="services")Ce();else if(k==="tasks"){const T=P||"all";document.querySelectorAll(".task-filter-btn").forEach(A=>{A.dataset.filter===T||P==="pending"&&A.dataset.filter==="in_progress"?(A.classList.add("bg-slate-800","text-white","font-bold"),A.classList.remove("text-slate-400","font-medium")):(A.classList.remove("bg-slate-800","text-white","font-bold"),A.classList.add("text-slate-400","font-medium"))}),y.currentTaskStatus=T,Ge(T),Be(T)}else k==="finance"&&ye()};f.addEventListener("click",E),f.addEventListener("keydown",k=>{(k.key==="Enter"||k.key===" ")&&(k.preventDefault(),E())})}),document.getElementById("auditSearchInput")?.addEventListener("input",()=>{lt()}),document.getElementById("auditCategoryFilter")?.addEventListener("change",()=>{lt()});const s=document.getElementById("btnAuditCategoryDropdown"),t=document.getElementById("auditCategoryDropdownMenu"),r=document.getElementById("auditCategoryDropdownChevron"),e=document.getElementById("auditCategoryDropdownCurrentLabel"),l=document.getElementById("auditCategoryFilter");function i(){if(!t)return;t.classList.contains("hidden")?(t.classList.remove("hidden"),r&&r.classList.add("rotate-180"),s&&s.setAttribute("aria-expanded","true")):m()}function m(){t&&(t.classList.add("hidden"),r&&r.classList.remove("rotate-180"),s&&s.setAttribute("aria-expanded","false"))}s&&s.addEventListener("click",f=>{f.stopPropagation(),i()}),document.querySelectorAll(".custom-audit-cat-option").forEach(f=>{f.addEventListener("click",E=>{E.stopPropagation();const k=f.getAttribute("data-value")||"all",P=f.querySelector("span")?.textContent||"All Categories";e&&(e.textContent=P),document.querySelectorAll(".custom-audit-cat-option").forEach(T=>{const A=T===f;T.setAttribute("aria-selected",A?"true":"false");const J=T.querySelector(".audit-option-check"),we=T.querySelector("i:first-child");A?(T.className="custom-audit-cat-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-[#087F70] bg-[#087F70]/10 hover:bg-[#087F70]/15 cursor-pointer transition-colors select-none font-sans text-left",J&&J.classList.remove("hidden"),we&&(we.classList.remove("text-slate-400"),we.classList.add("text-[#087F70]"))):(T.className="custom-audit-cat-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left",J&&J.classList.add("hidden"),we&&!we.classList.contains("fa-layer-group")&&(we.classList.add("text-slate-400"),we.classList.remove("text-[#087F70]")))}),l&&(l.value=k,l.dispatchEvent(new Event("change",{bubbles:!0}))),m()})}),document.addEventListener("click",f=>{t&&!t.classList.contains("hidden")&&!t.contains(f.target)&&!s?.contains(f.target)&&m()}),document.addEventListener("keydown",f=>{f.key==="Escape"&&t&&!t.classList.contains("hidden")&&m()}),document.getElementById("btnRefreshAuditHistory")?.addEventListener("click",async()=>{await dt(),h("Audit feed updated.","success")});const x=document.getElementById("btnClientStatusDropdown"),b=document.getElementById("clientStatusDropdownMenu"),a=document.getElementById("clientStatusDropdownChevron"),n=document.getElementById("clientStatusDropdownCurrentLabel"),d=document.getElementById("adminClientStatusFilter");function c(){if(!b)return;b.classList.contains("hidden")?(b.classList.remove("hidden"),a&&a.classList.add("rotate-180"),x&&x.setAttribute("aria-expanded","true")):o()}function o(){b&&(b.classList.add("hidden"),a&&a.classList.remove("rotate-180"),x&&x.setAttribute("aria-expanded","false"))}function u(f){document.querySelectorAll(".custom-client-status-option").forEach(E=>{const P=E.getAttribute("data-value")===f;E.setAttribute("aria-selected",P?"true":"false");const T=E.querySelector(".client-status-option-check");if(P){E.className="custom-client-status-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-[#087F70] bg-[#087F70]/10 hover:bg-[#087F70]/15 cursor-pointer transition-colors select-none font-sans text-left",T&&T.classList.remove("hidden");const A=E.querySelector("span:last-child"),J=A?A.textContent.trim():f==="active"?"Active Clients Only":f==="suspended"?"Suspended Clients":"All Clients";n&&(n.textContent=J)}else E.className="custom-client-status-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left",T&&T.classList.add("hidden")})}x&&x.addEventListener("click",f=>{f.stopPropagation(),c()}),document.querySelectorAll(".custom-client-status-option").forEach(f=>{f.addEventListener("click",E=>{E.stopPropagation();const k=f.getAttribute("data-value")||"active";u(k),d&&(d.value=k,d.dispatchEvent(new Event("change",{bubbles:!0}))),o()})}),document.addEventListener("click",f=>{b&&!b.classList.contains("hidden")&&!b.contains(f.target)&&!x?.contains(f.target)&&o()}),document.addEventListener("keydown",f=>{f.key==="Escape"&&b&&!b.classList.contains("hidden")&&o()}),d&&(d.addEventListener("change",()=>{u(d.value)}),u(d.value||"active"));const g=document.getElementById("btnClientCurrencyDropdown"),w=document.getElementById("clientCurrencyDropdownMenu"),C=document.getElementById("clientCurrencyDropdownChevron"),v=document.getElementById("clientCurrencyDropdownCurrentLabel"),B=document.getElementById("clientPreferredCurrencySelect");function I(){if(!w)return;w.classList.contains("hidden")?(w.classList.remove("hidden"),C&&C.classList.add("rotate-180"),g&&g.setAttribute("aria-expanded","true")):F()}function F(){w&&(w.classList.add("hidden"),C&&C.classList.remove("rotate-180"),g&&g.setAttribute("aria-expanded","false"))}function M(f){if(!f)return;const E=f.toUpperCase();document.querySelectorAll(".custom-client-currency-option").forEach(k=>{const T=(k.getAttribute("data-value")||"").toUpperCase()===E;k.setAttribute("aria-selected",T?"true":"false");const A=k.querySelector(".currency-option-check");if(T){k.className="custom-client-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-[#087F70] bg-[#087F70]/10 hover:bg-[#087F70]/15 cursor-pointer transition-colors select-none font-sans text-left",A&&A.classList.remove("hidden");const J=k.querySelector("span")?.textContent||k.textContent.trim();v&&(v.textContent=J)}else k.className="custom-client-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left",A&&A.classList.add("hidden")}),B&&B.value!==E&&(B.value=E)}g&&g.addEventListener("click",f=>{f.stopPropagation(),I()}),document.querySelectorAll(".custom-client-currency-option").forEach(f=>{f.addEventListener("click",E=>{E.stopPropagation();const k=f.getAttribute("data-value")||"USD";M(k),B&&(B.value=k,B.dispatchEvent(new Event("change",{bubbles:!0}))),F()})}),B&&B.addEventListener("change",()=>{M(B.value)});const D=document.getElementById("btnAssignServiceTrigger"),_=document.getElementById("assignServiceMenu"),N=document.getElementById("assignServiceChevron"),j=document.getElementById("assignServiceCurrentLabel"),W=document.getElementById("assignServiceSelect");function ee(){if(!_)return;_.classList.contains("hidden")?(_.classList.remove("hidden"),N&&N.classList.add("rotate-180"),D&&D.setAttribute("aria-expanded","true")):G()}function G(){_&&(_.classList.add("hidden"),N&&N.classList.remove("rotate-180"),D&&D.setAttribute("aria-expanded","false"))}D&&D.addEventListener("click",f=>{f.stopPropagation(),ee()});const U=document.getElementById("btnAssignCurrencyTrigger"),O=document.getElementById("assignCurrencyMenu"),Q=document.getElementById("assignCurrencyChevron"),ce=document.getElementById("assignCurrencyCurrentLabel"),te=document.getElementById("assignServiceCurrency");function ue(){if(!O)return;O.classList.contains("hidden")?(O.classList.remove("hidden"),Q&&Q.classList.add("rotate-180"),U&&U.setAttribute("aria-expanded","true")):oe()}function oe(){O&&(O.classList.add("hidden"),Q&&Q.classList.remove("rotate-180"),U&&U.setAttribute("aria-expanded","false"))}function me(f){if(!f)return;const E=f.toUpperCase();document.querySelectorAll(".custom-assign-currency-option").forEach(k=>{const T=(k.getAttribute("data-value")||"").toUpperCase()===E;k.setAttribute("aria-selected",T?"true":"false");const A=k.querySelector(".assign-currency-check");if(T){k.className="custom-assign-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-[#087F70] bg-[#087F70]/10 hover:bg-[#087F70]/15 cursor-pointer transition-colors select-none font-sans text-left",A&&A.classList.remove("hidden");const J=k.querySelector("span")?.textContent||k.textContent.trim();ce&&(ce.textContent=J)}else k.className="custom-assign-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left",A&&A.classList.add("hidden")}),te&&te.value!==E&&(te.value=E)}U&&U.addEventListener("click",f=>{f.stopPropagation(),ue()}),document.querySelectorAll(".custom-assign-currency-option").forEach(f=>{f.addEventListener("click",E=>{E.stopPropagation();const k=f.getAttribute("data-value")||"USD";me(k),te&&(te.value=k,te.dispatchEvent(new Event("change",{bubbles:!0}))),oe()})});let q=null,ne=null,K=new Date().getFullYear(),V=new Date().getMonth();function $(f){if(!f)return"Select date...";const E=f.split("-").map(Number);if(E.length!==3||isNaN(E[0]))return f;const[k,P,T]=E;return new Date(k,P-1,T).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}function z(f){if(!f)return;const E=f.closest(".custom-datepicker-wrapper")||document.querySelector(`[data-datepicker-target="${f.id}"]`);if(!E)return;const k=E.querySelector(".datepicker-label");if(!k)return;const P=f.value;P?(k.textContent=$(P),k.classList.remove("text-slate-400"),k.classList.add("text-[#172B36]")):(k.textContent="Select date...",k.classList.add("text-slate-400"),k.classList.remove("text-[#172B36]"))}function R(f,E){if(!f||!E)return;const k=f.getBoundingClientRect(),P=Math.min(300,window.innerWidth-24);E.style.width=`${P}px`;const T=330;let A=k.left;A+P>window.innerWidth-12&&(A=Math.max(12,window.innerWidth-P-12)),A<12&&(A=12);let J=k.bottom+6;J+T>window.innerHeight-12&&(k.top-T-6>=12?J=k.top-T-6:J=Math.max(12,window.innerHeight-T-12)),E.style.left=`${Math.round(A)}px`,E.style.top=`${Math.round(J)}px`,E.style.zIndex="10000"}function Fe(){const f=document.getElementById("whizCustomDatePickerPopover"),E=document.getElementById("datepickerMonthYearLabel"),k=document.getElementById("datepickerDaysGrid");if(!f||!E||!k)return;const P=["January","February","March","April","May","June","July","August","September","October","November","December"];E.textContent=`${P[V]} ${K}`,k.innerHTML="";const T=new Date(K,V,1).getDay(),A=new Date(K,V+1,0).getDate(),J=new Date(K,V,0).getDate(),we=q?q.value:"",vt=new Date,tn=`${vt.getFullYear()}-${String(vt.getMonth()+1).padStart(2,"0")}-${String(vt.getDate()).padStart(2,"0")}`;for(let ie=T-1;ie>=0;ie--){const xe=J-ie,Ve=document.createElement("div");Ve.className="w-8 h-8 rounded-lg text-xs font-normal text-slate-300 flex items-center justify-center pointer-events-none select-none",Ve.textContent=xe,k.appendChild(Ve)}for(let ie=1;ie<=A;ie++){const xe=`${K}-${String(V+1).padStart(2,"0")}-${String(ie).padStart(2,"0")}`,Ve=we===xe,sn=tn===xe,Re=document.createElement("button");Re.type="button",Re.textContent=ie,Re.dataset.isoDate=xe;let nt="w-8 h-8 rounded-lg text-xs font-medium flex items-center justify-center cursor-pointer transition-colors select-none font-sans ";Ve?nt+="bg-[#087F70] text-white font-bold shadow-xs hover:bg-[#066559]":sn?nt+="ring-1.5 ring-[#087F70] font-bold text-[#087F70] hover:bg-[#087F70]/10":nt+="text-[#172B36] hover:bg-[#087F70]/10 hover:text-[#087F70]",Re.className=nt,Re.addEventListener("click",an=>{an.stopPropagation(),q&&(q.value=xe,q.dispatchEvent(new Event("input",{bubbles:!0})),q.dispatchEvent(new Event("change",{bubbles:!0})),z(q)),Pe()}),k.appendChild(Re)}const nn=(7-(T+A)%7)%7;for(let ie=1;ie<=nn;ie++){const xe=document.createElement("div");xe.className="w-8 h-8 rounded-lg text-xs font-normal text-slate-300 flex items-center justify-center pointer-events-none select-none",xe.textContent=ie,k.appendChild(xe)}}function Qe(f,E){const k=document.getElementById("whizCustomDatePickerPopover");if(!k||!f)return;q=f,ne=E;const P=f.value;if(P&&/^\d{4}-\d{2}-\d{2}$/.test(P)){const[T,A]=P.split("-").map(Number);K=T,V=A-1}else{const T=new Date;K=T.getFullYear(),V=T.getMonth()}R(E,k),k.classList.remove("hidden"),Fe(),R(E,k),E?.classList.add("border-[#087F70]","ring-2","ring-[#087F70]/20")}window.addEventListener("resize",()=>{const f=document.getElementById("whizCustomDatePickerPopover");ne&&f&&!f.classList.contains("hidden")&&R(ne,f)}),window.addEventListener("scroll",()=>{const f=document.getElementById("whizCustomDatePickerPopover");ne&&f&&!f.classList.contains("hidden")&&R(ne,f)},!0);function Pe(){const f=document.getElementById("whizCustomDatePickerPopover");f&&f.classList.add("hidden"),ne&&ne.classList.remove("border-[#087F70]","ring-2","ring-[#087F70]/20"),q=null,ne=null}document.getElementById("btnDatepickerPrevMonth")?.addEventListener("click",f=>{f.stopPropagation(),V--,V<0&&(V=11,K--),Fe()}),document.getElementById("btnDatepickerNextMonth")?.addEventListener("click",f=>{f.stopPropagation(),V++,V>11&&(V=0,K++),Fe()}),document.getElementById("btnDatepickerToday")?.addEventListener("click",f=>{f.stopPropagation();const E=new Date,k=`${E.getFullYear()}-${String(E.getMonth()+1).padStart(2,"0")}-${String(E.getDate()).padStart(2,"0")}`;q&&(q.value=k,q.dispatchEvent(new Event("input",{bubbles:!0})),q.dispatchEvent(new Event("change",{bubbles:!0})),z(q)),Pe()}),document.getElementById("btnDatepickerClear")?.addEventListener("click",f=>{f.stopPropagation(),q&&(q.value="",q.dispatchEvent(new Event("input",{bubbles:!0})),q.dispatchEvent(new Event("change",{bubbles:!0})),z(q)),Pe()}),document.querySelectorAll(".custom-datepicker-wrapper").forEach(f=>{const E=f.dataset.datepickerTarget,k=E?document.getElementById(E):f.querySelector("input"),P=f.querySelector(".custom-datepicker-trigger");P&&k&&(P.addEventListener("click",T=>{T.stopPropagation();const A=document.getElementById("whizCustomDatePickerPopover");A&&!A.classList.contains("hidden")&&q===k?Pe():Qe(k,P)}),k.addEventListener("change",()=>z(k)),z(k))}),document.addEventListener("click",f=>{const E=document.getElementById("whizCustomDatePickerPopover");E&&!E.classList.contains("hidden")&&!E.contains(f.target)&&!ne?.contains(f.target)&&Pe(),w&&!w.classList.contains("hidden")&&!w.contains(f.target)&&!g?.contains(f.target)&&F(),_&&!_.classList.contains("hidden")&&!_.contains(f.target)&&!D?.contains(f.target)&&G(),O&&!O.classList.contains("hidden")&&!O.contains(f.target)&&!U?.contains(f.target)&&oe()}),document.addEventListener("keydown",f=>{f.key==="Escape"&&(Pe(),F(),G(),oe())}),window.addEventListener("hashchange",()=>{const f=(window.location.hash||"").replace("#","");if(f.startsWith("client-")){const E=f.replace("client-","");pe(E)}else if(f.startsWith("service-tasks-")){const E=f.replace("service-tasks-","");De(E)}else f&&Z(f,!1)});const Xe=document.getElementById("adminDesktopSidebar"),he=document.getElementById("sidebarCollapseToggleBtn"),Ze=document.getElementById("sidebarCollapseIcon");function bt(f){Xe&&(f?(Xe.setAttribute("data-collapsed","true"),document.documentElement.classList.add("dock-init-collapsed"),he&&(he.setAttribute("title","Expand sidebar (260px)"),he.setAttribute("aria-label","Expand sidebar")),Ze&&(Ze.className="fa-solid fa-angles-right text-xs transition-transform duration-200")):(Xe.removeAttribute("data-collapsed"),document.documentElement.classList.remove("dock-init-collapsed"),he&&(he.setAttribute("title","Collapse sidebar (72px)"),he.setAttribute("aria-label","Collapse sidebar")),Ze&&(Ze.className="fa-solid fa-angles-left text-xs transition-transform duration-200")))}try{const f=localStorage.getItem("whiz_sidebar_state");bt(f==="collapsed")}catch{bt(!1)}he&&he.addEventListener("click",f=>{f.stopPropagation();const k=!(Xe?.getAttribute("data-collapsed")==="true");bt(k);try{localStorage.setItem("whiz_sidebar_state",k?"collapsed":"expanded")}catch{}}),document.addEventListener("keydown",f=>{["INPUT","TEXTAREA","SELECT"].includes(document.activeElement?.tagName)||(f.key==="["||(f.ctrlKey||f.metaKey)&&f.key.toLowerCase()==="b")&&(f.preventDefault(),he?.click())});const Tt=document.getElementById("mobileMenuToggleBtn"),Ft=document.getElementById("mobileDrawerCloseBtn"),Me=document.getElementById("mobileDrawer"),Ne=document.getElementById("mobileDrawerBackdrop");function Zt(){Me&&Ne&&(Me.classList.remove("-translate-x-full"),Ne.classList.remove("hidden"),document.body.classList.add("overflow-hidden"))}function et(){Me&&Ne&&(Me.classList.add("-translate-x-full"),Ne.classList.add("hidden"),document.body.classList.remove("overflow-hidden"))}Tt&&Tt.addEventListener("click",Zt),Ft&&Ft.addEventListener("click",et),Ne&&Ne.addEventListener("click",et),Me&&Me.querySelectorAll("[data-dash-tab]").forEach(f=>{f.addEventListener("click",et)});const Ae=document.getElementById("userMenuBtn"),Ie=document.getElementById("userAccountDropdown"),tt=document.getElementById("userMenuChevron");function en(){if(!Ie)return;Ie.classList.contains("hidden")?(Ie.classList.remove("hidden"),tt&&tt.classList.add("rotate-180"),Ae&&Ae.setAttribute("aria-expanded","true")):qe()}function qe(){Ie&&(Ie.classList.add("hidden"),tt&&tt.classList.remove("rotate-180"),Ae&&Ae.setAttribute("aria-expanded","false"))}Ae&&Ae.addEventListener("click",f=>{f.stopPropagation(),en()}),document.addEventListener("click",f=>{Ie&&!Ie.classList.contains("hidden")&&!Ie.contains(f.target)&&!Ae?.contains(f.target)&&qe()}),document.addEventListener("keydown",f=>{f.key==="Escape"&&(qe(),et())}),document.getElementById("dropdownLinkProfile")?.addEventListener("click",()=>{qe(),Z("overview")}),document.getElementById("dropdownLinkSettings")?.addEventListener("click",()=>{qe(),Z("team")}),document.getElementById("dropdownLinkSecurity")?.addEventListener("click",()=>{qe(),Z("security")}),document.getElementById("btnRefreshSupport")?.addEventListener("click",()=>Oe(!0)),document.getElementById("supportSearchInput")?.addEventListener("input",()=>ze()),document.getElementById("supportStatusFilter")?.addEventListener("change",()=>ze()),document.getElementById("btnRefreshInquiries")?.addEventListener("click",()=>ut(!0)),document.getElementById("searchInquiriesInput")?.addEventListener("input",()=>Ue()),document.querySelectorAll("#inquiriesStatusFilterGroup .inquiry-filter-btn").forEach(f=>{f.addEventListener("click",()=>{y.activeInquiryFilter=f.dataset.inquiryFilter||"all",document.querySelectorAll("#inquiriesStatusFilterGroup .inquiry-filter-btn").forEach(E=>{E===f?E.className="inquiry-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/25 transition-all":E.className="inquiry-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 border border-transparent transition-all"}),Ue()})}),document.addEventListener("click",f=>{const E=f.target.closest(".btn-view-inquiry");if(E){const P=E.dataset.inquiryId;P&&pt(P);return}const k=f.target.closest(".btn-delete-inquiry");if(k){const P=k.dataset.inquiryId;P&&Ke(P);return}}),document.getElementById("btnCloseInquiryModal")?.addEventListener("click",Ye),document.getElementById("btnCloseInquiryModalBottom")?.addEventListener("click",Ye),document.getElementById("btnSaveInquiryModal")?.addEventListener("click",Xt),document.getElementById("btnDeleteInquiryModal")?.addEventListener("click",f=>{y.activeInquiryModalId&&Ke(y.activeInquiryModalId,f)}),document.querySelectorAll("#inquiryStatusButtonsGroup .inquiry-status-btn").forEach(f=>{f.addEventListener("click",()=>{document.querySelectorAll("#inquiryStatusButtonsGroup .inquiry-status-btn").forEach(E=>{E.className="inquiry-status-btn py-2 px-3 rounded-xl border text-center font-bold text-xs transition-all bg-slate-50 text-slate-700 border-[#E3E9EF] hover:bg-slate-100",E.removeAttribute("data-active")}),f.className="inquiry-status-btn py-2 px-3 rounded-xl border text-center font-bold text-xs transition-all bg-[#087F70] text-white border-[#087F70] shadow-xs",f.setAttribute("data-active","true")})}),document.getElementById("btnRefreshReviewsAdmin")?.addEventListener("click",()=>ft(!0)),document.getElementById("searchReviewsInput")?.addEventListener("input",()=>We()),document.querySelectorAll("#reviewsStatusFilterGroup .review-filter-btn").forEach(f=>{f.addEventListener("click",()=>{y.activeReviewFilter=f.dataset.reviewFilter||"all",document.querySelectorAll("#reviewsStatusFilterGroup .review-filter-btn").forEach(E=>{E===f?E.className="review-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/25 transition-all":E.className="review-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 border border-transparent transition-all"}),We()})}),document.addEventListener("click",f=>{const E=f.target.closest(".btn-approve-review");if(E){const A=E.dataset.reviewId;A&&Te(A,"approve");return}const k=f.target.closest(".btn-reject-review");if(k){const A=k.dataset.reviewId;A&&Te(A,"reject");return}const P=f.target.closest(".btn-toggle-vis-review");if(P){const A=P.dataset.reviewId;A&&Te(A,"toggle_visibility");return}const T=f.target.closest(".btn-delete-review");if(T){const A=T.dataset.reviewId;A&&gt(A);return}}),document.getElementById("supportSearchClear")?.addEventListener("click",()=>{const f=document.getElementById("supportSearchInput");f&&(f.value="",ze(),f.focus())}),document.addEventListener("click",f=>{if(f.target.closest("#btnClearSupportFilters")){const E=document.getElementById("supportSearchInput");E&&(E.value="");const k=document.getElementById("supportStatusFilter");k&&(k.value="all",k.dispatchEvent(new Event("change"))),ze()}else f.target.closest(".btn-retry-support")&&Oe(!0)});const yt=()=>{document.getElementById("modalSupportDetail")?.classList.add("hidden")};document.getElementById("btnCloseSupportModal")?.addEventListener("click",yt),document.getElementById("btnCancelSupportModal")?.addEventListener("click",yt),document.getElementById("formUpdateSupportStatus")?.addEventListener("submit",async f=>{f.preventDefault();const E=document.getElementById("modalSupportHiddenId")?.value,k=document.getElementById("modalSupportNewStatus")?.value,P=document.getElementById("modalSupportAdminNotes")?.value,T=document.getElementById("btnSubmitSupportStatus");if(!E)return;S(T,!0,"Saving...");const A=await L(`/portal/admin/support/${E}/status`,{method:"PUT",body:JSON.stringify({status:k,adminNotes:P})});S(T,!1),A.ok&&A.data?.success?(h(`Support request marked as ${k.replace("_"," ")}!`,"success"),yt(),Oe()):h(A.data?.error||"Failed to update ticket status.","error")}),document.getElementById("btnTrustThisDevice")?.addEventListener("click",async()=>{const f=prompt("Enter a label for this trusted device (e.g. Work Laptop, Chrome on Windows):",`Device ${new Date().toLocaleDateString()}`);if(!f)return;const E=await L("/security/trusted-devices",{method:"POST",body:JSON.stringify({deviceName:f.trim()})});E.ok&&E.data?.success?(h("Device added to trusted devices!","success"),Je()):h(E.data?.error||"Failed to register trusted device.","error")}),document.getElementById("btnRevokeAllDevices")?.addEventListener("click",async()=>{if(!confirm("Are you sure you want to revoke ALL trusted devices for your account?"))return;const f=await L("/security/trusted-devices",{method:"DELETE"});f.ok&&f.data?.success?(h("All trusted devices revoked.","success"),Je()):h(f.data?.error||"Failed to revoke devices.","error")}),document.getElementById("mobileQuickRefreshBtn")?.addEventListener("click",()=>{const f=document.getElementById("mobileQuickRefreshIcon");f&&f.classList.add("fa-spin");const E=y.activeTab||"overview";E==="overview"?wt():E==="clients"?de():E==="services"?Ce():E==="projects"?ke():E==="tasks"?Be():E==="finance"?ye():E==="team"?fe():E==="support"?Oe():E==="history"?dt():E==="security"?At():E==="inquiries"?ut():E==="reviews_admin"&&ft(),setTimeout(()=>{f&&f.classList.remove("fa-spin"),h("Console synchronized successfully.","success")},500)}),document.querySelectorAll(".btn-admin-signout").forEach(f=>{f.addEventListener("click",async()=>{document.cookie="whiz_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax; Secure";try{localStorage.removeItem("whiz_last_role"),sessionStorage.clear()}catch{}window.Clerk&&await window.Clerk.signOut(),window.location.replace("/")})});const Pt=document.getElementById("adminChangePasswordForm");Pt&&Pt.addEventListener("submit",Gt),Qt(),Kt(),typeof H=="function"&&H(),_t()}document.readyState==="loading"?document.addEventListener("DOMContentLoaded",$t):$t()})();
