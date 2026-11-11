@@ -1593,3 +1593,52 @@ button {
     padding: 0.15rem 0.45rem !important;
   }
 }
+
+/* =============================================================================
+   ELEGANT SKELETON SHIMMER PLACEHOLDERS (ZERO-LAYOUT-DAMAGE)
+   Hardware-accelerated emerald & dark glass shimmer waves
+   ============================================================================= */
+@keyframes whizShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.whiz-skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(7, 19, 17, 0.04) 25%,
+    rgba(8, 127, 112, 0.09) 50%,
+    rgba(7, 19, 17, 0.04) 75%
+  );
+  background-size: 200% 100%;
+  animation: whizShimmer 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  border-radius: 0.75rem;
+}
+
+.whiz-skeleton-dark {
+  background: linear-gradient(
+    90deg,
+    rgba(7, 19, 17, 0.7) 25%,
+    rgba(16, 185, 129, 0.16) 50%,
+    rgba(7, 19, 17, 0.7) 75%
+  );
+  background-size: 200% 100%;
+  animation: whizShimmer 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  border-radius: 0.75rem;
+}
+
+.whiz-skeleton-row {
+  height: 2.75rem;
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+
+.whiz-skeleton-card {
+  height: 5.5rem;
+  width: 100%;
+}
+

@@ -39,9 +39,9 @@ const ALLOWED_ORIGINS = [
 
 function getCorsHeaders(request, env = null) {
   const origin = request?.headers?.get("origin") || "";
-  const isDev = env?.ENVIRONMENT && env.ENVIRONMENT !== "production";
+  const isDev = Boolean(env?.ENVIRONMENT && env.ENVIRONMENT !== "production");
   const isProdAllowed = ALLOWED_ORIGINS.includes(origin) || origin.endsWith(".whizstudio.pages.dev");
-  const isLocalAllowed = isDev && origin.startsWith("http://localhost:");
+  const isLocalAllowed = isDev && (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:"));
   const isAllowed = isProdAllowed || isLocalAllowed;
   return {
     "Access-Control-Allow-Origin": isAllowed ? origin : "https://whizstudio.art",
@@ -226,9 +226,16 @@ async function verifyDiscordSignature(rawBody, signature, timestamp, publicKey) 
 // KV HELPERS (Native binding with Cloudflare REST API fallback)
 // Strictly quota-optimized for Cloudflare Free Tier
 // =============================================================================
-async function kvPut(env, key, value) {
+async function kvPut(env, key, value, metadata = null) {
+  const valString = typeof value === "string" ? value : JSON.stringify(value);
+  const meta = metadata || (typeof value === "object" && value !== null ? value : null);
+
   if (env && env.REVIEWS_DB && typeof env.REVIEWS_DB.put === "function") {
-    await env.REVIEWS_DB.put(key, value);
+    if (meta) {
+      await env.REVIEWS_DB.put(key, valString, { metadata: meta });
+    } else {
+      await env.REVIEWS_DB.put(key, valString);
+    }
     return true;
   }
 
@@ -239,7 +246,7 @@ async function kvPut(env, key, value) {
       "Authorization": `Bearer ${cfToken}`,
       "Content-Type": "application/json"
     },
-    body: typeof value === "string" ? value : JSON.stringify(value)
+    body: valString
   });
   return res.ok;
 }
@@ -294,14 +301,18 @@ async function kvList(env, prefix = "review_") {
 }
 
 /**
- * High-Performance Aggregated Index KV Pattern
- * Eliminates sub-request limits by serving list queries in 1 single KV read.
+ * High-Performance Aggregated Index KV Pattern (Sub-Request & Quota Optimizer)
+ * Resolves list queries in 1 single KV read using reviews:_index / inquiries:_index.
  */
 async function kvGetAll(env, prefix) {
-  const indexKey = `_idx_${prefix}`;
+  const primaryIndexKey = prefix === "review_" ? "reviews:_index" : (prefix === "inquiry_" ? "inquiries:_index" : `_idx_${prefix}`);
+  const fallbackIndexKey = `_idx_${prefix}`;
 
   // 1. Try reading pre-aggregated index key (Single Sub-Request)
-  const indexRaw = await kvGet(env, indexKey);
+  let indexRaw = await kvGet(env, primaryIndexKey);
+  if (!indexRaw && primaryIndexKey !== fallbackIndexKey) {
+    indexRaw = await kvGet(env, fallbackIndexKey);
+  }
   if (indexRaw) {
     try {
       const indexList = JSON.parse(indexRaw);
@@ -311,13 +322,25 @@ async function kvGetAll(env, prefix) {
     } catch (e) {}
   }
 
-  // 2. Cold start fallback: scan keys and compile the index
+  // 2. High-Performance Metadata List (1 Single Request)
   const keys = await kvList(env, prefix);
   if (!keys || keys.length === 0) return [];
 
-  const itemKeys = keys.filter(k => !k.name.startsWith("_idx_")).slice(0, 60);
+  const itemKeys = keys.filter(k => k.name !== primaryIndexKey && k.name !== fallbackIndexKey && !k.name.startsWith("_idx_") && !k.name.endsWith(":_index"));
+
+  // Check if KV keys have metadata embedded
+  const hasMetadata = itemKeys.some(k => k.metadata && typeof k.metadata === "object");
+  if (hasMetadata) {
+    const listFromMeta = itemKeys.map(k => k.metadata).filter(Boolean);
+    if (listFromMeta.length > 0) {
+      await kvPut(env, primaryIndexKey, JSON.stringify(listFromMeta));
+      return listFromMeta;
+    }
+  }
+
+  // 3. Cold start fallback: scan keys and compile the index
   const results = await Promise.all(
-    itemKeys.map(async (k) => {
+    itemKeys.slice(0, 50).map(async (k) => {
       const raw = await kvGet(env, k.name);
       if (!raw) return null;
       try {
@@ -335,7 +358,7 @@ async function kvGetAll(env, prefix) {
 
   // Persist aggregated index for all future single-request reads
   if (validResults.length > 0) {
-    await kvPut(env, indexKey, JSON.stringify(validResults));
+    await kvPut(env, primaryIndexKey, JSON.stringify(validResults));
   }
 
   return validResults;
@@ -343,9 +366,14 @@ async function kvGetAll(env, prefix) {
 
 async function updateKvIndex(env, prefix, itemOrId, action = "upsert") {
   try {
-    const indexKey = `_idx_${prefix}`;
+    const primaryIndexKey = prefix === "review_" ? "reviews:_index" : (prefix === "inquiry_" ? "inquiries:_index" : `_idx_${prefix}`);
+    const fallbackIndexKey = `_idx_${prefix}`;
+
     let list = [];
-    const indexRaw = await kvGet(env, indexKey);
+    let indexRaw = await kvGet(env, primaryIndexKey);
+    if (!indexRaw && primaryIndexKey !== fallbackIndexKey) {
+      indexRaw = await kvGet(env, fallbackIndexKey);
+    }
     if (indexRaw) {
       try {
         const parsed = JSON.parse(indexRaw);
@@ -368,7 +396,11 @@ async function updateKvIndex(env, prefix, itemOrId, action = "upsert") {
       }
     }
 
-    await kvPut(env, indexKey, JSON.stringify(list));
+    const payload = JSON.stringify(list);
+    await kvPut(env, primaryIndexKey, payload);
+    if (primaryIndexKey !== fallbackIndexKey) {
+      await kvPut(env, fallbackIndexKey, payload);
+    }
   } catch (err) {
     console.error(`KV index synchronization warning for ${prefix}:`, err);
   }
@@ -424,7 +456,7 @@ export default {
     }
 
     if (request.method === "OPTIONS") {
-      return new Response(null, { status: 204, headers: getCorsHeaders(request) });
+      return new Response(null, { status: 204, headers: getCorsHeaders(request, env) });
     }
 
     const botToken = env?.BOT_TOKEN || "";
@@ -774,6 +806,7 @@ export default {
           review.updated_at = new Date().toISOString();
 
           await kvPut(env, `review_${id}`, JSON.stringify(review));
+          await updateKvIndex(env, "review_", review, "upsert");
 
           const modStatus = review.moderation_status;
           const visStatus = review.visibility;
