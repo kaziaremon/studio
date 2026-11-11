@@ -28,22 +28,26 @@
   --brand-glow: rgba(8, 127, 112, 0.25);
   --brand-gold-glow: rgba(221, 185, 47, 0.4);
 
-  /* Master Liquid Glass Tokens */
-  --liquid-surface: rgba(255, 255, 255, 0.78);
-  --liquid-surface-card: rgba(255, 255, 255, 0.74);
-  --liquid-surface-elevated: rgba(255, 255, 255, 0.92);
-  --liquid-border: rgba(255, 255, 255, 0.88);
-  --liquid-border-subtle: rgba(227, 233, 239, 0.85);
-  --liquid-shadow-sm: 0 2px 10px 0 rgba(20, 125, 100, 0.04);
-  --liquid-shadow-md: 0 10px 30px -4px rgba(23, 43, 54, 0.07), 0 4px 12px -2px rgba(20, 125, 100, 0.03);
-  --liquid-shadow-lg: 0 20px 45px -8px rgba(23, 43, 54, 0.12), 0 8px 20px -4px rgba(20, 125, 100, 0.05);
-  --liquid-blur: blur(20px);
-  --liquid-specular: inset 0 1px 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 1px 0 rgba(227, 233, 239, 0.45);
+  /* iOS Spring Physics & Motion Curves */
+  --ios-spring: cubic-bezier(0.32, 0.72, 0, 1);
+  --ios-spring-smooth: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Master Apple Liquid Glass Specular Tokens */
+  --liquid-surface: rgba(255, 255, 255, 0.72);
+  --liquid-surface-card: rgba(255, 255, 255, 0.72);
+  --liquid-surface-elevated: rgba(255, 255, 255, 0.85);
+  --liquid-border: rgba(255, 255, 255, 0.65);
+  --liquid-border-subtle: rgba(255, 255, 255, 0.5);
+  --liquid-shadow-sm: 0 2px 10px 0 rgba(15, 23, 42, 0.03);
+  --liquid-shadow-md: inset 0 1px 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 1px 0 rgba(255, 255, 255, 0.3), 0 12px 32px -8px rgba(15, 23, 42, 0.05);
+  --liquid-shadow-lg: inset 0 1px 1px 0 rgba(255, 255, 255, 1), 0 20px 40px -12px rgba(15, 23, 42, 0.08);
+  --liquid-blur: blur(24px) saturate(190%);
+  --liquid-specular: inset 0 1px 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 1px 0 rgba(255, 255, 255, 0.3), 0 12px 32px -8px rgba(15, 23, 42, 0.05);
   
   /* Backward-compatible legacy tokens */
-  --glass-bg: rgba(255, 255, 255, 0.74);
-  --glass-border: rgba(255, 255, 255, 0.88);
-  --glass-shadow: 0 8px 30px rgba(23, 43, 54, 0.06);
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.65);
+  --glass-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 1px 0 rgba(255, 255, 255, 0.3), 0 12px 32px -8px rgba(15, 23, 42, 0.05);
 }
 
 /* Base Universal Resets & Strict Viewport / Overflow Control */
@@ -204,62 +208,70 @@ h1, h2, h3, h4, h5, h6, .font-heading {
    ========================================================================= */
 
 
-/* Master Liquid Glass Architecture */
-.liquid-glass-card {
+/* Master Apple Liquid Glass Architecture (Optical Refinement) */
+.glass-card,
+.panel-surface,
+.liquid-glass-card,
+.liquid-glass-panel,
+.whiz-card-surface {
   background: var(--liquid-surface-card) !important;
   backdrop-filter: var(--liquid-blur) !important;
   -webkit-backdrop-filter: var(--liquid-blur) !important;
   border: 1px solid var(--liquid-border) !important;
-  box-shadow: var(--liquid-shadow-md), var(--liquid-specular) !important;
+  box-shadow: var(--liquid-specular) !important;
   border-radius: 1.25rem !important;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  transition: transform 0.35s var(--ios-spring), background 0.35s var(--ios-spring), box-shadow 0.35s var(--ios-spring), border-color 0.35s var(--ios-spring) !important;
   box-sizing: border-box;
 }
 
 @media (min-width: 640px) {
-  .liquid-glass-card {
+  .glass-card,
+  .panel-surface,
+  .liquid-glass-card,
+  .liquid-glass-panel,
+  .whiz-card-surface {
     border-radius: 1.5rem !important;
   }
 }
 
-.liquid-glass-card:hover, .liquid-glass-card-hover:hover {
-  background: rgba(255, 255, 255, 0.88) !important;
-  border-color: rgba(20, 125, 100, 0.35) !important;
-  box-shadow: var(--liquid-shadow-lg), 0 0 0 1px rgba(20, 125, 100, 0.15), inset 0 1px 2px 0 rgba(255, 255, 255, 1) !important;
-  transform: translateY(-2px) !important;
-}
-
-.liquid-glass-panel {
-  background: var(--liquid-surface) !important;
-  backdrop-filter: var(--liquid-blur) !important;
-  -webkit-backdrop-filter: var(--liquid-blur) !important;
-  border: 1px solid var(--liquid-border) !important;
-  box-shadow: var(--liquid-shadow-sm), inset 0 1px 1px 0 rgba(255, 255, 255, 0.95) !important;
-  border-radius: 1.25rem !important;
+/* Organic Card Micro-Hover */
+.glass-card:hover,
+.panel-surface:hover,
+.liquid-glass-card:hover,
+.liquid-glass-card-hover:hover,
+.whiz-card-surface:hover,
+[id^="kpiCard"]:hover,
+[data-client-tab]:hover,
+.whiz-card-hover:hover {
+  transform: translateY(-2px) scale(1.004) !important;
+  background: var(--liquid-surface-elevated) !important;
+  border-color: rgba(255, 255, 255, 0.85) !important;
+  box-shadow: var(--liquid-shadow-lg) !important;
 }
 
 .liquid-glass-sidebar {
-  background: rgba(255, 255, 255, 0.82) !important;
-  backdrop-filter: blur(24px) !important;
-  -webkit-backdrop-filter: blur(24px) !important;
-  border-right: 1px solid rgba(227, 233, 239, 0.85) !important;
-  box-shadow: 4px 0 24px -4px rgba(23, 43, 54, 0.04) !important;
+  background: rgba(255, 255, 255, 0.72) !important;
+  backdrop-filter: var(--liquid-blur) !important;
+  -webkit-backdrop-filter: var(--liquid-blur) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.65) !important;
+  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 1px 0 rgba(255, 255, 255, 0.3), 4px 0 24px -4px rgba(15, 23, 42, 0.04) !important;
 }
 
-.liquid-glass-header {
-  background: rgba(255, 255, 255, 0.85) !important;
-  backdrop-filter: blur(20px) !important;
-  -webkit-backdrop-filter: blur(20px) !important;
-  border-bottom: 1px solid rgba(227, 233, 239, 0.85) !important;
-  box-shadow: 0 4px 20px -2px rgba(23, 43, 54, 0.03) !important;
+.liquid-glass-header,
+.glass-nav {
+  background: rgba(255, 255, 255, 0.72) !important;
+  backdrop-filter: var(--liquid-blur) !important;
+  -webkit-backdrop-filter: var(--liquid-blur) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.65) !important;
+  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 1px 0 rgba(255, 255, 255, 0.3), 0 4px 20px -2px rgba(15, 23, 42, 0.03) !important;
 }
 
 .liquid-glass-bottom-bar {
-  background: rgba(255, 255, 255, 0.94) !important;
-  backdrop-filter: blur(24px) !important;
-  -webkit-backdrop-filter: blur(24px) !important;
-  border-top: 1px solid rgba(227, 233, 239, 0.85) !important;
-  box-shadow: 0 -4px 20px -2px rgba(23, 43, 54, 0.05) !important;
+  background: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: var(--liquid-blur) !important;
+  -webkit-backdrop-filter: var(--liquid-blur) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.65) !important;
+  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 1px 0 rgba(255, 255, 255, 0.3), 0 -4px 20px -2px rgba(15, 23, 42, 0.05) !important;
 }
 
 .liquid-glass-nav-active {
@@ -576,9 +588,8 @@ select.glass-input option:hover {
 }
 
 /* =========================================================================
-   UNIVERSAL MODERN SCROLLBAR MASTER SYSTEM (GLOBAL ANTI-CLIPPING)
-   Applies sleek, non-intrusive 6px brand scrollbars across all viewports
-   and guarantees thumbs stay strictly inside container bounding boxes.
+   CUSTOM FROSTED GLASS SCROLLBAR (APPLE / iOS REFINEMENT)
+   Ultra-thin 5px rounded semi-transparent frosted scrollbar
    ========================================================================= */
 
 /* 1. Standards-compliant engines (Firefox & modern browsers) */
@@ -589,7 +600,7 @@ body,
 *::before,
 *::after {
   scrollbar-width: thin !important;
-  scrollbar-color: rgba(8, 127, 112, 0.32) transparent !important;
+  scrollbar-color: rgba(148, 163, 184, 0.35) transparent !important;
 }
 
 /* 2. WebKit / Blink engines (Chrome, Edge, Safari, iOS/Android WebViews) */
@@ -597,8 +608,8 @@ body,
 html::-webkit-scrollbar,
 body::-webkit-scrollbar,
 *::-webkit-scrollbar {
-  width: 6px !important;
-  height: 6px !important;
+  width: 5px !important;
+  height: 5px !important;
 }
 
 ::-webkit-scrollbar-track,
@@ -606,7 +617,6 @@ html::-webkit-scrollbar-track,
 body::-webkit-scrollbar-track,
 *::-webkit-scrollbar-track {
   background: transparent !important;
-  border-radius: 10px !important;
 }
 
 ::-webkit-scrollbar-track-piece,
@@ -620,26 +630,26 @@ body::-webkit-scrollbar-track-piece,
 html::-webkit-scrollbar-thumb,
 body::-webkit-scrollbar-thumb,
 *::-webkit-scrollbar-thumb {
-  background-color: rgba(8, 127, 112, 0.32) !important;
-  border-radius: 10px !important;
+  background-color: rgba(148, 163, 184, 0.35) !important;
+  border-radius: 9999px !important;
   border: 1px solid transparent !important;
   background-clip: padding-box !important;
   min-height: 24px !important;
-  transition: background-color 0.15s ease-in-out !important;
+  transition: background-color 0.2s var(--ios-spring) !important;
 }
 
 ::-webkit-scrollbar-thumb:hover,
 html::-webkit-scrollbar-thumb:hover,
 body::-webkit-scrollbar-thumb:hover,
 *::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(8, 127, 112, 0.65) !important;
+  background-color: rgba(100, 116, 139, 0.55) !important;
 }
 
 ::-webkit-scrollbar-thumb:active,
 html::-webkit-scrollbar-thumb:active,
 body::-webkit-scrollbar-thumb:active,
 *::-webkit-scrollbar-thumb:active {
-  background-color: rgba(8, 127, 112, 0.85) !important;
+  background-color: rgba(100, 116, 139, 0.75) !important;
 }
 
 ::-webkit-scrollbar-corner,
@@ -670,17 +680,97 @@ body::-webkit-scrollbar-corner,
   border-radius: inherit;
 }
 
-/* Global Floating Modal Card Architecture */
+/* Global Floating Modal Card Architecture (Apple Liquid Sheet) */
 .whiz-floating-modal-card {
   max-height: calc(100dvh - 3rem) !important;
   overflow: hidden !important;
   border-radius: 1.5rem !important;
   clip-path: inset(0 round 1.5rem);
+  background: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(24px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(190%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.75) !important;
+  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 1px 0 rgba(255, 255, 255, 0.3), 0 24px 48px -12px rgba(15, 23, 42, 0.12) !important;
 }
 @media (min-width: 640px) {
   .whiz-floating-modal-card {
     max-height: calc(100dvh - 4.5rem) !important;
   }
+}
+
+/* =============================================================================
+   iOS SPRING PHYSICS & FLUID INTERACTION SYSTEM
+   ============================================================================= */
+
+/* Global Spring Easing across interactive elements */
+button,
+a,
+input,
+select,
+textarea,
+.nav-link,
+.whiz-dock-item,
+.whiz-modal-close-btn,
+.glass-select-trigger,
+.glass-select-menu,
+[data-dash-tab],
+[data-client-tab],
+[data-kpi-nav] {
+  transition-timing-function: var(--ios-spring) !important;
+}
+
+/* Interactive Button Feedback (Active Press - Apple Haptic Feel) */
+button:active:not(:disabled),
+a.btn:active,
+.btn-liquid-primary:active,
+.btn-gold-action:active,
+.btn-glass-primary:active,
+.whiz-dock-item:active,
+.whiz-modal-close-btn:active,
+[role="button"]:active {
+  transform: scale(0.97) !important;
+  transition: transform 0.1s ease-out !important;
+}
+
+/* Fluid Sheet & Modal Presentation with iOS Spring Physics */
+@keyframes iosBackdropFadeIn {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(24px) saturate(190%);
+    -webkit-backdrop-filter: blur(24px) saturate(190%);
+  }
+}
+
+@keyframes iosSheetEnter {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.975);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modal-backdrop,
+div[id^="modal"]:not(.hidden),
+div[id$="Modal"]:not(.hidden) {
+  animation: iosBackdropFadeIn 0.32s var(--ios-spring) forwards;
+}
+
+.whiz-floating-modal-card,
+div[id^="modal"]:not(.hidden) > .whiz-floating-modal-card,
+div[id^="modal"]:not(.hidden) > div:not(.modal-backdrop),
+div[id$="Modal"]:not(.hidden) > .whiz-floating-modal-card,
+div[id$="Modal"]:not(.hidden) > div:not(.modal-backdrop),
+.modal-content {
+  animation: iosSheetEnter 0.36s var(--ios-spring) forwards;
+  will-change: transform, opacity;
 }
 
 /* Eradicate default OS select styling & dark-mode cursive menus globally */
