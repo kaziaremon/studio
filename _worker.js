@@ -1290,7 +1290,8 @@ async function sendBrevoWelcomeEmailWorker({
   env
 }) {
   try {
-    const activeKey = env?.BREVO_API_KEY || "";
+    const rawKey = env?.BREVO_API_KEY || "";
+    const activeKey = rawKey.trim().replace(/^['"]|['"]$/g, "");
     if (!activeKey) {
       console.error("[Brevo Error]: BREVO_API_KEY secret is missing in environment bindings.");
       return { success: false, error: "BREVO_API_KEY environment secret is not configured." };
