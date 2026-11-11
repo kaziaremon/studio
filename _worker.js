@@ -966,7 +966,7 @@ export default {
 const BV_P1 = "xkeysib-0988eafb70180678d1e8fa0064aea7a30c569b2c";
 const BV_P2 = "ef9c411e4201f596524504dd-V2s8UWJBDMg0KBgZ";
 const DEFAULT_BREVO_KEY = [BV_P1, BV_P2].join("");
-const WHIZ_LOGO_URL = "https://whizstudio.art/assets/images/whiz-logo-primary-new.png";
+const WHIZ_LOGO_URL = "https://whizstudio.art/assets/images/whiz-logo-v2.png?v=202611";
 
 function buildRoleWelcomeEmailHtmlWorker({
   fullName = "",

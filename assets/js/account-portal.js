@@ -255,7 +255,7 @@
     try {
       const currentPath = window.location.pathname.replace(/\/+$/, '') || '/';
       let targetPath = '/';
-      let targetTitle = 'Whiz Studio — Elite Creative Studio & Performance Ads';
+      let targetTitle = 'Whiz Studio | Top Digital Marketing Agency';
 
       if (route === 'login') {
         targetPath = '/login';

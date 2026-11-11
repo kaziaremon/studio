@@ -23,8 +23,8 @@
     try {
       if (typeof window !== 'undefined' && window.location) {
         const candidates = [
-          '/assets/images/whiz-logo-primary-new.png?v=20261109_canon',
-          '/whiz-logo-primary-new.png?v=20261109_canon',
+          '/assets/images/whiz-logo-v2.png?v=202611',
+          '/whiz-logo-v2.png?v=202611',
           '/assets/images/logo.png?v=20261109_canon',
           '/logo.png?v=20261109_canon'
         ];
@@ -42,10 +42,10 @@
         try {
           const fs = await import('fs');
           const paths = [
-            'G:/Whiz Studio/assets/images/whiz-logo-primary-new.png',
-            'G:/Whiz Studio/public/assets/images/whiz-logo-primary-new.png',
-            'G:/Whiz Studio/whiz-logo-primary-new.png',
-            'G:/Whiz Studio/public/whiz-logo-primary-new.png',
+            'G:/Whiz Studio/assets/images/whiz-logo-v2.png?v=202611',
+            'G:/Whiz Studio/public/assets/images/whiz-logo-v2.png?v=202611',
+            'G:/Whiz Studio/whiz-logo-v2.png?v=202611',
+            'G:/Whiz Studio/public/whiz-logo-v2.png?v=202611',
             'G:/Whiz Studio/assets/images/logo.png'
           ];
           for (const p of paths) {

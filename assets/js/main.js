@@ -1188,8 +1188,8 @@ function initNavigation() {
   // Dedicated pages /about and /articles are routed natively to their standalone pages
   // ---------------------------------------------------------------------------
   const routeMap = {
-    '/': { id: 'home', title: 'Whiz Studio — Elite Creative Studio & Performance Ads' },
-    '/home': { id: 'home', title: 'Whiz Studio — Elite Creative Studio & Performance Ads' },
+    '/': { id: 'home', title: 'Whiz Studio | Top Digital Marketing Agency' },
+    '/home': { id: 'home', title: 'Whiz Studio | Top Digital Marketing Agency' },
     '/services': { id: 'services', title: 'Services & Solutions | Whiz Studio' },
     '/pricing': { id: 'pricing', title: 'Pricing & Packages | Whiz Studio' },
     '/reviews': { id: 'testimonials', title: 'Client Reviews & Testimonials | Whiz Studio' },
@@ -1199,7 +1199,7 @@ function initNavigation() {
   };
 
   const sectionToRoute = {
-    'home': { path: '/', title: 'Whiz Studio — Elite Creative Studio & Performance Ads' },
+    'home': { path: '/', title: 'Whiz Studio | Top Digital Marketing Agency' },
     'services': { path: '/services', title: 'Services & Solutions | Whiz Studio' },
     'pricing': { path: '/pricing', title: 'Pricing & Packages | Whiz Studio' },
     'testimonials': { path: '/reviews', title: 'Client Reviews & Testimonials | Whiz Studio' },
@@ -1257,7 +1257,7 @@ function initNavigation() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       setActiveNavLink('home');
       if (updateUrl) {
-        updateRoutePath('/', 'Whiz Studio — Elite Creative Studio & Performance Ads', push);
+        updateRoutePath('/', 'Whiz Studio | Top Digital Marketing Agency', push);
       }
       return;
     }
@@ -1398,7 +1398,7 @@ function initNavigation() {
         setActiveNavLink('home');
         const currentPath = window.location.pathname.replace(/\/+$/, '') || '/';
         if (currentPath !== '/' && currentPath !== '/login' && currentPath !== '/register') {
-          updateRoutePath('/', 'Whiz Studio — Elite Creative Studio & Performance Ads', false);
+          updateRoutePath('/', 'Whiz Studio | Top Digital Marketing Agency', false);
         }
         return;
       }
