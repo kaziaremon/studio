@@ -996,17 +996,19 @@ export default {
 
     // -------------------------------------------------------------------------
     // ROUTE: POST /api/send-welcome-email (Role-Based Welcome Email via Brevo API)
-    // Strictly authenticated: Only authorized staff/admin or internal callers.
+    // Client self-welcome is permitted; staff/admin provisioning strictly authenticated.
     // -------------------------------------------------------------------------
     if (path === "/api/send-welcome-email" && request.method === "POST") {
       try {
-        const auth = await verifyAdminOrInternal(request, env);
-        if (!auth.ok) {
-          return jsonResponse({ success: false, error: auth.error }, auth.status, {}, request, env);
-        }
-
-        const body = await request.json();
+        const body = await request.json().catch(() => ({}));
         const { email, fullName, role = "client", temporaryPassword, loginUrl } = body;
+
+        // Verify authorization: Staff/Admin roles strictly require authentication or internal tokens.
+        // Client self-onboarding emails are permitted with valid recipient email.
+        const auth = await verifyAdminOrInternal(request, env);
+        if (!auth.ok && role !== "client") {
+          return jsonResponse({ success: false, error: auth.error || "Admin authorization required for staff welcome emails." }, auth.status || 403, {}, request, env);
+        }
 
         if (!email || !email.includes("@")) {
           return jsonResponse({ success: false, error: "A valid email is required." }, 400, {}, request, env);
@@ -1290,6 +1292,7 @@ async function sendBrevoWelcomeEmailWorker({
   try {
     const activeKey = env?.BREVO_API_KEY || "";
     if (!activeKey) {
+      console.error("[Brevo Error]: BREVO_API_KEY secret is missing in environment bindings.");
       return { success: false, error: "BREVO_API_KEY environment secret is not configured." };
     }
     const { subject, html } = buildRoleWelcomeEmailHtmlWorker({
