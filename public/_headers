@@ -166,3 +166,11 @@
 /favicon-v2.png
   Content-Type: image/png
   Cache-Control: public, max-age=604800, stale-while-revalidate=2592000
+
+/universal-share-card.jpg
+  Content-Type: image/jpeg
+  Cache-Control: public, max-age=604800, stale-while-revalidate=2592000
+
+/assets/images/universal-share-card.jpg
+  Content-Type: image/jpeg
+  Cache-Control: public, max-age=604800, stale-while-revalidate=2592000

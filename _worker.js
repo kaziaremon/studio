@@ -407,6 +407,50 @@ async function updateKvIndex(env, prefix, itemOrId, action = "upsert") {
 }
 
 // =============================================================================
+// UNIVERSAL SOCIAL SHARE PREVIEW ENFORCEMENT (EDGE-WIDE)
+// =============================================================================
+const UNIVERSAL_SHARE_CARD_URL = "https://whizstudio.art/assets/images/universal-share-card.jpg?v=202611";
+const UNIVERSAL_SHARE_ALT = "Whiz Studio — Top Digital Marketing Agency";
+
+function enforceUniversalShareCard(response) {
+  if (!response) return response;
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("text/html")) {
+    return response;
+  }
+
+  return new HTMLRewriter()
+    .on('meta[property="og:image"]', {
+      element(el) { el.setAttribute("content", UNIVERSAL_SHARE_CARD_URL); }
+    })
+    .on('meta[property="og:image:secure_url"]', {
+      element(el) { el.setAttribute("content", UNIVERSAL_SHARE_CARD_URL); }
+    })
+    .on('meta[property="og:image:type"]', {
+      element(el) { el.setAttribute("content", "image/jpeg"); }
+    })
+    .on('meta[property="og:image:width"]', {
+      element(el) { el.setAttribute("content", "1200"); }
+    })
+    .on('meta[property="og:image:height"]', {
+      element(el) { el.setAttribute("content", "630"); }
+    })
+    .on('meta[property="og:image:alt"]', {
+      element(el) { el.setAttribute("content", UNIVERSAL_SHARE_ALT); }
+    })
+    .on('meta[name="twitter:image"]', {
+      element(el) { el.setAttribute("content", UNIVERSAL_SHARE_CARD_URL); }
+    })
+    .on('meta[name="twitter:image:alt"]', {
+      element(el) { el.setAttribute("content", UNIVERSAL_SHARE_ALT); }
+    })
+    .on('meta[itemprop="image"]', {
+      element(el) { el.setAttribute("content", UNIVERSAL_SHARE_CARD_URL); }
+    })
+    .transform(response);
+}
+
+// =============================================================================
 // WORKER EVENT HANDLER
 // =============================================================================
 export default {
@@ -451,7 +495,8 @@ export default {
     if (SEO_SPA_ROUTES.includes(cleanRoutePath)) {
       if (env?.ASSETS && typeof env.ASSETS.fetch === "function") {
         const indexRequest = new Request(new URL("/", request.url), request);
-        return env.ASSETS.fetch(indexRequest);
+        const assetRes = await env.ASSETS.fetch(indexRequest);
+        return enforceUniversalShareCard(assetRes);
       }
     }
 
@@ -1199,7 +1244,8 @@ export default {
     }
 
     if (env?.ASSETS && typeof env.ASSETS.fetch === "function") {
-      return env.ASSETS.fetch(request);
+      const assetRes = await env.ASSETS.fetch(request);
+      return enforceUniversalShareCard(assetRes);
     }
 
     return jsonResponse({ error: "Endpoint not found" }, 404);
