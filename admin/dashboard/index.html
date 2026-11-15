@@ -733,6 +733,13 @@
   </style>
 </head>
 <body class="h-full bg-[#F8FAFC] text-slate-800 flex flex-col font-sans antialiased selection:bg-[#147D64] selection:text-white">
+  <!-- Ambient Liquid Glass Gradient Backdrop Orbs (Subtle Refraction Base) -->
+  <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden" aria-hidden="true">
+    <div class="absolute -top-[15%] left-[5%] w-[45vw] h-[45vw] max-w-[650px] max-h-[650px] rounded-full bg-gradient-to-br from-[#087F70]/8 to-[#10B981]/4 blur-3xl transform-gpu"></div>
+    <div class="absolute top-[35%] -right-[10%] w-[50vw] h-[50vw] max-w-[700px] max-h-[700px] rounded-full bg-gradient-to-bl from-[#DDB92F]/6 to-[#087F70]/5 blur-3xl transform-gpu"></div>
+    <div class="absolute -bottom-[10%] left-[20%] w-[40vw] h-[40vw] max-w-[600px] max-h-[600px] rounded-full bg-gradient-to-tr from-[#0EA5E9]/5 to-transparent blur-3xl transform-gpu"></div>
+  </div>
+
 
   <!-- =========================================================================
        1. AUTH PRELOADER & GUARD (SHOWS UNTIL CLERK AUTH VERIFIES ROLE)
@@ -1125,7 +1132,7 @@
     <div class="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
       
       <!-- WORKSPACE TOP HEADER (Refined Glassmorphism, Minimalist Icons, Perfectly Centered Logo) -->
-      <header class="h-16 sticky top-0 border-b border-slate-200/60 bg-white/80 backdrop-blur-md backdrop-saturate-150 shrink-0 flex items-center justify-between px-3 sm:px-6 z-30 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] relative">
+      <header class="h-16 sticky top-0 sm:top-2 mx-0 sm:mx-4 my-0 sm:my-2 rounded-none sm:rounded-2xl border border-white/75 bg-white/75 backdrop-blur-2xl backdrop-saturate-190 shrink-0 flex items-center justify-between px-3 sm:px-6 z-30 shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.95),0_8px_24px_-4px_rgba(15,23,42,0.04)] relative floating-capsule-header transition-all">
         <!-- Left: Mobile Menu Toggle / Desktop Context Breadcrumb -->
         <div class="flex items-center space-x-2 sm:space-x-3">
           <!-- Mobile Drawer Hamburger Toggle (Clean Standalone Borderless Icon with Soft Circular Tap Highlight) -->
@@ -1139,6 +1146,15 @@
               <span class="text-[#74817D] font-medium">Console</span>
               <i class="fa-solid fa-chevron-right text-[10px] text-slate-300"></i>
               <span id="breadcrumbActiveTab" class="font-bold text-[#202D2A]">Overview &amp; KPIs</span>
+            </div>
+          </div>
+
+          <!-- Quick Filter / Instant Search (Ctrl+K) -->
+          <div class="hidden md:flex items-center ml-3 relative">
+            <div class="relative flex items-center">
+              <i class="fa-solid fa-magnifying-glass absolute left-3 text-slate-400 text-xs pointer-events-none"></i>
+              <input type="text" class="quick-filter-input pl-8 pr-12 py-1.5 text-xs text-slate-800 placeholder-slate-400 w-44 lg:w-56" placeholder="Quick filter...">
+              <span class="absolute right-2 px-1.5 py-0.5 rounded text-[10px] font-mono text-slate-400 bg-slate-100 border border-slate-200 pointer-events-none">Ctrl+K</span>
             </div>
           </div>
         </div>
@@ -5628,5 +5644,7 @@
   <!-- Reusable Liquid Glass Popover Portal Root -->
   <div id="whizGlassSelectPortal" class="whiz-glass-portal-root" aria-hidden="true" style="position:fixed;top:0;left:0;width:100%;height:0;overflow:visible;pointer-events:none;z-index:10005;"></div>
 
+  <!-- Liquid Glass Modernization Engine -->
+  <script src="/assets/js/whiz-modern-ui.js?v=202611"></script>
 </body>
 </html>

@@ -1081,11 +1081,35 @@ export default {
         const body = await request.json().catch(() => ({}));
         const { email, fullName, role = "client", temporaryPassword, loginUrl } = body;
 
+        const clientIp = request.headers.get("cf-connecting-ip") || request.headers.get("x-real-ip") || "127.0.0.1";
+        const origin = request.headers.get("origin") || "";
+        const referer = request.headers.get("referer") || "";
+        const isTrustedOrigin = 
+          origin.startsWith("https://whizstudio.art") || 
+          origin.startsWith("https://portal.whizstudio.art") || 
+          origin.startsWith("https://admin.whizstudio.art") ||
+          origin.endsWith(".whizstudio.pages.dev") ||
+          referer.startsWith("https://whizstudio.art") ||
+          referer.startsWith("https://portal.whizstudio.art") ||
+          referer.startsWith("https://admin.whizstudio.art");
+
         // Verify authorization: Staff/Admin roles strictly require authentication or internal tokens.
-        // Client self-onboarding emails are permitted with valid recipient email.
         const auth = await verifyAdminOrInternal(request, env);
-        if (!auth.ok && role !== "client") {
-          return jsonResponse({ success: false, error: auth.error || "Admin authorization required for staff welcome emails." }, auth.status || 403, {}, request, env);
+        if (!auth.ok) {
+          if (role !== "client") {
+            return jsonResponse({ success: false, error: auth.error || "Admin authorization required for staff welcome emails." }, auth.status || 403, {}, request, env);
+          }
+          // Client self-onboarding: strictly enforce trusted origin & rate limiting (3 requests / 10 min)
+          if (!isTrustedOrigin && env?.ENVIRONMENT === "production") {
+            return jsonResponse({ success: false, error: "Forbidden: Unauthorized cross-origin request." }, 403, {}, request, env);
+          }
+          const rl = checkWorkerRateLimit(`welcome-email:${clientIp}`, 3, 600000);
+          if (!rl.allowed) {
+            return jsonResponse({
+              success: false,
+              error: `Email dispatch rate limit exceeded. Please wait ${rl.waitSec} seconds before requesting another email.`
+            }, 429, {}, request, env);
+          }
         }
 
         if (!email || !email.includes("@")) {
