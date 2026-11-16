@@ -169,17 +169,32 @@ async function kvList(env, prefix = "review_") {
 const HOMEPAGE_HEAD_INJECTION = `<meta name="application-name" content="Whiz Studio">
 <meta property="og:site_name" content="Whiz Studio">
 <link rel="canonical" href="https://whizstudio.art/">
-<link rel="icon" type="image/png" sizes="192x192" href="https://whizstudio.art/whiz-icon-v4.png">
-<link rel="shortcut icon" href="https://whizstudio.art/whiz-icon-v4.png">
-<link rel="apple-touch-icon" href="https://whizstudio.art/whiz-icon-v4.png">
+<link rel="icon" type="image/png" sizes="192x192" href="https://whizstudio.art/whiz-icon-v5.png?v=20261116">
+<link rel="shortcut icon" href="https://whizstudio.art/whiz-icon-v5.png?v=20261116">
+<link rel="apple-touch-icon" href="https://whizstudio.art/whiz-icon-v5.png?v=20261116">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@type": "WebSite",
-  "@id": "https://whizstudio.art/#website",
-  "name": "Whiz Studio",
-  "alternateName": ["WhizStudio", "Whiz Studio Digital Marketing Agency"],
-  "url": "https://whizstudio.art/"
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://whizstudio.art/#website",
+      "name": "Whiz Studio",
+      "alternateName": ["WhizStudio", "Whiz Studio Digital Marketing Agency"],
+      "url": "https://whizstudio.art/",
+      "datePublished": "2026-11-16",
+      "dateModified": "2026-11-16"
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://whizstudio.art/#organization",
+      "name": "Whiz Studio",
+      "url": "https://whizstudio.art/",
+      "logo": "https://whizstudio.art/whiz-icon-v5.png?v=20261116",
+      "datePublished": "2026-11-16",
+      "dateModified": "2026-11-16"
+    }
+  ]
 }
 </script>`;
 
@@ -199,7 +214,7 @@ function transformHomepageHtml(response) {
     .on('link[rel="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"]', {
       element(el) {
         const href = el.getAttribute("href") || "";
-        if (!href.includes("whiz-icon-v4.png")) {
+        if (!href.includes("whiz-icon-v5.png")) {
           el.remove();
         }
       }
@@ -281,7 +296,7 @@ export default {
     }
 
     // 3. Favicon & Direct Icon Delivery (HTTP 200, Zero Redirects, 24-Hour Cache)
-    if (path === "/favicon.ico" || path === "/whiz-icon-v4.png" || path === "/icon-whiz-2026.png" || path === "/whiz-favicon-2026.png") {
+    if (path === "/favicon.ico" || path === "/whiz-icon-v5.png" || path === "/whiz-icon-v4.png" || path === "/icon-whiz-2026.png" || path === "/whiz-favicon-2026.png") {
       const contentType = path === "/favicon.ico" ? "image/x-icon" : "image/png";
       return new Response(getIconV4Bytes(), {
         status: 200,
