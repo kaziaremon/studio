@@ -53,9 +53,15 @@
 /terms.html
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 
+/icon-whiz-2026.png
+  Content-Type: image/png
+  Cache-Control: public, max-age=3600, must-revalidate
+  Access-Control-Allow-Origin: *
+
 /favicon.ico
   Content-Type: image/x-icon
-  Cache-Control: public, max-age=604800, stale-while-revalidate=2592000
+  Cache-Control: public, max-age=3600, must-revalidate
+  Access-Control-Allow-Origin: *
 
 /favicon.png
   Content-Type: image/png

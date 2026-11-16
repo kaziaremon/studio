@@ -26,18 +26,11 @@
   <link rel="alternate" hreflang="bn" href="https://whizstudio.art/bn/">
   <link rel="alternate" hreflang="x-default" href="https://whizstudio.art/">
 
-  <!-- Favicon & Device Touch Icons (Strict Absolute HTTPS URLs: Multiple of 48px prioritized for Google Search) -->
-  <link rel="icon" type="image/png" sizes="48x48" href="https://whizstudio.art/favicon-48x48.png?v=202611">
-  <link rel="icon" type="image/png" sizes="96x96" href="https://whizstudio.art/favicon-96x96.png?v=202611">
-  <link rel="icon" type="image/png" sizes="144x144" href="https://whizstudio.art/favicon-144x144.png?v=202611">
-  <link rel="icon" type="image/x-icon" href="https://whizstudio.art/favicon.ico?v=202611">
-  <link rel="shortcut icon" href="https://whizstudio.art/favicon.ico?v=202611">
-  <link rel="icon" type="image/png" sizes="32x32" href="https://whizstudio.art/favicon-32x32.png?v=202611">
-  <link rel="icon" type="image/png" sizes="16x16" href="https://whizstudio.art/favicon-16x16.png?v=202611">
-  <link rel="icon" type="image/png" sizes="192x192" href="https://whizstudio.art/android-chrome-192x192.png?v=202611">
-  <link rel="icon" type="image/png" sizes="512x512" href="https://whizstudio.art/android-chrome-512x512.png?v=202611">
-  <link rel="icon" type="image/png" href="https://whizstudio.art/favicon.png?v=202611">
-  <link rel="apple-touch-icon" sizes="180x180" href="https://whizstudio.art/apple-touch-icon.png?v=202611">
+    <!-- Favicon & Device Touch Icons -->
+  <link rel="icon" type="image/png" sizes="192x192" href="https://whizstudio.art/icon-whiz-2026.png">
+  <link rel="icon" type="image/x-icon" href="https://whizstudio.art/favicon.ico">
+  <link rel="shortcut icon" href="https://whizstudio.art/icon-whiz-2026.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="https://whizstudio.art/icon-whiz-2026.png">
   <link rel="manifest" href="https://whizstudio.art/site.webmanifest">
   <meta name="application-name" content="Whiz Studio" />
   <meta name="apple-mobile-web-app-title" content="Whiz Studio" />
@@ -89,25 +82,7 @@
   <meta itemprop="image" content="https://whizstudio.art/assets/images/universal-share-card.jpg?v=202611">
   <meta name="twitter:image:alt" content="Whiz Studio — Top Digital Marketing Agency">
 
-    <!-- Google Search Site Name - Standalone WebSite Schema -->
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    "@id": "https://whizstudio.art/#website",
-    "name": "Whiz Studio",
-    "alternateName": ["WhizStudio", "Whiz Studio Digital"],
-    "url": "https://whizstudio.art/",
-    "publisher": {
-      "@type": "Organization",
-      "name": "Whiz Studio",
-      "url": "https://whizstudio.art/",
-      "logo": "https://whizstudio.art/assets/images/favicon-v2.png"
-    }
-  }
-  </script>
-
-  <!-- Single Authoritative JSON-LD Schema Graph (WebSite, Organization, LocalBusiness & Services) -->
+      <!-- Single Authoritative JSON-LD Schema Graph (WebSite, Organization, LocalBusiness & Services) -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -115,18 +90,31 @@
       {
         "@type": "WebSite",
         "@id": "https://whizstudio.art/#website",
-        "url": "https://whizstudio.art/",
         "name": "Whiz Studio",
-        "alternateName": "WHIZ Studio",
-        "description": "Whiz Studio is a top digital marketing agency specializing in Social Media Optimization (SMO), Facebook Ads management, and data-driven growth.",
-        "inLanguage": "en-US",
+        "alternateName": ["WhizStudio", "Whiz Studio Agency"],
+        "url": "https://whizstudio.art/",
         "publisher": {
           "@id": "https://whizstudio.art/#organization"
         }
       },
       {
-        "@type": ["Organization", "LocalBusiness", "ProfessionalService"],
+        "@type": "Organization",
         "@id": "https://whizstudio.art/#organization",
+        "name": "Whiz Studio",
+        "url": "https://whizstudio.art/",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://whizstudio.art/icon-whiz-2026.png",
+          "width": 192,
+          "height": 192
+        }
+      },
+      {
+        "@type": ["LocalBusiness", "ProfessionalService"],
+        "@id": "https://whizstudio.art/#localbusiness",
+        "parentOrganization": {
+          "@id": "https://whizstudio.art/#organization"
+        },
         "name": "Whiz Studio",
         "legalName": "Whiz Studio",
         "alternateName": "WHIZ Studio",
@@ -134,17 +122,17 @@
         "logo": {
           "@type": "ImageObject",
           "@id": "https://whizstudio.art/#logo",
-          "url": "https://whizstudio.art/assets/images/whiz-logo-v2.png?v=202611",
-          "contentUrl": "https://whizstudio.art/assets/images/whiz-logo-v2.png?v=202611",
+          "url": "https://whizstudio.art/icon-whiz-2026.png",
+          "contentUrl": "https://whizstudio.art/icon-whiz-2026.png",
           "caption": "Whiz Studio Official Brand Logo",
-          "width": 512,
-          "height": 512
+          "width": 192,
+          "height": 192
         },
-        "image": "https://whizstudio.art/assets/images/whiz-logo-v2.png?v=202611",
+        "image": "https://whizstudio.art/icon-whiz-2026.png",
         "description": "Whiz Studio is a top digital marketing agency providing data-driven Facebook Ads management, Social Media Optimization (SMO), B2B lead generation, and platform management.",
         "telephone": "+8801815127022",
         "email": "info@whizstudio.art",
-        "priceRange": "$$",
+        "priceRange": "$",
         "currenciesAccepted": "USD, BDT, EUR, GBP",
         "paymentAccepted": "Cash, Credit Card, Bank Transfer",
         "address": {

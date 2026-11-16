@@ -475,6 +475,26 @@ export default {
       return Response.redirect(canonicalUrl.toString(), 301);
     }
 
+    // Favicon & Googlebot-Favicon Direct Delivery (HTTP 200, Zero Redirects)
+    if (path === "/favicon.ico" || path === "/icon-whiz-2026.png") {
+      if (env?.ASSETS && typeof env.ASSETS.fetch === "function") {
+        const assetRes = await env.ASSETS.fetch(request);
+        const headers = new Headers(assetRes.headers);
+        headers.set("Cache-Control", "public, max-age=3600, must-revalidate");
+        headers.set("Access-Control-Allow-Origin", "*");
+        if (path === "/favicon.ico") {
+          headers.set("Content-Type", "image/x-icon");
+        } else if (path === "/icon-whiz-2026.png") {
+          headers.set("Content-Type", "image/png");
+        }
+        return new Response(assetRes.body, {
+          status: assetRes.status,
+          statusText: assetRes.statusText,
+          headers
+        });
+      }
+    }
+
     // Admin Workspace Redirection
     if (path === "/admin" || path === "/admin/") {
       return Response.redirect(`${url.origin}/admin/dashboard`, 302);
