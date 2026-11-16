@@ -913,7 +913,7 @@
     const quotes = [
       "Ready to crush your agency goals today?",
       "Here is a snapshot of your operational momentum today.",
-      "Let's scale your agency to new heights with seamless execution.",
+      "Let's scale your agency to new heights with direct execution.",
       "Operational excellence and client success start with daily focus.",
       "enabling enterprise growth with real-time clarity and precision.",
       "Every milestone achieved is another step towards scaling mastery."

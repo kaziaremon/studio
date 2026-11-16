@@ -1673,7 +1673,7 @@ function buildRoleWelcomeEmailHtmlWorker({
             </td>
           </tr>
 
-          <!-- Seamless Call-To-Action Button (Zero Escaping Errors) -->
+          <!-- direct Call-To-Action Button (Zero Escaping Errors) -->
           <tr>
             <td style="padding-bottom: 36px;">
               <a href="${cleanLoginUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: #00A86B; color: #FFFFFF; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 600; text-decoration: none; padding: 12px 28px; border-radius: 6px; letter-spacing: -0.2px;">${ctaButtonText}</a>

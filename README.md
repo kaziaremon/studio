@@ -1,8 +1,8 @@
-# Whiz Studio — Elite Digital Platform Management & High-Velocity Marketing Agency
+# Whiz Studio  -  Elite Digital Platform Management & High-Velocity Marketing Agency
 
 ![Whiz Studio Logo](public/assets/images/logo.png)
 
-A world-class, ultra-modern web application engineered for **Whiz Studio** — a premier digital platform management and multi-channel marketing agency.
+A world-class, ultra-modern web application engineered for **Whiz Studio**  -  a premier digital platform management and multi-channel marketing agency.
 
 ---
 
@@ -140,4 +140,4 @@ Whiz Studio/
 
 ---
 
-Built for **Whiz Studio** — Ready for custom domain connection and immediate deployment.
+Built for **Whiz Studio**  -  Ready for custom domain connection and immediate deployment.
