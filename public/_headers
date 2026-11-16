@@ -63,9 +63,14 @@
   Cache-Control: public, max-age=3600, must-revalidate
   Access-Control-Allow-Origin: *
 
+/whiz-icon-v4.png
+  Content-Type: image/png
+  Cache-Control: public, max-age=86400
+  Access-Control-Allow-Origin: *
+
 /favicon.ico
   Content-Type: image/x-icon
-  Cache-Control: public, max-age=3600, must-revalidate
+  Cache-Control: public, max-age=86400
   Access-Control-Allow-Origin: *
 
 /favicon.png

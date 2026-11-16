@@ -169,7 +169,7 @@ async function verifyAdminOrInternal(request, env) {
           }
         }
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 
   WORKER_AUTH_CACHE.set(token, { isAuthorized: false, expiresAt: now + 15000, user: null });
@@ -207,7 +207,7 @@ async function verifyDiscordSignature(rawBody, signature, timestamp, publicKey) 
       encoder.encode(timestamp + rawBody)
     );
     if (verified) return true;
-  } catch (err) {}
+  } catch (err) { }
 
   try {
     const encoder = new TextEncoder();
@@ -319,7 +319,7 @@ async function kvGetAll(env, prefix) {
       if (Array.isArray(indexList)) {
         return indexList;
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 
   // 2. High-Performance Metadata List (1 Single Request)
@@ -378,7 +378,7 @@ async function updateKvIndex(env, prefix, itemOrId, action = "upsert") {
       try {
         const parsed = JSON.parse(indexRaw);
         if (Array.isArray(parsed)) list = parsed;
-      } catch (e) {}
+      } catch (e) { }
     }
 
     if (action === "delete") {
@@ -453,46 +453,136 @@ function enforceUniversalShareCard(response) {
 // =============================================================================
 // WORKER EVENT HANDLER
 // =============================================================================
+
+// =============================================================================
+// HARD-INJECT WebSite SCHEMA & FAVICON VIA CLOUDFLARE HTMLRewriter
+// =============================================================================
+const HOMEPAGE_HEAD_INJECTION = `<meta name="application-name" content="Whiz Studio">
+<meta property="og:site_name" content="Whiz Studio">
+<link rel="canonical" href="https://whizstudio.art/">
+<link rel="icon" type="image/png" sizes="192x192" href="https://whizstudio.art/whiz-icon-v4.png">
+<link rel="shortcut icon" href="https://whizstudio.art/whiz-icon-v4.png">
+<link rel="apple-touch-icon" href="https://whizstudio.art/whiz-icon-v4.png">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "@id": "https://whizstudio.art/#website",
+  "name": "Whiz Studio",
+  "alternateName": ["WhizStudio", "whizstudio.art"],
+  "url": "https://whizstudio.art/"
+}
+</script>`;
+
+function transformHomepageHtml(response) {
+  if (!response) return response;
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("text/html")) {
+    return response;
+  }
+
+  return new HTMLRewriter()
+    .on("head", {
+      element(el) {
+        el.prepend(`\n${HOMEPAGE_HEAD_INJECTION}\n`, { html: true });
+      }
+    })
+    .on('link[rel="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"]', {
+      element(el) {
+        const href = el.getAttribute("href") || "";
+        if (!href.includes("whiz-icon-v4.png")) {
+          el.remove();
+        }
+      }
+    })
+    .on('link[rel="canonical"]', {
+      element(el) {
+        // Strip duplicate static canonical tags downstream
+        el.remove();
+      }
+    })
+    .on('meta[name="application-name"], meta[property="og:site_name"]', {
+      element(el) {
+        // Strip duplicate static meta tags downstream so the top prepended one is sole source of truth
+        el.remove();
+      }
+    })
+    .on('meta[property="og:image"]', {
+      element(el) { el.setAttribute("content", UNIVERSAL_SHARE_CARD_URL); }
+    })
+    .on('meta[property="og:image:secure_url"]', {
+      element(el) { el.setAttribute("content", UNIVERSAL_SHARE_CARD_URL); }
+    })
+    .on('meta[property="og:image:type"]', {
+      element(el) { el.setAttribute("content", "image/jpeg"); }
+    })
+    .on('meta[property="og:image:width"]', {
+      element(el) { el.setAttribute("content", "1200"); }
+    })
+    .on('meta[property="og:image:height"]', {
+      element(el) { el.setAttribute("content", "630"); }
+    })
+    .on('meta[property="og:image:alt"]', {
+      element(el) { el.setAttribute("content", UNIVERSAL_SHARE_ALT); }
+    })
+    .on('meta[name="twitter:image"]', {
+      element(el) { el.setAttribute("content", UNIVERSAL_SHARE_CARD_URL); }
+    })
+    .on('meta[name="twitter:image:alt"]', {
+      element(el) { el.setAttribute("content", UNIVERSAL_SHARE_ALT); }
+    })
+    .on('meta[itemprop="image"]', {
+      element(el) { el.setAttribute("content", UNIVERSAL_SHARE_CARD_URL); }
+    })
+    .transform(response);
+}
+
+// -----------------------------------------------------------------------------
+// IN-MEMORY HIGH-SPEED ICON DELIVERY (192x192 White Square Icon)
+// -----------------------------------------------------------------------------
+const WHIZ_ICON_V4_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAMAAABlApw1AAADAFBMVEX////buj/WqSzYsDT//v7buT7bu0LZsTX///7UoincvEPbu0DUoSjZszjewUn9/v3Voyrdv0jbuD7btTrbvUTdw0zYsjfXqi3//vzfwkrYrzPWqC3YsTbexE38+/XVpCv59Ofu36fcu0nZrDH69+zYrzTauD3dqyzXpi3XqzDVqC/ToSnw4bbdwEn9/PnlyYD59eTcvkTWpCrw4K7dwkvVpSnmvj379/TVpizgvUDoyEfmwUD0687atzzcuU3etzrjsS/YsjjluTX8+vL//f3ozVDetTbgqSrdwE7q2Zb8/f3rykcCbV7ewUrcvkrz6cHXrTLev0TmxUXZpSnbu0PatkLhx2XTnyjYrUPZrUHewlLeszToyk3dw0vbuETUoivoxEEBcmLiry7kz3Xu4K3jw2vz5sn17dPctEjo0JXatTvmuzb69urktC/hwUbgujzery8BaVvkuzrjyWzhsS/XqTDcqCrky3IEfGbirCv8+vX38N3gvGDhvmX279jz6M2oy8W61dDhxGParTTq15P8+fDaqCzdsD7y48L48uHn1arjxHbnzIvW5eLt3LH3+fjr16Hjxk3RrTZUlo3u2qkusHMUcmTXoifu9fO038ro8O7ozoH06MhnopmEtK3D3NbitjSw0ctfnJTNpS8pgHTasEpHkYbs3J7fw0vq05rlyXo/vnYOkm3v0VDryETl0X3k7OvK39vx5r6hx8E6iX7x9vXYqj7hxlnc8eT068rx4rzkvj7hvU3fuVfzyD/z5rrq04lDxnlzypoffG7ft0oHg2jJnisOimohnm+dwr19r6eLu7De6ehBuHMzpXSY07fVpTT79/Detk7btlXPoSaTu7VPpY5yqKBlx5C75M3F59RDrYPQ5t3btl7rsy3UtT7suS/10Ee73dJLtn/n9+4lj3r1omHwxcbqnaHt3qOs4MJhtpX128X2xKOXy6vUeIjQVmbxuWtypp3t2NmMxJTxybT73d3usLPAlZHQxabPio/aZW/mtrue0r7fszjUqTCdeKKLAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAO+0lEQVR42u2aaVRUV7bHN1DARaAYBCkopLBBQIoqBTGNEl5kUExZIAKKRmwooqJ0QTDMIjJoGBoQlSE4IEKj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";
+let cachedIconBytes = null;
+function getIconV4Bytes() {
+  if (!cachedIconBytes) {
+    const binary = atob(WHIZ_ICON_V4_BASE64);
+    const len = binary.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    cachedIconBytes = bytes;
+  }
+  return cachedIconBytes;
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const path = url.pathname;
 
+        // 1. FORCE 301 CANONICAL REDIRECT (www -> non-www) AT THE VERY TOP OF _worker.js
+    if (url.hostname === "www.whizstudio.art") {
+      return Response.redirect(`https://whizstudio.art${url.pathname}${url.search}`, 301);
+    }
+
     // Strict HTTPS Enforcement (301 Permanent Redirect)
     const proto = request.headers.get("x-forwarded-proto") || (url.protocol ? url.protocol.replace(":", "") : "https");
     if (proto === "http" || url.protocol === "http:") {
-      const secureUrl = new URL(request.url);
-      secureUrl.protocol = "https:";
-      secureUrl.hostname = "whizstudio.art";
-      return Response.redirect(secureUrl.toString(), 301);
+      return Response.redirect(`https://whizstudio.art${url.pathname}${url.search}`, 301);
     }
 
-    // Canonical Apex Domain Enforcement (301 Permanent Redirect)
-    if (url.hostname === "www.whizstudio.art") {
-      const canonicalUrl = new URL(request.url);
-      canonicalUrl.protocol = "https:";
-      canonicalUrl.hostname = "whizstudio.art";
-      return Response.redirect(canonicalUrl.toString(), 301);
-    }
-
-    // Favicon & Googlebot-Favicon Direct Delivery (HTTP 200, Zero Redirects)
-    if (path === "/favicon.ico" || path === "/icon-whiz-2026.png" || path === "/whiz-favicon-2026.png") {
-      if (env?.ASSETS && typeof env.ASSETS.fetch === "function") {
-        const assetRes = await env.ASSETS.fetch(request);
-        const headers = new Headers(assetRes.headers);
-        headers.set("Cache-Control", "public, max-age=3600, must-revalidate");
-        headers.set("Access-Control-Allow-Origin", "*");
-        if (path === "/favicon.ico") {
-          headers.set("Content-Type", "image/x-icon");
-        } else if (path === "/icon-whiz-2026.png" || path === "/whiz-favicon-2026.png") {
-          headers.set("Content-Type", "image/png");
+    // 3. Favicon & Direct Icon Delivery (HTTP 200, Zero Redirects, 24-Hour Cache)
+    if (path === "/favicon.ico" || path === "/whiz-icon-v4.png" || path === "/icon-whiz-2026.png" || path === "/whiz-favicon-2026.png") {
+      const contentType = path === "/favicon.ico" ? "image/x-icon" : "image/png";
+      return new Response(getIconV4Bytes(), {
+        status: 200,
+        headers: {
+          "Content-Type": contentType,
+          "Cache-Control": "public, max-age=86400",
+          "Access-Control-Allow-Origin": "*",
+          "X-Content-Type-Options": "nosniff"
         }
-        return new Response(assetRes.body, {
-          status: assetRes.status,
-          statusText: assetRes.statusText,
-          headers
-        });
-      }
+      });
     }
 
     // Admin Workspace Redirection
@@ -676,7 +766,7 @@ export default {
             try {
               const body = await request.json();
               id = body?.id;
-            } catch (e) {}
+            } catch (e) { }
           }
           if (!id) return jsonResponse({ success: false, error: "Review ID required" }, 400, {}, request, env);
 
@@ -749,7 +839,7 @@ export default {
             try {
               const body = await request.json();
               id = body?.id;
-            } catch (e) {}
+            } catch (e) { }
           }
           if (!id) return jsonResponse({ success: false, error: "Inquiry ID required" }, 400, {}, request, env);
 
@@ -827,7 +917,7 @@ export default {
           if (existingRaw) {
             try {
               review = JSON.parse(existingRaw);
-            } catch (e) {}
+            } catch (e) { }
           }
 
           if (!review) {
@@ -1104,9 +1194,9 @@ export default {
         const clientIp = request.headers.get("cf-connecting-ip") || request.headers.get("x-real-ip") || "127.0.0.1";
         const origin = request.headers.get("origin") || "";
         const referer = request.headers.get("referer") || "";
-        const isTrustedOrigin = 
-          origin.startsWith("https://whizstudio.art") || 
-          origin.startsWith("https://portal.whizstudio.art") || 
+        const isTrustedOrigin =
+          origin.startsWith("https://whizstudio.art") ||
+          origin.startsWith("https://portal.whizstudio.art") ||
           origin.startsWith("https://admin.whizstudio.art") ||
           origin.endsWith(".whizstudio.pages.dev") ||
           referer.startsWith("https://whizstudio.art") ||
@@ -1289,6 +1379,9 @@ export default {
 
     if (env?.ASSETS && typeof env.ASSETS.fetch === "function") {
       const assetRes = await env.ASSETS.fetch(request);
+      if (path === "/" || path === "/index.html" || path === "") {
+        return transformHomepageHtml(assetRes);
+      }
       return enforceUniversalShareCard(assetRes);
     }
 
