@@ -255,7 +255,7 @@ export default {
           content: "⭐ **NEW CLIENT TESTIMONIAL AWAITING MODERATION**",
           embeds: [
             {
-              title: "⭐ Client Review Submission — Whiz Studio",
+              title: "⭐ Client Review Submission  -  Whiz Studio",
               description: "A new client review has been submitted and is awaiting team moderation.\n\n### 🛡️ Moderation Actions:\nUse the action buttons below to accept, decline, or toggle website display.",
               color: 0xF59E0B,
               fields: [
@@ -466,7 +466,7 @@ export default {
           const starString = "★".repeat(review.rating || 5) + "☆".repeat(5 - (review.rating || 5)) + ` (${review.rating || 5} / 5 Stars)`;
 
           const updatedEmbed = {
-            title: "⭐ Client Review Control Panel — Whiz Studio",
+            title: "⭐ Client Review Control Panel  -  Whiz Studio",
             description: `Permanent moderation control panel for Whiz Studio.\n\n${statusDetail}\n👤 **Last Updated By:** **@${moderatorName}**`,
             color: embedColor,
             fields: [
@@ -596,7 +596,7 @@ export default {
           content: "🚨 **NEW INBOUND CLIENT INQUIRY FROM WHIZSTUDIO.ART**",
           embeds: [
             {
-              title: "📬 Strategic Growth Inquiry — Whiz Studio",
+              title: "📬 Strategic Growth Inquiry  -  Whiz Studio",
               description: "A new prospective business client has submitted their requirements via the official contact form.",
               color: 0x00A86B,
               fields: [

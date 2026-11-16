@@ -410,7 +410,7 @@ async function updateKvIndex(env, prefix, itemOrId, action = "upsert") {
 // UNIVERSAL SOCIAL SHARE PREVIEW ENFORCEMENT (EDGE-WIDE)
 // =============================================================================
 const UNIVERSAL_SHARE_CARD_URL = "https://whizstudio.art/assets/images/universal-share-card.jpg?v=202611";
-const UNIVERSAL_SHARE_ALT = "Whiz Studio — Top Digital Marketing Agency";
+const UNIVERSAL_SHARE_ALT = "Whiz Studio  -  Top Digital Marketing Agency";
 
 function enforceUniversalShareCard(response) {
   if (!response) return response;
@@ -476,7 +476,7 @@ export default {
     }
 
     // Favicon & Googlebot-Favicon Direct Delivery (HTTP 200, Zero Redirects)
-    if (path === "/favicon.ico" || path === "/icon-whiz-2026.png") {
+    if (path === "/favicon.ico" || path === "/icon-whiz-2026.png" || path === "/whiz-favicon-2026.png") {
       if (env?.ASSETS && typeof env.ASSETS.fetch === "function") {
         const assetRes = await env.ASSETS.fetch(request);
         const headers = new Headers(assetRes.headers);
@@ -484,7 +484,7 @@ export default {
         headers.set("Access-Control-Allow-Origin", "*");
         if (path === "/favicon.ico") {
           headers.set("Content-Type", "image/x-icon");
-        } else if (path === "/icon-whiz-2026.png") {
+        } else if (path === "/icon-whiz-2026.png" || path === "/whiz-favicon-2026.png") {
           headers.set("Content-Type", "image/png");
         }
         return new Response(assetRes.body, {
@@ -903,7 +903,7 @@ export default {
           const starString = "★".repeat(review.rating || 5) + "☆".repeat(5 - (review.rating || 5)) + ` (${review.rating || 5} / 5 Stars)`;
 
           const updatedEmbed = {
-            title: "⭐ Client Review Control Panel — Whiz Studio",
+            title: "⭐ Client Review Control Panel  -  Whiz Studio",
             description: `Permanent moderation control panel for Whiz Studio.\n\n${statusDetail}\n👤 **Last Updated By:** **@${moderatorName}**`,
             color: embedColor,
             fields: [
@@ -1322,7 +1322,7 @@ function buildRoleWelcomeEmailHtmlWorker({
 
   const greeting = fullName ? `Hello ${fullName},` : "Hello,";
   const mainCopy = isInternal
-    ? "Welcome to the team! We are thrilled to embark on this journey together. Your contribution, expertise, and dedication will directly shape our agency's future and elevate the results we deliver. Let's build something extraordinary together."
+    ? "Welcome to the team! We are thrilled to embark on this journey together. Your contribution, expertise, and dedication will directly shape our agency's future and improve the results we deliver. Let's build something extraordinary together."
     : "We are thrilled to partner with you and ready to scale your digital presence. Your client portal is active, giving you complete visibility into your projects, deliverables, and performance analytics.";
 
   const signoffHtml = isInternal

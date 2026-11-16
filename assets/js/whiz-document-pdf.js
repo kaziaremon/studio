@@ -1,11 +1,11 @@
 /**
- * WHIZ STUDIO — OFFICIAL CORPORATE PDF INVOICE ENGINE
+ * WHIZ STUDIO  -  OFFICIAL CORPORATE PDF INVOICE ENGINE
  * "High-End Corporate Designer Stationery & Precision Vector A4 Layout"
  *
  * Architecture & Design Blueprint:
- * 1. Color Palette: Extracted from official brand logo — Deep Teal / Green (#087F70), Rich Gold (#C69A40), Dark Charcoal (#172B36)
+ * 1. Color Palette: Extracted from official brand logo  -  Deep Teal / Green (#087F70), Rich Gold (#C69A40), Dark Charcoal (#172B36)
  * 2. Header Section: Crisp official logo top-left; modern bold 'INVOICE' top-right underlined with subtle Gold accent bar
- * 3. Grid Structure: Clean 2-column grid — 'Billed To' (Client CIF details) on left, 'Invoice Details' (No, Date, Status, Currency) on right
+ * 3. Grid Structure: Clean 2-column grid  -  'Billed To' (Client CIF details) on left, 'Invoice Details' (No, Date, Status, Currency) on right
  * 4. Background Watermark: Horizontally and vertically centered watermark of official logo set to 5% opacity (opacity: 0.05)
  * 5. Premium Table Styling: Solid Teal/Deep Green (#087F70) header row with crisp white text; subtle light-gray borders (#E2E8F0); spacious padding (12px feel, 32 pt row height)
  * 6. Distinct Totals Block: Lightly tinted Teal rounded container (#EBF5F3) at bottom right wrapping Subtotal, Amount Received, and Grand Total

@@ -193,7 +193,7 @@ export async function onRequestPost({ request, env }) {
     const starString = "★".repeat(review.rating || 5) + "☆".repeat(5 - (review.rating || 5)) + ` (${review.rating || 5} / 5 Stars)`;
 
     const updatedEmbed = {
-      title: "⭐ Client Review Control Panel — Whiz Studio",
+      title: "⭐ Client Review Control Panel  -  Whiz Studio",
       description: `Permanent moderation control panel for Whiz Studio.\n\n${statusDetail}\n👤 **Last Updated By:** **@${moderatorName}**`,
       color: embedColor,
       fields: [

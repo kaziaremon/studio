@@ -1,5 +1,5 @@
 /**
- * WHIZ STUDIO — FULL-PAGE CLIENT DASHBOARD CONTROLLER (v2 Enterprise)
+ * WHIZ STUDIO  -  FULL-PAGE CLIENT DASHBOARD CONTROLLER (v2 Enterprise)
  * Technology: Clerk JS SDK, Cloudflare D1 Backend API, Tailwind CSS, pdf-lib
  * Route: /client/dashboard | Free-Tier Architecture ($0 Cost)
  */
@@ -525,7 +525,7 @@
             payment_method: rec.payment_method || 'Online',
             paymentMethod: rec.payment_method || 'Online',
             payment_reference: rec.payment_reference || 'LEDGER-VERIFIED',
-            invoice_number: invNum || '—',
+            invoice_number: invNum || ' - ',
             created_at: rec.created_at || new Date().toISOString()
           });
         }
@@ -580,7 +580,7 @@
             payment_method: rec.payment_method || 'Online',
             paymentMethod: rec.payment_method || 'Online',
             payment_reference: rec.payment_reference || 'LEDGER-VERIFIED',
-            invoice_number: invNum || '—',
+            invoice_number: invNum || ' - ',
             created_at: rec.created_at || new Date().toISOString()
           });
         }
@@ -635,12 +635,12 @@
 
     // Rotating customer-friendly welcoming subtext
     const customerQuotes = [
-      "Welcome back! Let’s achieve great things today.",
+      "Welcome back! Let's achieve great things today.",
       "Here is the latest snapshot of your project's progress.",
       "Ready to see your business grow?",
       "Your campaigns and operational deliverables are running smoothly.",
       "Review your live milestones, verified deliverables, and invoices below.",
-      "Empowering your brand with dedicated digital growth and execution."
+      "enabling your brand with dedicated digital growth and execution."
     ];
 
     if (subtextEl) {
@@ -2195,7 +2195,7 @@
     document.getElementById('btnRequestProfileUpdate')?.addEventListener('click', () => {
       switchTab('support');
       const subj = document.querySelector('#supportRequestForm input[name="subject"]');
-      if (subj) subj.value = `Profile Information Update Request — ${state.currentUser?.fullName || 'Client'}`;
+      if (subj) subj.value = `Profile Information Update Request  -  ${state.currentUser?.fullName || 'Client'}`;
       const msg = document.querySelector('#supportRequestForm textarea[name="message"]');
       if (msg) {
         msg.value = 'Please describe the profile fields you would like our administrative team to update (e.g. phone, address, legal entity, tax ID):\n\n- Field to update:\n- New value:\n- Reason:';

@@ -1,5 +1,5 @@
 /**
- * WHIZ STUDIO — SUPER ADMIN CONSOLE JAVASCRIPT CONTROLLER (v5.0 Enterprise)
+ * WHIZ STUDIO  -  SUPER ADMIN CONSOLE JAVASCRIPT CONTROLLER (v5.0 Enterprise)
  * Technology: Clerk JS SDK, Cloudflare Workers API, Cloudflare D1 Database, pdf-lib
  * Architecture: 100% Free Plan ($0 / month) | Cloudflare Authoritative Engine
  */
@@ -103,7 +103,7 @@
   function isCurrentUserOwner() {
     if (!state.adminProfile) return false;
     const role = (state.adminProfile.role || '').toLowerCase();
-    // Non-owner roles are NEVER elevated regardless of email or flags
+    // Non-owner roles are NEVER improved regardless of email or flags
     if (role === 'accountant' || role === 'accounts' || role === 'employee' || role === 'client') {
       return false;
     }
@@ -386,7 +386,7 @@
   function resolveUserIdentity(rawIdOrEmail, roleHint = '') {
     if (!rawIdOrEmail) return roleHint === 'target' ? 'Authorized Account' : 'System';
     const clean = String(rawIdOrEmail).trim();
-    if (!clean || clean === '—' || clean === 'null' || clean === 'undefined') {
+    if (!clean || clean === ' - ' || clean === 'null' || clean === 'undefined') {
       return roleHint === 'target' ? 'Authorized Account' : 'System';
     }
 
@@ -915,7 +915,7 @@
       "Here is a snapshot of your operational momentum today.",
       "Let's scale your agency to new heights with seamless execution.",
       "Operational excellence and client success start with daily focus.",
-      "Empowering enterprise growth with real-time clarity and precision.",
+      "enabling enterprise growth with real-time clarity and precision.",
       "Every milestone achieved is another step towards scaling mastery."
     ];
 
@@ -1909,7 +1909,7 @@
             <div class="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 space-y-1.5">
               <div class="flex items-center gap-2 font-bold text-emerald-800">
                 <i class="fa-solid fa-shield-check text-emerald-600 text-sm"></i>
-                <span>0 Live Dependencies — Safe to Permanently Purge</span>
+                <span>0 Live Dependencies  -  Safe to Permanently Purge</span>
               </div>
               <p class="text-[11px] text-emerald-800/90 leading-relaxed">
                 No active client contracts, projects, or invoices reference this service.
@@ -2538,7 +2538,7 @@
   
   // =========================================================================
   // WHIZ LIQUID GLASS SELECTION MENU CONTROLLER (PORTAL POPOVER ARCHITECTURE)
-  // Renders dropdown popovers into an elevated body portal to prevent clipping
+  // Renders dropdown popovers into an improved body portal to prevent clipping
   // and stacking-context collision from parent cards or sibling containers.
   // =========================================================================
   let _activeGlassMenu = null;
@@ -3417,7 +3417,7 @@
     tbody.innerHTML = history.map(h => {
       const dateStr = h.action_timestamp ? new Date(h.action_timestamp).toLocaleString('en-US', {
         month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
-      }) : '—';
+      }) : ' - ';
       const target = resolveUserIdentity(h.target_email || h.target_name || h.target_clerk_user_id || h.user_name || 'User', 'target');
       const actor = resolveUserIdentity(h.actor_email || h.actor_name || h.actor_clerk_user_id || h.changed_by, 'actor');
       const prevRole = h.previous_role || 'client';
@@ -3450,7 +3450,7 @@
       cardsContainer.innerHTML = history.map(h => {
         const dateStr = h.action_timestamp ? new Date(h.action_timestamp).toLocaleString('en-US', {
           month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
-        }) : '—';
+        }) : ' - ';
         const target = resolveUserIdentity(h.target_email || h.target_name || h.target_clerk_user_id || h.user_name || 'User', 'target');
         const actor = resolveUserIdentity(h.actor_email || h.actor_name || h.actor_clerk_user_id || h.changed_by, 'actor');
         const prevRole = h.previous_role || 'client';
@@ -3593,7 +3593,7 @@
           const email = a.approved_email || a.email || '';
           const isOwner = email.toLowerCase() === 'kaziaremon@gmail.com';
           const name = a.full_name || (isOwner ? 'Kazi Emon' : 'Administrator');
-          const clerkId = a.clerk_user_id || '—';
+          const clerkId = a.clerk_user_id || ' - ';
           const isSelf = isCurrentAdminSelf(a);
 
           const isActualOwner = email.toLowerCase() === 'kaziaremon@gmail.com' || a.role === 'owner' || a.role === 'super_admin';
@@ -3615,7 +3615,7 @@
             <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
               <td class="px-6 py-4 font-bold text-[#172B36]">${escapeHtml(name)}</td>
               <td class="px-6 py-4 font-mono text-xs text-slate-600">${escapeHtml(email)}</td>
-              <td class="px-6 py-4 font-mono text-[11px]">${clerkId && clerkId !== '—' ? '<span class="inline-flex items-center gap-1 text-emerald-700 font-semibold text-[11px]"><i class="fa-solid fa-shield-check text-[10px]"></i> SSO Linked</span>' : '<span class="text-slate-400">Direct Pending</span>'}</td>
+              <td class="px-6 py-4 font-mono text-[11px]">${clerkId && clerkId !== ' - ' ? '<span class="inline-flex items-center gap-1 text-emerald-700 font-semibold text-[11px]"><i class="fa-solid fa-shield-check text-[10px]"></i> SSO Linked</span>' : '<span class="text-slate-400">Direct Pending</span>'}</td>
               <td class="px-6 py-4">${roleBadge}</td>
               <td class="px-6 py-4 font-mono text-xs text-slate-500">${escapeHtml(activatedAt)}</td>
               <td class="px-6 py-4 text-right">${actionHtml}</td>
@@ -3825,7 +3825,7 @@
         hour: 'numeric',
         minute: '2-digit',
         hour12: true
-      }) : '—';
+      }) : ' - ';
 
       const actorEmail = resolveUserIdentity(l.user_email || l.user_id || l.actor_id || 'System', 'actor');
       let resourceInfo = '';
@@ -5486,7 +5486,7 @@
                   }
                 } else {
                   invSelect.innerHTML = '<option value="">Auto-create new invoice on commitment</option>' + invs.map(i => `
-                    <option value="${i.id}">${i.invoice_number} — Due: ${formatCurrency(i.outstanding_balance_cents || 0, i.currency || 'USD')}</option>
+                    <option value="${i.id}">${i.invoice_number}  -  Due: ${formatCurrency(i.outstanding_balance_cents || 0, i.currency || 'USD')}</option>
                   `).join('');
                   if (targetInvMenu) {
                     targetInvMenu.innerHTML = `
@@ -6312,7 +6312,7 @@
             <div class="flex items-center gap-1.5">
               ${waBtn}
               ${mailBtn}
-              <span class="text-[11px] font-mono text-slate-600">${escapeHtml(phone || '—')}</span>
+              <span class="text-[11px] font-mono text-slate-600">${escapeHtml(phone || ' - ')}</span>
             </div>
           </td>
           <td class="py-3.5 px-4 whitespace-nowrap">
