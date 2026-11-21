@@ -283,7 +283,8 @@
     selectedOrganizationId: null,
     completionChart: null,
     refreshIntervalId: null,
-    isRefreshing: false
+    isRefreshing: false,
+    clientContentFolders: []
   };
 
   async function apiFetch(endpoint, options = {}) {
@@ -313,7 +314,15 @@
     }
 
     try {
-      const response = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
+      let targetUrl = endpoint;
+      if (endpoint.startsWith('/api/')) {
+        targetUrl = (window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+          ? `https://whizstudio.art${endpoint}`
+          : endpoint;
+      } else {
+        targetUrl = `${API_BASE}${endpoint}`;
+      }
+      const response = await fetch(targetUrl, { ...options, headers });
       const data = await response.json().catch(() => ({}));
       return { ok: response.ok, status: response.status, data };
     } catch (err) {
@@ -351,7 +360,7 @@
 
   function switchTab(tabId) {
     state.activeTab = tabId;
-    const tabs = ['overview', 'services', 'tasks', 'finance', 'reviews', 'profile', 'support', 'settings'];
+    const tabs = ['overview', 'services', 'tasks', 'finance', 'reviews', 'profile', 'support', 'settings', 'content_calendar'];
     tabs.forEach(t => {
       const el = document.getElementById(`view_${t}`);
       if (el) {
@@ -400,7 +409,8 @@
       finance: 'Invoices',
       profile: 'My Profile',
       support: 'Support & Inquiries',
-      settings: 'Account Security'
+      settings: 'Account Security',
+      content_calendar: 'Content Calendar'
     };
 
     const breadcrumb = document.getElementById('breadcrumbActiveTab');
@@ -421,6 +431,7 @@
     }
     if (tabId === 'support') loadClientSupportTickets();
     if (tabId === 'overview') updateClientOverviewGreeting();
+    if (tabId === 'content_calendar') loadClientContentCalendar();
   }
 
   // Load All Workspace Data
@@ -2053,6 +2064,237 @@
     }).join('');
   }
 
+  // =========================================================================
+  // CLIENT CONTENT CALENDAR (READ-ONLY, TITLE-ONLY - STRICT ZERO BODY EXPOSURE)
+  // =========================================================================
+  async function loadClientContentCalendar(showToastNotice = false) {
+    const container = document.getElementById('clientContentCalContainer');
+    const refreshBtn = document.getElementById('btnRefreshClientContentCal');
+    if (refreshBtn) {
+      const icon = refreshBtn.querySelector('i');
+      if (icon) icon.classList.add('fa-spin');
+    }
+
+    const clientEmail = (
+      state.currentUser?.email ||
+      state.clientProfile?.email ||
+      window.Clerk?.user?.primaryEmailAddress?.emailAddress ||
+      ''
+    ).toLowerCase().trim();
+
+    if (!container) return;
+
+    try {
+      const queryParam = clientEmail ? `?email=${encodeURIComponent(clientEmail)}` : '';
+      const res = await apiFetch(`/api/client/content-calendar${queryParam}`);
+
+      if (res.ok && res.data?.success) {
+        state.clientContentFolders = res.data.folders || [];
+        renderClientContentCalendar();
+        if (showToastNotice) {
+          showToast('Content calendar updated.', 'success');
+        }
+      } else {
+        state.clientContentFolders = [];
+        renderClientContentCalendar();
+      }
+    } catch (err) {
+      console.error('Error loading client content calendar:', err);
+      container.innerHTML = `
+        <div class="p-8 rounded-2xl bg-white border border-[#E6ECE9] text-center text-xs text-slate-500 space-y-2">
+          <i class="fa-solid fa-triangle-exclamation text-2xl text-amber-500 block mb-1"></i>
+          <p>Unable to load content calendar at this time.</p>
+        </div>
+      `;
+    } finally {
+      if (refreshBtn) {
+        const icon = refreshBtn.querySelector('i');
+        if (icon) icon.classList.remove('fa-spin');
+      }
+    }
+  }
+
+  function renderClientContentCalendar(activeFolderId = null) {
+    const container = document.getElementById('clientContentCalContainer');
+    if (!container) return;
+
+    const folders = state.clientContentFolders || [];
+
+    // Case 1: 0 Folders (Empty State)
+    if (folders.length === 0) {
+      container.innerHTML = `
+        <div class="p-12 rounded-3xl bg-white border border-[#E6ECE9] text-center space-y-3.5 shadow-2xs">
+          <div class="w-14 h-14 rounded-2xl bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20 flex items-center justify-center mx-auto text-2xl shadow-2xs">
+            <i class="fa-solid fa-calendar-xmark"></i>
+          </div>
+          <div class="space-y-1">
+            <h4 class="font-bold text-base text-[#172B36]">No Content Calendar Published</h4>
+            <p class="text-xs text-[#74817D] max-w-sm mx-auto leading-relaxed">
+              Your content calendar has not been uploaded yet or is currently being prepared by the Whiz Studio team.
+            </p>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    // Case 2: Specific folder selected or exactly 1 folder exists
+    if (activeFolderId) {
+      const selectedFolder = folders.find(f => f.id === activeFolderId);
+      if (selectedFolder) {
+        renderSingleFolderTitleList(selectedFolder, folders.length > 1);
+        return;
+      }
+    }
+
+    if (folders.length === 1) {
+      renderSingleFolderTitleList(folders[0], false);
+      return;
+    }
+
+    // Case 3: Multiple folders (>=2 folders) - Service Folders Grid
+    container.innerHTML = `
+      <div class="space-y-5">
+        <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E6ECE9] shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h3 class="text-lg font-bold text-[#172B36] tracking-tight">Active Deliverable Retainers</h3>
+            <p class="text-xs text-[#74817D] mt-0.5">Select a service retainer below to view its scheduled publication titles.</p>
+          </div>
+          <span class="text-xs font-bold px-3 py-1.5 rounded-full bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20 shrink-0 self-start sm:self-auto">
+            ${folders.length} Service Retainers
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          ${folders.map(f => {
+            const count = (f.items || []).length;
+            const updatedDate = f.created_at ? new Date(f.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recently';
+
+            return `
+              <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E6ECE9] shadow-2xs hover:border-[#087F70]/40 hover:shadow-xs transition-all flex flex-col justify-between gap-4">
+                <div class="space-y-3">
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="w-10 h-10 rounded-2xl bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20 flex items-center justify-center text-base shrink-0 shadow-2xs">
+                      <i class="fa-solid fa-folder-closed"></i>
+                    </span>
+                    <span class="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20">
+                      ${count} Deliverable${count === 1 ? '' : 's'}
+                    </span>
+                  </div>
+
+                  <div>
+                    <h4 class="text-sm font-bold text-[#172B36] line-clamp-1">
+                      ${escapeHtml(f.service_name || 'Content Retainer')}
+                    </h4>
+                    <p class="text-xs text-[#74817D] mt-0.5">
+                      Updated ${escapeHtml(updatedDate)}
+                    </p>
+                  </div>
+                </div>
+
+                <div class="pt-3 border-t border-[#E6ECE9] flex items-center justify-between">
+                  <span class="text-[10px] font-semibold text-[#74817D]">
+                    ${escapeHtml(f.company_name || 'Client Workspace')}
+                  </span>
+                  <button type="button" class="btn-open-client-folder px-3 py-1.5 rounded-xl text-xs font-bold bg-[#087F70] text-white hover:bg-[#066155] transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs" data-folder-id="${escapeHtml(f.id)}">
+                    <span>View Calendar</span>
+                    <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                  </button>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+
+    container.querySelectorAll('.btn-open-client-folder').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const fId = btn.dataset.folderId;
+        if (fId) renderClientContentCalendar(fId);
+      });
+    });
+  }
+
+  function renderSingleFolderTitleList(folder, hasBackNav = false) {
+    const container = document.getElementById('clientContentCalContainer');
+    if (!container) return;
+
+    const items = folder.items || [];
+    const count = items.length;
+
+    container.innerHTML = `
+      <div class="space-y-5">
+        <!-- Service Header & Navigation -->
+        <div class="p-5 sm:p-6 rounded-3xl bg-white border border-[#E6ECE9] shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="space-y-1.5">
+            ${hasBackNav ? `
+              <button type="button" id="btnBackToClientFolders" class="inline-flex items-center gap-1.5 text-xs font-bold text-[#087F70] hover:text-[#066155] transition-colors cursor-pointer mb-1">
+                <i class="fa-solid fa-arrow-left text-[10px]"></i>
+                <span>Back to All Services</span>
+              </button>
+            ` : ''}
+            <div class="flex flex-wrap items-center gap-2.5">
+              <h3 class="text-lg font-bold text-[#172B36] tracking-tight">
+                ${escapeHtml(folder.service_name || 'Content Retainer')}
+              </h3>
+              <span class="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20">
+                ${count} Deliverable${count === 1 ? '' : 's'}
+              </span>
+            </div>
+            <p class="text-xs text-[#74817D]">
+              ${escapeHtml(folder.company_name || 'Client')} • Title-Only Publication Schedule
+            </p>
+          </div>
+        </div>
+
+        <!-- Titles List -->
+        ${count === 0 ? `
+          <div class="p-10 rounded-2xl bg-white border border-[#E6ECE9] text-center space-y-2">
+            <i class="fa-solid fa-file-circle-check text-2xl text-slate-300 block"></i>
+            <p class="text-xs text-[#74817D]">No content items currently scheduled for this service.</p>
+          </div>
+        ` : `
+          <div class="space-y-2.5">
+            ${items.map(it => {
+              const serial = it.serial_number || 1;
+              const title = it.title || `Content ${serial}`;
+
+              return `
+                <div class="p-4 sm:p-4.5 rounded-2xl bg-white border border-[#E6ECE9] shadow-2xs hover:border-[#087F70]/30 transition-all flex items-center justify-between gap-4">
+                  <div class="flex items-center gap-3.5 min-w-0">
+                    <span class="w-8 h-8 rounded-xl bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20 flex items-center justify-center font-extrabold text-xs shrink-0 select-none">
+                      #${serial}
+                    </span>
+                    <div class="min-w-0">
+                      <h4 class="text-xs sm:text-sm font-bold text-[#172B36] truncate leading-snug">
+                        ${escapeHtml(title)}
+                      </h4>
+                      <p class="text-[10px] text-[#74817D] mt-0.5">
+                        Scheduled Editorial Post
+                      </p>
+                    </div>
+                  </div>
+
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-[#F7FAF9] text-[#087F70] border border-[#E6ECE9] shrink-0">
+                    <i class="fa-solid fa-circle-check text-[9px] text-[#087F70]"></i>
+                    Approved Title
+                  </span>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `}
+      </div>
+    `;
+
+    if (hasBackNav) {
+      document.getElementById('btnBackToClientFolders')?.addEventListener('click', () => {
+        renderClientContentCalendar(null);
+      });
+    }
+  }
+
   function init() {
     // 1. Tab Switching Listeners (Desktop, Drawer, Bottom Bar)
     document.querySelectorAll('[data-client-tab]').forEach(btn => {
@@ -2240,6 +2482,10 @@
     document.getElementById('btnRefreshClientSupport')?.addEventListener('click', () => {
       loadClientSupportTickets();
       showToast('Support history refreshed.', 'info');
+    });
+
+    document.getElementById('btnRefreshClientContentCal')?.addEventListener('click', () => {
+      loadClientContentCalendar(true);
     });
 
     // 4. Manual Live Refresh / Sync Button

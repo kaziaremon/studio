@@ -248,6 +248,10 @@
             <i class="fa-solid fa-file-invoice text-xs w-4 text-center shrink-0 text-[#74817D] group-hover:text-[#202D2A] transition-colors"></i>
             <span class="flex-1">Invoices</span>
           </button>
+          <button type="button" data-client-tab="content_calendar" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#74817D] hover:text-[#202D2A] hover:bg-[#F7FAF9] border border-transparent transition-all text-left cursor-pointer group">
+            <i class="fa-solid fa-calendar-days text-xs w-4 text-center shrink-0 text-[#74817D] group-hover:text-[#202D2A] transition-colors"></i>
+            <span class="flex-1">Content Calendar</span>
+          </button>
         </div>
       </div>
 
@@ -332,6 +336,10 @@
             <button type="button" data-client-tab="finance" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#74817D] hover:text-[#202D2A] hover:bg-[#F7FAF9] border border-transparent transition-all duration-150 text-left cursor-pointer group">
               <i class="fa-solid fa-file-invoice text-xs w-4 text-center shrink-0 text-[#74817D] group-hover:text-[#202D2A] transition-colors"></i>
               <span class="flex-1">Invoices</span>
+            </button>
+            <button type="button" data-client-tab="content_calendar" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#74817D] hover:text-[#202D2A] hover:bg-[#F7FAF9] border border-transparent transition-all duration-150 text-left cursor-pointer group">
+              <i class="fa-solid fa-calendar-days text-xs w-4 text-center shrink-0 text-[#74817D] group-hover:text-[#202D2A] transition-colors"></i>
+              <span class="flex-1">Content Calendar</span>
             </button>
           </div>
         </div>
@@ -695,6 +703,42 @@
 
             <div id="financeFullList">
               <p class="text-xs text-[#5F7180] italic">Loading transaction history...</p>
+            </div>
+          </div>
+
+          <!-- =================================================================
+               VIEW: CONTENT CALENDAR (id="view_content_calendar")
+               Read-Only, Title-Only Schedule for Active Services
+               ================================================================= -->
+          <div id="view_content_calendar" class="hidden space-y-6">
+            <!-- Header Banner -->
+            <div class="p-6 sm:p-7 rounded-3xl bg-white border border-[#E6ECE9] shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div class="space-y-1">
+                <div class="flex items-center gap-2">
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20">
+                    <i class="fa-solid fa-calendar-check text-[9px]"></i>
+                    Editorial Deliverables
+                  </span>
+                </div>
+                <h2 class="text-xl sm:text-2xl font-bold text-[#172B36] tracking-tight">Content Calendar</h2>
+                <p class="text-xs text-[#74817D] max-w-xl">
+                  Review upcoming and scheduled content topics, titles, and publication sequences crafted for your active service retainers.
+                </p>
+              </div>
+              <div class="flex items-center gap-2 self-start sm:self-auto">
+                <button type="button" id="btnRefreshClientContentCal" class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-[#F7FAF9] hover:bg-[#EAF5F1] text-[#202D2A] hover:text-[#087F70] border border-[#E6ECE9] hover:border-[#087F70]/20 transition-all flex items-center gap-2 cursor-pointer shadow-2xs">
+                  <i class="fa-solid fa-arrows-rotate text-xs"></i>
+                  <span>Refresh</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Dynamic Content Calendar Container -->
+            <div id="clientContentCalContainer">
+              <div class="p-12 rounded-3xl bg-white border border-[#E6ECE9] text-center space-y-3">
+                <i class="fa-solid fa-spinner fa-spin text-2xl text-[#087F70]"></i>
+                <p class="text-xs text-[#74817D]">Loading content calendar...</p>
+              </div>
             </div>
           </div>
 

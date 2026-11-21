@@ -75,7 +75,12 @@
     adminReviews: [],
     activeInquiryFilter: 'all',
     activeReviewFilter: 'all',
-    activeInquiryModalId: null
+    activeInquiryModalId: null,
+    contentCalendarFolders: [],
+    contentCalendarMeta: { companies: [], services: [] },
+    currentContentFolder: null,
+    currentContentItems: [],
+    selectedCalendarFile: null
   };
 
   // =========================================================================
@@ -611,7 +616,7 @@
     const allViews = [
       'overview', 'clients', 'client_details', 'services', 'service_tasks',
       'projects', 'tasks', 'finance', 'team',
-      'support', 'history', 'security', 'inquiries', 'reviews_admin'
+      'support', 'history', 'security', 'inquiries', 'reviews_admin', 'content_calendar'
     ];
 
     allViews.forEach(v => {
@@ -637,7 +642,8 @@
       history: 'Audit & History',
       security: 'Account Security',
       inquiries: 'Inquiries & Leads',
-      reviews_admin: 'Review Moderation'
+      reviews_admin: 'Review Moderation',
+      content_calendar: 'Content Calendar Hub'
     };
 
     const activeTitle = tabTitles[tabId] || tabId.replace(/_/g, ' ');
@@ -690,6 +696,7 @@
       else if (tabId === 'service_tasks') breadcrumb.textContent = 'Task Blueprints';
       else if (tabId === 'inquiries') breadcrumb.textContent = 'Inquiries & Leads';
       else if (tabId === 'reviews_admin') breadcrumb.textContent = 'Review Moderation';
+      else if (tabId === 'content_calendar') breadcrumb.textContent = 'Content Calendar Hub';
       else breadcrumb.textContent = tabId.replace('_', ' ');
     }
 
@@ -710,6 +717,7 @@
     else if (tabId === 'security') loadSecurityData();
     else if (tabId === 'inquiries') loadInquiriesData();
     else if (tabId === 'reviews_admin') loadAdminReviewsData();
+    else if (tabId === 'content_calendar') loadContentCalendarData();
 
     if (typeof initGlassSelects === 'function') initGlassSelects();
   }
@@ -6918,6 +6926,631 @@
     }
   }
 
+  // =========================================================================
+  // 14. CONTENT CALENDAR SYSTEM & IN-BROWSER PARSER (ZERO FILE STORAGE)
+  // =========================================================================
+
+  function parseContentCalendarText(text) {
+    if (!text || typeof text !== 'string') return [];
+    const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    const markerRegex = /(?:^|\n)[ \t]*(?:\*{1,3}|_{1,3})?[ \t]*(?:content|post)[ \t]*[-#:]*[ \t]*0*([0-9]+)[ \t]*[:\-\—\–\.]*[ \t]*(.*?)(?=(?:\*{1,3}|_{1,3})?(?:\n|$))/gi;
+    const matches = [];
+    let m;
+    while ((m = markerRegex.exec(normalized)) !== null) {
+      matches.push({
+        index: m.index,
+        fullMatchLength: m[0].length,
+        serialNumber: parseInt(m[1], 10),
+        inlineHeader: (m[2] || '').trim()
+      });
+    }
+
+    if (matches.length === 0) return [];
+
+    const cards = [];
+    for (let i = 0; i < matches.length; i++) {
+      const current = matches[i];
+      const next = matches[i + 1];
+      const start = current.index + current.fullMatchLength;
+      const end = next ? next.index : normalized.length;
+      let body = normalized.substring(start, end).trim();
+
+      let title = '';
+      if (current.inlineHeader && current.inlineHeader.length > 0) {
+        title = current.inlineHeader.replace(/^[\*\_\:\-\#\s]+|[\*\_\:\-\#\s]+$/g, '').trim();
+      }
+
+      const lines = body.split('\n').map(l => l.trim()).filter(Boolean);
+      if (!title && lines.length > 0) {
+        const titleMatch = lines[0].match(/^(?:title|topic|headline)\s*[:\-]\s*(.+)/i);
+        if (titleMatch && titleMatch[1]) {
+          title = titleMatch[1].trim();
+        } else if (lines[0].length <= 80 && !lines[0].includes(':') && !lines[0].startsWith('-') && !lines[0].startsWith('•')) {
+          title = lines[0];
+        }
+      }
+
+      if (!title) {
+        title = `Content ${current.serialNumber}`;
+      }
+
+      cards.push({
+        serial_number: current.serialNumber,
+        title: title,
+        content_body: body
+      });
+    }
+
+    return cards;
+  }
+
+  async function parseDocxFile(arrayBuffer) {
+    if (!window.mammoth) {
+      throw new Error('Mammoth parser library not loaded. Please refresh the page.');
+    }
+    const result = await window.mammoth.extractRawText({ arrayBuffer });
+    return result.value || '';
+  }
+
+  async function parsePdfFile(arrayBuffer) {
+    if (!window.pdfjsLib) {
+      throw new Error('PDF.js parser library not loaded. Please refresh the page.');
+    }
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = '/assets/js/pdf.worker.min.js';
+    const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let fullText = '';
+
+    for (let p = 1; p <= pdf.numPages; p++) {
+      const page = await pdf.getPage(p);
+      const textContent = await page.getTextContent();
+      const items = textContent.items.map(it => ({
+        str: it.str,
+        x: it.transform[4],
+        y: it.transform[5],
+        h: it.height || 10
+      }));
+
+      // Sort descending by Y (top-to-bottom), then ascending by X (left-to-right)
+      items.sort((a, b) => {
+        const yDiff = b.y - a.y;
+        if (Math.abs(yDiff) > 4) return yDiff;
+        return a.x - b.x;
+      });
+
+      let lastY = null;
+      let pageStr = '';
+      for (const it of items) {
+        if (lastY === null) {
+          pageStr += it.str;
+          lastY = it.y;
+        } else if (Math.abs(lastY - it.y) > 4) {
+          if (Math.abs(lastY - it.y) > 16) {
+            pageStr += '\n\n' + it.str;
+          } else {
+            pageStr += '\n' + it.str;
+          }
+          lastY = it.y;
+        } else {
+          pageStr += (pageStr.endsWith(' ') || it.str.startsWith(' ') ? '' : ' ') + it.str;
+        }
+      }
+      fullText += (fullText ? '\n\n' : '') + pageStr;
+    }
+
+    return fullText;
+  }
+
+  async function loadContentCalendarData(showToastNotice = false) {
+    const refreshBtn = document.getElementById('btnRefreshContentCal');
+    if (refreshBtn) {
+      const icon = refreshBtn.querySelector('i');
+      if (icon) icon.classList.add('fa-spin');
+    }
+
+    try {
+      // 1. Fetch Meta (known companies and services)
+      const metaRes = await apiFetch('/api/admin/content-calendar/meta');
+      if (metaRes.ok && metaRes.data?.success) {
+        state.contentCalendarMeta = {
+          companies: metaRes.data.companies || [],
+          services: metaRes.data.services || []
+        };
+        populateContentCalendarSelects();
+      }
+
+      // 2. Fetch Folders
+      const foldersRes = await apiFetch('/api/admin/content-calendar/folders');
+      if (foldersRes.ok && foldersRes.data?.success) {
+        state.contentCalendarFolders = foldersRes.data.folders || [];
+      } else {
+        state.contentCalendarFolders = [];
+      }
+
+      updateContentCalendarStats();
+      renderContentCalendarFolders();
+
+      if (showToastNotice) {
+        showToast('Content Calendar Hub synchronized.', 'success');
+      }
+    } catch (err) {
+      console.error('Error loading content calendar data:', err);
+      showToast('Failed to load content calendar records.', 'error');
+    } finally {
+      if (refreshBtn) {
+        const icon = refreshBtn.querySelector('i');
+        if (icon) icon.classList.remove('fa-spin');
+      }
+    }
+  }
+
+  function populateContentCalendarSelects() {
+    const compSelect = document.getElementById('contentCalCompanySelect');
+    if (compSelect) {
+      const currentVal = compSelect.value;
+      compSelect.innerHTML = `
+        <option value="">Select an existing client...</option>
+        ${(state.contentCalendarMeta.companies || []).map(c => `
+          <option value="${escapeHtml(c.client_email)}" data-company="${escapeHtml(c.company_name)}">
+            ${escapeHtml(c.company_name)} (${escapeHtml(c.client_email)})
+          </option>
+        `).join('')}
+        <option value="__custom__">+ Enter Custom Company Name</option>
+      `;
+      if (currentVal) compSelect.value = currentVal;
+    }
+
+    const srvSelect = document.getElementById('contentCalServiceSelect');
+    if (srvSelect) {
+      const currentVal = srvSelect.value;
+      srvSelect.innerHTML = `
+        <option value="">Select a service...</option>
+        ${(state.contentCalendarMeta.services || []).map(s => `
+          <option value="${escapeHtml(s)}">${escapeHtml(s)}</option>
+        `).join('')}
+        <option value="__custom__">+ Enter Custom Service</option>
+      `;
+      if (currentVal) srvSelect.value = currentVal;
+    }
+  }
+
+  function updateContentCalendarStats() {
+    const folders = state.contentCalendarFolders || [];
+    const totalFolders = folders.length;
+    const totalItems = folders.reduce((sum, f) => sum + (Number(f.item_count) || 0), 0);
+    const uniqueClients = new Set(folders.map(f => (f.client_email || '').toLowerCase())).size;
+    const avgCards = totalFolders > 0 ? (totalItems / totalFolders).toFixed(1) : 0;
+
+    const elTotalFolders = document.getElementById('statTotalContentFolders');
+    const elTotalItems = document.getElementById('statTotalContentItems');
+    const elClientsCount = document.getElementById('statContentClientsCount');
+    const elAvgCards = document.getElementById('statAvgContentCards');
+    const elBadge = document.getElementById('contentCalFoldersCountBadge');
+
+    if (elTotalFolders) elTotalFolders.textContent = totalFolders;
+    if (elTotalItems) elTotalItems.textContent = totalItems;
+    if (elClientsCount) elClientsCount.textContent = uniqueClients;
+    if (elAvgCards) elAvgCards.textContent = avgCards;
+    if (elBadge) elBadge.textContent = `${totalFolders} Folder${totalFolders === 1 ? '' : 's'}`;
+  }
+
+  function renderContentCalendarFolders(filteredList = null) {
+    const folders = filteredList !== null ? filteredList : (state.contentCalendarFolders || []);
+    const grid = document.getElementById('contentCalFoldersGrid');
+    const emptyState = document.getElementById('contentCalEmptyFolders');
+    if (!grid) return;
+
+    if (folders.length === 0) {
+      grid.innerHTML = '';
+      if (emptyState) emptyState.classList.remove('hidden');
+      return;
+    }
+
+    if (emptyState) emptyState.classList.add('hidden');
+
+    grid.innerHTML = folders.map(f => {
+      const company = f.company_name || 'Client';
+      const email = f.client_email || '';
+      const service = f.service_name || 'Marketing Retainer';
+      const count = Number(f.item_count) || 0;
+      const updatedStr = f.updated_at
+        ? new Date(f.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        : 'Recent';
+
+      return `
+        <div class="p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs hover:border-[#087F70]/30 hover:shadow-sm transition-all flex flex-col justify-between space-y-4" data-folder-card="${escapeHtml(f.id)}">
+          <div class="space-y-2.5">
+            <div class="flex items-start justify-between gap-2">
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20 truncate max-w-[200px]">
+                <i class="fa-solid fa-shapes text-[9px]"></i>
+                ${escapeHtml(service)}
+              </span>
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700 shrink-0">
+                <i class="fa-solid fa-layer-group text-[9px] text-slate-400"></i>
+                ${count} Cards
+              </span>
+            </div>
+
+            <div>
+              <h4 class="text-sm font-bold text-[#172B36] tracking-tight truncate" title="${escapeHtml(company)}">
+                ${escapeHtml(company)}
+              </h4>
+              <p class="text-xs text-slate-500 truncate mt-0.5 flex items-center gap-1.5" title="${escapeHtml(email)}">
+                <i class="fa-solid fa-envelope text-slate-400 text-[10px]"></i>
+                <span>${escapeHtml(email)}</span>
+              </p>
+            </div>
+          </div>
+
+          <div class="pt-3 border-t border-[#E3E9EF] flex items-center justify-between text-xs">
+            <span class="text-[10px] text-slate-400">
+              Updated: ${escapeHtml(updatedStr)}
+            </span>
+            <div class="flex items-center gap-1">
+              <button type="button" class="btn-view-content-folder px-3 py-1.5 rounded-lg text-xs font-bold bg-[#EAF5F1] hover:bg-[#d8ece4] text-[#087F70] transition-colors cursor-pointer" data-folder-id="${escapeHtml(f.id)}">
+                <span>View</span>
+                <i class="fa-solid fa-chevron-right text-[9px] ml-1"></i>
+              </button>
+              <button type="button" class="btn-edit-content-folder p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer" data-folder-id="${escapeHtml(f.id)}" title="Edit Folder">
+                <i class="fa-solid fa-pen-to-square text-xs"></i>
+              </button>
+              <button type="button" class="btn-delete-content-folder p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer" data-folder-id="${escapeHtml(f.id)}" title="Delete Folder">
+                <i class="fa-solid fa-trash-can text-xs"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  async function openContentFolderDetail(folderId) {
+    const foldersView = document.getElementById('contentCalFoldersView');
+    const detailView = document.getElementById('contentCalFolderDetailView');
+    if (!detailView) return;
+
+    try {
+      const res = await apiFetch(`/api/admin/content-calendar/folders/${folderId}`);
+      if (!res.ok || !res.data?.success) {
+        showToast(res.data?.error || 'Failed to load folder details.', 'error');
+        return;
+      }
+
+      state.currentContentFolder = res.data.folder;
+      state.currentContentItems = res.data.items || [];
+
+      // Update Detail Header
+      const f = state.currentContentFolder;
+      const elCompany = document.getElementById('contentCalDetailCompany');
+      const elService = document.getElementById('contentCalDetailService');
+      const elEmail = document.getElementById('contentCalDetailEmail');
+      const elCount = document.getElementById('contentCalDetailItemsCount');
+
+      if (elCompany) elCompany.textContent = f.company_name;
+      if (elService) elService.textContent = f.service_name;
+      if (elEmail) elEmail.textContent = f.client_email;
+      if (elCount) elCount.textContent = `${state.currentContentItems.length} Cards`;
+
+      renderContentCalendarCards();
+
+      if (foldersView) foldersView.classList.add('hidden');
+      detailView.classList.remove('hidden');
+
+      detailView.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    } catch (err) {
+      console.error('Error opening folder detail:', err);
+      showToast('Error opening folder detail.', 'error');
+    }
+  }
+
+  function renderContentCalendarCards(filteredItems = null) {
+    const items = filteredItems !== null ? filteredItems : (state.currentContentItems || []);
+    const grid = document.getElementById('contentCalCardsGrid');
+    const emptyState = document.getElementById('contentCalEmptyCards');
+    if (!grid) return;
+
+    if (items.length === 0) {
+      grid.innerHTML = '';
+      if (emptyState) emptyState.classList.remove('hidden');
+      return;
+    }
+
+    if (emptyState) emptyState.classList.add('hidden');
+
+    grid.innerHTML = items.map(it => {
+      const serial = it.serial_number || 1;
+      const title = it.title || `Content ${serial}`;
+      const body = it.content_body || '';
+
+      return `
+        <div class="p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs flex flex-col justify-between space-y-3.5 hover:border-[#087F70]/30 transition-all" data-content-card-id="${escapeHtml(it.id)}">
+          <div class="space-y-2">
+            <div class="flex items-center justify-between gap-2">
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20">
+                <i class="fa-solid fa-hashtag text-[9px]"></i> Content ${serial}
+              </span>
+              <div class="flex items-center gap-1">
+                <button type="button" class="btn-copy-content-body px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-[#EAF5F1] text-slate-700 hover:text-[#087F70] transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs" data-item-id="${escapeHtml(it.id)}" title="Copy raw text">
+                  <i class="fa-solid fa-copy text-xs"></i>
+                  <span>Copy</span>
+                </button>
+                <button type="button" class="btn-delete-content-card p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer" data-item-id="${escapeHtml(it.id)}" title="Delete card">
+                  <i class="fa-solid fa-trash-can text-xs"></i>
+                </button>
+              </div>
+            </div>
+
+            <h4 class="text-sm font-bold text-[#172B36] leading-snug">
+              ${escapeHtml(title)}
+            </h4>
+          </div>
+
+          <div class="bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/60 max-h-72 overflow-y-auto whiz-nested-scroll">
+            <pre class="font-sans text-xs text-slate-700 leading-relaxed whitespace-pre-wrap select-text m-0">${escapeHtml(body)}</pre>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function closeContentFolderDetail() {
+    const foldersView = document.getElementById('contentCalFoldersView');
+    const detailView = document.getElementById('contentCalFolderDetailView');
+    if (detailView) detailView.classList.add('hidden');
+    if (foldersView) foldersView.classList.remove('hidden');
+    state.currentContentFolder = null;
+    state.currentContentItems = [];
+    loadContentCalendarData();
+  }
+
+  async function deleteContentItem(itemId) {
+    if (!confirm('Are you sure you want to permanently delete this content card? The folder will remain intact.')) {
+      return;
+    }
+
+    try {
+      const res = await apiFetch(`/api/admin/content-calendar/items/${itemId}`, { method: 'DELETE' });
+      if (res.ok && res.data?.success) {
+        showToast('Content card deleted.', 'success');
+        state.currentContentItems = state.currentContentItems.filter(i => i.id !== itemId);
+        const elCount = document.getElementById('contentCalDetailItemsCount');
+        if (elCount) elCount.textContent = `${state.currentContentItems.length} Cards`;
+        renderContentCalendarCards();
+      } else {
+        showToast(res.data?.error || 'Failed to delete content card.', 'error');
+      }
+    } catch (err) {
+      console.error('Delete item error:', err);
+      showToast('Error deleting content card.', 'error');
+    }
+  }
+
+  function openEditFolderModal(folderId) {
+    const folder = (state.contentCalendarFolders || []).find(f => f.id === folderId) || state.currentContentFolder;
+    if (!folder) return;
+
+    const modal = document.getElementById('modalEditContentFolder');
+    const idInput = document.getElementById('editContentFolderId');
+    const compInput = document.getElementById('editContentFolderCompany');
+    const emailInput = document.getElementById('editContentFolderEmail');
+    const srvInput = document.getElementById('editContentFolderService');
+    const syncAllCheckbox = document.getElementById('editContentFolderSyncAll');
+
+    if (idInput) idInput.value = folder.id;
+    if (compInput) compInput.value = folder.company_name;
+    if (emailInput) emailInput.value = folder.client_email;
+    if (srvInput) srvInput.value = folder.service_name;
+    if (syncAllCheckbox) syncAllCheckbox.checked = false;
+
+    if (modal) modal.classList.remove('hidden');
+  }
+
+  function closeEditFolderModal() {
+    const modal = document.getElementById('modalEditContentFolder');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  async function handleEditFolderSubmit(e) {
+    e.preventDefault();
+    const id = document.getElementById('editContentFolderId')?.value;
+    const company = document.getElementById('editContentFolderCompany')?.value?.trim();
+    const email = document.getElementById('editContentFolderEmail')?.value?.trim()?.toLowerCase();
+    const service = document.getElementById('editContentFolderService')?.value?.trim();
+    const syncAll = document.getElementById('editContentFolderSyncAll')?.checked;
+    const saveBtn = document.getElementById('btnSaveEditContentFolder');
+
+    if (!id || !company || !email || !service) {
+      showToast('Please fill out all required fields.', 'warn');
+      return;
+    }
+
+    setButtonLoading(saveBtn, true, 'Saving...');
+
+    try {
+      const res = await apiFetch(`/api/admin/content-calendar/folders/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          company_name: company,
+          client_email: email,
+          service_name: service,
+          apply_to_all_client_folders: syncAll
+        })
+      });
+
+      setButtonLoading(saveBtn, false);
+
+      if (res.ok && res.data?.success) {
+        showToast('Folder updated successfully.', 'success');
+        closeEditFolderModal();
+        if (state.currentContentFolder && state.currentContentFolder.id === id) {
+          state.currentContentFolder.company_name = company;
+          state.currentContentFolder.client_email = email;
+          state.currentContentFolder.service_name = service;
+          const elCompany = document.getElementById('contentCalDetailCompany');
+          const elService = document.getElementById('contentCalDetailService');
+          const elEmail = document.getElementById('contentCalDetailEmail');
+          if (elCompany) elCompany.textContent = company;
+          if (elService) elService.textContent = service;
+          if (elEmail) elEmail.textContent = email;
+        }
+        loadContentCalendarData();
+      } else {
+        showToast(res.data?.error || 'Failed to update folder.', 'error');
+      }
+    } catch (err) {
+      setButtonLoading(saveBtn, false);
+      console.error('Update folder error:', err);
+      showToast('Error updating folder.', 'error');
+    }
+  }
+
+  function openDeleteFolderModal(folderId) {
+    const modal = document.getElementById('modalDeleteContentFolder');
+    const idInput = document.getElementById('deleteContentFolderId');
+    if (idInput) idInput.value = folderId;
+    if (modal) modal.classList.remove('hidden');
+  }
+
+  function closeDeleteFolderModal() {
+    const modal = document.getElementById('modalDeleteContentFolder');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  async function handleConfirmDeleteFolder() {
+    const id = document.getElementById('deleteContentFolderId')?.value;
+    const confirmBtn = document.getElementById('btnConfirmDeleteContentFolder');
+    if (!id) return;
+
+    setButtonLoading(confirmBtn, true, 'Deleting...');
+
+    try {
+      const res = await apiFetch(`/api/admin/content-calendar/folders/${id}`, { method: 'DELETE' });
+      setButtonLoading(confirmBtn, false);
+
+      if (res.ok && res.data?.success) {
+        showToast('Folder and all content items deleted.', 'success');
+        closeDeleteFolderModal();
+        if (state.currentContentFolder && state.currentContentFolder.id === id) {
+          closeContentFolderDetail();
+        } else {
+          loadContentCalendarData();
+        }
+      } else {
+        showToast(res.data?.error || 'Failed to delete folder.', 'error');
+      }
+    } catch (err) {
+      setButtonLoading(confirmBtn, false);
+      console.error('Delete folder error:', err);
+      showToast('Error deleting folder.', 'error');
+    }
+  }
+
+  async function handleContentCalendarUpload(e) {
+    e.preventDefault();
+    const compSelect = document.getElementById('contentCalCompanySelect');
+    const customComp = document.getElementById('contentCalCustomCompany');
+    const emailInput = document.getElementById('contentCalClientEmail');
+    const srvSelect = document.getElementById('contentCalServiceSelect');
+    const customSrv = document.getElementById('contentCalCustomService');
+    const fileInput = document.getElementById('contentCalFileInput');
+    const submitBtn = document.getElementById('btnGenerateContentCal');
+
+    let company = '';
+    if (compSelect?.value === '__custom__') {
+      company = customComp?.value?.trim() || '';
+    } else if (compSelect) {
+      const opt = compSelect.options[compSelect.selectedIndex];
+      company = opt?.dataset?.company || opt?.text?.split(' (')[0]?.trim() || '';
+    }
+
+    const email = emailInput?.value?.trim()?.toLowerCase() || '';
+
+    let service = '';
+    if (srvSelect?.value === '__custom__') {
+      service = customSrv?.value?.trim() || '';
+    } else if (srvSelect) {
+      service = srvSelect.value?.trim() || '';
+    }
+
+    const file = state.selectedCalendarFile || fileInput?.files?.[0];
+
+    if (!company) {
+      showToast('Please select or enter a Company Name.', 'warn');
+      return;
+    }
+    if (!email || !email.includes('@')) {
+      showToast('Please enter a valid Client Email (Gmail).', 'warn');
+      return;
+    }
+    if (!service) {
+      showToast('Please select or enter a Service Name.', 'warn');
+      return;
+    }
+    if (!file) {
+      showToast('Please choose a .docx or .pdf document to parse.', 'warn');
+      return;
+    }
+
+    setButtonLoading(submitBtn, true, 'Parsing document in browser...');
+
+    try {
+      let rawText = '';
+      const arrayBuffer = await file.arrayBuffer();
+
+      const fileName = file.name.toLowerCase();
+      if (fileName.endsWith('.docx')) {
+        rawText = await parseDocxFile(arrayBuffer);
+      } else if (fileName.endsWith('.pdf')) {
+        rawText = await parsePdfFile(arrayBuffer);
+      } else {
+        throw new Error('Unsupported file format. Please upload a .docx or .pdf file.');
+      }
+
+      const cards = parseContentCalendarText(rawText);
+
+      if (!cards || cards.length === 0) {
+        setButtonLoading(submitBtn, false);
+        showToast("No content markers (e.g. 'Content 1', 'Content 2') were detected in this document. Please check the document formatting.", 'error');
+        return;
+      }
+
+      setButtonLoading(submitBtn, true, `Uploading ${cards.length} content items...`);
+
+      const res = await apiFetch('/api/admin/content-calendar/upload', {
+        method: 'POST',
+        body: JSON.stringify({
+          company_name: company,
+          client_email: email,
+          service_name: service,
+          items: cards
+        })
+      });
+
+      if (fileInput) fileInput.value = '';
+      state.selectedCalendarFile = null;
+      const preview = document.getElementById('contentCalFilePreview');
+      if (preview) preview.classList.add('hidden');
+
+      setButtonLoading(submitBtn, false);
+
+      if (res.ok && res.data?.success) {
+        showToast(`Successfully generated Content Calendar with ${cards.length} cards!`, 'success');
+        const folderId = res.data.folder_id;
+        await loadContentCalendarData();
+        if (folderId) {
+          openContentFolderDetail(folderId);
+        }
+      } else {
+        showToast(res.data?.error || 'Failed to save content calendar to database.', 'error');
+      }
+
+    } catch (err) {
+      setButtonLoading(submitBtn, false);
+      console.error('Content calendar parsing error:', err);
+      showToast(err.message || 'Failed to parse document.', 'error');
+    }
+  }
+
   window.__whizDeleteReview = deleteReviewAdmin;
 
   // =========================================================================
@@ -8028,11 +8661,185 @@
       else if (tabId === 'security') loadSecurityData();
       else if (tabId === 'inquiries') loadInquiriesData();
       else if (tabId === 'reviews_admin') loadAdminReviewsData();
+      else if (tabId === 'content_calendar') loadContentCalendarData();
       setTimeout(() => {
         if (icon) icon.classList.remove('fa-spin');
         showToast('Console synchronized successfully.', 'success');
       }, 500);
     });
+
+    // =========================================================================
+    // CONTENT CALENDAR HUB EVENT LISTENERS
+    // =========================================================================
+    const compSelect = document.getElementById('contentCalCompanySelect');
+    const customComp = document.getElementById('contentCalCustomCompany');
+    const emailInput = document.getElementById('contentCalClientEmail');
+    const srvSelect = document.getElementById('contentCalServiceSelect');
+    const customSrv = document.getElementById('contentCalCustomService');
+    const dropZone = document.getElementById('contentCalDropZone');
+    const fileInput = document.getElementById('contentCalFileInput');
+    const filePreview = document.getElementById('contentCalFilePreview');
+    const fileNameEl = document.getElementById('contentCalFileName');
+    const fileSizeEl = document.getElementById('contentCalFileSize');
+    const btnRemoveFile = document.getElementById('btnRemoveContentCalFile');
+
+    compSelect?.addEventListener('change', () => {
+      if (compSelect.value === '__custom__') {
+        customComp?.classList.remove('hidden');
+        if (customComp) customComp.focus();
+      } else {
+        customComp?.classList.add('hidden');
+        if (compSelect.value && emailInput) {
+          emailInput.value = compSelect.value;
+        }
+      }
+    });
+
+    srvSelect?.addEventListener('change', () => {
+      if (srvSelect.value === '__custom__') {
+        customSrv?.classList.remove('hidden');
+        if (customSrv) customSrv.focus();
+      } else {
+        customSrv?.classList.add('hidden');
+      }
+    });
+
+    const updateSelectedFile = (file) => {
+      if (!file) return;
+      const name = file.name.toLowerCase();
+      if (!name.endsWith('.docx') && !name.endsWith('.pdf')) {
+        showToast('Please select a valid .docx or .pdf file.', 'warn');
+        return;
+      }
+      state.selectedCalendarFile = file;
+      if (fileNameEl) fileNameEl.textContent = file.name;
+      if (fileSizeEl) fileSizeEl.textContent = `${Math.round(file.size / 1024)} KB`;
+      if (filePreview) filePreview.classList.remove('hidden');
+    };
+
+    dropZone?.addEventListener('click', () => fileInput?.click());
+    dropZone?.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('border-[#087F70]', 'bg-[#EAF5F1]/40');
+    });
+    dropZone?.addEventListener('dragleave', () => {
+      dropZone.classList.remove('border-[#087F70]', 'bg-[#EAF5F1]/40');
+    });
+    dropZone?.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('border-[#087F70]', 'bg-[#EAF5F1]/40');
+      if (e.dataTransfer?.files?.[0]) {
+        updateSelectedFile(e.dataTransfer.files[0]);
+      }
+    });
+
+    fileInput?.addEventListener('change', () => {
+      if (fileInput.files?.[0]) {
+        updateSelectedFile(fileInput.files[0]);
+      }
+    });
+
+    btnRemoveFile?.addEventListener('click', () => {
+      state.selectedCalendarFile = null;
+      if (fileInput) fileInput.value = '';
+      if (filePreview) filePreview.classList.add('hidden');
+    });
+
+    document.getElementById('formUploadContentCal')?.addEventListener('submit', handleContentCalendarUpload);
+    document.getElementById('btnRefreshContentCal')?.addEventListener('click', () => loadContentCalendarData(true));
+
+    document.getElementById('searchContentCalFolders')?.addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      const all = state.contentCalendarFolders || [];
+      if (!q) {
+        renderContentCalendarFolders(all);
+        return;
+      }
+      const filtered = all.filter(f =>
+        (f.company_name || '').toLowerCase().includes(q) ||
+        (f.client_email || '').toLowerCase().includes(q) ||
+        (f.service_name || '').toLowerCase().includes(q)
+      );
+      renderContentCalendarFolders(filtered);
+    });
+
+    document.getElementById('searchContentCalCards')?.addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      const all = state.currentContentItems || [];
+      if (!q) {
+        renderContentCalendarCards(all);
+        return;
+      }
+      const filtered = all.filter(i =>
+        (i.title || '').toLowerCase().includes(q) ||
+        (i.content_body || '').toLowerCase().includes(q)
+      );
+      renderContentCalendarCards(filtered);
+    });
+
+    document.getElementById('btnBackToFolders')?.addEventListener('click', closeContentFolderDetail);
+
+    document.addEventListener('click', async (e) => {
+      const viewFolderBtn = e.target.closest('.btn-view-content-folder');
+      if (viewFolderBtn) {
+        const fId = viewFolderBtn.dataset.folderId;
+        if (fId) openContentFolderDetail(fId);
+        return;
+      }
+
+      const editFolderBtn = e.target.closest('.btn-edit-content-folder');
+      if (editFolderBtn) {
+        const fId = editFolderBtn.dataset.folderId;
+        if (fId) openEditFolderModal(fId);
+        return;
+      }
+
+      const delFolderBtn = e.target.closest('.btn-delete-content-folder');
+      if (delFolderBtn) {
+        const fId = delFolderBtn.dataset.folderId;
+        if (fId) openDeleteFolderModal(fId);
+        return;
+      }
+
+      const copyBtn = e.target.closest('.btn-copy-content-body');
+      if (copyBtn) {
+        const itemId = copyBtn.dataset.itemId;
+        const item = (state.currentContentItems || []).find(i => i.id === itemId);
+        if (item) {
+          try {
+            await navigator.clipboard.writeText(item.content_body || '');
+            const origHtml = copyBtn.innerHTML;
+            copyBtn.innerHTML = '<i class="fa-solid fa-check text-xs text-emerald-600"></i><span class="text-emerald-700">Copied!</span>';
+            showToast(`Content #${item.serial_number} copied to clipboard!`, 'success');
+            setTimeout(() => { copyBtn.innerHTML = origHtml; }, 2000);
+          } catch (err) {
+            showToast('Unable to copy to clipboard.', 'warn');
+          }
+        }
+        return;
+      }
+
+      const delCardBtn = e.target.closest('.btn-delete-content-card');
+      if (delCardBtn) {
+        const itemId = delCardBtn.dataset.itemId;
+        if (itemId) deleteContentItem(itemId);
+        return;
+      }
+    });
+
+    document.getElementById('btnEditCurrentFolder')?.addEventListener('click', () => {
+      if (state.currentContentFolder?.id) openEditFolderModal(state.currentContentFolder.id);
+    });
+    document.getElementById('btnDeleteCurrentFolder')?.addEventListener('click', () => {
+      if (state.currentContentFolder?.id) openDeleteFolderModal(state.currentContentFolder.id);
+    });
+
+    document.getElementById('btnCloseEditContentFolder')?.addEventListener('click', closeEditFolderModal);
+    document.getElementById('btnCancelEditContentFolder')?.addEventListener('click', closeEditFolderModal);
+    document.getElementById('formEditContentFolder')?.addEventListener('submit', handleEditFolderSubmit);
+
+    document.getElementById('btnCancelDeleteContentFolder')?.addEventListener('click', closeDeleteFolderModal);
+    document.getElementById('btnConfirmDeleteContentFolder')?.addEventListener('click', handleConfirmDeleteFolder);
 
     // Sign out buttons
     document.querySelectorAll('.btn-admin-signout').forEach(btn => {

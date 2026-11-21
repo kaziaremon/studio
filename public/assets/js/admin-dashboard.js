@@ -1,992 +1,19 @@
-/**
- * WHIZ STUDIO  -  SUPER ADMIN CONSOLE JAVASCRIPT CONTROLLER (v5.0 Enterprise)
- * Technology: Clerk JS SDK, Cloudflare Workers API, Cloudflare D1 Database, pdf-lib
- * Architecture: 100% Free Plan ($0 / month) | Cloudflare Authoritative Engine
- */
-
-(function () {
-  'use strict';
-
-  const CLERK_PUBLISHABLE_KEY = 'pk_live_Y2xlcmsud2hpenN0dWRpby5hcnQk';
-  const API_BASE = 'https://whiz-api.kaziaremon.workers.dev/api/v1';
-
-  // Global State
-  
-  const CURRENCY_CONFIG = {
-    BDT: { symbol: '৳', name: 'Bangladeshi Taka', locale: 'bn-BD', decimals: 2 },
-    USD: { symbol: '$', name: 'US Dollar', locale: 'en-US', decimals: 2 },
-    GBP: { symbol: '£', name: 'British Pound', locale: 'en-GB', decimals: 2 },
-    EUR: { symbol: '€', name: 'Euro', locale: 'de-DE', decimals: 2 },
-    AED: { symbol: 'AED', name: 'UAE Dirham', locale: 'ar-AE', decimals: 2 },
-    SAR: { symbol: 'SAR', name: 'Saudi Riyal', locale: 'ar-SA', decimals: 2 },
-    CAD: { symbol: 'CA$', name: 'Canadian Dollar', locale: 'en-CA', decimals: 2 },
-    AUD: { symbol: 'A$', name: 'Australian Dollar', locale: 'en-AU', decimals: 2 },
-    SGD: { symbol: 'S$', name: 'Singapore Dollar', locale: 'en-SG', decimals: 2 },
-    INR: { symbol: '₹', name: 'Indian Rupee', locale: 'en-IN', decimals: 2 },
-    JPY: { symbol: '¥', name: 'Japanese Yen', locale: 'ja-JP', decimals: 0 },
-    MYR: { symbol: 'RM', name: 'Malaysian Ringgit', locale: 'ms-MY', decimals: 2 }
-  };
-
-  function formatCurrency(amountCents, currencyCode = 'USD') {
-    const code = (currencyCode || 'USD').toUpperCase();
-    const conf = CURRENCY_CONFIG[code] || { symbol: code, locale: 'en-US', decimals: 2 };
-    const divisor = conf.decimals === 0 ? 1 : 100;
-    const value = (Number(amountCents) || 0) / divisor;
-
-    try {
-      return new Intl.NumberFormat(conf.locale, {
-        style: 'currency',
-        currency: code,
-        minimumFractionDigits: conf.decimals,
-        maximumFractionDigits: conf.decimals
-      }).format(value);
-    } catch (e) {
-      return conf.symbol + value.toFixed(conf.decimals);
-    }
-  }
-
-  function escapeHtml(str) {
-    if (str === null || str === undefined) return '';
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
-  }
-
-  const state = {
-    currentUser: null,
-    adminProfile: null,
-    activeTab: 'overview',
-    selectedClientId: null,
-    selectedServiceId: null,
-    clientsCache: [],
-    servicesCache: [],
-    projectsCache: [],
-    tasksCache: [],
-    usersCache: [],
-    roleHistoryCache: [],
-    supportCache: [],
-    trustedDevicesCache: [],
-    currentBlueprints: [],
-    currentTaskStatus: 'all',
-    inquiries: [],
-    adminReviews: [],
-    activeInquiryFilter: 'all',
-    activeReviewFilter: 'all',
-    activeInquiryModalId: null
-  };
-
-  // =========================================================================
-  // ROLE-BASED ACCESS CONTROL (RBAC) & PERMISSION ENGINE
-  // =========================================================================
-  function normalizeRole(role) {
-    if (!role) return 'client';
-    const r = String(role).trim().toLowerCase();
-    if (r === 'owner' || r === 'super_admin' || r === 'superadmin') return 'super_admin';
-    if (r === 'admin' || r === 'administrator') return 'admin';
-    if (r === 'accountant' || r === 'accounts' || r === 'finance' || r === 'billing') return 'accountant';
-    if (r === 'employee' || r === 'staff' || r === 'project_manager' || r === 'operations') return 'employee';
-    return 'client';
-  }
-
-  function formatRoleName(role) {
-    const norm = normalizeRole(role);
-    if (norm === 'super_admin') return 'Super Admin';
-    if (norm === 'admin') return 'Admin';
-    if (norm === 'accountant') return 'Accountant';
-    if (norm === 'employee') return 'Employee';
-    return 'Client';
-  }
-
-  function isCurrentUserOwner() {
-    if (!state.adminProfile) return false;
-    const role = (state.adminProfile.role || '').toLowerCase();
-    // Non-owner roles are NEVER improved regardless of email or flags
-    if (role === 'accountant' || role === 'accounts' || role === 'employee' || role === 'client') {
-      return false;
-    }
-    const email = (state.adminProfile.email || '').toLowerCase();
-    if (email === 'kaziaremon@gmail.com') return true;
-    if (role === 'owner' || role === 'super_admin' || role === 'superadmin') return true;
-    const isa = state.adminProfile.isSuperAdmin ?? state.adminProfile.is_super_admin;
-    return isa === true || isa === 1 || isa === 'true' || isa === '1';
-  }
-
-  function getRoleBadgeForRole(rawRole, isOwner = false) {
-    const norm = normalizeRole(rawRole);
-    if ((isOwner && norm !== 'accountant' && norm !== 'employee' && norm !== 'client') || norm === 'super_admin') {
-      return '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-xs"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Super Admin</span>';
-    } else if (norm === 'admin') {
-      return '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200 shadow-xs"><i class="fa-solid fa-shield-halved text-[9px]"></i> Admin</span>';
-    } else if (norm === 'accountant') {
-      return '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200 shadow-xs"><i class="fa-solid fa-calculator text-[9px]"></i> Accountant</span>';
-    } else if (norm === 'employee') {
-      return '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-teal-50 text-teal-700 border border-teal-200 shadow-xs"><i class="fa-solid fa-briefcase text-[9px]"></i> Employee</span>';
-    } else {
-      return '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200 shadow-xs"><i class="fa-solid fa-user text-[9px]"></i> Client</span>';
-    }
-  }
-
-  function applyRoleAdaptiveUI(profile) {
-    if (!profile) return;
-    const isOwner = isCurrentUserOwner();
-    const normRole = isOwner ? 'super_admin' : normalizeRole(profile.role);
-    const displayRole = isOwner ? 'Super Admin' : formatRoleName(profile.role);
-
-    // 1. Update Header Role Label
-    const headerRoleEl = document.getElementById('adminHeaderRoleLabel');
-    if (headerRoleEl) {
-      if (normRole === 'super_admin') {
-        headerRoleEl.textContent = 'Super Admin Console';
-      } else if (normRole === 'admin') {
-        headerRoleEl.textContent = 'Admin Workspace';
-      } else if (normRole === 'accountant') {
-        headerRoleEl.textContent = 'Accountant Portal';
-      } else if (normRole === 'employee') {
-        headerRoleEl.textContent = 'Employee Workspace';
-      } else {
-        headerRoleEl.textContent = 'Management Console';
-      }
-    }
-
-    // 2. Update Profile & Security Badges
-    const badge = document.getElementById('dropdownRoleBadge');
-    const sidebarRoleBadge = document.getElementById('sidebarRoleBadge');
-    const drawerRoleBadge = document.getElementById('drawerRoleBadge');
-    const secRoleHeader = document.getElementById('secRoleBadgeHeader');
-    const secRoleBadge = document.getElementById('secRoleBadge');
-
-    if (sidebarRoleBadge) sidebarRoleBadge.textContent = displayRole;
-    if (drawerRoleBadge) drawerRoleBadge.textContent = displayRole;
-    if (secRoleHeader) {
-      secRoleHeader.innerHTML = `<i class="fa-solid fa-shield-halved text-[9px]"></i> ${displayRole.toUpperCase()}`;
-    }
-
-    if (badge) {
-      badge.textContent = displayRole;
-      if (normRole === 'super_admin') {
-        badge.className = 'font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-[#147D64] border border-emerald-200 text-[10px] uppercase';
-      } else if (normRole === 'admin') {
-        badge.className = 'font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 text-[10px] uppercase';
-      } else if (normRole === 'accountant') {
-        badge.className = 'font-bold px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200 text-[10px] uppercase';
-      } else if (normRole === 'employee') {
-        badge.className = 'font-bold px-2 py-0.5 rounded-md bg-teal-50 text-teal-700 border border-teal-200 text-[10px] uppercase';
-      } else {
-        badge.className = 'font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 text-[10px] uppercase';
-      }
-    }
-
-    if (secRoleBadge) {
-      secRoleBadge.innerHTML = isOwner
-        ? '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Founding Owner</span>'
-        : getRoleBadgeForRole(profile.role, false);
-    }
-
-    // 3. Strict Navigation & UI Element RBAC Visibility Constraints
-    const sidebarFinance = document.getElementById('sidebarSectionFinance');
-    const drawerFinance = document.getElementById('drawerSectionFinance');
-    const bottomNavFinance = document.getElementById('bottomNavFinance');
-    const sidebarTeam = document.getElementById('sidebarNavTeam');
-    const drawerTeam = document.getElementById('drawerNavTeam');
-    const sidebarHistory = document.getElementById('sidebarNavHistory');
-    const drawerHistory = document.getElementById('drawerNavHistory');
-
-    const sidebarServices = document.getElementById('sidebarNavServices');
-    const sidebarProjects = document.getElementById('sidebarNavProjects');
-    const sidebarTasks = document.getElementById('sidebarNavTasks');
-    const drawerServices = document.getElementById('drawerNavServices');
-    const drawerProjects = document.getElementById('drawerNavProjects');
-    const drawerTasks = document.getElementById('drawerNavTasks');
-    const bottomNavServices = document.getElementById('bottomNavServices');
-    const bottomNavTasks = document.getElementById('bottomNavTasks');
-
-    const kpiRevenue = document.getElementById('kpiCardRevenue');
-    const chartRev = document.getElementById('chartRevenueContainer');
-    const kpiProjects = document.getElementById('kpiCardProjects');
-    const kpiServices = document.getElementById('kpiCardServices');
-    const kpiTasksComp = document.getElementById('kpiCardCompletedTasks');
-    const kpiTasksPend = document.getElementById('kpiCardPendingTasks');
-
-    const chartServices = document.getElementById('chartServiceDistributionContainer');
-    const chartProjects = document.getElementById('chartProjectProgressContainer');
-    const chartTasks = document.getElementById('chartTaskStatusContainer');
-
-    const clientFinSummary = document.getElementById('clientFinancialSummaryCard');
-    const clientFinPrefs = document.getElementById('clientFinancialPreferencesCard');
-    const btnAssignService = document.getElementById('btnOpenAssignServiceClientModal');
-    const clientAssignedServices = document.getElementById('clientAssignedServicesCard');
-    const clientProjects = document.getElementById('clientProjectsCard');
-    const clientAuditCard = document.getElementById('clientAuditHistoryCard');
-
-    // Rule A: Audit & Operational History is STRICTLY PRIVATE to Admin and Super Admin
-    const canAccessAudit = normRole === 'super_admin' || normRole === 'admin';
-    if (sidebarHistory) sidebarHistory.classList.toggle('hidden', !canAccessAudit);
-    if (drawerHistory) drawerHistory.classList.toggle('hidden', !canAccessAudit);
-    if (clientAuditCard) clientAuditCard.classList.toggle('hidden', !canAccessAudit);
-
-    // Rule B: Team Governance is restricted to Admin & Super Admin
-    const canAccessTeam = normRole === 'super_admin' || normRole === 'admin';
-    if (sidebarTeam) sidebarTeam.classList.toggle('hidden', !canAccessTeam);
-    if (drawerTeam) drawerTeam.classList.toggle('hidden', !canAccessTeam);
-
-    // Rule C: Accountant Dashboard Constraints (Financial-Only Mode)
-    if (normRole === 'accountant') {
-      // STRICTLY HIDE all Service provisioning, Task pipelines, and Project management modules
-      if (sidebarServices) sidebarServices.classList.add('hidden');
-      if (sidebarProjects) sidebarProjects.classList.add('hidden');
-      if (sidebarTasks) sidebarTasks.classList.add('hidden');
-      if (drawerServices) drawerServices.classList.add('hidden');
-      if (drawerProjects) drawerProjects.classList.add('hidden');
-      if (drawerTasks) drawerTasks.classList.add('hidden');
-      if (bottomNavServices) bottomNavServices.classList.add('hidden');
-      if (bottomNavTasks) bottomNavTasks.classList.add('hidden');
-
-      if (kpiProjects) kpiProjects.classList.add('hidden');
-      if (kpiServices) kpiServices.classList.add('hidden');
-      if (kpiTasksComp) kpiTasksComp.classList.add('hidden');
-      if (kpiTasksPend) kpiTasksPend.classList.add('hidden');
-
-      if (chartServices) chartServices.classList.add('hidden');
-      if (chartProjects) chartProjects.classList.add('hidden');
-      if (chartTasks) chartTasks.classList.add('hidden');
-
-      if (btnAssignService) btnAssignService.classList.add('hidden');
-      if (clientProjects) clientProjects.classList.add('hidden');
-      if (clientAssignedServices) clientAssignedServices.classList.add('hidden');
-
-      // EXCLUSIVELY DISPLAY financial, billing, invoicing, and ledger modules
-      if (sidebarFinance) sidebarFinance.classList.remove('hidden');
-      if (drawerFinance) drawerFinance.classList.remove('hidden');
-      if (bottomNavFinance) bottomNavFinance.classList.remove('hidden');
-      if (kpiRevenue) kpiRevenue.classList.remove('hidden');
-      if (chartRev) chartRev.classList.remove('hidden');
-      if (clientFinSummary) clientFinSummary.classList.remove('hidden');
-      if (clientFinPrefs) clientFinPrefs.classList.remove('hidden');
-
-      document.querySelectorAll('.role-operational-nav').forEach(el => el.classList.add('hidden'));
-      document.querySelectorAll('.role-operational-only').forEach(el => el.classList.add('hidden'));
-      document.querySelectorAll('.role-financial-only').forEach(el => el.classList.remove('hidden'));
-    }
-    // Rule D: Employee Dashboard Constraints (Operational-Only Mode, Zero Financial Access)
-    else if (normRole === 'employee') {
-      // STRICTLY HIDE all accounting, revenue, billing, and financial preference modules
-      if (sidebarFinance) sidebarFinance.classList.add('hidden');
-      if (drawerFinance) drawerFinance.classList.add('hidden');
-      if (bottomNavFinance) bottomNavFinance.classList.add('hidden');
-      if (kpiRevenue) kpiRevenue.classList.add('hidden');
-      if (chartRev) chartRev.classList.add('hidden');
-      if (clientFinSummary) clientFinSummary.classList.add('hidden');
-      if (clientFinPrefs) clientFinPrefs.classList.add('hidden');
-      document.querySelectorAll('.role-financial-only').forEach(el => el.classList.add('hidden'));
-
-      // DISPLAY assigned operational tasks, SOPs, and project workflows
-      if (sidebarServices) sidebarServices.classList.remove('hidden');
-      if (sidebarProjects) sidebarProjects.classList.remove('hidden');
-      if (sidebarTasks) sidebarTasks.classList.remove('hidden');
-      if (drawerServices) drawerServices.classList.remove('hidden');
-      if (drawerProjects) drawerProjects.classList.remove('hidden');
-      if (drawerTasks) drawerTasks.classList.remove('hidden');
-      if (bottomNavServices) bottomNavServices.classList.remove('hidden');
-      if (bottomNavTasks) bottomNavTasks.classList.remove('hidden');
-
-      if (kpiProjects) kpiProjects.classList.remove('hidden');
-      if (kpiServices) kpiServices.classList.remove('hidden');
-      if (kpiTasksComp) kpiTasksComp.classList.remove('hidden');
-      if (kpiTasksPend) kpiTasksPend.classList.remove('hidden');
-
-      if (chartServices) chartServices.classList.remove('hidden');
-      if (chartProjects) chartProjects.classList.remove('hidden');
-      if (chartTasks) chartTasks.classList.remove('hidden');
-
-      if (clientProjects) clientProjects.classList.remove('hidden');
-      if (clientAssignedServices) clientAssignedServices.classList.remove('hidden');
-
-      document.querySelectorAll('.role-operational-nav').forEach(el => el.classList.remove('hidden'));
-      document.querySelectorAll('.role-operational-only').forEach(el => el.classList.remove('hidden'));
-    }
-    // Rule E: Admin and Super Admin (Full operational & financial access)
-    else {
-      if (sidebarFinance) sidebarFinance.classList.remove('hidden');
-      if (drawerFinance) drawerFinance.classList.remove('hidden');
-      if (bottomNavFinance) bottomNavFinance.classList.remove('hidden');
-      if (sidebarServices) sidebarServices.classList.remove('hidden');
-      if (sidebarProjects) sidebarProjects.classList.remove('hidden');
-      if (sidebarTasks) sidebarTasks.classList.remove('hidden');
-      if (drawerServices) drawerServices.classList.remove('hidden');
-      if (drawerProjects) drawerProjects.classList.remove('hidden');
-      if (drawerTasks) drawerTasks.classList.remove('hidden');
-      if (bottomNavServices) bottomNavServices.classList.remove('hidden');
-      if (bottomNavTasks) bottomNavTasks.classList.remove('hidden');
-
-      if (kpiRevenue) kpiRevenue.classList.remove('hidden');
-      if (chartRev) chartRev.classList.remove('hidden');
-      if (kpiProjects) kpiProjects.classList.remove('hidden');
-      if (kpiServices) kpiServices.classList.remove('hidden');
-      if (kpiTasksComp) kpiTasksComp.classList.remove('hidden');
-      if (kpiTasksPend) kpiTasksPend.classList.remove('hidden');
-
-      if (chartServices) chartServices.classList.remove('hidden');
-      if (chartProjects) chartProjects.classList.remove('hidden');
-      if (chartTasks) chartTasks.classList.remove('hidden');
-
-      if (clientFinSummary) clientFinSummary.classList.remove('hidden');
-      if (clientFinPrefs) clientFinPrefs.classList.remove('hidden');
-      if (btnAssignService) btnAssignService.classList.remove('hidden');
-      if (clientProjects) clientProjects.classList.remove('hidden');
-      if (clientAssignedServices) clientAssignedServices.classList.remove('hidden');
-
-      document.querySelectorAll('.role-operational-nav').forEach(el => el.classList.remove('hidden'));
-      document.querySelectorAll('.role-operational-only').forEach(el => el.classList.remove('hidden'));
-      document.querySelectorAll('.role-financial-only').forEach(el => el.classList.remove('hidden'));
-    }
-
-    // Super Admin Exclusive Navigation & Controls (Inquiries CRM & Review Moderation)
-    const isSuperAdminUser = isOwner || normRole === 'super_admin';
-    document.querySelectorAll('.role-superadmin-nav, .role-superadmin-only').forEach(el => {
-      if (isSuperAdminUser) {
-        el.classList.remove('hidden');
-      } else {
-        el.classList.add('hidden');
-      }
-    });
-
-    // 4. Configure Staff Invite Form role options
-    const inviteRoleSelect = document.getElementById('inviteRole');
-    if (inviteRoleSelect) {
-      if (normRole === 'admin' && !isOwner) {
-        // Admins can only invite Accountant or Employee
-        const adminOption = inviteRoleSelect.querySelector('option[value="admin"]');
-        if (adminOption) adminOption.remove();
-      }
-    }
-  }
-
-  function isCurrentAdminSelf(target) {
-    if (!target) return false;
-    const currentEmail = (state.adminProfile?.email || state.currentUser?.primaryEmailAddress?.emailAddress || '').toLowerCase();
-    const currentUserId = state.adminProfile?.id;
-    const currentClerkId = state.currentUser?.id || state.adminProfile?.clerkUserId;
-
-    const targetEmail = (target.email || target.approved_email || '').toLowerCase();
-    const targetId = target.id;
-    const targetClerkId = target.clerk_user_id || target.clerkUserId;
-
-    if (currentEmail && targetEmail && currentEmail === targetEmail) return true;
-    if (currentUserId && targetId && currentUserId === targetId) return true;
-    if (currentClerkId && targetClerkId && currentClerkId === targetClerkId) return true;
-    return false;
-  }
-
-  // =========================================================================
-  // IDENTITY & AUDIT PRIVACY PROTECTION ENGINE (ZERO RAW ID LEAKAGE)
-  // =========================================================================
-  function resolveUserIdentity(rawIdOrEmail, roleHint = '') {
-    if (!rawIdOrEmail) return roleHint === 'target' ? 'Authorized Account' : 'System';
-    const clean = String(rawIdOrEmail).trim();
-    if (!clean || clean === ' - ' || clean === 'null' || clean === 'undefined') {
-      return roleHint === 'target' ? 'Authorized Account' : 'System';
-    }
-
-    // Direct owner checks
-    if (clean.toLowerCase() === 'kaziaremon@gmail.com' || clean.startsWith('usr_owner') || clean === 'owner') {
-      return 'Super Admin';
-    }
-
-    // Direct email check (already a human-readable email)
-    if (clean.includes('@')) {
-      const userWithEmail = (state.usersCache || []).find(u => (u.email || '').toLowerCase() === clean.toLowerCase());
-      if (userWithEmail && (userWithEmail.full_name || userWithEmail.fullName)) {
-        return userWithEmail.full_name || userWithEmail.fullName;
-      }
-      return clean;
-    }
-
-    // Search usersCache by Clerk ID, ID, or Email
-    const cachedUser = (state.usersCache || []).find(u =>
-      (u.clerk_user_id && u.clerk_user_id === clean) ||
-      (u.clerkUserId && u.clerkUserId === clean) ||
-      (u.id && u.id === clean) ||
-      (u.email && u.email.toLowerCase() === clean.toLowerCase())
-    );
-    if (cachedUser) {
-      return cachedUser.full_name || cachedUser.fullName || cachedUser.email || (cachedUser.role === 'admin' ? 'Administrator' : 'Team Member');
-    }
-
-    // Search clientsCache by Clerk ID, ID, or Email
-    const cachedClient = (state.clientsCache || []).find(c =>
-      (c.clerk_user_id && c.clerk_user_id === clean) ||
-      (c.id && c.id === clean) ||
-      (c.email && c.email.toLowerCase() === clean.toLowerCase())
-    );
-    if (cachedClient) {
-      return cachedClient.full_name || cachedClient.company_name || cachedClient.email || 'Client';
-    }
-
-    // Search active Clerk session user
-    if (window.Clerk?.user && (window.Clerk.user.id === clean || clean === window.Clerk.user.primaryEmailAddress?.emailAddress)) {
-      return window.Clerk.user.fullName || window.Clerk.user.primaryEmailAddress?.emailAddress || 'Administrator';
-    }
-
-    // STRICT PRIVACY PROTECTION: Block any raw Clerk ID (user_...) or backend hash
-    if (clean.startsWith('user_') || clean.startsWith('usr_') || clean.startsWith('org_') || /^[a-zA-Z0-9_-]{20,}$/.test(clean)) {
-      if (roleHint === 'target') return 'Authorized Account';
-      if (roleHint === 'client') return 'Client';
-      return 'Administrator';
-    }
-
-    return clean;
-  }
-
-  function sanitizeAuditDetails(details, fallbackName = '') {
-    if (!details) return '';
-    let text = '';
-    if (typeof details === 'object') {
-      try {
-        const copy = JSON.parse(JSON.stringify(details));
-        for (const [k, v] of Object.entries(copy)) {
-          if (typeof v === 'string') {
-            if (v.startsWith('user_') || v.startsWith('usr_')) {
-              copy[k] = resolveUserIdentity(v, k.includes('target') ? 'target' : 'actor');
-            }
-          }
-        }
-        text = JSON.stringify(copy, null, 2);
-      } catch (e) {
-        text = String(details);
-      }
-    } else {
-      text = String(details);
-    }
-
-    // Regex replace any remaining Clerk ID string patterns (e.g., user_3LSEtPcTNnyxAwwf7LdhNCK7ROO)
-    text = text.replace(/user_[a-zA-Z0-9]{15,}/g, (match) => {
-      return resolveUserIdentity(match, 'target');
-    });
-
-    // Replace internal owner IDs
-    text = text.replace(/usr_owner[a-zA-Z0-9_]*/g, 'Super Admin');
-
-    // Replace backend architecture references
-    text = text.replace(/Cloudflare\s+D1/gi, 'Cloud Database');
-    text = text.replace(/\bD1\b/g, 'Database');
-
-    return text;
-  }
-
-  // =========================================================================
-  // AUTHENTICATED API FETCH HELPER
-  // =========================================================================
-  async function apiFetch(endpoint, options = {}) {
-    if (state.isPreview && window.__whizAdminMock) {
-      return window.__whizAdminMock.handleRequest(endpoint, options, state);
-    }
-    const headers = {
-      'Content-Type': 'application/json',
-      ...(options.headers || {})
-    };
-
-    if (window.Clerk && window.Clerk.session) {
-      try {
-        const token = await window.Clerk.session.getToken();
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-      } catch (e) {
-        console.warn('Could not retrieve Clerk token:', e);
-      }
-    }
-
-    if (window.Clerk && window.Clerk.user) {
-      headers['X-Clerk-User-Id'] = window.Clerk.user.id;
-    }
-
-    try {
-      let url = endpoint;
-      if (endpoint.startsWith('/api/')) {
-        const isLocal = window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        url = isLocal ? `https://whizstudio.art${endpoint}` : endpoint;
-      } else {
-        url = `${API_BASE}${endpoint}`;
-      }
-      const response = await fetch(url, { ...options, headers });
-      const data = await response.json().catch(() => ({}));
-      return { ok: response.ok, status: response.status, data };
-    } catch (err) {
-      console.error('API Fetch Error:', err);
-      return { ok: false, status: 500, data: { success: false, error: 'Network connection failure.' } };
-    }
-  }
-
-  // =========================================================================
-  // TOAST NOTIFICATIONS
-  // =========================================================================
-  function showToast(message, type = 'info') {
-    const container = document.getElementById('toastContainer');
-    if (!container) return;
-
-    const toast = document.createElement('div');
-    const colors = {
-      success: 'bg-white border-emerald-400 text-[#172B36] shadow-emerald-100/60',
-      error: 'bg-white border-rose-400 text-[#172B36] shadow-rose-100/60',
-      info: 'bg-white border-[#147D64]/50 text-[#172B36] shadow-slate-100/60',
-      warn: 'bg-white border-amber-400 text-[#172B36] shadow-amber-100/60'
-    };
-    const icons = {
-      success: 'fa-circle-check text-emerald-500',
-      error: 'fa-circle-exclamation text-rose-500',
-      info: 'fa-circle-info text-[#147D64]',
-      warn: 'fa-triangle-exclamation text-amber-500'
-    };
-
-    toast.className = `p-4 rounded-2xl border backdrop-blur-xl shadow-xl flex items-start space-x-3 text-xs transition-all duration-300 transform translate-y-2 pointer-events-auto ${colors[type] || colors.info}`;
-    toast.innerHTML = `
-      <i class="fa-solid ${icons[type] || icons.info} text-sm mt-0.5 shrink-0"></i>
-      <div class="flex-1 font-medium leading-relaxed">${message}</div>
+(function(){"use strict";const nn="pk_live_Y2xlcmsud2hpenN0dWRpby5hcnQk",sn="https://whiz-api.kaziaremon.workers.dev/api/v1",an={BDT:{symbol:"\u09F3",name:"Bangladeshi Taka",locale:"bn-BD",decimals:2},USD:{symbol:"$",name:"US Dollar",locale:"en-US",decimals:2},GBP:{symbol:"\xA3",name:"British Pound",locale:"en-GB",decimals:2},EUR:{symbol:"\u20AC",name:"Euro",locale:"de-DE",decimals:2},AED:{symbol:"AED",name:"UAE Dirham",locale:"ar-AE",decimals:2},SAR:{symbol:"SAR",name:"Saudi Riyal",locale:"ar-SA",decimals:2},CAD:{symbol:"CA$",name:"Canadian Dollar",locale:"en-CA",decimals:2},AUD:{symbol:"A$",name:"Australian Dollar",locale:"en-AU",decimals:2},SGD:{symbol:"S$",name:"Singapore Dollar",locale:"en-SG",decimals:2},INR:{symbol:"\u20B9",name:"Indian Rupee",locale:"en-IN",decimals:2},JPY:{symbol:"\xA5",name:"Japanese Yen",locale:"ja-JP",decimals:0},MYR:{symbol:"RM",name:"Malaysian Ringgit",locale:"ms-MY",decimals:2}};function Y(n,t="USD"){const s=(t||"USD").toUpperCase(),e=an[s]||{symbol:s,locale:"en-US",decimals:2},l=e.decimals===0?1:100,i=(Number(n)||0)/l;try{return new Intl.NumberFormat(e.locale,{style:"currency",currency:s,minimumFractionDigits:e.decimals,maximumFractionDigits:e.decimals}).format(i)}catch{return e.symbol+i.toFixed(e.decimals)}}function f(n){return n==null?"":String(n).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;")}const g={currentUser:null,adminProfile:null,activeTab:"overview",selectedClientId:null,selectedServiceId:null,clientsCache:[],servicesCache:[],projectsCache:[],tasksCache:[],usersCache:[],roleHistoryCache:[],supportCache:[],trustedDevicesCache:[],currentBlueprints:[],currentTaskStatus:"all",inquiries:[],adminReviews:[],activeInquiryFilter:"all",activeReviewFilter:"all",activeInquiryModalId:null,contentCalendarFolders:[],contentCalendarMeta:{companies:[],services:[]},currentContentFolder:null,currentContentItems:[],selectedCalendarFile:null};function Se(n){if(!n)return"client";const t=String(n).trim().toLowerCase();return t==="owner"||t==="super_admin"||t==="superadmin"?"super_admin":t==="admin"||t==="administrator"?"admin":t==="accountant"||t==="accounts"||t==="finance"||t==="billing"?"accountant":t==="employee"||t==="staff"||t==="project_manager"||t==="operations"?"employee":"client"}function Ue(n){const t=Se(n);return t==="super_admin"?"Super Admin":t==="admin"?"Admin":t==="accountant"?"Accountant":t==="employee"?"Employee":"Client"}function Z(){if(!g.adminProfile)return!1;const n=(g.adminProfile.role||"").toLowerCase();if(n==="accountant"||n==="accounts"||n==="employee"||n==="client")return!1;if((g.adminProfile.email||"").toLowerCase()==="kaziaremon@gmail.com"||n==="owner"||n==="super_admin"||n==="superadmin")return!0;const s=g.adminProfile.isSuperAdmin??g.adminProfile.is_super_admin;return s===!0||s===1||s==="true"||s==="1"}function ye(n,t=!1){const s=Se(n);return t&&s!=="accountant"&&s!=="employee"&&s!=="client"||s==="super_admin"?'<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-xs"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Super Admin</span>':s==="admin"?'<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200 shadow-xs"><i class="fa-solid fa-shield-halved text-[9px]"></i> Admin</span>':s==="accountant"?'<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200 shadow-xs"><i class="fa-solid fa-calculator text-[9px]"></i> Accountant</span>':s==="employee"?'<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-teal-50 text-teal-700 border border-teal-200 shadow-xs"><i class="fa-solid fa-briefcase text-[9px]"></i> Employee</span>':'<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200 shadow-xs"><i class="fa-solid fa-user text-[9px]"></i> Client</span>'}function _t(n){if(!n)return;const t=Z(),s=t?"super_admin":Se(n.role),e=t?"Super Admin":Ue(n.role),l=document.getElementById("adminHeaderRoleLabel");l&&(s==="super_admin"?l.textContent="Super Admin Console":s==="admin"?l.textContent="Admin Workspace":s==="accountant"?l.textContent="Accountant Portal":s==="employee"?l.textContent="Employee Workspace":l.textContent="Management Console");const i=document.getElementById("dropdownRoleBadge"),p=document.getElementById("sidebarRoleBadge"),u=document.getElementById("drawerRoleBadge"),y=document.getElementById("secRoleBadgeHeader"),a=document.getElementById("secRoleBadge");p&&(p.textContent=e),u&&(u.textContent=e),y&&(y.innerHTML=`<i class="fa-solid fa-shield-halved text-[9px]"></i> ${e.toUpperCase()}`),i&&(i.textContent=e,s==="super_admin"?i.className="font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-[#147D64] border border-emerald-200 text-[10px] uppercase":s==="admin"?i.className="font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 text-[10px] uppercase":s==="accountant"?i.className="font-bold px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200 text-[10px] uppercase":s==="employee"?i.className="font-bold px-2 py-0.5 rounded-md bg-teal-50 text-teal-700 border border-teal-200 text-[10px] uppercase":i.className="font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 text-[10px] uppercase"),a&&(a.innerHTML=t?'<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Founding Owner</span>':ye(n.role,!1));const o=document.getElementById("sidebarSectionFinance"),d=document.getElementById("drawerSectionFinance"),c=document.getElementById("bottomNavFinance"),r=document.getElementById("sidebarNavTeam"),m=document.getElementById("drawerNavTeam"),b=document.getElementById("sidebarNavHistory"),E=document.getElementById("drawerNavHistory"),C=document.getElementById("sidebarNavServices"),h=document.getElementById("sidebarNavProjects"),I=document.getElementById("sidebarNavTasks"),L=document.getElementById("drawerNavServices"),P=document.getElementById("drawerNavProjects"),M=document.getElementById("drawerNavTasks"),F=document.getElementById("bottomNavServices"),D=document.getElementById("bottomNavTasks"),N=document.getElementById("kpiCardRevenue"),H=document.getElementById("chartRevenueContainer"),W=document.getElementById("kpiCardProjects"),ee=document.getElementById("kpiCardServices"),J=document.getElementById("kpiCardCompletedTasks"),V=document.getElementById("kpiCardPendingTasks"),z=document.getElementById("chartServiceDistributionContainer"),Q=document.getElementById("chartProjectProgressContainer"),ue=document.getElementById("chartTaskStatusContainer"),te=document.getElementById("clientFinancialSummaryCard"),me=document.getElementById("clientFinancialPreferencesCard"),ie=document.getElementById("btnOpenAssignServiceClientModal"),pe=document.getElementById("clientAssignedServicesCard"),q=document.getElementById("clientProjectsCard"),ne=document.getElementById("clientAuditHistoryCard"),K=s==="super_admin"||s==="admin";b&&b.classList.toggle("hidden",!K),E&&E.classList.toggle("hidden",!K),ne&&ne.classList.toggle("hidden",!K);const G=s==="super_admin"||s==="admin";r&&r.classList.toggle("hidden",!G),m&&m.classList.toggle("hidden",!G),s==="accountant"?(C&&C.classList.add("hidden"),h&&h.classList.add("hidden"),I&&I.classList.add("hidden"),L&&L.classList.add("hidden"),P&&P.classList.add("hidden"),M&&M.classList.add("hidden"),F&&F.classList.add("hidden"),D&&D.classList.add("hidden"),W&&W.classList.add("hidden"),ee&&ee.classList.add("hidden"),J&&J.classList.add("hidden"),V&&V.classList.add("hidden"),z&&z.classList.add("hidden"),Q&&Q.classList.add("hidden"),ue&&ue.classList.add("hidden"),ie&&ie.classList.add("hidden"),q&&q.classList.add("hidden"),pe&&pe.classList.add("hidden"),o&&o.classList.remove("hidden"),d&&d.classList.remove("hidden"),c&&c.classList.remove("hidden"),N&&N.classList.remove("hidden"),H&&H.classList.remove("hidden"),te&&te.classList.remove("hidden"),me&&me.classList.remove("hidden"),document.querySelectorAll(".role-operational-nav").forEach(R=>R.classList.add("hidden")),document.querySelectorAll(".role-operational-only").forEach(R=>R.classList.add("hidden")),document.querySelectorAll(".role-financial-only").forEach(R=>R.classList.remove("hidden"))):s==="employee"?(o&&o.classList.add("hidden"),d&&d.classList.add("hidden"),c&&c.classList.add("hidden"),N&&N.classList.add("hidden"),H&&H.classList.add("hidden"),te&&te.classList.add("hidden"),me&&me.classList.add("hidden"),document.querySelectorAll(".role-financial-only").forEach(R=>R.classList.add("hidden")),C&&C.classList.remove("hidden"),h&&h.classList.remove("hidden"),I&&I.classList.remove("hidden"),L&&L.classList.remove("hidden"),P&&P.classList.remove("hidden"),M&&M.classList.remove("hidden"),F&&F.classList.remove("hidden"),D&&D.classList.remove("hidden"),W&&W.classList.remove("hidden"),ee&&ee.classList.remove("hidden"),J&&J.classList.remove("hidden"),V&&V.classList.remove("hidden"),z&&z.classList.remove("hidden"),Q&&Q.classList.remove("hidden"),ue&&ue.classList.remove("hidden"),q&&q.classList.remove("hidden"),pe&&pe.classList.remove("hidden"),document.querySelectorAll(".role-operational-nav").forEach(R=>R.classList.remove("hidden")),document.querySelectorAll(".role-operational-only").forEach(R=>R.classList.remove("hidden"))):(o&&o.classList.remove("hidden"),d&&d.classList.remove("hidden"),c&&c.classList.remove("hidden"),C&&C.classList.remove("hidden"),h&&h.classList.remove("hidden"),I&&I.classList.remove("hidden"),L&&L.classList.remove("hidden"),P&&P.classList.remove("hidden"),M&&M.classList.remove("hidden"),F&&F.classList.remove("hidden"),D&&D.classList.remove("hidden"),N&&N.classList.remove("hidden"),H&&H.classList.remove("hidden"),W&&W.classList.remove("hidden"),ee&&ee.classList.remove("hidden"),J&&J.classList.remove("hidden"),V&&V.classList.remove("hidden"),z&&z.classList.remove("hidden"),Q&&Q.classList.remove("hidden"),ue&&ue.classList.remove("hidden"),te&&te.classList.remove("hidden"),me&&me.classList.remove("hidden"),ie&&ie.classList.remove("hidden"),q&&q.classList.remove("hidden"),pe&&pe.classList.remove("hidden"),document.querySelectorAll(".role-operational-nav").forEach(R=>R.classList.remove("hidden")),document.querySelectorAll(".role-operational-only").forEach(R=>R.classList.remove("hidden")),document.querySelectorAll(".role-financial-only").forEach(R=>R.classList.remove("hidden")));const $=t||s==="super_admin";document.querySelectorAll(".role-superadmin-nav, .role-superadmin-only").forEach(R=>{$?R.classList.remove("hidden"):R.classList.add("hidden")});const U=document.getElementById("inviteRole");if(U&&s==="admin"&&!t){const R=U.querySelector('option[value="admin"]');R&&R.remove()}}function we(n){if(!n)return!1;const t=(g.adminProfile?.email||g.currentUser?.primaryEmailAddress?.emailAddress||"").toLowerCase(),s=g.adminProfile?.id,e=g.currentUser?.id||g.adminProfile?.clerkUserId,l=(n.email||n.approved_email||"").toLowerCase(),i=n.id,p=n.clerk_user_id||n.clerkUserId;return!!(t&&l&&t===l||s&&i&&s===i||e&&p&&e===p)}function be(n,t=""){if(!n)return t==="target"?"Authorized Account":"System";const s=String(n).trim();if(!s||s===" - "||s==="null"||s==="undefined")return t==="target"?"Authorized Account":"System";if(s.toLowerCase()==="kaziaremon@gmail.com"||s.startsWith("usr_owner")||s==="owner")return"Super Admin";if(s.includes("@")){const i=(g.usersCache||[]).find(p=>(p.email||"").toLowerCase()===s.toLowerCase());return i&&(i.full_name||i.fullName)?i.full_name||i.fullName:s}const e=(g.usersCache||[]).find(i=>i.clerk_user_id&&i.clerk_user_id===s||i.clerkUserId&&i.clerkUserId===s||i.id&&i.id===s||i.email&&i.email.toLowerCase()===s.toLowerCase());if(e)return e.full_name||e.fullName||e.email||(e.role==="admin"?"Administrator":"Team Member");const l=(g.clientsCache||[]).find(i=>i.clerk_user_id&&i.clerk_user_id===s||i.id&&i.id===s||i.email&&i.email.toLowerCase()===s.toLowerCase());return l?l.full_name||l.company_name||l.email||"Client":window.Clerk?.user&&(window.Clerk.user.id===s||s===window.Clerk.user.primaryEmailAddress?.emailAddress)?window.Clerk.user.fullName||window.Clerk.user.primaryEmailAddress?.emailAddress||"Administrator":s.startsWith("user_")||s.startsWith("usr_")||s.startsWith("org_")||/^[a-zA-Z0-9_-]{20,}$/.test(s)?t==="target"?"Authorized Account":t==="client"?"Client":"Administrator":s}function Ve(n,t=""){if(!n)return"";let s="";if(typeof n=="object")try{const e=JSON.parse(JSON.stringify(n));for(const[l,i]of Object.entries(e))typeof i=="string"&&(i.startsWith("user_")||i.startsWith("usr_"))&&(e[l]=be(i,l.includes("target")?"target":"actor"));s=JSON.stringify(e,null,2)}catch{s=String(n)}else s=String(n);return s=s.replace(/user_[a-zA-Z0-9]{15,}/g,e=>be(e,"target")),s=s.replace(/usr_owner[a-zA-Z0-9_]*/g,"Super Admin"),s=s.replace(/Cloudflare\s+D1/gi,"Cloud Database"),s=s.replace(/\bD1\b/g,"Database"),s}async function B(n,t={}){if(g.isPreview&&window.__whizAdminMock)return window.__whizAdminMock.handleRequest(n,t,g);const s={"Content-Type":"application/json",...t.headers||{}};if(window.Clerk&&window.Clerk.session)try{const e=await window.Clerk.session.getToken();e&&(s.Authorization=`Bearer ${e}`)}catch(e){console.warn("Could not retrieve Clerk token:",e)}window.Clerk&&window.Clerk.user&&(s["X-Clerk-User-Id"]=window.Clerk.user.id);try{let e=n;n.startsWith("/api/")?e=window.location.protocol==="file:"||window.location.hostname==="localhost"||window.location.hostname==="127.0.0.1"?`https://whizstudio.art${n}`:n:e=`${sn}${n}`;const l=await fetch(e,{...t,headers:s}),i=await l.json().catch(()=>({}));return{ok:l.ok,status:l.status,data:i}}catch(e){return console.error("API Fetch Error:",e),{ok:!1,status:500,data:{success:!1,error:"Network connection failure."}}}}function v(n,t="info"){const s=document.getElementById("toastContainer");if(!s)return;const e=document.createElement("div"),l={success:"bg-white border-emerald-400 text-[#172B36] shadow-emerald-100/60",error:"bg-white border-rose-400 text-[#172B36] shadow-rose-100/60",info:"bg-white border-[#147D64]/50 text-[#172B36] shadow-slate-100/60",warn:"bg-white border-amber-400 text-[#172B36] shadow-amber-100/60"},i={success:"fa-circle-check text-emerald-500",error:"fa-circle-exclamation text-rose-500",info:"fa-circle-info text-[#147D64]",warn:"fa-triangle-exclamation text-amber-500"};e.className=`p-4 rounded-2xl border backdrop-blur-xl shadow-xl flex items-start space-x-3 text-xs transition-all duration-300 transform translate-y-2 pointer-events-auto ${l[t]||l.info}`,e.innerHTML=`
+      <i class="fa-solid ${i[t]||i.info} text-sm mt-0.5 shrink-0"></i>
+      <div class="flex-1 font-medium leading-relaxed">${n}</div>
       <button type="button" class="text-slate-400 hover:text-[#172B36] cursor-pointer ml-2">
         <i class="fa-solid fa-xmark text-xs"></i>
       </button>
-    `;
-
-    toast.querySelector('button').addEventListener('click', () => toast.remove());
-    container.appendChild(toast);
-
-    requestAnimationFrame(() => toast.classList.remove('translate-y-2'));
-
-    setTimeout(() => {
-      toast.classList.add('opacity-0', 'translate-y-2');
-      setTimeout(() => toast.remove(), 300);
-    }, 4500);
-  }
-
-  function setBtnLoading(btn, isLoading, loadingText = 'Processing...') {
-    if (!btn) return;
-    if (isLoading) {
-      btn.dataset.originalHtml = btn.innerHTML;
-      btn.disabled = true;
-      btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin text-xs mr-2"></i><span>${loadingText}</span>`;
-      btn.classList.add('opacity-75', 'cursor-not-allowed');
-    } else {
-      btn.disabled = false;
-      if (btn.dataset.originalHtml) btn.innerHTML = btn.dataset.originalHtml;
-      btn.classList.remove('opacity-75', 'cursor-not-allowed');
-    }
-  }
-
-  // =========================================================================
-  // TAB NAVIGATION & ROUTING
-  // =========================================================================
-  function switchTab(tabId, updateHash = true) {
-    if (typeof closeActiveGlassMenu === "function") closeActiveGlassMenu();
-    if (tabId === 'settings') tabId = 'security';
-
-    // Strict RBAC Route Guard
-    const userRole = state.adminProfile?.role || '';
-    const normRole = typeof normalizeRole === 'function' ? normalizeRole(userRole) : userRole.toLowerCase();
-    const isOwner = typeof isCurrentUserOwner === 'function' ? isCurrentUserOwner() : false;
-
-    // Hard Rule 0: Inquiries CRM and Review Moderation are strictly restricted to Super Admin
-    if ((tabId === 'inquiries' || tabId === 'reviews_admin') && !isOwner && normRole !== 'super_admin') {
-      showToast('Access Denied: Inquiries CRM and Review Moderation are strictly restricted to Super Administrators.', 'error');
-      tabId = normRole === 'accountant' ? 'finance' : (normRole === 'employee' ? 'tasks' : 'overview');
-    }
-    // Hard Rule 1: Audit & Operational History is strictly restricted to Admin and Super Admin
-    if (tabId === 'history' && !isOwner && normRole !== 'admin' && normRole !== 'super_admin') {
-      showToast('Access Denied: Audit & Operational History is strictly restricted to Administrators.', 'error');
-      tabId = normRole === 'accountant' ? 'finance' : (normRole === 'employee' ? 'tasks' : 'overview');
-    }
-    // Hard Rule 2: Accountant Dashboard Constraints (Financial only)
-    else if (normRole === 'accountant' && ['services', 'service_tasks', 'projects', 'tasks', 'team', 'history'].includes(tabId)) {
-      showToast('Access Denied: Operational pipelines and user governance are restricted for accountant accounts.', 'warning');
-      tabId = 'finance';
-    }
-    // Hard Rule 3: Employee Dashboard Constraints (Operational only)
-    else if (normRole === 'employee' && ['finance', 'team', 'history'].includes(tabId)) {
-      showToast('Access Denied: Financial and administrative modules are strictly restricted for employee accounts.', 'warning');
-      tabId = 'tasks';
-    }
-
-    state.activeTab = tabId;
-
-    const allViews = [
-      'overview', 'clients', 'client_details', 'services', 'service_tasks',
-      'projects', 'tasks', 'finance', 'team',
-      'support', 'history', 'security', 'inquiries', 'reviews_admin'
-    ];
-
-    allViews.forEach(v => {
-      const el = document.getElementById(`view_${v}`);
-      if (el) {
-        if (v === tabId) el.classList.remove('hidden');
-        else el.classList.add('hidden');
-      }
-    });
-
-    // Friendly Title Mapping
-    const tabTitles = {
-      overview: 'Overview & KPIs',
-      clients: 'Client Directory',
-      client_details: 'Client Workspace',
-      services: 'Service Catalog',
-      service_tasks: 'Task Blueprints',
-      projects: 'Service Projects',
-      tasks: 'Live Tasks',
-      finance: 'Payments & Ledger',
-      team: 'User & Access Management',
-      support: 'Support Requests',
-      history: 'Audit & History',
-      security: 'Account Security',
-      inquiries: 'Inquiries & Leads',
-      reviews_admin: 'Review Moderation'
-    };
-
-    const activeTitle = tabTitles[tabId] || tabId.replace(/_/g, ' ');
-
-    // Update Mobile Subheader Title
-    const subheaderTitle = document.getElementById('mobileSubheaderTitle');
-    if (subheaderTitle) {
-      subheaderTitle.textContent = activeTitle;
-    }
-
-    // Sidebar & Mobile Bottom Nav active styling
-    document.querySelectorAll('[data-dash-tab]').forEach(btn => {
-      const isTarget = btn.dataset.dashTab === tabId;
-      if (btn.closest('#adminMobileBottomNav')) {
-        const label = btn.querySelector('.dash-bottom-label');
-        if (isTarget) {
-          btn.classList.add('bg-[#EAF5F1]', 'text-[#087F70]', 'border-[#087F70]/25', 'shadow-2xs');
-          btn.classList.remove('text-[#74817D]', 'border-transparent');
-          btn.setAttribute('aria-current', 'page');
-          if (label) {
-            label.classList.add('font-bold');
-            label.classList.remove('font-semibold');
-          }
-        } else {
-          btn.classList.remove('bg-[#EAF5F1]', 'text-[#087F70]', 'border-[#087F70]/25', 'shadow-2xs');
-          btn.classList.add('text-[#74817D]', 'border-transparent');
-          btn.removeAttribute('aria-current');
-          if (label) {
-            label.classList.remove('font-bold');
-            label.classList.add('font-semibold');
-          }
-        }
-      } else {
-        if (isTarget) {
-          btn.classList.add('dock-active', 'bg-[#EAF5F1]', 'text-[#087F70]', 'border-[#087F70]/20');
-          btn.classList.remove('text-[#74817D]', 'text-slate-400', 'border-transparent', 'hover:bg-[#F7FAF9]');
-          btn.setAttribute('aria-current', 'page');
-        } else {
-          btn.classList.remove('dock-active', 'bg-[#EAF5F1]', 'text-[#087F70]', 'border-[#087F70]/20', 'bg-brand-whiz/15', 'text-brand-whiz', 'border-brand-whiz/30');
-          btn.classList.add('text-[#74817D]', 'border-transparent');
-          btn.removeAttribute('aria-current');
-        }
-      }
-    });
-
-    // Breadcrumb
-    const breadcrumb = document.getElementById('breadcrumbActiveTab');
-    if (breadcrumb) {
-      if (tabId === 'client_details') breadcrumb.textContent = 'Client Workspace';
-      else if (tabId === 'service_tasks') breadcrumb.textContent = 'Task Blueprints';
-      else if (tabId === 'inquiries') breadcrumb.textContent = 'Inquiries & Leads';
-      else if (tabId === 'reviews_admin') breadcrumb.textContent = 'Review Moderation';
-      else breadcrumb.textContent = tabId.replace('_', ' ');
-    }
-
-    if (updateHash && !tabId.includes('_details') && !tabId.includes('_tasks')) {
-      window.location.hash = tabId;
-    }
-
-    // Lazy load tab data
-    if (tabId === 'overview') loadOverviewData();
-    else if (tabId === 'clients') loadClientsData();
-    else if (tabId === 'services') loadServicesData();
-    else if (tabId === 'projects') loadProjectsData();
-    else if (tabId === 'tasks') loadTasksData();
-    else if (tabId === 'finance') loadFinanceData();
-    else if (tabId === 'team') loadTeamData();
-    else if (tabId === 'support') loadSupportData();
-    else if (tabId === 'history') loadHistoryData();
-    else if (tabId === 'security') loadSecurityData();
-    else if (tabId === 'inquiries') loadInquiriesData();
-    else if (tabId === 'reviews_admin') loadAdminReviewsData();
-
-    if (typeof initGlassSelects === 'function') initGlassSelects();
-  }
-
-  // =========================================================================
-  // 1. OVERVIEW DATA
-  // =========================================================================
-    let charts = {
-    services: null,
-    projects: null,
-    tasks: null,
-    revenue: null
-  };
-
-  function renderCharts(d) {
-    if (typeof Chart === 'undefined') return;
-
-    // 1. Service Distribution
-    const serviceCtx = document.getElementById('chartServiceDistribution');
-    const serviceEmpty = document.getElementById('chartServiceEmptyState');
-    if (serviceCtx) {
-      if (charts.services) charts.services.destroy();
-      const items = d.serviceDistribution || [];
-      if (items.length === 0) {
-        serviceCtx.style.display = 'none';
-        if (serviceEmpty) serviceEmpty.classList.remove('hidden');
-      } else {
-        serviceCtx.style.display = 'block';
-        if (serviceEmpty) serviceEmpty.classList.add('hidden');
-        charts.services = new Chart(serviceCtx, {
-          type: 'doughnut',
-          data: {
-            labels: items.map(i => i.name),
-            datasets: [{
-              data: items.map(i => i.count),
-              backgroundColor: ['#147D64', '#06B6D4', '#3B82F6', '#8B5CF6', '#F59E0B', '#10B981'],
-              borderWidth: 2,
-              borderColor: '#FFFFFF'
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10, family: 'Inter' }, color: '#64748B' } }
-            }
-          }
-        });
-      }
-    }
-
-    // 2. Project Progress
-    const projCtx = document.getElementById('chartProjectProgress');
-    const projEmpty = document.getElementById('chartProjectEmptyState');
-    if (projCtx) {
-      if (charts.projects) charts.projects.destroy();
-      const projects = d.projectProgress || [];
-      if (projects.length === 0) {
-        projCtx.style.display = 'none';
-        if (projEmpty) projEmpty.classList.remove('hidden');
-      } else {
-        projCtx.style.display = 'block';
-        if (projEmpty) projEmpty.classList.add('hidden');
-        charts.projects = new Chart(projCtx, {
-          type: 'bar',
-          data: {
-            labels: projects.map(p => p.name.length > 20 ? p.name.substring(0, 18) + '...' : p.name),
-            datasets: [{
-              label: 'Progress %',
-              data: projects.map(p => p.progress_percent || 0),
-              backgroundColor: '#147D64',
-              borderRadius: 6
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            indexAxis: 'y',
-            scales: {
-              x: { min: 0, max: 100, ticks: { callback: v => v + '%', color: '#64748B', font: { size: 10 } }, grid: { color: '#F1F5F9' } },
-              y: { ticks: { color: '#1E293B', font: { size: 10 } }, grid: { display: false } }
-            },
-            plugins: { legend: { display: false } }
-          }
-        });
-      }
-    }
-
-    // 3. Task Status Distribution
-    const taskCtx = document.getElementById('chartTaskStatus');
-    const taskEmpty = document.getElementById('chartTaskEmptyState');
-    if (taskCtx) {
-      if (charts.tasks) charts.tasks.destroy();
-      const tasks = d.taskStatusDistribution || [];
-      const totalTasks = tasks.reduce((acc, t) => acc + (t.count || 0), 0);
-      if (totalTasks === 0) {
-        taskCtx.style.display = 'none';
-        if (taskEmpty) taskEmpty.classList.remove('hidden');
-      } else {
-        taskCtx.style.display = 'block';
-        if (taskEmpty) taskEmpty.classList.add('hidden');
-        charts.tasks = new Chart(taskCtx, {
-          type: 'doughnut',
-          data: {
-            labels: tasks.map(t => (t.status || 'todo').toUpperCase()),
-            datasets: [{
-              data: tasks.map(t => t.count),
-              backgroundColor: ['#10B981', '#3B82F6', '#F59E0B', '#94A3B8'],
-              borderWidth: 2,
-              borderColor: '#FFFFFF'
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10, family: 'Inter' }, color: '#64748B' } }
-            }
-          }
-        });
-      }
-    }
-
-    // 4. Monthly Revenue
-    const revCtx = document.getElementById('chartMonthlyRevenue');
-    const revEmpty = document.getElementById('chartRevenueEmptyState');
-    if (revCtx) {
-      if (charts.revenue) charts.revenue.destroy();
-      const revenueCents = d.confirmedRevenueCents || 0;
-      if (revenueCents === 0) {
-        revCtx.style.display = 'none';
-        if (revEmpty) revEmpty.classList.remove('hidden');
-      } else {
-        revCtx.style.display = 'block';
-        if (revEmpty) revEmpty.classList.add('hidden');
-        charts.revenue = new Chart(revCtx, {
-          type: 'bar',
-          data: {
-            labels: ['Current Month'],
-            datasets: [{
-              label: 'Confirmed Payments ($ USD)',
-              data: [revenueCents / 100],
-              backgroundColor: '#10B981',
-              borderRadius: 8
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-              y: { ticks: { callback: v => '$' + v, color: '#64748B', font: { size: 10 } }, grid: { color: '#F1F5F9' } },
-              x: { ticks: { color: '#1E293B', font: { size: 10 } }, grid: { display: false } }
-            },
-            plugins: { legend: { display: false } }
-          }
-        });
-      }
-    }
-  }
-
-  function updateOverviewGreeting() {
-    const greetingEl = document.getElementById('overviewGreetingTitle');
-    const quoteEl = document.getElementById('overviewMotivationalQuote');
-    if (!greetingEl && !quoteEl) return;
-
-    // Dynamic time-aware greeting based on local hour
-    const hour = new Date().getHours();
-    let timeGreeting = 'Good Morning';
-    if (hour >= 12 && hour < 17) {
-      timeGreeting = 'Good Afternoon';
-    } else if (hour >= 17 || hour < 4) {
-      timeGreeting = 'Good Evening';
-    }
-
-    // Resolve authenticated user's first name
-    const rawFullName = state.adminProfile?.full_name || 
-                        state.adminProfile?.fullName || 
-                        window.Clerk?.user?.firstName || 
-                        window.Clerk?.user?.fullName || 
-                        '';
-    let firstName = '';
-    if (rawFullName) {
-      const parts = rawFullName.trim().split(/\s+/);
-      firstName = parts[0];
-      if (['md', 'md.', 'mr', 'mr.', 'ms', 'ms.', 'dr', 'dr.'].includes(firstName.toLowerCase()) && parts.length > 1) {
-        firstName = parts[1];
-      }
-    } else {
-      firstName = 'Kazi';
-    }
-
-    if (firstName) {
-      firstName = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
-    }
-
-    if (greetingEl) {
-      greetingEl.textContent = `${timeGreeting}, ${firstName}!`;
-    }
-
-    // Rotating motivational subtext
-    const quotes = [
-      "Ready to crush your agency goals today?",
-      "Here is a snapshot of your operational momentum today.",
-      "Let's scale your agency to new heights with direct execution.",
-      "Operational excellence and client success start with daily focus.",
-      "enabling enterprise growth with real-time clarity and precision.",
-      "Every milestone achieved is another step towards scaling mastery."
-    ];
-
-    if (quoteEl) {
-      const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
-      quoteEl.textContent = randomQuote;
-    }
-  }
-
-  async function loadOverviewData() {
-    updateOverviewGreeting();
-    const res = await apiFetch('/portal/admin/stats');
-    if (res.ok && res.data && res.data.data) {
-      const d = res.data.data;
-      const totalClientsEl = document.getElementById('statTotalClients');
-      if (totalClientsEl) totalClientsEl.textContent = d.totalClients || 0;
-
-      const actCount = document.getElementById('statActiveProjects');
-      if (actCount) actCount.textContent = d.activeProjects || 0;
-
-      const srvCount = document.getElementById('statActiveServices');
-      if (srvCount) srvCount.textContent = d.activeServices || 0;
-
-      const compTasks = document.getElementById('statCompletedTasks');
-      if (compTasks) compTasks.textContent = d.completedTasks || 0;
-
-      const pendTasks = document.getElementById('statPendingTasks');
-      if (pendTasks) pendTasks.textContent = d.pendingTasks || 0;
-
-      const revEl = document.getElementById('statConfirmedRevenue');
-      if (revEl) {
-        const revByCurr = d.confirmedRevenueByCurrency || d.revenueByCurrency || [];
-        if (revByCurr.length === 0) {
-          revEl.textContent = '$0.00';
-        } else if (revByCurr.length === 1) {
-          revEl.textContent = formatCurrency(revByCurr[0].total, revByCurr[0].currency);
-        } else {
-          revEl.textContent = formatCurrency(revByCurr[0].total, revByCurr[0].currency);
-        }
-      }
-
-      renderCharts(d);
-
-      const actEl = document.getElementById('overviewActivityList');
-      if (actEl && d.recentActivity) {
-        if (d.recentActivity.length === 0) {
-          actEl.innerHTML = '<p class="text-slate-500 italic p-4 text-center">No recent system activity recorded.</p>';
-        } else {
-          actEl.innerHTML = d.recentActivity.map(a => `
+    `,e.querySelector("button").addEventListener("click",()=>e.remove()),s.appendChild(e),requestAnimationFrame(()=>e.classList.remove("translate-y-2")),setTimeout(()=>{e.classList.add("opacity-0","translate-y-2"),setTimeout(()=>e.remove(),300)},4500)}function A(n,t,s="Processing..."){n&&(t?(n.dataset.originalHtml=n.innerHTML,n.disabled=!0,n.innerHTML=`<i class="fa-solid fa-circle-notch fa-spin text-xs mr-2"></i><span>${s}</span>`,n.classList.add("opacity-75","cursor-not-allowed")):(n.disabled=!1,n.dataset.originalHtml&&(n.innerHTML=n.dataset.originalHtml),n.classList.remove("opacity-75","cursor-not-allowed")))}function X(n,t=!0){typeof ce=="function"&&ce(),n==="settings"&&(n="security");const s=g.adminProfile?.role||"",e=typeof Se=="function"?Se(s):s.toLowerCase(),l=typeof Z=="function"?Z():!1;(n==="inquiries"||n==="reviews_admin")&&!l&&e!=="super_admin"&&(v("Access Denied: Inquiries CRM and Review Moderation are strictly restricted to Super Administrators.","error"),n=e==="accountant"?"finance":e==="employee"?"tasks":"overview"),n==="history"&&!l&&e!=="admin"&&e!=="super_admin"?(v("Access Denied: Audit & Operational History is strictly restricted to Administrators.","error"),n=e==="accountant"?"finance":e==="employee"?"tasks":"overview"):e==="accountant"&&["services","service_tasks","projects","tasks","team","history"].includes(n)?(v("Access Denied: Operational pipelines and user governance are restricted for accountant accounts.","warning"),n="finance"):e==="employee"&&["finance","team","history"].includes(n)&&(v("Access Denied: Financial and administrative modules are strictly restricted for employee accounts.","warning"),n="tasks"),g.activeTab=n,["overview","clients","client_details","services","service_tasks","projects","tasks","finance","team","support","history","security","inquiries","reviews_admin","content_calendar"].forEach(o=>{const d=document.getElementById(`view_${o}`);d&&(o===n?d.classList.remove("hidden"):d.classList.add("hidden"))});const u={overview:"Overview & KPIs",clients:"Client Directory",client_details:"Client Workspace",services:"Service Catalog",service_tasks:"Task Blueprints",projects:"Service Projects",tasks:"Live Tasks",finance:"Payments & Ledger",team:"User & Access Management",support:"Support Requests",history:"Audit & History",security:"Account Security",inquiries:"Inquiries & Leads",reviews_admin:"Review Moderation",content_calendar:"Content Calendar Hub"}[n]||n.replace(/_/g," "),y=document.getElementById("mobileSubheaderTitle");y&&(y.textContent=u),document.querySelectorAll("[data-dash-tab]").forEach(o=>{const d=o.dataset.dashTab===n;if(o.closest("#adminMobileBottomNav")){const c=o.querySelector(".dash-bottom-label");d?(o.classList.add("bg-[#EAF5F1]","text-[#087F70]","border-[#087F70]/25","shadow-2xs"),o.classList.remove("text-[#74817D]","border-transparent"),o.setAttribute("aria-current","page"),c&&(c.classList.add("font-bold"),c.classList.remove("font-semibold"))):(o.classList.remove("bg-[#EAF5F1]","text-[#087F70]","border-[#087F70]/25","shadow-2xs"),o.classList.add("text-[#74817D]","border-transparent"),o.removeAttribute("aria-current"),c&&(c.classList.remove("font-bold"),c.classList.add("font-semibold")))}else d?(o.classList.add("dock-active","bg-[#EAF5F1]","text-[#087F70]","border-[#087F70]/20"),o.classList.remove("text-[#74817D]","text-slate-400","border-transparent","hover:bg-[#F7FAF9]"),o.setAttribute("aria-current","page")):(o.classList.remove("dock-active","bg-[#EAF5F1]","text-[#087F70]","border-[#087F70]/20","bg-brand-whiz/15","text-brand-whiz","border-brand-whiz/30"),o.classList.add("text-[#74817D]","border-transparent"),o.removeAttribute("aria-current"))});const a=document.getElementById("breadcrumbActiveTab");a&&(n==="client_details"?a.textContent="Client Workspace":n==="service_tasks"?a.textContent="Task Blueprints":n==="inquiries"?a.textContent="Inquiries & Leads":n==="reviews_admin"?a.textContent="Review Moderation":n==="content_calendar"?a.textContent="Content Calendar Hub":a.textContent=n.replace("_"," ")),t&&!n.includes("_details")&&!n.includes("_tasks")&&(window.location.hash=n),n==="overview"?Ft():n==="clients"?le():n==="services"?Ce():n==="projects"?ke():n==="tasks"?Ie():n==="finance"?ve():n==="team"?xe():n==="support"?We():n==="history"?yt():n==="security"?Rt():n==="inquiries"?ht():n==="reviews_admin"?Ct():n==="content_calendar"&&_e(),typeof O=="function"&&O()}let re={services:null,projects:null,tasks:null,revenue:null};function on(n){if(typeof Chart>"u")return;const t=document.getElementById("chartServiceDistribution"),s=document.getElementById("chartServiceEmptyState");if(t){re.services&&re.services.destroy();const a=n.serviceDistribution||[];a.length===0?(t.style.display="none",s&&s.classList.remove("hidden")):(t.style.display="block",s&&s.classList.add("hidden"),re.services=new Chart(t,{type:"doughnut",data:{labels:a.map(o=>o.name),datasets:[{data:a.map(o=>o.count),backgroundColor:["#147D64","#06B6D4","#3B82F6","#8B5CF6","#F59E0B","#10B981"],borderWidth:2,borderColor:"#FFFFFF"}]},options:{responsive:!0,maintainAspectRatio:!1,plugins:{legend:{position:"bottom",labels:{boxWidth:10,font:{size:10,family:"Inter"},color:"#64748B"}}}}}))}const e=document.getElementById("chartProjectProgress"),l=document.getElementById("chartProjectEmptyState");if(e){re.projects&&re.projects.destroy();const a=n.projectProgress||[];a.length===0?(e.style.display="none",l&&l.classList.remove("hidden")):(e.style.display="block",l&&l.classList.add("hidden"),re.projects=new Chart(e,{type:"bar",data:{labels:a.map(o=>o.name.length>20?o.name.substring(0,18)+"...":o.name),datasets:[{label:"Progress %",data:a.map(o=>o.progress_percent||0),backgroundColor:"#147D64",borderRadius:6}]},options:{responsive:!0,maintainAspectRatio:!1,indexAxis:"y",scales:{x:{min:0,max:100,ticks:{callback:o=>o+"%",color:"#64748B",font:{size:10}},grid:{color:"#F1F5F9"}},y:{ticks:{color:"#1E293B",font:{size:10}},grid:{display:!1}}},plugins:{legend:{display:!1}}}}))}const i=document.getElementById("chartTaskStatus"),p=document.getElementById("chartTaskEmptyState");if(i){re.tasks&&re.tasks.destroy();const a=n.taskStatusDistribution||[];a.reduce((d,c)=>d+(c.count||0),0)===0?(i.style.display="none",p&&p.classList.remove("hidden")):(i.style.display="block",p&&p.classList.add("hidden"),re.tasks=new Chart(i,{type:"doughnut",data:{labels:a.map(d=>(d.status||"todo").toUpperCase()),datasets:[{data:a.map(d=>d.count),backgroundColor:["#10B981","#3B82F6","#F59E0B","#94A3B8"],borderWidth:2,borderColor:"#FFFFFF"}]},options:{responsive:!0,maintainAspectRatio:!1,plugins:{legend:{position:"bottom",labels:{boxWidth:10,font:{size:10,family:"Inter"},color:"#64748B"}}}}}))}const u=document.getElementById("chartMonthlyRevenue"),y=document.getElementById("chartRevenueEmptyState");if(u){re.revenue&&re.revenue.destroy();const a=n.confirmedRevenueCents||0;a===0?(u.style.display="none",y&&y.classList.remove("hidden")):(u.style.display="block",y&&y.classList.add("hidden"),re.revenue=new Chart(u,{type:"bar",data:{labels:["Current Month"],datasets:[{label:"Confirmed Payments ($ USD)",data:[a/100],backgroundColor:"#10B981",borderRadius:8}]},options:{responsive:!0,maintainAspectRatio:!1,scales:{y:{ticks:{callback:o=>"$"+o,color:"#64748B",font:{size:10}},grid:{color:"#F1F5F9"}},x:{ticks:{color:"#1E293B",font:{size:10}},grid:{display:!1}}},plugins:{legend:{display:!1}}}}))}}function mt(){const n=document.getElementById("overviewGreetingTitle"),t=document.getElementById("overviewMotivationalQuote");if(!n&&!t)return;const s=new Date().getHours();let e="Good Morning";s>=12&&s<17?e="Good Afternoon":(s>=17||s<4)&&(e="Good Evening");const l=g.adminProfile?.full_name||g.adminProfile?.fullName||window.Clerk?.user?.firstName||window.Clerk?.user?.fullName||"";let i="";if(l){const u=l.trim().split(/\s+/);i=u[0],["md","md.","mr","mr.","ms","ms.","dr","dr."].includes(i.toLowerCase())&&u.length>1&&(i=u[1])}else i="Kazi";i&&(i=i.charAt(0).toUpperCase()+i.slice(1).toLowerCase()),n&&(n.textContent=`${e}, ${i}!`);const p=["Ready to crush your agency goals today?","Here is a snapshot of your operational momentum today.","Let's scale your agency to new heights with direct execution.","Operational excellence and client success start with daily focus.","enabling enterprise growth with real-time clarity and precision.","Every milestone achieved is another step towards scaling mastery."];if(t){const u=p[Math.floor(Math.random()*p.length)];t.textContent=u}}async function Ft(){mt();const n=await B("/portal/admin/stats");if(n.ok&&n.data&&n.data.data){const t=n.data.data,s=document.getElementById("statTotalClients");s&&(s.textContent=t.totalClients||0);const e=document.getElementById("statActiveProjects");e&&(e.textContent=t.activeProjects||0);const l=document.getElementById("statActiveServices");l&&(l.textContent=t.activeServices||0);const i=document.getElementById("statCompletedTasks");i&&(i.textContent=t.completedTasks||0);const p=document.getElementById("statPendingTasks");p&&(p.textContent=t.pendingTasks||0);const u=document.getElementById("statConfirmedRevenue");if(u){const a=t.confirmedRevenueByCurrency||t.revenueByCurrency||[];a.length===0?u.textContent="$0.00":(a.length,u.textContent=Y(a[0].total,a[0].currency))}on(t);const y=document.getElementById("overviewActivityList");y&&t.recentActivity&&(t.recentActivity.length===0?y.innerHTML='<p class="text-slate-500 italic p-4 text-center">No recent system activity recorded.</p>':y.innerHTML=t.recentActivity.map(a=>`
             <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-[#E3E9EF]">
               <div class="flex items-center space-x-2.5">
                 <span class="w-2 h-2 rounded-full bg-brand-whiz"></span>
-                <span class="font-bold text-[#172B36] uppercase text-[10px]">${escapeHtml(a.action)}</span>
-                <span class="text-slate-500 text-xs">${escapeHtml(sanitizeAuditDetails(a.resource_type || ''))}</span>
+                <span class="font-bold text-[#172B36] uppercase text-[10px]">${f(a.action)}</span>
+                <span class="text-slate-500 text-xs">${f(Ve(a.resource_type||""))}</span>
               </div>
               <span class="text-[11px] text-slate-400 font-mono">${new Date(a.created_at).toLocaleTimeString()}</span>
             </div>
-          `).join('');
-        }
-      }
-    }
-  }
-
-  // =========================================================================
-  // 2. CLIENT DIRECTORY & CLIENT DETAILS WORKSPACE (Phase 3 & 4)
-  // =========================================================================
-  async function loadClientsData() {
-    const tbody = document.getElementById('adminClientsTableBody');
-    if (!tbody) return;
-
-    tbody.innerHTML = `
+          `).join(""))}}async function le(){const n=document.getElementById("adminClientsTableBody");if(!n)return;n.innerHTML=`
       <tr>
         <td colspan="5" class="px-6 py-10 text-center">
           <div class="inline-flex items-center gap-2.5 text-xs font-semibold text-slate-500">
@@ -995,19 +22,7 @@
           </div>
         </td>
       </tr>
-    `;
-
-    const statusFilter = document.getElementById('adminClientStatusFilter')?.value || 'active';
-    const searchQuery = (document.getElementById('adminClientSearchInput')?.value || '').trim();
-
-    const res = await apiFetch(`/clients?status=${statusFilter}&search=${encodeURIComponent(searchQuery)}`);
-
-    if (res.ok && res.data && Array.isArray(res.data.data)) {
-      state.clientsCache = res.data.data;
-      renderClientsTable(state.clientsCache);
-    } else {
-      const errMsg = res.data?.error || 'Failed to communicate with database.';
-      tbody.innerHTML = `
+    `;const t=document.getElementById("adminClientStatusFilter")?.value||"active",s=(document.getElementById("adminClientSearchInput")?.value||"").trim(),e=await B(`/clients?status=${t}&search=${encodeURIComponent(s)}`);if(e.ok&&e.data&&Array.isArray(e.data.data))g.clientsCache=e.data.data,rn(g.clientsCache);else{const l=e.data?.error||"Failed to communicate with database.";n.innerHTML=`
         <tr>
           <td colspan="5" class="px-6 py-8 text-center">
             <div class="max-w-md mx-auto p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs space-y-2">
@@ -1015,27 +30,14 @@
                 <i class="fa-solid fa-triangle-exclamation"></i>
                 <span>Unable to load clients directory</span>
               </div>
-              <p class="text-[11px] text-rose-600">${escapeHtml(errMsg)}</p>
+              <p class="text-[11px] text-rose-600">${f(l)}</p>
               <button type="button" id="btnRetryLoadClients" class="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-[11px] transition-colors cursor-pointer shadow-xs">
                 <i class="fa-solid fa-rotate-right"></i> Retry Connection
               </button>
             </div>
           </td>
         </tr>
-      `;
-      document.getElementById('btnRetryLoadClients')?.addEventListener('click', () => {
-        loadClientsData();
-      });
-    }
-  }
-
-  function renderClientsTable(clients) {
-    const tbody = document.getElementById('adminClientsTableBody');
-    const cardsContainer = document.getElementById('adminClientsCardsContainer');
-    if (!tbody) return;
-
-    if (!clients || clients.length === 0) {
-      const emptyHtml = `
+      `,document.getElementById("btnRetryLoadClients")?.addEventListener("click",()=>{le()})}}function rn(n){const t=document.getElementById("adminClientsTableBody"),s=document.getElementById("adminClientsCardsContainer");if(t){if(!n||n.length===0){const e=`
         <div class="p-8 rounded-2xl bg-white border border-[#E3E9EF] text-center max-w-sm mx-auto space-y-3">
           <div class="w-12 h-12 mx-auto rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 text-lg">
             <i class="fa-solid fa-users-slash"></i>
@@ -1048,264 +50,66 @@
             <i class="fa-solid fa-user-plus"></i> Add New Client
           </button>
         </div>
-      `;
-
-      tbody.innerHTML = `
+      `;t.innerHTML=`
         <tr>
-          <td colspan="5" class="px-6 py-12 text-center">${emptyHtml}</td>
+          <td colspan="5" class="px-6 py-12 text-center">${e}</td>
         </tr>
-      `;
-
-      if (cardsContainer) cardsContainer.innerHTML = emptyHtml;
-
-      document.querySelectorAll('.btn-empty-add-client').forEach(btn => {
-        btn.addEventListener('click', () => {
-          document.getElementById('btnOpenAddClientModal')?.click();
-        });
-      });
-      return;
-    }
-
-    // 1. Desktop Table Rows
-    tbody.innerHTML = clients.map(c => {
-      const isSuspended = c.status === 'suspended';
-      const isDeleted = c.status === 'deleted';
-
-      let statusBadge = '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">Active</span>';
-      if (isSuspended) {
-        statusBadge = '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-200">Suspended</span>';
-      } else if (isDeleted) {
-        statusBadge = '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-rose-50 text-rose-700 border border-rose-200">Deleted</span>';
-      }
-
-      const companyDisplay = (c.company_name && c.company_name.trim())
-        ? `<div class="text-xs text-[#147D64] font-medium truncate max-w-[220px]">${escapeHtml(c.company_name)}</div>`
-        : `<div class="mt-0.5"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200"><i class="fa-solid fa-building-circle-exclamation text-amber-500 text-[9px]"></i> Unassigned Company</span></div>`;
-
-      return `
+      `,s&&(s.innerHTML=e),document.querySelectorAll(".btn-empty-add-client").forEach(l=>{l.addEventListener("click",()=>{document.getElementById("btnOpenAddClientModal")?.click()})});return}t.innerHTML=n.map(e=>{const l=e.status==="suspended",i=e.status==="deleted";let p='<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">Active</span>';l?p='<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-200">Suspended</span>':i&&(p='<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-rose-50 text-rose-700 border border-rose-200">Deleted</span>');const u=e.company_name&&e.company_name.trim()?`<div class="text-xs text-[#147D64] font-medium truncate max-w-[220px]">${f(e.company_name)}</div>`:'<div class="mt-0.5"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200"><i class="fa-solid fa-building-circle-exclamation text-amber-500 text-[9px]"></i> Unassigned Company</span></div>';return`
         <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
           <td class="px-6 py-4">
-            <div class="font-bold text-[#172B36] text-sm">${escapeHtml(c.full_name || 'Client')}</div>
-            ${companyDisplay}
+            <div class="font-bold text-[#172B36] text-sm">${f(e.full_name||"Client")}</div>
+            ${u}
             
           </td>
           <td class="px-6 py-4 font-mono text-[#5F7180]">
-            <div>${escapeHtml(c.email)}</div>
-            <div class="text-[11px] text-slate-500">${escapeHtml(c.phone || 'No phone')}</div>
+            <div>${f(e.email)}</div>
+            <div class="text-[11px] text-slate-500">${f(e.phone||"No phone")}</div>
           </td>
           <td class="px-6 py-4 text-[#5F7180] text-xs">
-            ${escapeHtml(c.city || 'Dhaka')}, ${escapeHtml(c.country || 'Bangladesh')}
+            ${f(e.city||"Dhaka")}, ${f(e.country||"Bangladesh")}
           </td>
           <td class="px-6 py-4">
-            ${statusBadge}
+            ${p}
           </td>
           <td class="px-6 py-4 text-right">
-            <button type="button" class="btn-manage-client px-3.5 py-1.5 rounded-xl text-xs font-bold btn-glass-primary shadow-xs hover:shadow-md cursor-pointer transition-all" data-id="${escapeHtml(c.id)}">
+            <button type="button" class="btn-manage-client px-3.5 py-1.5 rounded-xl text-xs font-bold btn-glass-primary shadow-xs hover:shadow-md cursor-pointer transition-all" data-id="${f(e.id)}">
               <i class="fa-solid fa-sliders mr-1 text-[11px]"></i> Manage
             </button>
           </td>
         </tr>
-      `;
-    }).join('');
-
-    // 2. Mobile Cards List (Table-to-Card Pattern)
-    if (cardsContainer) {
-      cardsContainer.innerHTML = clients.map(c => {
-        const isSuspended = c.status === 'suspended';
-        const isDeleted = c.status === 'deleted';
-
-        let statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">Active</span>';
-        if (isSuspended) {
-          statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-200">Suspended</span>';
-        } else if (isDeleted) {
-          statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-rose-50 text-rose-700 border border-rose-200">Deleted</span>';
-        }
-
-        const companyDisplay = (c.company_name && c.company_name.trim())
-          ? `<span class="text-xs font-semibold text-[#147D64] truncate">${escapeHtml(c.company_name)}</span>`
-          : `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200"><i class="fa-solid fa-building-circle-exclamation text-amber-500 text-[9px]"></i> Unassigned</span>`;
-
-        return `
+      `}).join(""),s&&(s.innerHTML=n.map(e=>{const l=e.status==="suspended",i=e.status==="deleted";let p='<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">Active</span>';l?p='<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-200">Suspended</span>':i&&(p='<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-rose-50 text-rose-700 border border-rose-200">Deleted</span>');const u=e.company_name&&e.company_name.trim()?`<span class="text-xs font-semibold text-[#147D64] truncate">${f(e.company_name)}</span>`:'<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200"><i class="fa-solid fa-building-circle-exclamation text-amber-500 text-[9px]"></i> Unassigned</span>';return`
           <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs space-y-3">
             <div class="flex items-start justify-between gap-2">
               <div class="min-w-0">
-                <h4 class="text-sm font-black text-[#172B36] truncate">${escapeHtml(c.full_name || 'Client')}</h4>
-                <div class="mt-0.5">${companyDisplay}</div>
+                <h4 class="text-sm font-black text-[#172B36] truncate">${f(e.full_name||"Client")}</h4>
+                <div class="mt-0.5">${u}</div>
               </div>
-              <div class="shrink-0">${statusBadge}</div>
+              <div class="shrink-0">${p}</div>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-600 pt-1 border-t border-slate-100">
               <div class="flex items-center space-x-2 truncate">
                 <i class="fa-solid fa-envelope text-slate-400 text-xs w-3.5"></i>
-                <span class="truncate font-mono text-[11px]">${escapeHtml(c.email)}</span>
+                <span class="truncate font-mono text-[11px]">${f(e.email)}</span>
               </div>
               <div class="flex items-center space-x-2 truncate">
                 <i class="fa-solid fa-phone text-slate-400 text-xs w-3.5"></i>
-                <span class="text-[11px]">${escapeHtml(c.phone || 'No phone')}</span>
+                <span class="text-[11px]">${f(e.phone||"No phone")}</span>
               </div>
               <div class="flex items-center space-x-2 truncate">
                 <i class="fa-solid fa-location-dot text-slate-400 text-xs w-3.5"></i>
-                <span class="text-[11px]">${escapeHtml(c.city || 'Dhaka')}, ${escapeHtml(c.country || 'Bangladesh')}</span>
+                <span class="text-[11px]">${f(e.city||"Dhaka")}, ${f(e.country||"Bangladesh")}</span>
               </div>
             </div>
 
             <div class="pt-2 border-t border-slate-100">
-              <button type="button" class="btn-manage-client w-full py-2.5 rounded-xl text-xs font-bold bg-[#147D64] hover:bg-[#116954] active:bg-[#0e5645] text-white flex items-center justify-center gap-2 cursor-pointer transition-all shadow-xs" data-id="${escapeHtml(c.id)}">
+              <button type="button" class="btn-manage-client w-full py-2.5 rounded-xl text-xs font-bold bg-[#147D64] hover:bg-[#116954] active:bg-[#0e5645] text-white flex items-center justify-center gap-2 cursor-pointer transition-all shadow-xs" data-id="${f(e.id)}">
                 <i class="fa-solid fa-sliders text-xs"></i>
                 <span>Manage Client Workspace</span>
               </button>
             </div>
           </div>
-        `;
-      }).join('');
-    }
-
-    // Wire Manage buttons on both table and cards
-    document.querySelectorAll('.btn-manage-client').forEach(btn => {
-      btn.addEventListener('click', () => {
-        openClientDetails(btn.dataset.id);
-      });
-    });
-  }
-
-  // Open Full-Page Client Details Workspace
-  async function openClientDetails(clientId) {
-    state.selectedClientId = clientId;
-    switchTab('client_details', false);
-    window.location.hash = `client-${clientId}`;
-
-    const titleEl = document.getElementById('clientDetailTitle');
-    const subEl = document.getElementById('clientDetailSubtitle');
-    if (titleEl) {
-      titleEl.textContent = 'Loading Client Record...';
-      titleEl.title = '';
-    }
-
-    const res = await apiFetch(`/clients/${clientId}`);
-    if (!res.ok || !res.data || !res.data.data) {
-      showToast('Failed to load client details.', 'error');
-      switchTab('clients');
-      return;
-    }
-
-    const { client, services, projects, invoices, payments, auditLogs } = res.data.data;
-    state.selectedClient = client;
-
-    // Header info
-    if (titleEl) {
-      titleEl.textContent = 'Client Workspace';
-      titleEl.title = titleEl.textContent;
-    }
-    if (subEl) {
-      subEl.textContent = client.is_unassigned ? 'Unassigned Organization • Master Operational Record' : 'Authoritative Client Record & Active Services';
-      subEl.title = subEl.textContent;
-    }
-
-    const statusBadges = [
-      document.getElementById('clientDetailStatusBadge'),
-      document.getElementById('clientCardStatusBadge')
-    ].filter(Boolean);
-    const btnSuspend = document.getElementById('btnSuspendClientAction');
-    const btnReactivate = document.getElementById('btnReactivateClientAction');
-
-    statusBadges.forEach(statusBadge => {
-      if (client.status === 'suspended') {
-        statusBadge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200/90 shadow-2xs shrink-0 select-none';
-        statusBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span><span>Suspended</span>';
-      } else {
-        statusBadge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200/90 shadow-2xs shrink-0 select-none';
-        statusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span><span>${escapeHtml(client.status || 'Active')}</span>`;
-      }
-    });
-
-    if (client.status === 'suspended') {
-      btnSuspend?.classList.add('hidden');
-      btnReactivate?.classList.remove('hidden');
-    } else {
-      btnSuspend?.classList.remove('hidden');
-      btnReactivate?.classList.add('hidden');
-    }
-    // Profile Card
-    const cif = client.cif || {};
-    const effectiveFullName = cif.fullName || client.full_name || 'Valued Client';
-    const effectiveCompanyName = cif.companyName || client.company_name;
-    const effectivePhone = cif.phone || client.phone || 'None provided';
-    const effectiveAddress = cif.address || client.address;
-    const effectiveCity = cif.city || client.city || 'Dhaka';
-    const effectiveCountry = cif.country || client.country || 'Bangladesh';
-
-    const initials = effectiveFullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-    const avInit = document.getElementById('clientAvatarInitials');
-    if (avInit) avInit.textContent = initials;
-    const cfn = document.getElementById('clientCardFullName');
-    if (cfn) cfn.textContent = effectiveFullName;
-    const ccn = document.getElementById('clientCardCompanyName');
-    if (ccn) {
-      ccn.innerHTML = effectiveCompanyName
-        ? escapeHtml(effectiveCompanyName)
-        : `<span class="inline-flex items-center gap-1 text-amber-600 font-semibold"><i class="fa-solid fa-triangle-exclamation text-[10px]"></i> Unassigned (No Linked Organization)</span>`;
-    }
-    const cEm = document.getElementById('clientCardEmail');
-    if (cEm) cEm.textContent = client.email;
-    const cPh = document.getElementById('clientCardPhone');
-    if (cPh) cPh.textContent = effectivePhone;
-    const cLoc = document.getElementById('clientCardLocation');
-    if (cLoc) cLoc.textContent = `${effectiveAddress ? effectiveAddress + ', ' : ''}${effectiveCity}, ${effectiveCountry}`;
-    const cClk = document.getElementById('clientCardClerkId');
-    if (cClk) cClk.innerHTML = client.clerk_user_id ? '<span class="text-emerald-700 font-semibold"><i class="fa-solid fa-shield-check text-[#147D64] mr-1"></i>SSO Verified</span>' : '<span class="text-slate-400">Pending SSO link</span>';
-    const cOrg = document.getElementById('clientCardOrgId');
-    if (cOrg) {
-      cOrg.textContent = client.organization_name || (client.organization_id ? (client.organization_id.startsWith('org_') ? 'Primary Client Workspace' : client.organization_id) : 'Personal Workspace');
-    }
-
-    // Populate Preferred Currency in Financial Preferences
-    const clientCurrency = (cif.currency || client.currency || (effectiveCountry === 'Bangladesh' || (effectivePhone && effectivePhone.startsWith('+880')) ? 'BDT' : 'USD')).toUpperCase();
-    const currSelect = document.getElementById('clientPreferredCurrencySelect');
-    if (currSelect) {
-      currSelect.value = clientCurrency;
-      if (typeof syncClientPreferredCurrencyDropdown === 'function') {
-        syncClientPreferredCurrencyDropdown(clientCurrency);
-      }
-    }
-    const currBadge = document.getElementById('clientPreferredCurrencyBadge');
-    if (currBadge) currBadge.textContent = clientCurrency;
-
-    // Wire Save Currency button
-    const saveCurrBtn = document.getElementById('btnSaveClientCurrency');
-    if (saveCurrBtn) {
-      saveCurrBtn.onclick = async () => {
-        const newCurr = currSelect.value;
-        setBtnLoading(saveCurrBtn, true, 'Saving...');
-        const updRes = await apiFetch(`/clients/${clientId}`, {
-          method: 'PUT',
-          body: JSON.stringify({ currency: newCurr })
-        });
-        setBtnLoading(saveCurrBtn, false);
-        if (updRes.ok) {
-          showToast(`Client billing currency updated to ${newCurr}!`, 'success');
-          if (currBadge) currBadge.textContent = newCurr;
-        } else {
-          showToast(updRes.data?.error || 'Failed to update currency.', 'error');
-        }
-      };
-    }
-
-    // Financial calculations
-    const totalBilledCents = (invoices || []).reduce((sum, inv) => sum + (inv.total_cents || 0), 0);
-    const totalPaidCents = (payments || []).reduce((sum, p) => sum + (p.amount_cents || 0), 0);
-    const tbEl = document.getElementById('clientCardTotalBilled');
-    if (tbEl) tbEl.textContent = formatCurrency(totalBilledCents, clientCurrency);
-    const tpEl = document.getElementById('clientCardTotalPaid');
-    if (tpEl) tpEl.textContent = formatCurrency(totalPaidCents, clientCurrency);
-
-    // Render Assigned Services
-    const srvCountEl = document.getElementById('clientServicesCount');
-    if (srvCountEl) srvCountEl.textContent = `${services.length} Total`;
-    const srvList = document.getElementById('clientAssignedServicesList');
-    if (srvList) {
-      if (services.length === 0) {
-        srvList.innerHTML = `
+        `}).join("")),document.querySelectorAll(".btn-manage-client").forEach(e=>{e.addEventListener("click",()=>{fe(e.dataset.id)})})}}async function fe(n){g.selectedClientId=n,X("client_details",!1),window.location.hash=`client-${n}`;const t=document.getElementById("clientDetailTitle"),s=document.getElementById("clientDetailSubtitle");t&&(t.textContent="Loading Client Record...",t.title="");const e=await B(`/clients/${n}`);if(!e.ok||!e.data||!e.data.data){v("Failed to load client details.","error"),X("clients");return}const{client:l,services:i,projects:p,invoices:u,payments:y,auditLogs:a}=e.data.data;g.selectedClient=l,t&&(t.textContent="Client Workspace",t.title=t.textContent),s&&(s.textContent=l.is_unassigned?"Unassigned Organization \u2022 Master Operational Record":"Authoritative Client Record & Active Services",s.title=s.textContent);const o=[document.getElementById("clientDetailStatusBadge"),document.getElementById("clientCardStatusBadge")].filter(Boolean),d=document.getElementById("btnSuspendClientAction"),c=document.getElementById("btnReactivateClientAction");o.forEach($=>{l.status==="suspended"?($.className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200/90 shadow-2xs shrink-0 select-none",$.innerHTML='<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span><span>Suspended</span>'):($.className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200/90 shadow-2xs shrink-0 select-none",$.innerHTML=`<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span><span>${f(l.status||"Active")}</span>`)}),l.status==="suspended"?(d?.classList.add("hidden"),c?.classList.remove("hidden")):(d?.classList.remove("hidden"),c?.classList.add("hidden"));const r=l.cif||{},m=r.fullName||l.full_name||"Valued Client",b=r.companyName||l.company_name,E=r.phone||l.phone||"None provided",C=r.address||l.address,h=r.city||l.city||"Dhaka",I=r.country||l.country||"Bangladesh",L=m.split(" ").map($=>$[0]).join("").slice(0,2).toUpperCase(),P=document.getElementById("clientAvatarInitials");P&&(P.textContent=L);const M=document.getElementById("clientCardFullName");M&&(M.textContent=m);const F=document.getElementById("clientCardCompanyName");F&&(F.innerHTML=b?f(b):'<span class="inline-flex items-center gap-1 text-amber-600 font-semibold"><i class="fa-solid fa-triangle-exclamation text-[10px]"></i> Unassigned (No Linked Organization)</span>');const D=document.getElementById("clientCardEmail");D&&(D.textContent=l.email);const N=document.getElementById("clientCardPhone");N&&(N.textContent=E);const H=document.getElementById("clientCardLocation");H&&(H.textContent=`${C?C+", ":""}${h}, ${I}`);const W=document.getElementById("clientCardClerkId");W&&(W.innerHTML=l.clerk_user_id?'<span class="text-emerald-700 font-semibold"><i class="fa-solid fa-shield-check text-[#147D64] mr-1"></i>SSO Verified</span>':'<span class="text-slate-400">Pending SSO link</span>');const ee=document.getElementById("clientCardOrgId");ee&&(ee.textContent=l.organization_name||(l.organization_id?l.organization_id.startsWith("org_")?"Primary Client Workspace":l.organization_id:"Personal Workspace"));const J=(r.currency||l.currency||(I==="Bangladesh"||E&&E.startsWith("+880")?"BDT":"USD")).toUpperCase(),V=document.getElementById("clientPreferredCurrencySelect");V&&(V.value=J,typeof syncClientPreferredCurrencyDropdown=="function"&&syncClientPreferredCurrencyDropdown(J));const z=document.getElementById("clientPreferredCurrencyBadge");z&&(z.textContent=J);const Q=document.getElementById("btnSaveClientCurrency");Q&&(Q.onclick=async()=>{const $=V.value;A(Q,!0,"Saving...");const U=await B(`/clients/${n}`,{method:"PUT",body:JSON.stringify({currency:$})});A(Q,!1),U.ok?(v(`Client billing currency updated to ${$}!`,"success"),z&&(z.textContent=$)):v(U.data?.error||"Failed to update currency.","error")});const ue=(u||[]).reduce(($,U)=>$+(U.total_cents||0),0),te=(y||[]).reduce(($,U)=>$+(U.amount_cents||0),0),me=document.getElementById("clientCardTotalBilled");me&&(me.textContent=Y(ue,J));const ie=document.getElementById("clientCardTotalPaid");ie&&(ie.textContent=Y(te,J));const pe=document.getElementById("clientServicesCount");pe&&(pe.textContent=`${i.length} Total`);const q=document.getElementById("clientAssignedServicesList");q&&(i.length===0?(q.innerHTML=`
           <div class="p-6 rounded-2xl bg-slate-50 border border-[#E3E9EF] text-center text-xs text-[#5F7180] space-y-2">
             <i class="fa-solid fa-shapes text-2xl text-slate-600 block mb-1"></i>
             <p>No services assigned to this client organization yet.</p>
@@ -1313,308 +117,134 @@
               Assign Service from Catalog
             </button>
           </div>
-        `;
-        srvList.querySelector('.btn-open-assign-service-inline')?.addEventListener('click', () => {
-          document.getElementById('btnOpenAssignServiceClientModal')?.click();
-        });
-      } else {
-        srvList.innerHTML = services.map(s => `
+        `,q.querySelector(".btn-open-assign-service-inline")?.addEventListener("click",()=>{document.getElementById("btnOpenAssignServiceClientModal")?.click()})):(q.innerHTML=i.map($=>`
           <div class="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-white border border-[#E6ECE9] flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 shadow-2xs hover:border-[#087F70]/30 transition-all">
             <div class="flex items-center space-x-3 min-w-0">
               <div class="w-9 h-9 rounded-xl bg-brand-whiz/15 text-brand-whiz border border-brand-whiz/30 flex items-center justify-center font-bold text-xs shrink-0">
                 <i class="fa-solid fa-bolt"></i>
               </div>
               <div class="min-w-0">
-                <div class="text-xs font-bold text-[#172B36] truncate">${escapeHtml(s.service_name)}</div>
+                <div class="text-xs font-bold text-[#172B36] truncate">${f($.service_name)}</div>
                 <div class="text-[11px] text-[#5F7180] flex items-center gap-2">
-                  <span>${escapeHtml(s.package_name || 'Standard Retainer')}</span>
-                  <span>•</span>
-                  <span>Started: ${escapeHtml(s.start_date || 'N/A')}</span>
+                  <span>${f($.package_name||"Standard Retainer")}</span>
+                  <span>\u2022</span>
+                  <span>Started: ${f($.start_date||"N/A")}</span>
                 </div>
               </div>
             </div>
             <div class="flex items-center space-x-3 shrink-0 self-end sm:self-auto">
-              ${state.adminProfile?.role !== 'employee' && s.price_cents != null ? `<span class="text-xs font-mono font-bold text-brand-whiz">${formatCurrency(s.price_cents || 0, s.currency || clientCurrency || "USD")}</span>` : ''}
-              <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${s.status === 'active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-50 text-slate-600 border border-slate-200'}">${s.status}</span>
-              ${s.status === 'active' ? `
-                <button type="button" class="btn-cancel-client-service text-slate-500 hover:text-rose-600 p-1 cursor-pointer transition-colors" data-cs="${s.id}" title="Cancel Service">
+              ${g.adminProfile?.role!=="employee"&&$.price_cents!=null?`<span class="text-xs font-mono font-bold text-brand-whiz">${Y($.price_cents||0,$.currency||J||"USD")}</span>`:""}
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${$.status==="active"?"bg-emerald-50 text-emerald-700 border border-emerald-200":"bg-slate-50 text-slate-600 border border-slate-200"}">${$.status}</span>
+              ${$.status==="active"?`
+                <button type="button" class="btn-cancel-client-service text-slate-500 hover:text-rose-600 p-1 cursor-pointer transition-colors" data-cs="${$.id}" title="Cancel Service">
                   <i class="fa-solid fa-ban text-xs"></i>
                 </button>
-              ` : ''}
+              `:""}
             </div>
           </div>
-        `).join('');
-
-        // Wire cancel service buttons
-        srvList.querySelectorAll('.btn-cancel-client-service').forEach(btn => {
-          btn.addEventListener('click', async () => {
-            if (!confirm('Are you sure you want to cancel this service engagement?')) return;
-            const csId = btn.dataset.cs;
-            const cancelRes = await apiFetch(`/clients/${clientId}/services/${csId}`, { method: 'DELETE' });
-            if (cancelRes.ok) {
-              showToast('Service cancelled.', 'info');
-              openClientDetails(clientId);
-            } else {
-              showToast(cancelRes.data?.error || 'Failed to cancel service.', 'error');
-            }
-          });
-        });
-      }
-    }
-
-    // Render Projects
-    const prjCountEl = document.getElementById('clientProjectsCount');
-    if (prjCountEl) prjCountEl.textContent = `${projects.length} Projects`;
-    const prjList = document.getElementById('clientProjectsList');
-    if (prjList) {
-      if (projects.length === 0) {
-        prjList.innerHTML = '<p class="text-slate-500 italic text-xs p-4 text-center">No projects auto-provisioned yet.</p>';
-      } else {
-        prjList.innerHTML = projects.map(p => {
-          const percent = p.progress_percent || 0;
-          return `
+        `).join(""),q.querySelectorAll(".btn-cancel-client-service").forEach($=>{$.addEventListener("click",async()=>{if(!confirm("Are you sure you want to cancel this service engagement?"))return;const U=$.dataset.cs,R=await B(`/clients/${n}/services/${U}`,{method:"DELETE"});R.ok?(v("Service cancelled.","info"),fe(n)):v(R.data?.error||"Failed to cancel service.","error")})})));const ne=document.getElementById("clientProjectsCount");ne&&(ne.textContent=`${p.length} Projects`);const K=document.getElementById("clientProjectsList");K&&(p.length===0?K.innerHTML='<p class="text-slate-500 italic text-xs p-4 text-center">No projects auto-provisioned yet.</p>':K.innerHTML=p.map($=>{const U=$.progress_percent||0;return`
             <div class="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-white border border-[#E6ECE9] space-y-2.5 shadow-2xs hover:border-[#087F70]/30 transition-all">
               <div class="flex items-center justify-between">
                 <div>
-                  <h4 class="text-xs font-bold text-[#172B36]">${p.name}</h4>
-                  <p class="text-[11px] text-[#5F7180] font-mono">${p.service_name || 'Standard Engagement'}</p>
+                  <h4 class="text-xs font-bold text-[#172B36]">${$.name}</h4>
+                  <p class="text-[11px] text-[#5F7180] font-mono">${$.service_name||"Standard Engagement"}</p>
                 </div>
-                <span class="px-2.5 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">${p.status}</span>
+                <span class="px-2.5 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">${$.status}</span>
               </div>
               <div class="flex items-center space-x-3">
                 <div class="flex-1 bg-slate-100 h-2 rounded-full overflow-hidden border border-[#E3E9EF]">
-                  <div class="bg-gradient-to-r from-brand-whiz to-emerald-400 h-full rounded-full transition-all duration-500" style="width: ${percent}%"></div>
+                  <div class="bg-gradient-to-r from-brand-whiz to-emerald-400 h-full rounded-full transition-all duration-500" style="width: ${U}%"></div>
                 </div>
-                <span class="text-xs font-mono font-bold text-brand-whiz">${percent}%</span>
-                <span class="text-[11px] font-mono text-slate-400">(${p.completed_tasks || 0}/${p.total_tasks || 20} Tasks)</span>
+                <span class="text-xs font-mono font-bold text-brand-whiz">${U}%</span>
+                <span class="text-[11px] font-mono text-slate-400">(${$.completed_tasks||0}/${$.total_tasks||20} Tasks)</span>
               </div>
             </div>
-          `;
-        }).join('');
-      }
-    }
-
-    // Render Audit Trail
-    const audList = document.getElementById('clientAuditHistoryList');
-    if (audList) {
-      if (!auditLogs || auditLogs.length === 0) {
-        audList.innerHTML = '<p class="text-slate-500 italic text-xs">No audit logs for this client yet.</p>';
-      } else {
-        audList.innerHTML = auditLogs.map(a => {
-          const actionText = escapeHtml(a.action || 'ACTIVITY');
-          const actorEmail = escapeHtml(resolveUserIdentity(a.user_email || a.user_name || a.actor_id || a.clerk_id, 'actor'));
-          const dateStr = a.created_at || a.timestamp ? new Date(a.created_at || a.timestamp).toLocaleDateString() : '';
-          const detailsStr = a.details ? sanitizeAuditDetails(a.details, effectiveFullName) : '';
-
-          return `
+          `}).join(""));const G=document.getElementById("clientAuditHistoryList");G&&(!a||a.length===0?G.innerHTML='<p class="text-slate-500 italic text-xs">No audit logs for this client yet.</p>':G.innerHTML=a.map($=>{const U=f($.action||"ACTIVITY"),R=f(be($.user_email||$.user_name||$.actor_id||$.clerk_id,"actor")),Ne=$.created_at||$.timestamp?new Date($.created_at||$.timestamp).toLocaleDateString():"",nt=$.details?Ve($.details,m):"";return`
             <div class="p-2.5 rounded-xl bg-slate-50/70 border border-[#E6ECE9] text-[11px] min-w-0 max-w-full overflow-hidden space-y-1.5 [overflow-wrap:anywhere] [word-break:break-all] break-all" style="overflow-wrap: anywhere; word-break: break-all;">
               <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 min-w-0">
                 <div class="flex items-start sm:items-center gap-1.5 min-w-0 flex-1 flex-wrap [overflow-wrap:anywhere] [word-break:break-all] break-all" style="overflow-wrap: anywhere; word-break: break-all;">
                   <span class="w-1.5 h-1.5 rounded-full bg-[#087F70] shrink-0 mt-1 sm:mt-0"></span>
-                  <span class="font-bold text-[#172B36] uppercase tracking-wide [overflow-wrap:anywhere] [word-break:break-all] break-all" style="overflow-wrap: anywhere; word-break: break-all;">${actionText}</span>
-                  <span class="text-[#5F7180] [overflow-wrap:anywhere] [word-break:break-all] break-all" style="overflow-wrap: anywhere; word-break: break-all;">• ${actorEmail}</span>
+                  <span class="font-bold text-[#172B36] uppercase tracking-wide [overflow-wrap:anywhere] [word-break:break-all] break-all" style="overflow-wrap: anywhere; word-break: break-all;">${U}</span>
+                  <span class="text-[#5F7180] [overflow-wrap:anywhere] [word-break:break-all] break-all" style="overflow-wrap: anywhere; word-break: break-all;">\u2022 ${R}</span>
                 </div>
-                ${dateStr ? `<span class="text-[#5F7180] font-mono text-[10px] shrink-0 self-start sm:self-auto">${dateStr}</span>` : ''}
+                ${Ne?`<span class="text-[#5F7180] font-mono text-[10px] shrink-0 self-start sm:self-auto">${Ne}</span>`:""}
               </div>
-              ${detailsStr ? `
+              ${nt?`
                 <div class="text-[10px] text-slate-600 bg-white/80 p-2 rounded-lg border border-[#E6ECE9] [overflow-wrap:anywhere] [word-break:break-all] break-all whitespace-pre-wrap leading-relaxed select-text" style="overflow-wrap: anywhere; word-break: break-all;">
-                  ${escapeHtml(detailsStr)}
+                  ${f(nt)}
                 </div>
-              ` : ''}
+              `:""}
             </div>
-          `;
-        }).join('');
-      }
-    }
-  }
-
-  // =========================================================================
-  // 3. SERVICE MANAGEMENT & 240 SOP TASK BLUEPRINTS (Phase 5, 6, 7, 8, 9)
-  // =========================================================================
-  async function loadServicesData() {
-    const res = await apiFetch('/services/catalog');
-    const grid = document.getElementById('adminServicesGrid');
-    if (!grid) return;
-
-    if (res.ok && res.data && res.data.data) {
-      state.servicesCache = res.data.data;
-
-      const countBadge = document.getElementById('serviceCatalogCountBadge');
-      if (countBadge) {
-        countBadge.textContent = `${state.servicesCache.length} Active Services`;
-      }
-
-      grid.innerHTML = state.servicesCache.map(s => {
-        const canViewPricing = state.adminProfile?.role !== 'employee';
-        const priceCents = s.standard_price_cents != null ? s.standard_price_cents : s.pricing_cents;
-        const priceFormatted = priceCents != null ? formatCurrency(priceCents, s.currency || 'USD') : null;
-
-        return `
+          `}).join(""))}async function Ce(){const n=await B("/services/catalog"),t=document.getElementById("adminServicesGrid");if(t&&n.ok&&n.data&&n.data.data){g.servicesCache=n.data.data;const s=document.getElementById("serviceCatalogCountBadge");s&&(s.textContent=`${g.servicesCache.length} Active Services`),t.innerHTML=g.servicesCache.map(e=>{const l=g.adminProfile?.role!=="employee",i=e.standard_price_cents!=null?e.standard_price_cents:e.pricing_cents,p=i!=null?Y(i,e.currency||"USD"):null;return`
           <div class="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white border border-[#E6ECE9] flex flex-col justify-between space-y-4 hover:border-[#087F70]/40 hover:shadow-md transition-all shadow-2xs group">
             <div class="space-y-3">
               <!-- Top Row: Code Badge, Version Tag, Price -->
               <div class="flex items-center justify-between gap-2">
                 <div class="flex items-center gap-1.5 flex-wrap">
-                  <span class="text-xs font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-2.5 py-0.5 rounded-md border border-[#087F70]/25 whitespace-nowrap shrink-0">${escapeHtml(s.code || (s.id || "").toUpperCase())}</span>
-                  <span class="text-[10px] font-mono font-semibold text-[#74817D] bg-[#F7FAF9] px-1.5 py-0.5 rounded border border-[#E6ECE9] whitespace-nowrap">v${s.version || 1}</span>
+                  <span class="text-xs font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-2.5 py-0.5 rounded-md border border-[#087F70]/25 whitespace-nowrap shrink-0">${f(e.code||(e.id||"").toUpperCase())}</span>
+                  <span class="text-[10px] font-mono font-semibold text-[#74817D] bg-[#F7FAF9] px-1.5 py-0.5 rounded border border-[#E6ECE9] whitespace-nowrap">v${e.version||1}</span>
                 </div>
-                ${canViewPricing && priceFormatted ? `
+                ${l&&p?`
                   <div class="text-right shrink-0">
-                    <span class="text-xs sm:text-sm font-mono font-bold text-[#202D2A]">${priceFormatted}</span>
+                    <span class="text-xs sm:text-sm font-mono font-bold text-[#202D2A]">${p}</span>
                     <span class="text-[10px] text-[#74817D] font-medium hidden sm:inline ml-0.5">/mo</span>
                   </div>
-                ` : ''}
+                `:""}
               </div>
 
               <!-- Service Title & Description -->
               <div class="space-y-1">
-                <h3 class="text-base font-bold text-[#202D2A] group-hover:text-[#087F70] transition-colors leading-snug break-words">${escapeHtml(s.name)}</h3>
-                <p class="text-xs text-[#74817D] line-clamp-2 leading-relaxed" title="${escapeHtml(s.description || '')}">${escapeHtml(s.description || 'Comprehensive operational service package.')}</p>
+                <h3 class="text-base font-bold text-[#202D2A] group-hover:text-[#087F70] transition-colors leading-snug break-words">${f(e.name)}</h3>
+                <p class="text-xs text-[#74817D] line-clamp-2 leading-relaxed" title="${f(e.description||"")}">${f(e.description||"Comprehensive operational service package.")}</p>
               </div>
 
               <!-- Metadata Pills -->
               <div class="flex flex-wrap items-center gap-1.5 text-[11px] pt-0.5">
                 <span class="inline-flex items-center gap-1 font-semibold text-[#087F70] bg-[#EAF5F1] px-2 py-0.5 rounded-md border border-[#087F70]/20 truncate max-w-[180px]">
                   <i class="fa-solid fa-layer-group text-[10px]"></i>
-                  <span class="truncate">${escapeHtml(s.category || 'Core Service')}</span>
+                  <span class="truncate">${f(e.category||"Core Service")}</span>
                 </span>
                 <span class="inline-flex items-center gap-1 font-medium text-[#74817D] bg-[#F7FAF9] px-2 py-0.5 rounded-md border border-[#E6ECE9] whitespace-nowrap">
                   <i class="fa-solid fa-list-check text-[10px] text-[#087F70]"></i>
-                  <span>${s.blueprint_count != null ? s.blueprint_count : (s.blueprints_count || 0)} SOPs</span>
+                  <span>${e.blueprint_count!=null?e.blueprint_count:e.blueprints_count||0} SOPs</span>
                 </span>
               </div>
             </div>
 
             <!-- Actions: Prominent Primary Button + Secondary Row -->
             <div class="pt-3 border-t border-[#E6ECE9] space-y-2">
-              <button type="button" class="btn-view-service-tasks w-full py-2.5 px-3 rounded-xl text-xs font-bold bg-[#087F70] hover:bg-[#06685c] text-white shadow-2xs hover:shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer touch-manipulation select-none" data-id="${s.id}">
+              <button type="button" class="btn-view-service-tasks w-full py-2.5 px-3 rounded-xl text-xs font-bold bg-[#087F70] hover:bg-[#06685c] text-white shadow-2xs hover:shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer touch-manipulation select-none" data-id="${e.id}">
                 <i class="fa-solid fa-list-check text-xs"></i>
-                <span>View &amp; Edit Tasks (${s.blueprint_count != null ? s.blueprint_count : (s.blueprints_count || 0)})</span>
+                <span>View &amp; Edit Tasks (${e.blueprint_count!=null?e.blueprint_count:e.blueprints_count||0})</span>
               </button>
               <div class="flex items-center gap-2">
-                <button type="button" class="btn-manage-service flex-1 py-2 px-3 rounded-xl text-xs font-semibold bg-[#F7FAF9] hover:bg-[#EAF5F1] text-[#202D2A] border border-[#E6ECE9] hover:border-[#087F70]/30 transition-all flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation select-none" data-id="${s.id}">
+                <button type="button" class="btn-manage-service flex-1 py-2 px-3 rounded-xl text-xs font-semibold bg-[#F7FAF9] hover:bg-[#EAF5F1] text-[#202D2A] border border-[#E6ECE9] hover:border-[#087F70]/30 transition-all flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation select-none" data-id="${e.id}">
                   <i class="fa-solid fa-sliders text-[11px] text-[#74817D]"></i>
                   <span>Manage</span>
                 </button>
-                <button type="button" class="btn-delete-service p-2 w-10 h-8 rounded-xl text-xs font-semibold text-[#74817D] hover:text-rose-600 bg-[#F7FAF9] hover:bg-rose-50 border border-[#E6ECE9] hover:border-rose-200 transition-all flex items-center justify-center cursor-pointer touch-manipulation shrink-0 select-none" data-id="${s.id}" title="Permanently Delete Service" aria-label="Delete Service">
+                <button type="button" class="btn-delete-service p-2 w-10 h-8 rounded-xl text-xs font-semibold text-[#74817D] hover:text-rose-600 bg-[#F7FAF9] hover:bg-rose-50 border border-[#E6ECE9] hover:border-rose-200 transition-all flex items-center justify-center cursor-pointer touch-manipulation shrink-0 select-none" data-id="${e.id}" title="Permanently Delete Service" aria-label="Delete Service">
                   <i class="fa-solid fa-trash-can text-xs"></i>
                 </button>
               </div>
             </div>
           </div>
-        `;
-      }).join('');
-
-      // Wire View & Edit Tasks
-      grid.querySelectorAll('.btn-view-service-tasks').forEach(b => {
-        b.addEventListener('click', () => openServiceTasksWorkspace(b.dataset.id));
-      });
-
-      // Wire Manage Service
-      grid.querySelectorAll('.btn-manage-service').forEach(b => {
-        b.addEventListener('click', () => openEditServiceModal(b.dataset.id));
-      });
-
-      // Wire Delete Service
-      grid.querySelectorAll('.btn-delete-service').forEach(b => {
-        b.addEventListener('click', () => openDeleteServiceModal(b.dataset.id));
-      });
-    }
-  }
-
-  // Open Full-Page Task Blueprint Workspace (Phase 7)
-  async function openServiceTasksWorkspace(serviceId) {
-    state.selectedServiceId = serviceId;
-    switchTab('service_tasks', false);
-    window.location.hash = `service-tasks-${serviceId}`;
-
-    const titleEl = document.getElementById('serviceTasksTitle');
-    const codeEl = document.getElementById('serviceTasksCodeBadge');
-    const verEl = document.getElementById('serviceTasksVersionBadge');
-    const descEl = document.getElementById('serviceTasksDescription');
-
-    // Ensure services cache is populated
-    if (!state.servicesCache || state.servicesCache.length === 0) {
-      const catRes = await apiFetch('/services/catalog');
-      if (catRes.ok && catRes.data?.data) {
-        state.servicesCache = catRes.data.data;
-      }
-    }
-
-    const service = state.servicesCache?.find(s => s.id === serviceId);
-    if (service) {
-      if (titleEl) titleEl.textContent = service.name;
-      if (codeEl) codeEl.textContent = service.code;
-      if (verEl) verEl.textContent = `v${service.version || 1}`;
-      if (descEl) descEl.textContent = service.description || `Master ${service.blueprint_count || 20}-Task SOP Blueprint Library`;
-    }
-
-    const res = await apiFetch(`/services/${serviceId}/blueprints`);
-    if (!res.ok || !res.data || !res.data.data) {
-      showToast('Failed to load task blueprints.', 'error');
-      return;
-    }
-
-    state.currentBlueprints = res.data.data;
-    renderBlueprintsWorkspace();
-  }
-
-  function renderBlueprintsWorkspace() {
-    const bps = state.currentBlueprints;
-
-    // Categorize into 3 phases: Beginning (1-7), Intermediate (8-14), Advanced (15-20)
-    const beginning = bps.filter(b => (b.phase || '').toLowerCase().includes('begin') || (b.sort_order <= 7 && !b.phase?.includes('Inter') && !b.phase?.includes('Adv')));
-    const intermediate = bps.filter(b => (b.phase || '').toLowerCase().includes('inter') || (b.sort_order > 7 && b.sort_order <= 14));
-    const advanced = bps.filter(b => (b.phase || '').toLowerCase().includes('adv') || b.sort_order > 14);
-
-    const bCount = document.getElementById('phaseBeginningCount');
-    if (bCount) bCount.textContent = `${beginning.length} Tasks`;
-    const iCount = document.getElementById('phaseIntermediateCount');
-    if (iCount) iCount.textContent = `${intermediate.length} Tasks`;
-    const aCount = document.getElementById('phaseAdvancedCount');
-    if (aCount) aCount.textContent = `${advanced.length} Tasks`;
-
-    renderBlueprintPhaseGroup('blueprintsPhaseBeginning', beginning);
-    renderBlueprintPhaseGroup('blueprintsPhaseIntermediate', intermediate);
-    renderBlueprintPhaseGroup('blueprintsPhaseAdvanced', advanced);
-  }
-
-  function renderBlueprintPhaseGroup(containerId, list) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-
-    if (!list || list.length === 0) {
-      container.innerHTML = '<p class="text-[#74817D] italic text-xs p-3">No tasks in this phase.</p>';
-      return;
-    }
-
-    container.innerHTML = list.map(bp => {
-      const priorityColors = {
-        urgent: 'bg-rose-50 text-rose-700 border-rose-200',
-        high: 'bg-amber-50 text-amber-700 border-amber-200',
-        medium: 'bg-blue-50 text-blue-700 border-blue-200',
-        low: 'bg-slate-50 text-slate-600 border-slate-200'
-      };
-
-      const hasExtraDetails = Boolean(bp.steps || bp.where_location || bp.qa_criteria);
-
-      return `
-        <div class="p-3 sm:p-5 rounded-2xl bg-[#FDFEFE] hover:bg-white border border-[#E6ECE9] hover:border-[#087F70]/30 shadow-2xs hover:shadow-xs transition-all space-y-2.5 sm:space-y-3 group" data-blueprint-id="${bp.id}">
+        `}).join(""),t.querySelectorAll(".btn-view-service-tasks").forEach(e=>{e.addEventListener("click",()=>$e(e.dataset.id))}),t.querySelectorAll(".btn-manage-service").forEach(e=>{e.addEventListener("click",()=>ln(e.dataset.id))}),t.querySelectorAll(".btn-delete-service").forEach(e=>{e.addEventListener("click",()=>Tt(e.dataset.id))})}}async function $e(n){g.selectedServiceId=n,X("service_tasks",!1),window.location.hash=`service-tasks-${n}`;const t=document.getElementById("serviceTasksTitle"),s=document.getElementById("serviceTasksCodeBadge"),e=document.getElementById("serviceTasksVersionBadge"),l=document.getElementById("serviceTasksDescription");if(!g.servicesCache||g.servicesCache.length===0){const u=await B("/services/catalog");u.ok&&u.data?.data&&(g.servicesCache=u.data.data)}const i=g.servicesCache?.find(u=>u.id===n);i&&(t&&(t.textContent=i.name),s&&(s.textContent=i.code),e&&(e.textContent=`v${i.version||1}`),l&&(l.textContent=i.description||`Master ${i.blueprint_count||20}-Task SOP Blueprint Library`));const p=await B(`/services/${n}/blueprints`);if(!p.ok||!p.data||!p.data.data){v("Failed to load task blueprints.","error");return}g.currentBlueprints=p.data.data,Dt()}function Dt(){const n=g.currentBlueprints,t=n.filter(u=>(u.phase||"").toLowerCase().includes("begin")||u.sort_order<=7&&!u.phase?.includes("Inter")&&!u.phase?.includes("Adv")),s=n.filter(u=>(u.phase||"").toLowerCase().includes("inter")||u.sort_order>7&&u.sort_order<=14),e=n.filter(u=>(u.phase||"").toLowerCase().includes("adv")||u.sort_order>14),l=document.getElementById("phaseBeginningCount");l&&(l.textContent=`${t.length} Tasks`);const i=document.getElementById("phaseIntermediateCount");i&&(i.textContent=`${s.length} Tasks`);const p=document.getElementById("phaseAdvancedCount");p&&(p.textContent=`${e.length} Tasks`),pt("blueprintsPhaseBeginning",t),pt("blueprintsPhaseIntermediate",s),pt("blueprintsPhaseAdvanced",e)}function pt(n,t){const s=document.getElementById(n);if(s){if(!t||t.length===0){s.innerHTML='<p class="text-[#74817D] italic text-xs p-3">No tasks in this phase.</p>';return}s.innerHTML=t.map(e=>{const l={urgent:"bg-rose-50 text-rose-700 border-rose-200",high:"bg-amber-50 text-amber-700 border-amber-200",medium:"bg-blue-50 text-blue-700 border-blue-200",low:"bg-slate-50 text-slate-600 border-slate-200"},i=!!(e.steps||e.where_location||e.qa_criteria);return`
+        <div class="p-3 sm:p-5 rounded-2xl bg-[#FDFEFE] hover:bg-white border border-[#E6ECE9] hover:border-[#087F70]/30 shadow-2xs hover:shadow-xs transition-all space-y-2.5 sm:space-y-3 group" data-blueprint-id="${e.id}">
           <!-- Top Row: Code Badge + Priority + Estimate -->
           <div class="flex items-center justify-between gap-2 flex-wrap">
             <div class="flex items-center gap-2">
-              <span class="text-xs font-mono font-bold text-[#087F70] bg-[#EAF5F1] border border-[#087F70]/25 px-2.5 py-0.5 rounded-md whitespace-nowrap">${escapeHtml(bp.task_code || 'SOP')}</span>
-              <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${priorityColors[bp.priority] || priorityColors.medium}">${escapeHtml(bp.priority || 'medium')}</span>
+              <span class="text-xs font-mono font-bold text-[#087F70] bg-[#EAF5F1] border border-[#087F70]/25 px-2.5 py-0.5 rounded-md whitespace-nowrap">${f(e.task_code||"SOP")}</span>
+              <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${l[e.priority]||l.medium}">${f(e.priority||"medium")}</span>
             </div>
             <div class="flex items-center gap-1.5 text-xs font-mono text-[#74817D]">
               <i class="fa-regular fa-clock text-[11px] text-[#74817D]/70"></i>
-              <span>${bp.estimated_minutes || (bp.estimated_hours ? bp.estimated_hours * 60 : 60)} min</span>
+              <span>${e.estimated_minutes||(e.estimated_hours?e.estimated_hours*60:60)} min</span>
             </div>
           </div>
 
           <!-- Task Title: Readable, naturally wrapping -->
           <div>
-            <h4 class="text-sm sm:text-base font-bold text-[#202D2A] leading-snug break-words group-hover:text-[#087F70] transition-colors">${escapeHtml(bp.title)}</h4>
+            <h4 class="text-sm sm:text-base font-bold text-[#202D2A] leading-snug break-words group-hover:text-[#087F70] transition-colors">${f(e.title)}</h4>
           </div>
 
           <!-- Operational Core: WHY (Strategic Objective) -->
@@ -1623,7 +253,7 @@
               <i class="fa-solid fa-bullseye text-[10px]"></i>
               <span>Why (Strategic Objective)</span>
             </div>
-            <p class="text-xs sm:text-[13px] text-[#202D2A] leading-relaxed break-words">${escapeHtml(bp.why || bp.instructions || bp.description || 'Standard operational activity.')}</p>
+            <p class="text-xs sm:text-[13px] text-[#202D2A] leading-relaxed break-words">${f(e.why||e.instructions||e.description||"Standard operational activity.")}</p>
           </div>
 
           <!-- Operational Core: DONE WHEN (Measurable Standard) -->
@@ -1632,247 +262,80 @@
               <i class="fa-solid fa-circle-check text-[10px] text-[#087F70]"></i>
               <span>Done When (Measurable Standard)</span>
             </div>
-            <p class="text-xs sm:text-[13px] text-[#202D2A] leading-relaxed break-words">${escapeHtml(bp.done_when || 'Verified milestone output.')}</p>
+            <p class="text-xs sm:text-[13px] text-[#202D2A] leading-relaxed break-words">${f(e.done_when||"Verified milestone output.")}</p>
           </div>
 
           <!-- Expandable Detailed Specifications (Steps, QA, Location) -->
-          ${hasExtraDetails ? `
-            <div id="bp_details_${bp.id}" class="hidden pt-2 border-t border-[#E6ECE9] space-y-2.5 text-xs">
-              ${bp.steps ? `
+          ${i?`
+            <div id="bp_details_${e.id}" class="hidden pt-2 border-t border-[#E6ECE9] space-y-2.5 text-xs">
+              ${e.steps?`
                 <div class="space-y-1">
                   <span class="text-[11px] font-bold uppercase tracking-wider text-[#74817D] block">Operational Steps:</span>
-                  <div class="p-2 sm:p-2.5 rounded-xl bg-[#F7FAF9] border border-[#E6ECE9] text-xs text-[#202D2A] whitespace-pre-line leading-relaxed font-sans">${escapeHtml(bp.steps)}</div>
+                  <div class="p-2 sm:p-2.5 rounded-xl bg-[#F7FAF9] border border-[#E6ECE9] text-xs text-[#202D2A] whitespace-pre-line leading-relaxed font-sans">${f(e.steps)}</div>
                 </div>
-              ` : ''}
-              ${bp.where_location ? `
+              `:""}
+              ${e.where_location?`
                 <div class="flex items-center gap-1.5 text-xs text-[#74817D]">
                   <span class="font-semibold text-[#202D2A]">Location:</span>
-                  <span class="truncate font-mono text-[11px]">${escapeHtml(bp.where_location)}</span>
+                  <span class="truncate font-mono text-[11px]">${f(e.where_location)}</span>
                 </div>
-              ` : ''}
-              ${bp.qa_criteria ? `
+              `:""}
+              ${e.qa_criteria?`
                 <div class="p-2 sm:p-2.5 rounded-xl bg-[#EAF5F1]/60 border border-[#087F70]/20 text-xs text-[#087F70]">
                   <span class="font-bold uppercase text-[10px] tracking-wider block mb-0.5">QA Criteria:</span>
-                  <span class="text-[#202D2A]">${escapeHtml(bp.qa_criteria)}</span>
+                  <span class="text-[#202D2A]">${f(e.qa_criteria)}</span>
                 </div>
-              ` : ''}
+              `:""}
             </div>
-          ` : ''}
+          `:""}
 
           <!-- Card Action Controls & Expand Toggle -->
           <div class="pt-2 border-t border-[#E6ECE9] flex items-center justify-between gap-2 flex-wrap">
             <!-- Expand / Collapse Details Control -->
-            ${hasExtraDetails ? `
-              <button type="button" class="btn-toggle-bp-details text-xs font-semibold text-[#087F70] hover:text-[#06685c] flex items-center gap-1.5 py-1 px-2 rounded-lg hover:bg-[#EAF5F1] transition-all cursor-pointer touch-manipulation select-none" data-target="bp_details_${bp.id}" aria-expanded="false">
+            ${i?`
+              <button type="button" class="btn-toggle-bp-details text-xs font-semibold text-[#087F70] hover:text-[#06685c] flex items-center gap-1.5 py-1 px-2 rounded-lg hover:bg-[#EAF5F1] transition-all cursor-pointer touch-manipulation select-none" data-target="bp_details_${e.id}" aria-expanded="false">
                 <span>Show Details</span>
                 <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-200 icon-chevron"></i>
               </button>
-            ` : '<div class="text-[11px] text-[#74817D] italic">Core SOP Standard</div>'}
+            `:'<div class="text-[11px] text-[#74817D] italic">Core SOP Standard</div>'}
 
             <!-- Task Action Buttons: Edit, Duplicate, Delete -->
             <div class="flex items-center gap-1.5">
-              <button type="button" class="btn-edit-blueprint px-3 py-1.5 rounded-xl text-xs font-bold bg-[#F7FAF9] hover:bg-[#EAF5F1] text-[#202D2A] hover:text-[#087F70] border border-[#E6ECE9] hover:border-[#087F70]/30 transition-all flex items-center gap-1.5 cursor-pointer touch-manipulation select-none" data-id="${bp.id}" title="Edit Task Blueprint">
+              <button type="button" class="btn-edit-blueprint px-3 py-1.5 rounded-xl text-xs font-bold bg-[#F7FAF9] hover:bg-[#EAF5F1] text-[#202D2A] hover:text-[#087F70] border border-[#E6ECE9] hover:border-[#087F70]/30 transition-all flex items-center gap-1.5 cursor-pointer touch-manipulation select-none" data-id="${e.id}" title="Edit Task Blueprint">
                 <i class="fa-solid fa-pen-to-square text-[11px]"></i>
                 <span>Edit</span>
               </button>
-              <button type="button" class="btn-duplicate-blueprint p-2 rounded-xl text-xs font-semibold text-[#74817D] hover:text-[#202D2A] bg-[#F7FAF9] hover:bg-slate-100 border border-[#E6ECE9] transition-all flex items-center justify-center cursor-pointer touch-manipulation select-none" data-id="${bp.id}" title="Duplicate Task Blueprint" aria-label="Duplicate Task">
+              <button type="button" class="btn-duplicate-blueprint p-2 rounded-xl text-xs font-semibold text-[#74817D] hover:text-[#202D2A] bg-[#F7FAF9] hover:bg-slate-100 border border-[#E6ECE9] transition-all flex items-center justify-center cursor-pointer touch-manipulation select-none" data-id="${e.id}" title="Duplicate Task Blueprint" aria-label="Duplicate Task">
                 <i class="fa-solid fa-copy text-xs"></i>
               </button>
-              <button type="button" class="btn-delete-blueprint p-2 rounded-xl text-xs font-semibold text-[#74817D] hover:text-rose-600 bg-[#F7FAF9] hover:bg-rose-50 border border-[#E6ECE9] hover:border-rose-200 transition-all flex items-center justify-center cursor-pointer touch-manipulation select-none" data-id="${bp.id}" title="Delete Task Blueprint" aria-label="Delete Task">
+              <button type="button" class="btn-delete-blueprint p-2 rounded-xl text-xs font-semibold text-[#74817D] hover:text-rose-600 bg-[#F7FAF9] hover:bg-rose-50 border border-[#E6ECE9] hover:border-rose-200 transition-all flex items-center justify-center cursor-pointer touch-manipulation select-none" data-id="${e.id}" title="Delete Task Blueprint" aria-label="Delete Task">
                 <i class="fa-solid fa-trash-can text-xs"></i>
               </button>
             </div>
           </div>
         </div>
-      `;
-    }).join('');
-
-    // Wire edit buttons
-    container.querySelectorAll('.btn-edit-blueprint').forEach(b => {
-      b.addEventListener('click', () => openEditBlueprintModal(b.dataset.id));
-    });
-
-    // Wire duplicate buttons
-    container.querySelectorAll('.btn-duplicate-blueprint').forEach(b => {
-      b.addEventListener('click', async () => {
-        const id = b.dataset.id;
-        const dupRes = await apiFetch(`/services/blueprints/${id}/duplicate`, { method: 'POST' });
-        if (dupRes.ok && dupRes.data && dupRes.data.success) {
-          showToast(`Task duplicated as [${dupRes.data.data.taskCode}]!`, 'success');
-          openServiceTasksWorkspace(state.selectedServiceId);
-        } else {
-          showToast('Failed to duplicate blueprint.', 'error');
-        }
-      });
-    });
-
-    // Wire delete blueprint buttons (Hard Delete confirmation)
-    container.querySelectorAll('.btn-delete-blueprint').forEach(b => {
-      b.addEventListener('click', () => {
-        openDeleteBlueprintModal(b.dataset.id);
-      });
-    });
-
-    // Wire expandable detail toggles
-    container.querySelectorAll('.btn-toggle-bp-details').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const targetId = btn.dataset.target;
-        const details = document.getElementById(targetId);
-        if (!details) return;
-        const isHidden = details.classList.contains('hidden');
-        if (isHidden) {
-          details.classList.remove('hidden');
-          btn.setAttribute('aria-expanded', 'true');
-          const span = btn.querySelector('span');
-          if (span) span.textContent = 'Hide Details';
-          const icon = btn.querySelector('.icon-chevron');
-          if (icon) icon.classList.add('rotate-180');
-        } else {
-          details.classList.add('hidden');
-          btn.setAttribute('aria-expanded', 'false');
-          const span = btn.querySelector('span');
-          if (span) span.textContent = 'Show Details';
-          const icon = btn.querySelector('.icon-chevron');
-          if (icon) icon.classList.remove('rotate-180');
-        }
-      });
-    });
-  }
-
-  function openEditBlueprintModal(blueprintId) {
-    const bp = state.currentBlueprints.find(b => b.id === blueprintId);
-    if (!bp) return;
-
-    const modal = document.getElementById('modalEditBlueprint');
-    if (!modal) return;
-
-    document.getElementById('editBlueprintId').value = bp.id;
-    document.getElementById('editBlueprintTaskCode').value = bp.task_code || '';
-    document.getElementById('editBlueprintTitle').value = bp.title || '';
-    document.getElementById('editBlueprintPhase').value = bp.phase || 'Beginning';
-    document.getElementById('editBlueprintPriority').value = bp.priority || 'medium';
-    document.getElementById('editBlueprintSortOrder').value = bp.sort_order || 1;
-    document.getElementById('editBlueprintEstMinutes').value = bp.estimated_minutes || 60;
-    document.getElementById('editBlueprintWhy').value = bp.why || '';
-    document.getElementById('editBlueprintWhere').value = bp.where_location || '';
-    document.getElementById('editBlueprintSteps').value = bp.steps || bp.instructions || '';
-    document.getElementById('editBlueprintDoneWhen').value = bp.done_when || '';
-    document.getElementById('editBlueprintQACriteria').value = bp.qa_criteria || '';
-    initGlassSelects();
-
-    modal.classList.remove('hidden');
-  }
-
-  function openDeleteBlueprintModal(blueprintId) {
-    const bp = state.currentBlueprints.find(b => b.id === blueprintId);
-    if (!bp) {
-      showToast('Task blueprint not found.', 'error');
-      return;
-    }
-
-    state.selectedBlueprintId = blueprintId;
-    const currentService = state.servicesCache.find(s => s.id === (bp.service_id || state.selectedServiceId));
-
-    const codeEl = document.getElementById('deleteBlueprintTaskCode');
-    const titleEl = document.getElementById('deleteBlueprintTaskTitle');
-    const srvEl = document.getElementById('deleteBlueprintServiceName');
-    const modal = document.getElementById('modalDeleteBlueprint');
-
-    if (codeEl) codeEl.textContent = bp.task_code || bp.id;
-    if (titleEl) titleEl.textContent = bp.title || 'Untitled Task';
-    if (srvEl) srvEl.textContent = currentService ? currentService.name : (bp.service_id || 'Service');
-
-    const confirmBtn = document.getElementById('btnConfirmDeleteBlueprint');
-    if (confirmBtn) {
-      confirmBtn.disabled = false;
-      confirmBtn.innerHTML = '<i class="fa-solid fa-trash-can text-xs"></i> <span>Permanently Delete Task</span>';
-    }
-
-    if (modal) modal.classList.remove('hidden');
-  }
-
-  function openEditServiceModal(serviceId) {
-    const service = state.servicesCache.find(s => s.id === serviceId);
-    if (!service) return;
-
-    const modal = document.getElementById('modalEditService');
-    if (!modal) return;
-
-    document.getElementById('editServiceId').value = service.id;
-    document.getElementById('editServiceName').value = service.name || '';
-    document.getElementById('editServiceCode').value = service.code || '';
-    document.getElementById('editServiceCategory').value = service.category || '';
-    document.getElementById('editServicePrice').value = ((service.standard_price_cents || 100000) / 100).toFixed(0);
-    document.getElementById('editServicePackage').value = service.default_package || 'Standard Retainer';
-    document.getElementById('editServiceDescription').value = service.description || '';
-    document.getElementById('editServiceIsActive').checked = service.is_active === 1;
-
-    modal.classList.remove('hidden');
-  }
-
-  async function openDeleteServiceModal(serviceId) {
-    const service = state.servicesCache.find(s => s.id === serviceId);
-    if (!service) {
-      showToast('Service not found.', 'error');
-      return;
-    }
-
-    state.selectedServiceId = serviceId;
-    const modal = document.getElementById('modalDeleteService');
-    if (!modal) return;
-
-    const nameEl = document.getElementById('deleteServiceTargetName');
-    const codeEl = document.getElementById('deleteServiceTargetCode');
-    const countEl = document.getElementById('deleteServiceBlueprintCount');
-    const catEl = document.getElementById('deleteServiceCategory');
-    const depContainer = document.getElementById('deleteServiceDependencyContainer');
-    const confirmSection = document.getElementById('deleteServiceConfirmSection');
-    const expectedNameEl = document.getElementById('deleteServiceExpectedName');
-    const confirmInput = document.getElementById('deleteServiceConfirmInput');
-    const confirmBtn = document.getElementById('btnConfirmDeleteService');
-
-    if (nameEl) nameEl.textContent = service.name;
-    if (codeEl) codeEl.textContent = service.code || service.id;
-    if (countEl) countEl.textContent = `${service.blueprint_count || 0} Tasks`;
-    if (catEl) catEl.textContent = service.category || 'General';
-    if (expectedNameEl) expectedNameEl.textContent = `"${service.name}"`;
-    if (confirmInput) confirmInput.value = '';
-    if (confirmBtn) {
-      confirmBtn.disabled = true;
-      confirmBtn.innerHTML = '<i class="fa-solid fa-trash-can text-xs"></i> <span>Permanently Delete Service</span>';
-    }
-    if (confirmSection) confirmSection.classList.add('hidden');
-
-    if (depContainer) {
-      depContainer.innerHTML = `
+      `}).join(""),s.querySelectorAll(".btn-edit-blueprint").forEach(e=>{e.addEventListener("click",()=>dn(e.dataset.id))}),s.querySelectorAll(".btn-duplicate-blueprint").forEach(e=>{e.addEventListener("click",async()=>{const l=e.dataset.id,i=await B(`/services/blueprints/${l}/duplicate`,{method:"POST"});i.ok&&i.data&&i.data.success?(v(`Task duplicated as [${i.data.data.taskCode}]!`,"success"),$e(g.selectedServiceId)):v("Failed to duplicate blueprint.","error")})}),s.querySelectorAll(".btn-delete-blueprint").forEach(e=>{e.addEventListener("click",()=>{$t(e.dataset.id)})}),s.querySelectorAll(".btn-toggle-bp-details").forEach(e=>{e.addEventListener("click",()=>{const l=e.dataset.target,i=document.getElementById(l);if(!i)return;if(i.classList.contains("hidden")){i.classList.remove("hidden"),e.setAttribute("aria-expanded","true");const u=e.querySelector("span");u&&(u.textContent="Hide Details");const y=e.querySelector(".icon-chevron");y&&y.classList.add("rotate-180")}else{i.classList.add("hidden"),e.setAttribute("aria-expanded","false");const u=e.querySelector("span");u&&(u.textContent="Show Details");const y=e.querySelector(".icon-chevron");y&&y.classList.remove("rotate-180")}})})}}function dn(n){const t=g.currentBlueprints.find(e=>e.id===n);if(!t)return;const s=document.getElementById("modalEditBlueprint");s&&(document.getElementById("editBlueprintId").value=t.id,document.getElementById("editBlueprintTaskCode").value=t.task_code||"",document.getElementById("editBlueprintTitle").value=t.title||"",document.getElementById("editBlueprintPhase").value=t.phase||"Beginning",document.getElementById("editBlueprintPriority").value=t.priority||"medium",document.getElementById("editBlueprintSortOrder").value=t.sort_order||1,document.getElementById("editBlueprintEstMinutes").value=t.estimated_minutes||60,document.getElementById("editBlueprintWhy").value=t.why||"",document.getElementById("editBlueprintWhere").value=t.where_location||"",document.getElementById("editBlueprintSteps").value=t.steps||t.instructions||"",document.getElementById("editBlueprintDoneWhen").value=t.done_when||"",document.getElementById("editBlueprintQACriteria").value=t.qa_criteria||"",O(),s.classList.remove("hidden"))}function $t(n){const t=g.currentBlueprints.find(y=>y.id===n);if(!t){v("Task blueprint not found.","error");return}g.selectedBlueprintId=n;const s=g.servicesCache.find(y=>y.id===(t.service_id||g.selectedServiceId)),e=document.getElementById("deleteBlueprintTaskCode"),l=document.getElementById("deleteBlueprintTaskTitle"),i=document.getElementById("deleteBlueprintServiceName"),p=document.getElementById("modalDeleteBlueprint");e&&(e.textContent=t.task_code||t.id),l&&(l.textContent=t.title||"Untitled Task"),i&&(i.textContent=s?s.name:t.service_id||"Service");const u=document.getElementById("btnConfirmDeleteBlueprint");u&&(u.disabled=!1,u.innerHTML='<i class="fa-solid fa-trash-can text-xs"></i> <span>Permanently Delete Task</span>'),p&&p.classList.remove("hidden")}function ln(n){const t=g.servicesCache.find(e=>e.id===n);if(!t)return;const s=document.getElementById("modalEditService");s&&(document.getElementById("editServiceId").value=t.id,document.getElementById("editServiceName").value=t.name||"",document.getElementById("editServiceCode").value=t.code||"",document.getElementById("editServiceCategory").value=t.category||"",document.getElementById("editServicePrice").value=((t.standard_price_cents||1e5)/100).toFixed(0),document.getElementById("editServicePackage").value=t.default_package||"Standard Retainer",document.getElementById("editServiceDescription").value=t.description||"",document.getElementById("editServiceIsActive").checked=t.is_active===1,s.classList.remove("hidden"))}async function Tt(n){const t=g.servicesCache.find(c=>c.id===n);if(!t){v("Service not found.","error");return}g.selectedServiceId=n;const s=document.getElementById("modalDeleteService");if(!s)return;const e=document.getElementById("deleteServiceTargetName"),l=document.getElementById("deleteServiceTargetCode"),i=document.getElementById("deleteServiceBlueprintCount"),p=document.getElementById("deleteServiceCategory"),u=document.getElementById("deleteServiceDependencyContainer"),y=document.getElementById("deleteServiceConfirmSection"),a=document.getElementById("deleteServiceExpectedName"),o=document.getElementById("deleteServiceConfirmInput"),d=document.getElementById("btnConfirmDeleteService");e&&(e.textContent=t.name),l&&(l.textContent=t.code||t.id),i&&(i.textContent=`${t.blueprint_count||0} Tasks`),p&&(p.textContent=t.category||"General"),a&&(a.textContent=`"${t.name}"`),o&&(o.value=""),d&&(d.disabled=!0,d.innerHTML='<i class="fa-solid fa-trash-can text-xs"></i> <span>Permanently Delete Service</span>'),y&&y.classList.add("hidden"),u&&(u.innerHTML=`
         <div class="p-3 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-500 flex items-center gap-2">
           <i class="fa-solid fa-circle-notch fa-spin text-brand-whiz"></i>
           <span>Checking database dependencies & live client records...</span>
         </div>
-      `;
-    }
-
-    modal.classList.remove('hidden');
-
-    try {
-      const res = await apiFetch(`/services/${serviceId}/delete-check`);
-      if (!res.ok || !res.data || !res.data.data) {
-        if (depContainer) {
-          depContainer.innerHTML = `
+      `),s.classList.remove("hidden");try{const c=await B(`/services/${n}/delete-check`);if(!c.ok||!c.data||!c.data.data){u&&(u.innerHTML=`
             <div class="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700">
               <p class="font-bold">Failed to verify dependencies.</p>
               <p class="text-[11px] mt-0.5">Could not confirm safe deletion status. Please retry.</p>
             </div>
-          `;
-        }
-        return;
-      }
-
-      const check = res.data.data;
-      if (!check.canDelete) {
-        const dep = check.dependencies || {};
-        if (depContainer) {
-          depContainer.innerHTML = `
+          `);return}const r=c.data.data;if(r.canDelete)u&&(u.innerHTML=`
+            <div class="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 space-y-1.5">
+              <div class="flex items-center gap-2 font-bold text-emerald-800">
+                <i class="fa-solid fa-shield-check text-emerald-600 text-sm"></i>
+                <span>0 Live Dependencies  -  Safe to Permanently Purge</span>
+              </div>
+              <p class="text-[11px] text-emerald-800/90 leading-relaxed">
+                No active client contracts, projects, or invoices reference this service.
+                Permanently deleting it will purge the service catalog record and all <strong>${r.taskBlueprintCount||0} master SOP blueprints</strong>.
+              </p>
+            </div>
+          `),y&&y.classList.remove("hidden"),o&&o.focus();else{const m=r.dependencies||{};u&&(u.innerHTML=`
             <div class="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-2">
               <div class="flex items-center gap-2 font-bold text-amber-800">
                 <i class="fa-solid fa-triangle-exclamation text-amber-600 text-sm"></i>
@@ -1883,15 +346,15 @@
               </p>
               <div class="grid grid-cols-3 gap-2 pt-1 text-center font-mono">
                 <div class="p-2 rounded-xl bg-white/80 border border-amber-200">
-                  <span class="block text-sm font-black text-amber-900">${dep.clientServicesCount || 0}</span>
+                  <span class="block text-sm font-black text-amber-900">${m.clientServicesCount||0}</span>
                   <span class="text-[9px] uppercase font-bold text-amber-700">Client Agrmts</span>
                 </div>
                 <div class="p-2 rounded-xl bg-white/80 border border-amber-200">
-                  <span class="block text-sm font-black text-amber-900">${dep.projectsCount || 0}</span>
+                  <span class="block text-sm font-black text-amber-900">${m.projectsCount||0}</span>
                   <span class="text-[9px] uppercase font-bold text-amber-700">Projects</span>
                 </div>
                 <div class="p-2 rounded-xl bg-white/80 border border-amber-200">
-                  <span class="block text-sm font-black text-amber-900">${dep.invoicesCount || 0}</span>
+                  <span class="block text-sm font-black text-amber-900">${m.invoicesCount||0}</span>
                   <span class="text-[9px] uppercase font-bold text-amber-700">Invoices</span>
                 </div>
               </div>
@@ -1899,194 +362,75 @@
                 To delete this service, unassign or conclude all linked client contracts and projects first.
               </p>
             </div>
-          `;
-        }
-        if (confirmSection) confirmSection.classList.add('hidden');
-        if (confirmBtn) confirmBtn.disabled = true;
-      } else {
-        if (depContainer) {
-          depContainer.innerHTML = `
-            <div class="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 space-y-1.5">
-              <div class="flex items-center gap-2 font-bold text-emerald-800">
-                <i class="fa-solid fa-shield-check text-emerald-600 text-sm"></i>
-                <span>0 Live Dependencies  -  Safe to Permanently Purge</span>
-              </div>
-              <p class="text-[11px] text-emerald-800/90 leading-relaxed">
-                No active client contracts, projects, or invoices reference this service.
-                Permanently deleting it will purge the service catalog record and all <strong>${check.taskBlueprintCount || 0} master SOP blueprints</strong>.
-              </p>
-            </div>
-          `;
-        }
-        if (confirmSection) confirmSection.classList.remove('hidden');
-        if (confirmInput) confirmInput.focus();
-      }
-    } catch (err) {
-      if (depContainer) {
-        depContainer.innerHTML = `
+          `),y&&y.classList.add("hidden"),d&&(d.disabled=!0)}}catch{u&&(u.innerHTML=`
           <div class="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700">
             <p class="font-bold">Dependency check failed.</p>
           </div>
-        `;
-      }
-    }
-  }
-
-  // =========================================================================
-  // 4. SERVICE PROJECTS (Phase 10)
-  // =========================================================================
-  async function loadProjectsData() {
-    const res = await apiFetch('/projects');
-    const tbody = document.getElementById('adminProjectsTableBody');
-    const cardsContainer = document.getElementById('adminProjectsCardsContainer');
-    if (!tbody) return;
-
-    if (res.ok && res.data && res.data.data) {
-      state.projectsCache = res.data.data;
-      const projects = state.projectsCache;
-
-      const actCount = document.getElementById('statActiveProjects');
-      if (actCount) actCount.textContent = projects.length;
-
-      if (projects.length === 0) {
-        const emptyMsg = '<tr><td colspan="6" class="px-6 py-6 text-center text-slate-500 italic">No active projects. Add a client with services to auto-provision projects.</td></tr>';
-        tbody.innerHTML = emptyMsg;
-        if (cardsContainer) cardsContainer.innerHTML = '<div class="p-6 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 italic">No active projects provisioned yet.</div>';
-        return;
-      }
-
-      // Desktop Table
-      tbody.innerHTML = projects.map(p => {
-        const percent = p.progress_percent || 0;
-        return `
+        `)}}async function ke(){const n=await B("/projects"),t=document.getElementById("adminProjectsTableBody"),s=document.getElementById("adminProjectsCardsContainer");if(t&&n.ok&&n.data&&n.data.data){g.projectsCache=n.data.data;const e=g.projectsCache,l=document.getElementById("statActiveProjects");if(l&&(l.textContent=e.length),e.length===0){const i='<tr><td colspan="6" class="px-6 py-6 text-center text-slate-500 italic">No active projects. Add a client with services to auto-provision projects.</td></tr>';t.innerHTML=i,s&&(s.innerHTML='<div class="p-6 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 italic">No active projects provisioned yet.</div>');return}t.innerHTML=e.map(i=>{const p=i.progress_percent||0;return`
           <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
-            <td class="px-6 py-4 font-bold text-[#172B36]">${p.name}</td>
-            <td class="px-6 py-4 text-slate-600">${p.organization_name || 'Organization'}</td>
-            <td class="px-6 py-4 font-mono text-xs text-[#147D64] font-semibold">${p.service_name || 'Service'}</td>
+            <td class="px-6 py-4 font-bold text-[#172B36]">${i.name}</td>
+            <td class="px-6 py-4 text-slate-600">${i.organization_name||"Organization"}</td>
+            <td class="px-6 py-4 font-mono text-xs text-[#147D64] font-semibold">${i.service_name||"Service"}</td>
             <td class="px-6 py-4">
               <div class="flex items-center space-x-2">
                 <div class="w-24 bg-slate-100 h-2 border border-[#E3E9EF] rounded-full overflow-hidden">
-                  <div class="bg-[#147D64] h-full rounded-full transition-all duration-500" style="width: ${percent}%"></div>
+                  <div class="bg-[#147D64] h-full rounded-full transition-all duration-500" style="width: ${p}%"></div>
                 </div>
-                <span class="text-xs font-mono font-bold text-[#172B36]">${percent}%</span>
+                <span class="text-xs font-mono font-bold text-[#172B36]">${p}%</span>
               </div>
             </td>
             <td class="px-6 py-4">
-              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">${p.status || 'Active'}</span>
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">${i.status||"Active"}</span>
             </td>
             <td class="px-6 py-4 text-right font-mono text-slate-500 text-xs">
-              ${p.completed_tasks || 0} / ${p.total_tasks || 20}
+              ${i.completed_tasks||0} / ${i.total_tasks||20}
             </td>
           </tr>
-        `;
-      }).join('');
-
-      // Mobile Cards
-      if (cardsContainer) {
-        cardsContainer.innerHTML = projects.map(p => {
-          const percent = p.progress_percent || 0;
-          return `
+        `}).join(""),s&&(s.innerHTML=e.map(i=>{const p=i.progress_percent||0;return`
             <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs space-y-3">
               <div class="flex items-start justify-between gap-2">
                 <div>
-                  <h4 class="text-sm font-black text-[#172B36]">${p.name}</h4>
-                  <p class="text-xs text-slate-500">${p.organization_name || 'Organization'}</p>
+                  <h4 class="text-sm font-black text-[#172B36]">${i.name}</h4>
+                  <p class="text-xs text-slate-500">${i.organization_name||"Organization"}</p>
                 </div>
-                <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">${p.status || 'Active'}</span>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">${i.status||"Active"}</span>
               </div>
 
               <div class="space-y-1.5">
                 <div class="flex items-center justify-between text-xs font-semibold">
-                  <span class="text-[#147D64]">${p.service_name || 'Service'}</span>
-                  <span class="font-mono text-[#172B36]">${percent}% Complete</span>
+                  <span class="text-[#147D64]">${i.service_name||"Service"}</span>
+                  <span class="font-mono text-[#172B36]">${p}% Complete</span>
                 </div>
                 <div class="w-full bg-slate-100 h-2 border border-[#E3E9EF] rounded-full overflow-hidden">
-                  <div class="bg-[#147D64] h-full rounded-full" style="width: ${percent}%"></div>
+                  <div class="bg-[#147D64] h-full rounded-full" style="width: ${p}%"></div>
                 </div>
               </div>
 
               <div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs text-slate-500">
                 <span>Completed Tasks</span>
-                <span class="font-mono font-bold text-slate-700">${p.completed_tasks || 0} of ${p.total_tasks || 20}</span>
+                <span class="font-mono font-bold text-slate-700">${i.completed_tasks||0} of ${i.total_tasks||20}</span>
               </div>
             </div>
-          `;
-        }).join('');
-      }
-    }
-  }
-
-  // =========================================================================
-  // 5. LIVE OPERATIONAL TASKS (Phase 11 - WHIZ Smart Task Workspace)
-  // =========================================================================
-  async function loadTasksData(filterStatus = null) {
-    if (filterStatus) {
-      state.currentTaskStatus = filterStatus;
-      updateStatusFilterButtons(filterStatus);
-    } else if (!state.currentTaskStatus) {
-      state.currentTaskStatus = 'all';
-    }
-
-    const list = document.getElementById('adminLiveTasksList');
-    if (!list) return;
-
-    // Show loading state if cache is empty
-    if (!state.tasksCache || state.tasksCache.length === 0) {
-      list.innerHTML = `
+          `}).join(""))}}async function Ie(n=null){n?(g.currentTaskStatus=n,Qe(n)):g.currentTaskStatus||(g.currentTaskStatus="all");const t=document.getElementById("adminLiveTasksList");if(!t)return;(!g.tasksCache||g.tasksCache.length===0)&&(t.innerHTML=`
         <div class="p-8 rounded-2xl bg-white border border-[#E6ECE9] text-center space-y-2 shadow-2xs">
           <i class="fa-solid fa-circle-notch fa-spin text-lg text-[#087F70]"></i>
           <p class="text-xs text-[#74817D]">Loading operational tasks...</p>
         </div>
-      `;
-    }
-
-    const res = await apiFetch('/portal/admin/live-tasks');
-
-    if (!res.ok || !res.data || !res.data.data) {
-      const errMsg = res.data?.error || 'Unable to connect to live tasks database.';
-      list.innerHTML = `
+      `);const s=await B("/portal/admin/live-tasks");if(!s.ok||!s.data||!s.data.data){const e=s.data?.error||"Unable to connect to live tasks database.";t.innerHTML=`
         <div class="p-6 sm:p-8 rounded-2xl sm:rounded-3xl bg-white border border-rose-200 text-center space-y-3 shadow-2xs">
           <div class="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto text-lg border border-rose-200/60 shadow-2xs">
             <i class="fa-solid fa-triangle-exclamation"></i>
           </div>
           <div class="space-y-1">
             <h4 class="text-sm sm:text-base font-bold text-[#202D2A]">Failed to Load Operational Tasks</h4>
-            <p class="text-xs text-[#74817D] max-w-sm mx-auto leading-relaxed">${escapeHtml(errMsg)}</p>
+            <p class="text-xs text-[#74817D] max-w-sm mx-auto leading-relaxed">${f(e)}</p>
           </div>
           <button type="button" id="btnRetryLoadTasks" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-[#087F70] hover:bg-[#06685c] text-white shadow-2xs transition-all cursor-pointer touch-manipulation select-none">
             <i class="fa-solid fa-rotate-right text-xs"></i>
             <span>Retry Connection</span>
           </button>
         </div>
-      `;
-      document.getElementById('btnRetryLoadTasks')?.addEventListener('click', () => loadTasksData());
-      return;
-    }
-
-    state.tasksCache = res.data.data;
-    renderFilteredTasks();
-  }
-
-  function renderFilteredTasks() {
-    const list = document.getElementById('adminLiveTasksList');
-    if (!list) return;
-
-    const allTasks = state.tasksCache || [];
-    const searchInput = document.getElementById('taskSearchInput');
-    const prioritySelect = document.getElementById('taskPriorityFilter');
-    const clearSearchBtn = document.getElementById('btnClearTaskSearch');
-
-    const searchVal = (searchInput?.value || '').trim().toLowerCase();
-    const priorityVal = (prioritySelect?.value || 'all').toLowerCase();
-    const statusVal = state.currentTaskStatus || 'all';
-
-    if (clearSearchBtn) {
-      clearSearchBtn.classList.toggle('hidden', !searchVal);
-    }
-
-    // Case 1: Database has zero tasks across all projects
-    if (allTasks.length === 0) {
-      list.innerHTML = `
+      `,document.getElementById("btnRetryLoadTasks")?.addEventListener("click",()=>Ie());return}g.tasksCache=s.data.data,Ae()}function Ae(){const n=document.getElementById("adminLiveTasksList");if(!n)return;const t=g.tasksCache||[],s=document.getElementById("taskSearchInput"),e=document.getElementById("taskPriorityFilter"),l=document.getElementById("btnClearTaskSearch"),i=(s?.value||"").trim().toLowerCase(),p=(e?.value||"all").toLowerCase(),u=g.currentTaskStatus||"all";if(l&&l.classList.toggle("hidden",!i),t.length===0){n.innerHTML=`
         <div class="p-8 sm:p-12 rounded-2xl sm:rounded-3xl bg-white border border-[#E6ECE9] text-center space-y-3.5 shadow-2xs">
           <div class="w-14 h-14 rounded-2xl bg-[#EAF5F1] text-[#087F70] flex items-center justify-center mx-auto text-xl border border-[#087F70]/25 shadow-2xs">
             <i class="fa-solid fa-clipboard-check"></i>
@@ -2096,42 +440,7 @@
             <p class="text-xs sm:text-sm text-[#74817D] max-w-sm mx-auto leading-relaxed">Tasks assigned to active projects will appear here.</p>
           </div>
         </div>
-      `;
-      return;
-    }
-
-    // Filter tasks
-    const filtered = allTasks.filter(t => {
-      // Status filter: pending matches any incomplete task
-      if (statusVal === 'completed' && t.status !== 'completed') return false;
-      if (statusVal === 'pending' && t.status === 'completed') return false;
-
-      // Priority filter
-      if (priorityVal !== 'all' && (t.priority || '').toLowerCase() !== priorityVal) return false;
-
-      // Search filter
-      if (searchVal) {
-        const title = (t.title || '').toLowerCase();
-        const project = (t.project_name || '').toLowerCase();
-        const org = (t.organization_name || t.client_name || '').toLowerCase();
-        const code = (t.task_code || t.id || '').toLowerCase();
-        if (!title.includes(searchVal) && !project.includes(searchVal) && !org.includes(searchVal) && !code.includes(searchVal)) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-
-    // Update count badge if present
-    const countBadge = document.getElementById('liveTasksCountBadge');
-    if (countBadge) {
-      countBadge.textContent = `${filtered.length} of ${allTasks.length} Tasks`;
-    }
-
-    // Case 2: Filters active, but no matching tasks
-    if (filtered.length === 0) {
-      list.innerHTML = `
+      `;return}const y=t.filter(d=>{if(u==="completed"&&d.status!=="completed"||u==="pending"&&d.status==="completed"||p!=="all"&&(d.priority||"").toLowerCase()!==p)return!1;if(i){const c=(d.title||"").toLowerCase(),r=(d.project_name||"").toLowerCase(),m=(d.organization_name||d.client_name||"").toLowerCase(),b=(d.task_code||d.id||"").toLowerCase();if(!c.includes(i)&&!r.includes(i)&&!m.includes(i)&&!b.includes(i))return!1}return!0}),a=document.getElementById("liveTasksCountBadge");if(a&&(a.textContent=`${y.length} of ${t.length} Tasks`),y.length===0){n.innerHTML=`
         <div class="p-8 sm:p-12 rounded-2xl sm:rounded-3xl bg-white border border-[#E6ECE9] text-center space-y-3.5 shadow-2xs">
           <div class="w-14 h-14 rounded-2xl bg-[#F7FAF9] text-[#74817D] flex items-center justify-center mx-auto text-xl border border-[#E6ECE9] shadow-2xs">
             <i class="fa-solid fa-filter-circle-xmark"></i>
@@ -2147,865 +456,148 @@
             </button>
           </div>
         </div>
-      `;
-
-      document.getElementById('btnClearTaskFilters')?.addEventListener('click', () => {
-        if (searchInput) searchInput.value = '';
-        if (prioritySelect) prioritySelect.value = 'all';
-        state.currentTaskStatus = 'all';
-        updateStatusFilterButtons('all');
-        renderFilteredTasks();
-      });
-      return;
-    }
-
-    // Priority color mapping
-    const priorityColors = {
-      urgent: 'bg-rose-50 text-rose-700 border-rose-200',
-      high: 'bg-amber-50 text-amber-700 border-amber-200',
-      medium: 'bg-blue-50 text-blue-700 border-blue-200',
-      low: 'bg-slate-50 text-slate-600 border-slate-200'
-    };
-
-    // Render task cards
-    list.innerHTML = filtered.map(t => {
-      const isCompleted = t.status === 'completed';
-      const statusLabel = isCompleted ? 'Completed' : (t.status === 'in_progress' ? 'In Progress' : (t.status === 'review' ? 'In Review' : 'Pending'));
-      const statusClass = isCompleted 
-        ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-        : 'bg-[#EAF5F1] text-[#087F70] border-[#087F70]/25';
-
-      return `
-        <div class="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white border border-[#E6ECE9] hover:border-[#087F70]/30 shadow-2xs hover:shadow-xs transition-all space-y-3 group ${isCompleted ? 'bg-[#FDFEFE]/80' : ''}" data-task-id="${t.id}">
+      `,document.getElementById("btnClearTaskFilters")?.addEventListener("click",()=>{s&&(s.value=""),e&&(e.value="all"),g.currentTaskStatus="all",Qe("all"),Ae()});return}const o={urgent:"bg-rose-50 text-rose-700 border-rose-200",high:"bg-amber-50 text-amber-700 border-amber-200",medium:"bg-blue-50 text-blue-700 border-blue-200",low:"bg-slate-50 text-slate-600 border-slate-200"};n.innerHTML=y.map(d=>{const c=d.status==="completed",r=c?"Completed":d.status==="in_progress"?"In Progress":d.status==="review"?"In Review":"Pending",m=c?"bg-emerald-50 text-emerald-700 border-emerald-200":"bg-[#EAF5F1] text-[#087F70] border-[#087F70]/25";return`
+        <div class="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white border border-[#E6ECE9] hover:border-[#087F70]/30 shadow-2xs hover:shadow-xs transition-all space-y-3 group ${c?"bg-[#FDFEFE]/80":""}" data-task-id="${d.id}">
           <!-- Top Row: Priority Badge + Status Badge + Progress -->
           <div class="flex items-center justify-between gap-2 flex-wrap">
             <div class="flex items-center gap-1.5 flex-wrap">
-              <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${priorityColors[t.priority] || priorityColors.medium}">
-                ${escapeHtml(t.priority || 'medium')}
+              <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${o[d.priority]||o.medium}">
+                ${f(d.priority||"medium")}
               </span>
-              <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${statusClass}">
-                ${statusLabel}
+              <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${m}">
+                ${r}
               </span>
             </div>
             <div class="flex items-center gap-1.5 text-xs font-mono font-bold text-[#087F70]">
               <i class="fa-solid fa-chart-pie text-[11px] text-[#087F70]/70"></i>
-              <span>${t.progress_percent || 0}% Proj</span>
+              <span>${d.progress_percent||0}% Proj</span>
             </div>
           </div>
 
           <!-- Middle Row: Checkbox + Title -->
           <div class="flex items-start gap-3">
             <div class="pt-0.5 shrink-0">
-              <input type="checkbox" class="task-checkbox w-5 h-5 rounded-md text-[#087F70] bg-white border-[#CBD5E1] cursor-pointer focus:ring-2 focus:ring-[#087F70]/20 transition-all select-none" data-id="${t.id}" ${isCompleted ? 'checked' : ''} aria-label="Mark task complete">
+              <input type="checkbox" class="task-checkbox w-5 h-5 rounded-md text-[#087F70] bg-white border-[#CBD5E1] cursor-pointer focus:ring-2 focus:ring-[#087F70]/20 transition-all select-none" data-id="${d.id}" ${c?"checked":""} aria-label="Mark task complete">
             </div>
             <div class="min-w-0 flex-1 space-y-1">
-              <h4 class="text-sm sm:text-base font-bold text-[#202D2A] leading-snug break-words group-hover:text-[#087F70] transition-colors ${isCompleted ? 'line-through text-[#74817D]/70' : ''}">
-                ${escapeHtml(t.title)}
+              <h4 class="text-sm sm:text-base font-bold text-[#202D2A] leading-snug break-words group-hover:text-[#087F70] transition-colors ${c?"line-through text-[#74817D]/70":""}">
+                ${f(d.title)}
               </h4>
-              ${t.description ? `<p class="text-xs text-[#74817D] line-clamp-2 leading-relaxed">${escapeHtml(t.description)}</p>` : ''}
+              ${d.description?`<p class="text-xs text-[#74817D] line-clamp-2 leading-relaxed">${f(d.description)}</p>`:""}
             </div>
           </div>
 
           <!-- Context Row: Project, Client, Deadline, Details Button -->
           <div class="pt-2 border-t border-[#E6ECE9] flex flex-wrap items-center justify-between gap-2 text-xs">
             <div class="flex flex-wrap items-center gap-2 text-[#74817D] min-w-0">
-              <div class="inline-flex items-center gap-1.5 font-medium truncate max-w-[220px]" title="${escapeHtml(t.project_name || 'Active Project')}">
+              <div class="inline-flex items-center gap-1.5 font-medium truncate max-w-[220px]" title="${f(d.project_name||"Active Project")}">
                 <i class="fa-solid fa-folder-tree text-[11px] text-[#087F70] shrink-0"></i>
-                <span class="truncate text-[#202D2A]">${escapeHtml(t.project_name || 'Active Project')}</span>
+                <span class="truncate text-[#202D2A]">${f(d.project_name||"Active Project")}</span>
               </div>
-              ${t.organization_name || t.client_name ? `
-                <span class="text-[#CBD5E1]">•</span>
-                <div class="inline-flex items-center gap-1 font-medium truncate max-w-[180px]" title="${escapeHtml(t.organization_name || t.client_name)}">
+              ${d.organization_name||d.client_name?`
+                <span class="text-[#CBD5E1]">\u2022</span>
+                <div class="inline-flex items-center gap-1 font-medium truncate max-w-[180px]" title="${f(d.organization_name||d.client_name)}">
                   <i class="fa-regular fa-building text-[10px] text-[#74817D] shrink-0"></i>
-                  <span class="truncate">${escapeHtml(t.organization_name || t.client_name)}</span>
+                  <span class="truncate">${f(d.organization_name||d.client_name)}</span>
                 </div>
-              ` : ''}
-              ${t.deadline ? `
-                <span class="text-[#CBD5E1]">•</span>
+              `:""}
+              ${d.deadline?`
+                <span class="text-[#CBD5E1]">\u2022</span>
                 <div class="inline-flex items-center gap-1 text-[11px] font-mono text-[#74817D]">
                   <i class="fa-regular fa-calendar text-[10px]"></i>
-                  <span>${escapeHtml(t.deadline)}</span>
+                  <span>${f(d.deadline)}</span>
                 </div>
-              ` : ''}
+              `:""}
             </div>
 
             <!-- Action Button -->
             <div class="flex items-center gap-2 shrink-0 ml-auto">
-              <button type="button" class="btn-live-task-detail px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#F7FAF9] hover:bg-[#EAF5F1] text-[#202D2A] hover:text-[#087F70] border border-[#E6ECE9] hover:border-[#087F70]/30 transition-all flex items-center gap-1.5 cursor-pointer touch-manipulation select-none" data-id="${t.id}">
+              <button type="button" class="btn-live-task-detail px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#F7FAF9] hover:bg-[#EAF5F1] text-[#202D2A] hover:text-[#087F70] border border-[#E6ECE9] hover:border-[#087F70]/30 transition-all flex items-center gap-1.5 cursor-pointer touch-manipulation select-none" data-id="${d.id}">
                 <i class="fa-solid fa-circle-info text-[11px]"></i>
                 <span>Details</span>
               </button>
             </div>
           </div>
         </div>
-      `;
-    }).join('');
-
-    // Wire task checkbox completion
-    list.querySelectorAll('.task-checkbox').forEach(cb => {
-      cb.addEventListener('change', async () => {
-        const taskId = cb.dataset.id;
-        const res = await apiFetch(`/projects/tasks/${taskId}/complete`, {
-          method: 'PUT',
-          body: JSON.stringify({ notes: 'Completed via Super Admin Console' })
-        });
-        if (res.ok && res.data && res.data.success) {
-          showToast(`Task updated! Project progress is now ${res.data.data.newProgressPercent}%.`, 'success');
-          const localTask = state.tasksCache.find(t => t.id === taskId);
-          if (localTask) {
-            localTask.status = cb.checked ? 'completed' : 'todo';
-          }
-          renderFilteredTasks();
-          loadProjectsData();
-        } else {
-          showToast('Failed to update task status.', 'error');
-          cb.checked = !cb.checked;
-        }
-      });
-    });
-
-    // Wire live task details
-    list.querySelectorAll('.btn-live-task-detail').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const task = state.tasksCache.find(t => t.id === btn.dataset.id);
-        if (!task) return;
-
-        const modal = document.getElementById('modalLiveTaskDetail');
-        if (!modal) return;
-
-        document.getElementById('liveTaskId').value = task.id;
-        const modalTitle = document.getElementById('liveTaskModalTitle');
-        if (modalTitle) {
-          modalTitle.innerHTML = `<i class="fa-solid fa-list-check text-[#087F70]"></i><span>${escapeHtml(task.title)}</span>`;
-        }
-        const modalProject = document.getElementById('liveTaskModalProject');
-        if (modalProject) {
-          modalProject.textContent = `${task.project_name || 'Project'} (${task.organization_name || task.client_name || 'Client'})`;
-        }
-        const modalDesc = document.getElementById('liveTaskModalDesc');
-        if (modalDesc) {
-          modalDesc.textContent = task.description || 'Standard task execution blueprint.';
-        }
-        const modalStatus = document.getElementById('liveTaskStatus');
-        if (modalStatus) modalStatus.value = task.status || 'todo';
-        const modalPriority = document.getElementById('liveTaskPriority');
-        if (modalPriority) modalPriority.value = task.priority || 'medium';
-        const modalNotes = document.getElementById('liveTaskNotes');
-        if (modalNotes) modalNotes.value = task.internal_notes || '';
-        initGlassSelects();
-
-        modal.classList.remove('hidden');
-      });
-    });
-  }
-
-  function updateStatusFilterButtons(activeFilter) {
-    document.querySelectorAll('.task-filter-btn').forEach(b => {
-      const isTarget = b.dataset.filter === activeFilter;
-      if (isTarget) {
-        b.classList.add('bg-[#EAF5F1]', 'text-[#087F70]', 'font-bold', 'border-[#087F70]/25', 'shadow-2xs');
-        b.classList.remove('text-[#74817D]', 'border-transparent', 'font-semibold');
-      } else {
-        b.classList.remove('bg-[#EAF5F1]', 'text-[#087F70]', 'font-bold', 'border-[#087F70]/25', 'shadow-2xs');
-        b.classList.add('text-[#74817D]', 'border-transparent', 'font-semibold');
-      }
-    });
-  }
-
-  // =========================================================================
-  // 6. FINANCE & PAYMENTS
-  // =========================================================================
-  // Store payments in state cache for modal operations
-  let paymentsCache = [];
-
-  async function loadFinanceData() {
-    initFinanceSubtabs();
-    const res = await apiFetch('/finance/payments');
-    const tbody = document.getElementById('adminPaymentsTableBody');
-    const cardsContainer = document.getElementById('adminFinanceCardsContainer');
-    if (!tbody) return;
-
-    if (res.ok && res.data && res.data.data) {
-      const payments = res.data.data;
-      paymentsCache = payments;
-
-      if (payments.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-6 text-center text-slate-500 italic">No payments recorded. Click "Record New Payment" above.</td></tr>';
-        if (cardsContainer) cardsContainer.innerHTML = '<div class="p-6 rounded-2xl bg-white border border-[#E3E9EF] text-center text-slate-500 italic">No payments recorded.</div>';
-        return;
-      }
-
-      // Desktop Table
-      tbody.innerHTML = payments.map(p => {
-        const isVoided = (p.financial_notes && p.financial_notes.includes('[VOIDED]')) || (p.payment_reference && p.payment_reference.startsWith('VOIDED'));
-        const formattedAmount = formatCurrency(p.amount_cents || 0, p.currency || "USD");
-
-        return `
-          <tr class="hover:bg-slate-50/80 transition-colors border-b border-[#E3E9EF] ${isVoided ? 'opacity-60 bg-rose-50/20' : ''}">
+      `}).join(""),n.querySelectorAll(".task-checkbox").forEach(d=>{d.addEventListener("change",async()=>{const c=d.dataset.id,r=await B(`/projects/tasks/${c}/complete`,{method:"PUT",body:JSON.stringify({notes:"Completed via Super Admin Console"})});if(r.ok&&r.data&&r.data.success){v(`Task updated! Project progress is now ${r.data.data.newProgressPercent}%.`,"success");const m=g.tasksCache.find(b=>b.id===c);m&&(m.status=d.checked?"completed":"todo"),Ae(),ke()}else v("Failed to update task status.","error"),d.checked=!d.checked})}),n.querySelectorAll(".btn-live-task-detail").forEach(d=>{d.addEventListener("click",()=>{const c=g.tasksCache.find(L=>L.id===d.dataset.id);if(!c)return;const r=document.getElementById("modalLiveTaskDetail");if(!r)return;document.getElementById("liveTaskId").value=c.id;const m=document.getElementById("liveTaskModalTitle");m&&(m.innerHTML=`<i class="fa-solid fa-list-check text-[#087F70]"></i><span>${f(c.title)}</span>`);const b=document.getElementById("liveTaskModalProject");b&&(b.textContent=`${c.project_name||"Project"} (${c.organization_name||c.client_name||"Client"})`);const E=document.getElementById("liveTaskModalDesc");E&&(E.textContent=c.description||"Standard task execution blueprint.");const C=document.getElementById("liveTaskStatus");C&&(C.value=c.status||"todo");const h=document.getElementById("liveTaskPriority");h&&(h.value=c.priority||"medium");const I=document.getElementById("liveTaskNotes");I&&(I.value=c.internal_notes||""),O(),r.classList.remove("hidden")})})}function Qe(n){document.querySelectorAll(".task-filter-btn").forEach(t=>{t.dataset.filter===n?(t.classList.add("bg-[#EAF5F1]","text-[#087F70]","font-bold","border-[#087F70]/25","shadow-2xs"),t.classList.remove("text-[#74817D]","border-transparent","font-semibold")):(t.classList.remove("bg-[#EAF5F1]","text-[#087F70]","font-bold","border-[#087F70]/25","shadow-2xs"),t.classList.add("text-[#74817D]","border-transparent","font-semibold"))})}let Te=[];async function ve(){pn();const n=await B("/finance/payments"),t=document.getElementById("adminPaymentsTableBody"),s=document.getElementById("adminFinanceCardsContainer");if(t&&n.ok&&n.data&&n.data.data){const e=n.data.data;if(Te=e,e.length===0){t.innerHTML='<tr><td colspan="6" class="px-6 py-6 text-center text-slate-500 italic">No payments recorded. Click "Record New Payment" above.</td></tr>',s&&(s.innerHTML='<div class="p-6 rounded-2xl bg-white border border-[#E3E9EF] text-center text-slate-500 italic">No payments recorded.</div>');return}t.innerHTML=e.map(i=>{const p=i.financial_notes&&i.financial_notes.includes("[VOIDED]")||i.payment_reference&&i.payment_reference.startsWith("VOIDED"),u=Y(i.amount_cents||0,i.currency||"USD");return`
+          <tr class="hover:bg-slate-50/80 transition-colors border-b border-[#E3E9EF] ${p?"opacity-60 bg-rose-50/20":""}">
             <td class="px-6 py-4 font-mono font-bold text-brand-whiz">
-              ${p.receipt_number}
-              ${isVoided ? '<span class="ml-2 text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">VOIDED</span>' : ''}
+              ${i.receipt_number}
+              ${p?'<span class="ml-2 text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">VOIDED</span>':""}
             </td>
             <td class="px-6 py-4">
-              <div class="font-bold text-[#172B36]">${p.organization_name || 'Client'}</div>
-              <div class="text-[11px] text-slate-500 font-mono">${p.invoice_number || 'INV-DIRECT'}</div>
+              <div class="font-bold text-[#172B36]">${i.organization_name||"Client"}</div>
+              <div class="text-[11px] text-slate-500 font-mono">${i.invoice_number||"INV-DIRECT"}</div>
             </td>
-            <td class="px-6 py-4 font-mono font-bold ${isVoided ? 'line-through text-slate-400' : 'text-brand-whiz'}">${formattedAmount}</td>
-            <td class="px-6 py-4 uppercase text-slate-500 text-xs font-semibold">${(p.payment_method || 'card').replace('_', ' ')}</td>
-            <td class="px-6 py-4 text-slate-500 text-xs">${p.payment_date || 'N/A'}</td>
+            <td class="px-6 py-4 font-mono font-bold ${p?"line-through text-slate-400":"text-brand-whiz"}">${u}</td>
+            <td class="px-6 py-4 uppercase text-slate-500 text-xs font-semibold">${(i.payment_method||"card").replace("_"," ")}</td>
+            <td class="px-6 py-4 text-slate-500 text-xs">${i.payment_date||"N/A"}</td>
             <td class="px-6 py-4 text-right">
               <div class="flex items-center justify-end space-x-1.5">
-                                <button type="button" class="btn-edit-payment-admin px-2 py-1 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer" data-id="${p.id}" title="Edit Metadata">
+                                <button type="button" class="btn-edit-payment-admin px-2 py-1 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer" data-id="${i.id}" title="Edit Metadata">
                   <i class="fa-solid fa-pen"></i>
                 </button>
-                <button type="button" class="btn-correct-payment-admin px-2 py-1 rounded-lg text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-700 transition-colors cursor-pointer" data-id="${p.id}" title="Financial Correction">
+                <button type="button" class="btn-correct-payment-admin px-2 py-1 rounded-lg text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-700 transition-colors cursor-pointer" data-id="${i.id}" title="Financial Correction">
                   <i class="fa-solid fa-scale-balanced"></i>
                 </button>
-                ${!isVoided && state.adminProfile?.role !== 'accounts' ? `
-                  <button type="button" class="btn-void-payment-admin px-2 py-1 rounded-lg text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-600 transition-colors cursor-pointer" data-id="${p.id}" title="Void Payment">
+                ${!p&&g.adminProfile?.role!=="accounts"?`
+                  <button type="button" class="btn-void-payment-admin px-2 py-1 rounded-lg text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-600 transition-colors cursor-pointer" data-id="${i.id}" title="Void Payment">
                     <i class="fa-solid fa-ban"></i>
                   </button>
-                ` : ''}
-                ${state.adminProfile?.role !== 'accounts' ? `
-                  <button type="button" class="btn-delete-payment-admin px-2 py-1 rounded-lg text-xs font-semibold text-slate-400 hover:text-rose-600 transition-colors cursor-pointer" data-id="${p.id}" title="Delete Test Payment">
+                `:""}
+                ${g.adminProfile?.role!=="accounts"?`
+                  <button type="button" class="btn-delete-payment-admin px-2 py-1 rounded-lg text-xs font-semibold text-slate-400 hover:text-rose-600 transition-colors cursor-pointer" data-id="${i.id}" title="Delete Test Payment">
                     <i class="fa-solid fa-trash-can"></i>
                   </button>
-                ` : ''}
+                `:""}
               </div>
             </td>
           </tr>
-        `;
-      }).join('');
-
-      // Mobile Responsive Cards
-      if (cardsContainer) {
-        cardsContainer.innerHTML = payments.map(p => {
-          const isVoided = (p.financial_notes && p.financial_notes.includes('[VOIDED]')) || (p.payment_reference && p.payment_reference.startsWith('VOIDED'));
-          const formattedAmount = formatCurrency(p.amount_cents || 0, p.currency || "USD");
-
-          return `
-            <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-sm space-y-3 ${isVoided ? 'opacity-60 bg-rose-50/20' : ''}">
+        `}).join(""),s&&(s.innerHTML=e.map(i=>{const p=i.financial_notes&&i.financial_notes.includes("[VOIDED]")||i.payment_reference&&i.payment_reference.startsWith("VOIDED"),u=Y(i.amount_cents||0,i.currency||"USD");return`
+            <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-sm space-y-3 ${p?"opacity-60 bg-rose-50/20":""}">
               <div class="flex items-center justify-between">
                 <div>
-                  <span class="font-mono text-xs font-bold text-brand-whiz">${p.receipt_number}</span>
-                  ${isVoided ? '<span class="ml-2 text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">VOIDED</span>' : ''}
+                  <span class="font-mono text-xs font-bold text-brand-whiz">${i.receipt_number}</span>
+                  ${p?'<span class="ml-2 text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">VOIDED</span>':""}
                 </div>
-                <div class="font-mono font-bold text-sm ${isVoided ? 'line-through text-slate-400' : 'text-brand-whiz'}">${formattedAmount}</div>
+                <div class="font-mono font-bold text-sm ${p?"line-through text-slate-400":"text-brand-whiz"}">${u}</div>
               </div>
 
               <div class="space-y-1 text-xs">
-                <div class="font-bold text-[#172B36]">${p.organization_name || 'Client'}</div>
+                <div class="font-bold text-[#172B36]">${i.organization_name||"Client"}</div>
                 <div class="flex items-center justify-between text-slate-500 text-[11px]">
-                  <span>Invoice: <strong class="font-mono text-slate-700">${p.invoice_number || 'INV-DIRECT'}</strong></span>
-                  <span>${p.payment_date || 'N/A'}</span>
+                  <span>Invoice: <strong class="font-mono text-slate-700">${i.invoice_number||"INV-DIRECT"}</strong></span>
+                  <span>${i.payment_date||"N/A"}</span>
                 </div>
                 <div class="text-[11px] text-slate-500 uppercase">
-                  Method: <strong class="text-slate-700">${(p.payment_method || 'card').replace('_', ' ')}</strong>
+                  Method: <strong class="text-slate-700">${(i.payment_method||"card").replace("_"," ")}</strong>
                 </div>
               </div>
 
               <div class="flex items-center justify-end gap-1.5 pt-2 border-t border-[#E3E9EF]">
-                                <button type="button" class="btn-edit-payment-admin px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer" data-id="${p.id}">
+                                <button type="button" class="btn-edit-payment-admin px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer" data-id="${i.id}">
                   Edit
                 </button>
-                <button type="button" class="btn-correct-payment-admin px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-700 cursor-pointer" data-id="${p.id}">
+                <button type="button" class="btn-correct-payment-admin px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-700 cursor-pointer" data-id="${i.id}">
                   Correct
                 </button>
-                ${!isVoided && state.adminProfile?.role !== 'accounts' ? `
-                  <button type="button" class="btn-void-payment-admin px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-600 cursor-pointer" data-id="${p.id}" title="Void">
+                ${!p&&g.adminProfile?.role!=="accounts"?`
+                  <button type="button" class="btn-void-payment-admin px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-600 cursor-pointer" data-id="${i.id}" title="Void">
                     <i class="fa-solid fa-ban"></i>
                   </button>
-                ` : ''}
-                ${state.adminProfile?.role !== 'accounts' ? `
-                  <button type="button" class="btn-delete-payment-admin px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-rose-600 cursor-pointer" data-id="${p.id}" title="Delete">
+                `:""}
+                ${g.adminProfile?.role!=="accounts"?`
+                  <button type="button" class="btn-delete-payment-admin px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-rose-600 cursor-pointer" data-id="${i.id}" title="Delete">
                     <i class="fa-solid fa-trash-can"></i>
                   </button>
-                ` : ''}
+                `:""}
               </div>
             </div>
-          `;
-        }).join('');
-      }
+          `}).join(""));const l=i=>{i&&(i.querySelectorAll(".btn-edit-payment-admin").forEach(p=>{p.addEventListener("click",()=>{const u=p.dataset.id,y=Te.find(o=>o.id===u);if(!y)return;document.getElementById("editPaymentId").value=y.id,document.getElementById("editPaymentReceiptNum").textContent=y.receipt_number,document.getElementById("editPaymentInvoiceNum").textContent=y.invoice_number||"INV-DIRECT",document.getElementById("editPaymentAmountDisplay").textContent=Y(y.amount_cents||0,y.currency||"USD");const a=document.getElementById("editPaymentDate");a&&(a.value=y.payment_date||new Date().toISOString().split("T")[0],typeof updateDatePickerTrigger=="function"&&updateDatePickerTrigger(a)),document.getElementById("editPaymentMethod").value=y.payment_method||"bank_transfer",document.getElementById("editPaymentReference").value=y.payment_reference||"",document.getElementById("editPaymentNotes").value=y.financial_notes||"",O(),document.getElementById("modalEditPayment")?.classList.remove("hidden")})}),i.querySelectorAll(".btn-correct-payment-admin").forEach(p=>{p.addEventListener("click",()=>{const u=p.dataset.id,y=Te.find(a=>a.id===u);y&&(document.getElementById("correctPaymentId").value=y.id,document.getElementById("correctOriginalAmountDisplay").textContent=Y(y.amount_cents||0,y.currency||"USD"),document.getElementById("correctInvoiceNumDisplay").textContent=y.invoice_number||"INV-DIRECT",document.getElementById("correctAmountInput").value=((y.amount_cents||0)/100).toFixed(2),document.getElementById("correctCurrencySelect").value=y.currency||"USD",document.getElementById("correctReasonInput").value="",O(),document.getElementById("modalCorrectPayment")?.classList.remove("hidden"))})}),i.querySelectorAll(".btn-void-payment-admin").forEach(p=>{p.addEventListener("click",async()=>{const u=p.dataset.id,y=Te.find(c=>c.id===u);if(!y||!window.confirm(`Are you sure you want to VOID payment ${y.payment_number} (${Y(y.amount_cents,y.currency)})?
 
-      // Attach Event Listeners
-      const attachListeners = (container) => {
-        if (!container) return;
+This will record an audited reversal and adjust the client invoice balance.`))return;const o=window.prompt("Please enter the reason for voiding this payment:","Audited administrative reversal");if(!o)return;const d=await B(`/finance/payments/${u}/void`,{method:"POST",body:JSON.stringify({reason:o})});d.ok&&d.data&&d.data.success?(v(`Payment ${y.payment_number} voided successfully. Invoice balance adjusted.`,"success"),ve()):v(d.data?.error||"Failed to void payment.","error")})}),i.querySelectorAll(".btn-delete-payment-admin").forEach(p=>{p.addEventListener("click",async()=>{const u=p.dataset.id,y=Te.find(d=>d.id===u);if(!y||!window.confirm(`Permanently delete test payment ${y.payment_number} (${Y(y.amount_cents,y.currency)})?
 
-        
-        // Edit Payment Details Modal
-        container.querySelectorAll('.btn-edit-payment-admin').forEach(b => {
-          b.addEventListener('click', () => {
-            const pid = b.dataset.id;
-            const p = paymentsCache.find(x => x.id === pid);
-            if (!p) return;
-
-            document.getElementById('editPaymentId').value = p.id;
-            document.getElementById('editPaymentReceiptNum').textContent = p.receipt_number;
-            document.getElementById('editPaymentInvoiceNum').textContent = p.invoice_number || 'INV-DIRECT';
-            document.getElementById('editPaymentAmountDisplay').textContent = formatCurrency(p.amount_cents || 0, p.currency || 'USD');
-            const epd = document.getElementById('editPaymentDate');
-            if (epd) {
-              epd.value = p.payment_date || new Date().toISOString().split('T')[0];
-              if (typeof updateDatePickerTrigger === 'function') updateDatePickerTrigger(epd);
-            }
-            document.getElementById('editPaymentMethod').value = p.payment_method || 'bank_transfer';
-            document.getElementById('editPaymentReference').value = p.payment_reference || '';
-            document.getElementById('editPaymentNotes').value = p.financial_notes || '';
-            initGlassSelects();
-
-            document.getElementById('modalEditPayment')?.classList.remove('hidden');
-          });
-        });
-
-        // Financial Correction Modal
-        container.querySelectorAll('.btn-correct-payment-admin').forEach(b => {
-          b.addEventListener('click', () => {
-            const pid = b.dataset.id;
-            const p = paymentsCache.find(x => x.id === pid);
-            if (!p) return;
-
-            document.getElementById('correctPaymentId').value = p.id;
-            document.getElementById('correctOriginalAmountDisplay').textContent = formatCurrency(p.amount_cents || 0, p.currency || 'USD');
-            document.getElementById('correctInvoiceNumDisplay').textContent = p.invoice_number || 'INV-DIRECT';
-            document.getElementById('correctAmountInput').value = ((p.amount_cents || 0) / 100).toFixed(2);
-            document.getElementById('correctCurrencySelect').value = p.currency || 'USD';
-            document.getElementById('correctReasonInput').value = '';
-            initGlassSelects();
-
-            document.getElementById('modalCorrectPayment')?.classList.remove('hidden');
-          });
-        });
-
-        // Void Payment
-        container.querySelectorAll('.btn-void-payment-admin').forEach(b => {
-          b.addEventListener('click', async () => {
-            const pid = b.dataset.id;
-            const p = paymentsCache.find(x => x.id === pid);
-            if (!p) return;
-
-            const confirmed = window.confirm(`Are you sure you want to VOID payment ${p.payment_number} (${formatCurrency(p.amount_cents, p.currency)})?\n\nThis will record an audited reversal and adjust the client invoice balance.`);
-            if (!confirmed) return;
-
-            const reason = window.prompt('Please enter the reason for voiding this payment:', 'Audited administrative reversal');
-            if (!reason) return;
-
-            const vRes = await apiFetch(`/finance/payments/${pid}/void`, {
-              method: 'POST',
-              body: JSON.stringify({ reason })
-            });
-
-            if (vRes.ok && vRes.data && vRes.data.success) {
-              showToast(`Payment ${p.payment_number} voided successfully. Invoice balance adjusted.`, 'success');
-              loadFinanceData();
-            } else {
-              showToast(vRes.data?.error || 'Failed to void payment.', 'error');
-            }
-          });
-        });
-
-        // Delete Disposable Test Payment
-        container.querySelectorAll('.btn-delete-payment-admin').forEach(b => {
-          b.addEventListener('click', async () => {
-            const pid = b.dataset.id;
-            const p = paymentsCache.find(x => x.id === pid);
-            if (!p) return;
-
-            const confirmed = window.confirm(`Permanently delete test payment ${p.payment_number} (${formatCurrency(p.amount_cents, p.currency)})?\n\nThis will remove the test payment record and recalculate invoice balances. This action cannot be undone.`);
-            if (!confirmed) return;
-
-            const dRes = await apiFetch(`/finance/payments/${pid}`, {
-              method: 'DELETE'
-            });
-
-            if (dRes.ok && dRes.data && dRes.data.success) {
-              showToast(`Payment ${p.payment_number} permanently removed from ledger.`, 'success');
-              loadFinanceData();
-            } else {
-              showToast(dRes.data?.error || 'Failed to delete payment.', 'error');
-            }
-          });
-        });
-      };
-
-      attachListeners(tbody);
-      if (cardsContainer) attachListeners(cardsContainer);
-    }
-  }
-
-  // =========================================================================
-  // 7. USER & ACCESS MANAGEMENT (D1 DIRECTORY + ROLE GOVERNANCE)
-  // =========================================================================
-  
-  // =========================================================================
-  // WHIZ LIQUID GLASS SELECTION MENU CONTROLLER (PORTAL POPOVER ARCHITECTURE)
-  // Renders dropdown popovers into an improved body portal to prevent clipping
-  // and stacking-context collision from parent cards or sibling containers.
-  // =========================================================================
-  let _activeGlassMenu = null;
-  let _activeGlassTrigger = null;
-  let _activeGlassWrapper = null;
-  let _glassPortalElement = null;
-
-  function getGlassPortal() {
-    if (!_glassPortalElement || !document.body.contains(_glassPortalElement)) {
-      _glassPortalElement = document.getElementById('whizGlassSelectPortal');
-      if (!_glassPortalElement) {
-        _glassPortalElement = document.createElement('div');
-        _glassPortalElement.id = 'whizGlassSelectPortal';
-        _glassPortalElement.className = 'whiz-glass-portal-root';
-        _glassPortalElement.setAttribute('aria-hidden', 'false');
-        _glassPortalElement.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:0;overflow:visible;pointer-events:none;z-index:10005;';
-        document.body.appendChild(_glassPortalElement);
-      } else {
-        _glassPortalElement.style.zIndex = '10005';
-        _glassPortalElement.style.pointerEvents = 'none';
-      }
-    }
-    return _glassPortalElement;
-  }
-
-  function positionGlassMenu(triggerBtn, menuEl) {
-    if (!triggerBtn || !menuEl) return;
-    const rect = triggerBtn.getBoundingClientRect();
-
-    // If trigger scrolled off screen, close gracefully
-    if (rect.bottom < -30 || rect.top > window.innerHeight + 30) {
-      closeActiveGlassMenu();
-      return;
-    }
-
-    const vh = window.innerHeight;
-    const vw = window.innerWidth;
-    const isMobile = vw < 768;
-    const bottomNavReserve = isMobile ? 68 : 16;
-    const topMargin = 12;
-
-    // Estimate or measure menu height
-    const menuHeight = menuEl.offsetHeight || menuEl.scrollHeight || 180;
-    const spaceBelow = vh - rect.bottom - bottomNavReserve;
-    const spaceAbove = rect.top - topMargin;
-
-    let isDropup = false;
-    let top = 0;
-    let maxHeight = 270;
-
-    // Viewport collision: if space below is less than required (or < 155) and space above is greater
-    if (spaceBelow < Math.min(menuHeight, 155) && spaceAbove > spaceBelow) {
-      isDropup = true;
-      maxHeight = Math.max(110, Math.min(270, spaceAbove - 10));
-      top = Math.max(topMargin, rect.top - Math.min(menuHeight, maxHeight) - 6);
-    } else {
-      isDropup = false;
-      maxHeight = Math.max(110, Math.min(270, spaceBelow - 10));
-      top = rect.bottom + 6;
-    }
-
-    let left = rect.left;
-    let width = rect.width || triggerBtn.offsetWidth || 240;
-
-    // Clamping for narrow mobile viewports (320px - 430px)
-    const maxAllowedWidth = vw - 16;
-    if (width > maxAllowedWidth) {
-      width = maxAllowedWidth;
-      left = 8;
-    } else if (left + width > vw - 8) {
-      left = Math.max(8, vw - width - 8);
-    } else if (left < 8) {
-      left = 8;
-    }
-
-    menuEl.classList.toggle('dropup', isDropup);
-    menuEl.style.position = 'fixed';
-    menuEl.style.top = Math.round(top) + 'px';
-    menuEl.style.left = Math.round(left) + 'px';
-    menuEl.style.width = Math.round(width) + 'px';
-    menuEl.style.maxHeight = Math.round(maxHeight) + 'px';
-    menuEl.style.zIndex = '10010';
-    menuEl.style.pointerEvents = 'auto';
-  }
-
-  function closeActiveGlassMenu() {
-    if (!_activeGlassMenu) return;
-    const menuEl = _activeGlassMenu;
-    const triggerBtn = _activeGlassTrigger;
-    const wrapper = _activeGlassWrapper;
-
-    menuEl.classList.remove('open', 'dropup');
-    menuEl.style.display = 'none';
-    triggerBtn?.classList.remove('active');
-    triggerBtn?.setAttribute('aria-expanded', 'false');
-
-    // Return menu to wrapper
-    if (wrapper && menuEl.parentNode !== wrapper) {
-      wrapper.appendChild(menuEl);
-    }
-
-    menuEl.style.position = '';
-    menuEl.style.top = '';
-    menuEl.style.left = '';
-    menuEl.style.width = '';
-    menuEl.style.maxHeight = '';
-    menuEl.style.zIndex = '';
-    menuEl.style.pointerEvents = '';
-
-    _activeGlassMenu = null;
-    _activeGlassTrigger = null;
-    _activeGlassWrapper = null;
-  }
-
-  function initGlassSelects() {
-    const wrappers = document.querySelectorAll('[data-glass-select]');
-    wrappers.forEach(wrapper => {
-      const selectEl = wrapper.querySelector('select');
-      const triggerBtn = wrapper.querySelector('.glass-select-trigger');
-      const menuEl = wrapper.querySelector('.glass-select-menu') || 
-                     (document.getElementById('whizGlassSelectPortal')?.querySelector('[id="' + wrapper.dataset.glassSelect + 'Menu"]'));
-      const labelSpan = triggerBtn?.querySelector('.select-label');
-      const iconEl = triggerBtn?.querySelector('.select-icon');
-
-      if (!triggerBtn || !menuEl) return;
-
-      const getOptions = () => Array.from(menuEl.querySelectorAll('.glass-select-option'));
-
-      if (wrapper.dataset.glassInitialized === 'true') {
-        // Sync trigger display and option highlights with current select value
-        const val = selectEl?.value || '';
-        const opts = getOptions();
-        opts.forEach(opt => {
-          const isMatch = opt.dataset.value === val;
-          opt.classList.toggle('selected', isMatch);
-          opt.setAttribute('aria-selected', isMatch ? 'true' : 'false');
-          if (isMatch) {
-            if (labelSpan) {
-              const optText = opt.querySelector('.select-opt-text')?.textContent || opt.querySelector('span:not(.currency-badge)')?.textContent || opt.querySelector('span')?.textContent || opt.textContent.trim();
-              labelSpan.textContent = optText;
-            }
-            const optIcon = opt.querySelector('.option-icon');
-            if (optIcon && iconEl) {
-              iconEl.className = optIcon.className.replace('option-icon', 'select-icon');
-            }
-            const symbolBadge = triggerBtn.querySelector('.select-currency-symbol');
-            const optBadge = opt.querySelector('.currency-badge');
-            if (symbolBadge && optBadge) {
-              symbolBadge.textContent = optBadge.textContent;
-            }
-          }
-        });
-        return;
-      }
-      wrapper.dataset.glassInitialized = 'true';
-
-      function setSelected(val, triggerChangeEvent = true) {
-        if (selectEl) {
-          selectEl.value = val;
-        }
-        const opts = getOptions();
-        opts.forEach(opt => {
-          const isMatch = opt.dataset.value === val;
-          opt.classList.toggle('selected', isMatch);
-          opt.setAttribute('aria-selected', isMatch ? 'true' : 'false');
-          if (isMatch) {
-            if (labelSpan) {
-              const optText = opt.querySelector('.select-opt-text')?.textContent || opt.querySelector('span:not(.currency-badge)')?.textContent || opt.querySelector('span')?.textContent || opt.textContent.trim();
-              labelSpan.textContent = optText;
-            }
-            if (iconEl) {
-              const optIcon = opt.querySelector('.option-icon');
-              if (optIcon) {
-                iconEl.className = optIcon.className.replace('option-icon', 'select-icon');
-              }
-            }
-            const symbolBadge = triggerBtn.querySelector('.select-currency-symbol');
-            const optBadge = opt.querySelector('.currency-badge');
-            if (symbolBadge && optBadge) {
-              symbolBadge.textContent = optBadge.textContent;
-            }
-          }
-        });
-        if (triggerChangeEvent && selectEl) {
-          selectEl.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-      }
-
-      function toggleMenu(force) {
-        const willOpen = typeof force === 'boolean' ? force : (menuEl !== _activeGlassMenu || !menuEl.classList.contains('open'));
-        if (willOpen) {
-          if (_activeGlassMenu && _activeGlassMenu !== menuEl) {
-            closeActiveGlassMenu();
-          }
-
-          _activeGlassMenu = menuEl;
-          _activeGlassTrigger = triggerBtn;
-          _activeGlassWrapper = wrapper;
-
-          // Teleport to portal on body
-          const portal = getGlassPortal();
-          portal.appendChild(menuEl);
-          menuEl.style.display = 'block';
-
-          // Position anchored to trigger
-          positionGlassMenu(triggerBtn, menuEl);
-
-          requestAnimationFrame(() => {
-            menuEl.classList.add('open');
-            triggerBtn.classList.add('active');
-            triggerBtn.setAttribute('aria-expanded', 'true');
-            positionGlassMenu(triggerBtn, menuEl);
-            const opts = getOptions();
-            const currentSelected = menuEl.querySelector('.glass-select-option.selected') || opts[0];
-            currentSelected?.focus();
-          });
-        } else {
-          closeActiveGlassMenu();
-        }
-      }
-
-      triggerBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        toggleMenu();
-      });
-
-      triggerBtn.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          toggleMenu(true);
-        } else if (e.key === 'Escape') {
-          toggleMenu(false);
-        }
-      });
-
-      // Delegated click on menu options (handles dynamically injected options)
-      menuEl.addEventListener('click', (e) => {
-        const opt = e.target.closest('.glass-select-option');
-        if (opt) {
-          e.preventDefault();
-          e.stopPropagation();
-          setSelected(opt.dataset.value, true);
-          closeActiveGlassMenu();
-          triggerBtn.focus();
-        }
-      });
-
-      // Keydown navigation on menu
-      menuEl.addEventListener('keydown', (e) => {
-        const opt = e.target.closest('.glass-select-option');
-        if (!opt) return;
-        const opts = getOptions();
-        const idx = opts.indexOf(opt);
-
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          setSelected(opt.dataset.value, true);
-          closeActiveGlassMenu();
-          triggerBtn.focus();
-        } else if (e.key === 'ArrowDown') {
-          e.preventDefault();
-          const next = opts[idx + 1] || opts[0];
-          next?.focus();
-        } else if (e.key === 'ArrowUp') {
-          e.preventDefault();
-          const prev = opts[idx - 1] || opts[opts.length - 1];
-          prev?.focus();
-        } else if (e.key === 'Escape') {
-          e.preventDefault();
-          closeActiveGlassMenu();
-          triggerBtn.focus();
-        } else if (e.key === 'Tab') {
-          closeActiveGlassMenu();
-        }
-      });
-
-      if (selectEl) {
-        selectEl.addEventListener('change', () => {
-          setSelected(selectEl.value, false);
-        });
-        if (selectEl.value) {
-          setSelected(selectEl.value, false);
-        }
-      }
-
-      const parentForm = wrapper.closest('form');
-      if (parentForm) {
-        parentForm.addEventListener('reset', () => {
-          setTimeout(() => {
-            if (selectEl) setSelected(selectEl.value, false);
-          }, 10);
-        });
-      }
-    });
-  }
-
-  // Global Outside Click, Escape, and Reposition listeners
-  if (typeof window !== 'undefined' && !window._glassSelectGlobalBound) {
-    window._glassSelectGlobalBound = true;
-
-    // Reposition on scroll or resize
-    const handleGlassReposition = () => {
-      if (_activeGlassMenu && _activeGlassTrigger) {
-        positionGlassMenu(_activeGlassTrigger, _activeGlassMenu);
-      }
-    };
-    window.addEventListener('scroll', handleGlassReposition, { passive: true, capture: true });
-    window.addEventListener('resize', handleGlassReposition, { passive: true });
-
-    document.addEventListener('click', (e) => {
-      if (!_activeGlassMenu) return;
-      const clickedTrigger = _activeGlassTrigger && (_activeGlassTrigger === e.target || _activeGlassTrigger.contains(e.target));
-      const clickedMenu = _activeGlassMenu && (_activeGlassMenu === e.target || _activeGlassMenu.contains(e.target));
-      if (!clickedTrigger && !clickedMenu) {
-        closeActiveGlassMenu();
-      }
-    });
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && _activeGlassMenu) {
-        const trigger = _activeGlassTrigger;
-        closeActiveGlassMenu();
-        trigger?.focus();
-      }
-    });
-  }
-
-  // Standardized Role & Status Badge Builders
-  function getUserRoleBadge(u, isOwner) {
-    if (isOwner || u.role === 'owner' || u.role === 'super_admin' || u.is_owner === 1 || u.is_owner === true) {
-      return '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-xs"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Super Admin</span>';
-    } else if (u.role === 'admin') {
-      return '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200 shadow-xs"><i class="fa-solid fa-shield-halved text-[9px]"></i> Admin</span>';
-    } else if (u.role === 'accounts') {
-      return '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200 shadow-xs"><i class="fa-solid fa-calculator text-[9px]"></i> Accounts</span>';
-    } else if (u.role === 'employee' || u.role === 'project_manager') {
-      return '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-teal-50 text-teal-700 border border-teal-200 shadow-xs"><i class="fa-solid fa-briefcase text-[9px]"></i> Employee</span>';
-    } else {
-      return '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200 shadow-xs"><i class="fa-solid fa-user text-[9px]"></i> Client</span>';
-    }
-  }
-
-  function getUserStatusBadge(status) {
-    const s = (status || 'active').toLowerCase();
-    if (s === 'active') {
-      return '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Active</span>';
-    } else if (s === 'suspended') {
-      return '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Suspended</span>';
-    } else if (s === 'revoked') {
-      return '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider text-rose-700 bg-rose-50 border border-rose-200"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Revoked</span>';
-    } else {
-      return '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider text-slate-600 bg-slate-100 border border-slate-200"><span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> ' + escapeHtml(status || 'Pending') + '</span>';
-    }
-  }
-
-  async function loadTeamData() {
-    const tbody = document.getElementById('userDirectoryTableBody');
-    const cardsContainer = document.getElementById('adminUserCardsContainer');
-    if (tbody) {
-      tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic"><i class="fa-solid fa-circle-notch fa-spin mr-2 text-[#147D64]"></i>Loading users directory...</td></tr>';
-    }
-    if (cardsContainer) {
-      cardsContainer.innerHTML = '<div class="p-6 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 italic shadow-xs"><i class="fa-solid fa-circle-notch fa-spin mr-2 text-[#147D64]"></i>Loading users directory...</div>';
-    }
-
-    try {
-      const [usersSettled, historySettled, teamSettled] = await Promise.allSettled([
-        apiFetch('/portal/admin/users'),
-        apiFetch('/portal/admin/role-history'),
-        apiFetch('/portal/admin/team')
-      ]);
-
-      const usersRes = usersSettled.status === 'fulfilled' ? usersSettled.value : null;
-      const historyRes = historySettled.status === 'fulfilled' ? historySettled.value : null;
-      const teamRes = teamSettled.status === 'fulfilled' ? teamSettled.value : null;
-
-      if (usersRes && usersRes.ok && usersRes.data && usersRes.data.data) {
-        state.usersCache = usersRes.data.data.users || [];
-        initGlassSelects(); // Sync team selects
-        try {
-          renderUserDirectory();
-        } catch (renderErr) {
-          console.error('renderUserDirectory error:', renderErr);
-        }
-      } else {
-        const errorMsg = usersRes?.data?.error || (usersSettled.status === 'rejected' ? 'Connection error' : 'Failed to load users directory.');
-        if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-6 text-center text-rose-500 font-medium">${escapeHtml(errorMsg)}</td></tr>`;
-        if (cardsContainer) cardsContainer.innerHTML = `<div class="p-6 rounded-2xl bg-white border border-rose-200 text-center text-xs text-rose-500 font-medium shadow-xs">${escapeHtml(errorMsg)}</div>`;
-      }
-
-      if (historyRes && historyRes.ok && historyRes.data) {
-        state.roleHistoryCache = historyRes.data.data || [];
-        try {
-          renderRoleHistory();
-        } catch (histErr) {
-          console.error('renderRoleHistory error:', histErr);
-        }
-      }
-
-      if (teamRes && teamRes.ok && teamRes.data) {
-        const teamData = teamRes.data.data || teamRes.data;
-        try {
-          renderTeamManagement(teamData);
-        } catch (teamErr) {
-          console.error('renderTeamManagement error:', teamErr);
-        }
-      }
-    } catch (err) {
-      console.error('User Directory Fetch Error:', err);
-      const failMsg = 'Failed to load user directory. Please retry.';
-      if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-6 text-center text-rose-500 font-medium">${failMsg}</td></tr>`;
-      if (cardsContainer) cardsContainer.innerHTML = `<div class="p-6 rounded-2xl bg-white border border-rose-200 text-center text-xs text-rose-500 font-medium shadow-xs">${failMsg}</div>`;
-    }
-  }
-
-  function renderUserDirectory() {
-    const tbody = document.getElementById('userDirectoryTableBody');
-    const countEl = document.getElementById('userDirectoryCount');
-    const cardsContainer = document.getElementById('adminUserCardsContainer');
-    if (!tbody && !cardsContainer) return;
-
-    const query = (document.getElementById('userDirectorySearch')?.value || '').toLowerCase().trim();
-    const roleFilter = document.getElementById('userDirectoryRoleFilter')?.value || 'all';
-    const statusFilter = document.getElementById('userDirectoryStatusFilter')?.value || 'all';
-
-    // Toggle clear search button
-    const clearBtn = document.getElementById('userDirectorySearchClear');
-    if (clearBtn) {
-      clearBtn.classList.toggle('hidden', !query);
-    }
-
-    let filtered = state.usersCache.filter(u => {
-      const fullName = (u.full_name || u.fullName || '').toLowerCase();
-      const email = (u.email || '').toLowerCase();
-      const username = (u.username || '').toLowerCase();
-      const clerkId = (u.clerk_user_id || u.clerkUserId || '').toLowerCase();
-      const company = (u.company_name || u.companyName || '').toLowerCase();
-      const role = (u.role || '').toLowerCase();
-
-      const matchesQuery = !query || 
-        fullName.includes(query) ||
-        email.includes(query) ||
-        username.includes(query) ||
-        clerkId.includes(query) ||
-        company.includes(query) ||
-        role.includes(query);
-
-      const matchesRole = roleFilter === 'all' || 
-        (roleFilter === 'client' && u.role === 'client') ||
-        (roleFilter === 'admin' && u.role === 'admin') ||
-        (roleFilter === 'accounts' && u.role === 'accounts') ||
-        (roleFilter === 'employee' && (u.role === 'employee' || u.role === 'project_manager')) ||
-        (roleFilter === 'owner' && (u.role === 'owner' || u.role === 'super_admin'));
-
-      const matchesStatus = statusFilter === 'all' || u.status === statusFilter;
-
-      return matchesQuery && matchesRole && matchesStatus;
-    });
-
-    if (countEl) countEl.textContent = `${filtered.length} account${filtered.length === 1 ? '' : 's'}`;
-
-    if (filtered.length === 0) {
-      const emptyMsg = '<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">No users match the search filter.</td></tr>';
-      if (tbody) tbody.innerHTML = emptyMsg;
-      if (cardsContainer) {
-        cardsContainer.innerHTML = `
+This will remove the test payment record and recalculate invoice balances. This action cannot be undone.`))return;const o=await B(`/finance/payments/${u}`,{method:"DELETE"});o.ok&&o.data&&o.data.success?(v(`Payment ${y.payment_number} permanently removed from ledger.`,"success"),ve()):v(o.data?.error||"Failed to delete payment.","error")})}))};l(t),s&&l(s)}}let se=null,he=null,ft=null,ae=null;function cn(){return(!ae||!document.body.contains(ae))&&(ae=document.getElementById("whizGlassSelectPortal"),ae?(ae.style.zIndex="10005",ae.style.pointerEvents="none"):(ae=document.createElement("div"),ae.id="whizGlassSelectPortal",ae.className="whiz-glass-portal-root",ae.setAttribute("aria-hidden","false"),ae.style.cssText="position:fixed;top:0;left:0;width:100%;height:0;overflow:visible;pointer-events:none;z-index:10005;",document.body.appendChild(ae))),ae}function xt(n,t){if(!n||!t)return;const s=n.getBoundingClientRect();if(s.bottom<-30||s.top>window.innerHeight+30){ce();return}const e=window.innerHeight,l=window.innerWidth,p=l<768?68:16,u=12,y=t.offsetHeight||t.scrollHeight||180,a=e-s.bottom-p,o=s.top-u;let d=!1,c=0,r=270;a<Math.min(y,155)&&o>a?(d=!0,r=Math.max(110,Math.min(270,o-10)),c=Math.max(u,s.top-Math.min(y,r)-6)):(d=!1,r=Math.max(110,Math.min(270,a-10)),c=s.bottom+6);let m=s.left,b=s.width||n.offsetWidth||240;const E=l-16;b>E?(b=E,m=8):m+b>l-8?m=Math.max(8,l-b-8):m<8&&(m=8),t.classList.toggle("dropup",d),t.style.position="fixed",t.style.top=Math.round(c)+"px",t.style.left=Math.round(m)+"px",t.style.width=Math.round(b)+"px",t.style.maxHeight=Math.round(r)+"px",t.style.zIndex="10010",t.style.pointerEvents="auto"}function ce(){if(!se)return;const n=se,t=he,s=ft;n.classList.remove("open","dropup"),n.style.display="none",t?.classList.remove("active"),t?.setAttribute("aria-expanded","false"),s&&n.parentNode!==s&&s.appendChild(n),n.style.position="",n.style.top="",n.style.left="",n.style.width="",n.style.maxHeight="",n.style.zIndex="",n.style.pointerEvents="",se=null,he=null,ft=null}function O(){document.querySelectorAll("[data-glass-select]").forEach(t=>{const s=t.querySelector("select"),e=t.querySelector(".glass-select-trigger"),l=t.querySelector(".glass-select-menu")||document.getElementById("whizGlassSelectPortal")?.querySelector('[id="'+t.dataset.glassSelect+'Menu"]'),i=e?.querySelector(".select-label"),p=e?.querySelector(".select-icon");if(!e||!l)return;const u=()=>Array.from(l.querySelectorAll(".glass-select-option"));if(t.dataset.glassInitialized==="true"){const d=s?.value||"";u().forEach(r=>{const m=r.dataset.value===d;if(r.classList.toggle("selected",m),r.setAttribute("aria-selected",m?"true":"false"),m){if(i){const h=r.querySelector(".select-opt-text")?.textContent||r.querySelector("span:not(.currency-badge)")?.textContent||r.querySelector("span")?.textContent||r.textContent.trim();i.textContent=h}const b=r.querySelector(".option-icon");b&&p&&(p.className=b.className.replace("option-icon","select-icon"));const E=e.querySelector(".select-currency-symbol"),C=r.querySelector(".currency-badge");E&&C&&(E.textContent=C.textContent)}});return}t.dataset.glassInitialized="true";function y(d,c=!0){s&&(s.value=d),u().forEach(m=>{const b=m.dataset.value===d;if(m.classList.toggle("selected",b),m.setAttribute("aria-selected",b?"true":"false"),b){if(i){const h=m.querySelector(".select-opt-text")?.textContent||m.querySelector("span:not(.currency-badge)")?.textContent||m.querySelector("span")?.textContent||m.textContent.trim();i.textContent=h}if(p){const h=m.querySelector(".option-icon");h&&(p.className=h.className.replace("option-icon","select-icon"))}const E=e.querySelector(".select-currency-symbol"),C=m.querySelector(".currency-badge");E&&C&&(E.textContent=C.textContent)}}),c&&s&&s.dispatchEvent(new Event("change",{bubbles:!0}))}function a(d){(typeof d=="boolean"?d:l!==se||!l.classList.contains("open"))?(se&&se!==l&&ce(),se=l,he=e,ft=t,cn().appendChild(l),l.style.display="block",xt(e,l),requestAnimationFrame(()=>{l.classList.add("open"),e.classList.add("active"),e.setAttribute("aria-expanded","true"),xt(e,l);const m=u();(l.querySelector(".glass-select-option.selected")||m[0])?.focus()})):ce()}e.addEventListener("click",d=>{d.preventDefault(),d.stopPropagation(),a()}),e.addEventListener("keydown",d=>{d.key==="ArrowDown"||d.key==="Enter"||d.key===" "?(d.preventDefault(),a(!0)):d.key==="Escape"&&a(!1)}),l.addEventListener("click",d=>{const c=d.target.closest(".glass-select-option");c&&(d.preventDefault(),d.stopPropagation(),y(c.dataset.value,!0),ce(),e.focus())}),l.addEventListener("keydown",d=>{const c=d.target.closest(".glass-select-option");if(!c)return;const r=u(),m=r.indexOf(c);d.key==="Enter"||d.key===" "?(d.preventDefault(),y(c.dataset.value,!0),ce(),e.focus()):d.key==="ArrowDown"?(d.preventDefault(),(r[m+1]||r[0])?.focus()):d.key==="ArrowUp"?(d.preventDefault(),(r[m-1]||r[r.length-1])?.focus()):d.key==="Escape"?(d.preventDefault(),ce(),e.focus()):d.key==="Tab"&&ce()}),s&&(s.addEventListener("change",()=>{y(s.value,!1)}),s.value&&y(s.value,!1));const o=t.closest("form");o&&o.addEventListener("reset",()=>{setTimeout(()=>{s&&y(s.value,!1)},10)})})}if(typeof window<"u"&&!window._glassSelectGlobalBound){window._glassSelectGlobalBound=!0;const n=()=>{se&&he&&xt(he,se)};window.addEventListener("scroll",n,{passive:!0,capture:!0}),window.addEventListener("resize",n,{passive:!0}),document.addEventListener("click",t=>{if(!se)return;const s=he&&(he===t.target||he.contains(t.target)),e=se&&(se===t.target||se.contains(t.target));!s&&!e&&ce()}),document.addEventListener("keydown",t=>{if(t.key==="Escape"&&se){const s=he;ce(),s?.focus()}})}function Pt(n,t){return t||n.role==="owner"||n.role==="super_admin"||n.is_owner===1||n.is_owner===!0?'<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-xs"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Super Admin</span>':n.role==="admin"?'<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200 shadow-xs"><i class="fa-solid fa-shield-halved text-[9px]"></i> Admin</span>':n.role==="accounts"?'<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200 shadow-xs"><i class="fa-solid fa-calculator text-[9px]"></i> Accounts</span>':n.role==="employee"||n.role==="project_manager"?'<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-teal-50 text-teal-700 border border-teal-200 shadow-xs"><i class="fa-solid fa-briefcase text-[9px]"></i> Employee</span>':'<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200 shadow-xs"><i class="fa-solid fa-user text-[9px]"></i> Client</span>'}function Mt(n){const t=(n||"active").toLowerCase();return t==="active"?'<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Active</span>':t==="suspended"?'<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Suspended</span>':t==="revoked"?'<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider text-rose-700 bg-rose-50 border border-rose-200"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Revoked</span>':'<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider text-slate-600 bg-slate-100 border border-slate-200"><span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> '+f(n||"Pending")+"</span>"}async function xe(){const n=document.getElementById("userDirectoryTableBody"),t=document.getElementById("adminUserCardsContainer");n&&(n.innerHTML='<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic"><i class="fa-solid fa-circle-notch fa-spin mr-2 text-[#147D64]"></i>Loading users directory...</td></tr>'),t&&(t.innerHTML='<div class="p-6 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 italic shadow-xs"><i class="fa-solid fa-circle-notch fa-spin mr-2 text-[#147D64]"></i>Loading users directory...</div>');try{const[s,e,l]=await Promise.allSettled([B("/portal/admin/users"),B("/portal/admin/role-history"),B("/portal/admin/team")]),i=s.status==="fulfilled"?s.value:null,p=e.status==="fulfilled"?e.value:null,u=l.status==="fulfilled"?l.value:null;if(i&&i.ok&&i.data&&i.data.data){g.usersCache=i.data.data.users||[],O();try{Pe()}catch(y){console.error("renderUserDirectory error:",y)}}else{const y=i?.data?.error||(s.status==="rejected"?"Connection error":"Failed to load users directory.");n&&(n.innerHTML=`<tr><td colspan="6" class="px-6 py-6 text-center text-rose-500 font-medium">${f(y)}</td></tr>`),t&&(t.innerHTML=`<div class="p-6 rounded-2xl bg-white border border-rose-200 text-center text-xs text-rose-500 font-medium shadow-xs">${f(y)}</div>`)}if(p&&p.ok&&p.data){g.roleHistoryCache=p.data.data||[];try{un()}catch(y){console.error("renderRoleHistory error:",y)}}if(u&&u.ok&&u.data){const y=u.data.data||u.data;try{mn(y)}catch(a){console.error("renderTeamManagement error:",a)}}}catch(s){console.error("User Directory Fetch Error:",s);const e="Failed to load user directory. Please retry.";n&&(n.innerHTML=`<tr><td colspan="6" class="px-6 py-6 text-center text-rose-500 font-medium">${e}</td></tr>`),t&&(t.innerHTML=`<div class="p-6 rounded-2xl bg-white border border-rose-200 text-center text-xs text-rose-500 font-medium shadow-xs">${e}</div>`)}}function Pe(){const n=document.getElementById("userDirectoryTableBody"),t=document.getElementById("userDirectoryCount"),s=document.getElementById("adminUserCardsContainer");if(!n&&!s)return;const e=(document.getElementById("userDirectorySearch")?.value||"").toLowerCase().trim(),l=document.getElementById("userDirectoryRoleFilter")?.value||"all",i=document.getElementById("userDirectoryStatusFilter")?.value||"all",p=document.getElementById("userDirectorySearchClear");p&&p.classList.toggle("hidden",!e);let u=g.usersCache.filter(a=>{const o=(a.full_name||a.fullName||"").toLowerCase(),d=(a.email||"").toLowerCase(),c=(a.username||"").toLowerCase(),r=(a.clerk_user_id||a.clerkUserId||"").toLowerCase(),m=(a.company_name||a.companyName||"").toLowerCase(),b=(a.role||"").toLowerCase(),E=!e||o.includes(e)||d.includes(e)||c.includes(e)||r.includes(e)||m.includes(e)||b.includes(e),C=l==="all"||l==="client"&&a.role==="client"||l==="admin"&&a.role==="admin"||l==="accounts"&&a.role==="accounts"||l==="employee"&&(a.role==="employee"||a.role==="project_manager")||l==="owner"&&(a.role==="owner"||a.role==="super_admin"),h=i==="all"||a.status===i;return E&&C&&h});if(t&&(t.textContent=`${u.length} account${u.length===1?"":"s"}`),u.length===0){const a='<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">No users match the search filter.</td></tr>';n&&(n.innerHTML=a),s&&(s.innerHTML=`
           <div class="p-8 rounded-2xl sm:rounded-3xl bg-white border border-[#E3E9EF] text-center shadow-xs space-y-3">
             <div class="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-center mx-auto text-slate-400">
               <i class="fa-solid fa-users-slash text-lg"></i>
@@ -3017,109 +609,33 @@
               <span>Reset All Filters</span>
             </button>
           </div>
-        `;
-      }
-      return;
-    }
-
-    // Desktop Table
-    if (tbody) {
-      tbody.innerHTML = filtered.map(u => {
-        const email = u.email || '';
-        const isOwner = email.toLowerCase() === 'kaziaremon@gmail.com' || u.role === 'owner' || u.role === 'super_admin' || u.is_owner === 1 || u.is_owner === true;
-        const fullName = u.full_name || u.fullName || 'Registered User';
-        const initials = (fullName || email || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-        const clerkId = u.clerk_user_id || u.clerkUserId || '';
-        const companyName = u.company_name || u.companyName || '';
-        const createdAt = u.created_at || u.createdAt;
-
-        const roleBadge = getUserRoleBadge(u, isOwner);
-        const statusBadge = getUserStatusBadge(u.status);
-
-        const isSelf = isCurrentAdminSelf(u);
-        const isOwnerActor = isCurrentUserOwner();
-        const isTargetOwner = isOwner;
-
-        let actionsHtml = '';
-        if (isTargetOwner) {
-          actionsHtml = '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-mono font-bold text-emerald-800 bg-emerald-50 border border-emerald-300"><i class="fa-solid fa-crown text-[10px] text-amber-500"></i> Founding Owner</span>';
-        } else if (isSelf) {
-          actionsHtml = '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold text-slate-600 bg-slate-100 border border-slate-200"><i class="fa-solid fa-user-check text-[#087F70] text-[10px]"></i> Current Account</span>';
-        } else if (u.status === 'suspended') {
-          const canManageSuspended = u.role !== 'admin' || isOwnerActor;
-          actionsHtml = `
+        `);return}n&&(n.innerHTML=u.map(a=>{const o=a.email||"",d=o.toLowerCase()==="kaziaremon@gmail.com"||a.role==="owner"||a.role==="super_admin"||a.is_owner===1||a.is_owner===!0,c=a.full_name||a.fullName||"Registered User",r=(c||o||"U").split(" ").map(F=>F[0]).join("").slice(0,2).toUpperCase(),m=a.clerk_user_id||a.clerkUserId||"",b=a.company_name||a.companyName||"",E=a.created_at||a.createdAt,C=Pt(a,d),h=Mt(a.status),I=we(a),L=Z(),P=d;let M="";if(P)M='<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-mono font-bold text-emerald-800 bg-emerald-50 border border-emerald-300"><i class="fa-solid fa-crown text-[10px] text-amber-500"></i> Founding Owner</span>';else if(I)M='<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold text-slate-600 bg-slate-100 border border-slate-200"><i class="fa-solid fa-user-check text-[#087F70] text-[10px]"></i> Current Account</span>';else if(a.status==="suspended"){const F=a.role!=="admin"||L;M=`
             <div class="flex items-center justify-end gap-1.5">
-              ${u.role === 'client' ? `<button type="button" class="btn-user-view-details px-2.5 py-1 rounded-lg text-xs font-bold bg-white hover:bg-slate-50 text-[#172B36] border border-[#E3E9EF] cursor-pointer" data-id="${u.id}"><i class="fa-solid fa-eye mr-1 text-[#087F70]"></i>Details</button>` : ''}
-              ${canManageSuspended ? `<button type="button" class="btn-user-reactivate px-2.5 py-1 rounded-lg text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 cursor-pointer" data-id="${u.id}"><i class="fa-solid fa-play mr-1"></i>Reactivate</button>` : ''}
-              ${canManageSuspended ? `<button type="button" class="btn-user-delete px-2.5 py-1 rounded-lg text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 cursor-pointer" data-id="${u.id}" data-name="${escapeHtml(fullName)}"><i class="fa-solid fa-trash-can mr-1"></i>Delete</button>` : ''}
+              ${a.role==="client"?`<button type="button" class="btn-user-view-details px-2.5 py-1 rounded-lg text-xs font-bold bg-white hover:bg-slate-50 text-[#172B36] border border-[#E3E9EF] cursor-pointer" data-id="${a.id}"><i class="fa-solid fa-eye mr-1 text-[#087F70]"></i>Details</button>`:""}
+              ${F?`<button type="button" class="btn-user-reactivate px-2.5 py-1 rounded-lg text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 cursor-pointer" data-id="${a.id}"><i class="fa-solid fa-play mr-1"></i>Reactivate</button>`:""}
+              ${F?`<button type="button" class="btn-user-delete px-2.5 py-1 rounded-lg text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 cursor-pointer" data-id="${a.id}" data-name="${f(c)}"><i class="fa-solid fa-trash-can mr-1"></i>Delete</button>`:""}
             </div>
-          `;
-        } else {
-          const canRevokeAdmin = isOwnerActor && u.role === 'admin';
-          const canDemoteStaff = isOwnerActor && (u.role === 'accounts' || u.role === 'employee');
-          const canSuspend = u.role === 'client' || ((u.role === 'admin' || u.role === 'accounts' || u.role === 'employee') && isOwnerActor);
-
-          const roleBtn = canRevokeAdmin
-            ? `<button type="button" class="btn-role-action px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition-all cursor-pointer" data-id="${u.id}" data-role="client" data-email="${escapeHtml(email)}" data-name="${escapeHtml(fullName)}"><i class="fa-solid fa-arrow-down mr-1 text-[10px]"></i>Revoke Admin</button>`
-            : (canDemoteStaff
-                ? `<button type="button" class="btn-role-action px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition-all cursor-pointer" data-id="${u.id}" data-role="client" data-email="${escapeHtml(email)}" data-name="${escapeHtml(fullName)}"><i class="fa-solid fa-arrow-down mr-1 text-[10px]"></i>Demote Role</button>`
-                : '');
-
-          const suspendBtn = canSuspend
-            ? `<button type="button" class="btn-user-suspend px-2.5 py-1 rounded-lg text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 cursor-pointer" data-id="${u.id}"><i class="fa-solid fa-pause mr-1"></i>Suspend</button>`
-            : '';
-
-          actionsHtml = (roleBtn || suspendBtn)
-            ? `<div class="flex items-center justify-end gap-1.5">${roleBtn}${suspendBtn}</div>`
-            : '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-slate-500 bg-slate-50 border border-slate-200">Active</span>';
-        }
-
-        return `
+          `}else{const F=L&&a.role==="admin",D=L&&(a.role==="accounts"||a.role==="employee"),N=a.role==="client"||(a.role==="admin"||a.role==="accounts"||a.role==="employee")&&L,H=F?`<button type="button" class="btn-role-action px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition-all cursor-pointer" data-id="${a.id}" data-role="client" data-email="${f(o)}" data-name="${f(c)}"><i class="fa-solid fa-arrow-down mr-1 text-[10px]"></i>Revoke Admin</button>`:D?`<button type="button" class="btn-role-action px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition-all cursor-pointer" data-id="${a.id}" data-role="client" data-email="${f(o)}" data-name="${f(c)}"><i class="fa-solid fa-arrow-down mr-1 text-[10px]"></i>Demote Role</button>`:"",W=N?`<button type="button" class="btn-user-suspend px-2.5 py-1 rounded-lg text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 cursor-pointer" data-id="${a.id}"><i class="fa-solid fa-pause mr-1"></i>Suspend</button>`:"";M=H||W?`<div class="flex items-center justify-end gap-1.5">${H}${W}</div>`:'<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-slate-500 bg-slate-50 border border-slate-200">Active</span>'}return`
           <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
             <td class="px-6 py-4">
               <div class="flex items-center space-x-3">
                 <div class="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-xs text-[#172B36] uppercase shrink-0">
-                  ${escapeHtml(initials)}
+                  ${f(r)}
                 </div>
                 <div class="min-w-0">
-                  <div class="font-bold text-[#172B36] truncate">${escapeHtml(fullName)}</div>
-                  <div class="text-xs text-slate-500 font-mono truncate">${escapeHtml(email)}</div>
-                  ${clerkId ? `<div class="inline-flex items-center gap-1 text-[10px] text-emerald-700 font-semibold mt-0.5"><i class="fa-solid fa-shield-check text-[9px]"></i>SSO Linked</div>` : '<div class="text-[10px] text-slate-400 mt-0.5">Direct Verified</div>'}
+                  <div class="font-bold text-[#172B36] truncate">${f(c)}</div>
+                  <div class="text-xs text-slate-500 font-mono truncate">${f(o)}</div>
+                  ${m?'<div class="inline-flex items-center gap-1 text-[10px] text-emerald-700 font-semibold mt-0.5"><i class="fa-solid fa-shield-check text-[9px]"></i>SSO Linked</div>':'<div class="text-[10px] text-slate-400 mt-0.5">Direct Verified</div>'}
                 </div>
               </div>
             </td>
-            <td class="px-6 py-4">${roleBadge}</td>
-            <td class="px-6 py-4">${statusBadge}</td>
-            <td class="px-6 py-4 text-slate-600 text-xs">${companyName ? escapeHtml(companyName) : '<span class="text-slate-400 italic">None</span>'}</td>
-            <td class="px-6 py-4 text-slate-500 text-xs font-mono">${createdAt ? new Date(createdAt).toLocaleDateString() : 'N/A'}</td>
-            <td class="px-6 py-4 text-right">${actionsHtml}</td>
+            <td class="px-6 py-4">${C}</td>
+            <td class="px-6 py-4">${h}</td>
+            <td class="px-6 py-4 text-slate-600 text-xs">${b?f(b):'<span class="text-slate-400 italic">None</span>'}</td>
+            <td class="px-6 py-4 text-slate-500 text-xs font-mono">${E?new Date(E).toLocaleDateString():"N/A"}</td>
+            <td class="px-6 py-4 text-right">${M}</td>
           </tr>
-        `;
-      }).join('');
-    }
-
-    // Mobile Cards (Task 3 & 7)
-    if (cardsContainer) {
-      cardsContainer.innerHTML = filtered.map(u => {
-        const email = u.email || '';
-        const isOwner = email.toLowerCase() === 'kaziaremon@gmail.com' || u.role === 'owner' || u.role === 'super_admin' || u.is_owner === 1 || u.is_owner === true;
-        const fullName = u.full_name || u.fullName || 'Registered User';
-        const initials = (fullName || email || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-        const clerkId = u.clerk_user_id || u.clerkUserId || '';
-        const companyName = u.company_name || u.companyName || '';
-        const createdAt = u.created_at || u.createdAt;
-        const formattedDate = createdAt ? new Date(createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
-
-        const roleBadge = getUserRoleBadge(u, isOwner);
-        const statusBadge = getUserStatusBadge(u.status);
-
-        const isSelf = isCurrentAdminSelf(u);
-        const isOwnerActor = isCurrentUserOwner();
-        const isTargetOwner = isOwner;
-
-        let actionsHtml = '';
-        if (isTargetOwner) {
-          actionsHtml = `
+        `}).join("")),s&&(s.innerHTML=u.map(a=>{const o=a.email||"",d=o.toLowerCase()==="kaziaremon@gmail.com"||a.role==="owner"||a.role==="super_admin"||a.is_owner===1||a.is_owner===!0,c=a.full_name||a.fullName||"Registered User",r=(c||o||"U").split(" ").map(D=>D[0]).join("").slice(0,2).toUpperCase(),m=a.clerk_user_id||a.clerkUserId||"",b=a.company_name||a.companyName||"",E=a.created_at||a.createdAt,C=E?new Date(E).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}):"N/A",h=Pt(a,d),I=Mt(a.status),L=we(a),P=Z(),M=d;let F="";if(M)F=`
             <div class="p-3 rounded-xl bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200/80 flex items-center justify-between text-xs">
               <div class="flex items-center gap-2 font-bold text-emerald-800">
                 <i class="fa-solid fa-crown text-amber-500 text-xs"></i>
@@ -3127,9 +643,7 @@
               </div>
               <span class="text-[10px] font-mono font-extrabold uppercase bg-emerald-100/90 text-emerald-800 px-2.5 py-0.5 rounded-full border border-emerald-300">Protected</span>
             </div>
-          `;
-        } else if (isSelf) {
-          actionsHtml = `
+          `;else if(L)F=`
             <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
               <div class="flex items-center gap-2 font-bold text-slate-700">
                 <i class="fa-solid fa-user-check text-[#087F70] text-xs"></i>
@@ -3137,101 +651,83 @@
               </div>
               <span class="text-[10px] font-mono font-bold uppercase bg-white text-slate-600 px-2.5 py-0.5 rounded-full border border-slate-200">Current</span>
             </div>
-          `;
-        } else if (u.status === 'suspended') {
-          const canManageSuspended = u.role !== 'admin' || isOwnerActor;
-          actionsHtml = `
-            <div class="grid ${canManageSuspended ? 'grid-cols-2' : 'grid-cols-1'} gap-2">
-              ${canManageSuspended ? `
-                <button type="button" class="btn-user-reactivate h-11 px-3 rounded-xl text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs" data-id="${u.id}">
+          `;else if(a.status==="suspended"){const D=a.role!=="admin"||P;F=`
+            <div class="grid ${D?"grid-cols-2":"grid-cols-1"} gap-2">
+              ${D?`
+                <button type="button" class="btn-user-reactivate h-11 px-3 rounded-xl text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs" data-id="${a.id}">
                   <i class="fa-solid fa-play text-[10px]"></i>
                   <span>Reactivate</span>
                 </button>
-                <button type="button" class="btn-user-delete h-11 px-3 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs" data-id="${u.id}" data-name="${escapeHtml(fullName)}">
+                <button type="button" class="btn-user-delete h-11 px-3 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs" data-id="${a.id}" data-name="${f(c)}">
                   <i class="fa-solid fa-trash-can text-[10px]"></i>
                   <span>Delete</span>
                 </button>
-              ` : '<span class="text-xs text-slate-400 italic text-center py-2.5">Suspended Account</span>'}
+              `:'<span class="text-xs text-slate-400 italic text-center py-2.5">Suspended Account</span>'}
             </div>
-          `;
-        } else {
-          const canRevokeAdmin = isOwnerActor && u.role === 'admin';
-          const canDemoteStaff = isOwnerActor && (u.role === 'accounts' || u.role === 'employee');
-          const canSuspend = u.role === 'client' || ((u.role === 'admin' || u.role === 'accounts' || u.role === 'employee') && isOwnerActor);
-
-          if (u.role === 'client') {
-            actionsHtml = `
+          `}else{const D=P&&a.role==="admin",N=P&&(a.role==="accounts"||a.role==="employee"),H=a.role==="client"||(a.role==="admin"||a.role==="accounts"||a.role==="employee")&&P;a.role==="client"?F=`
               <div class="grid grid-cols-2 gap-2">
-                <button type="button" class="btn-user-view-details h-11 px-3 rounded-xl text-xs font-bold text-[#172B36] bg-white hover:bg-slate-50 border border-[#E3E9EF] transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs" data-id="${u.id}">
+                <button type="button" class="btn-user-view-details h-11 px-3 rounded-xl text-xs font-bold text-[#172B36] bg-white hover:bg-slate-50 border border-[#E3E9EF] transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs" data-id="${a.id}">
                   <i class="fa-solid fa-eye text-[#087F70] text-[11px]"></i>
                   <span>View Details</span>
                 </button>
-                ${canSuspend ? `
-                  <button type="button" class="btn-user-suspend h-11 px-3 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs" data-id="${u.id}">
+                ${H?`
+                  <button type="button" class="btn-user-suspend h-11 px-3 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs" data-id="${a.id}">
                     <i class="fa-solid fa-pause text-[10px]"></i>
                     <span>Suspend</span>
                   </button>
-                ` : ''}
+                `:""}
               </div>
-            `;
-          } else if (u.role === 'admin') {
-            actionsHtml = `
-              <div class="grid ${canRevokeAdmin && canSuspend ? 'grid-cols-2' : 'grid-cols-1'} gap-2">
-                ${canRevokeAdmin ? `
-                  <button type="button" class="btn-role-action h-11 px-3 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs" data-id="${u.id}" data-role="client" data-email="${escapeHtml(email)}" data-name="${escapeHtml(fullName)}">
+            `:a.role==="admin"?F=`
+              <div class="grid ${D&&H?"grid-cols-2":"grid-cols-1"} gap-2">
+                ${D?`
+                  <button type="button" class="btn-role-action h-11 px-3 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs" data-id="${a.id}" data-role="client" data-email="${f(o)}" data-name="${f(c)}">
                     <i class="fa-solid fa-user-minus text-[10px]"></i>
                     <span>Revoke Admin</span>
                   </button>
-                ` : ''}
-                ${canSuspend ? `
-                  <button type="button" class="btn-user-suspend h-11 px-3 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs" data-id="${u.id}">
+                `:""}
+                ${H?`
+                  <button type="button" class="btn-user-suspend h-11 px-3 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs" data-id="${a.id}">
                     <i class="fa-solid fa-pause text-[10px]"></i>
                     <span>Suspend</span>
                   </button>
-                ` : ''}
+                `:""}
               </div>
-            `;
-          } else {
-            actionsHtml = `
-              <div class="grid ${canDemoteStaff && canSuspend ? 'grid-cols-2' : 'grid-cols-1'} gap-2">
-                ${canDemoteStaff ? `
-                  <button type="button" class="btn-role-action h-11 px-3 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs" data-id="${u.id}" data-role="client" data-email="${escapeHtml(email)}" data-name="${escapeHtml(fullName)}">
+            `:F=`
+              <div class="grid ${N&&H?"grid-cols-2":"grid-cols-1"} gap-2">
+                ${N?`
+                  <button type="button" class="btn-role-action h-11 px-3 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs" data-id="${a.id}" data-role="client" data-email="${f(o)}" data-name="${f(c)}">
                     <i class="fa-solid fa-arrow-down text-[10px]"></i>
                     <span>Demote Role</span>
                   </button>
-                ` : ''}
-                ${canSuspend ? `
-                  <button type="button" class="btn-user-suspend h-11 px-3 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs" data-id="${u.id}">
+                `:""}
+                ${H?`
+                  <button type="button" class="btn-user-suspend h-11 px-3 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs" data-id="${a.id}">
                     <i class="fa-solid fa-pause text-[10px]"></i>
                     <span>Suspend</span>
                   </button>
-                ` : ''}
+                `:""}
               </div>
-            `;
-          }
-        }
-
-        return `
+            `}return`
           <div class="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white border border-[#E6ECE9] shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_24px_rgba(20,125,100,0.08)] transition-all space-y-3.5">
             <!-- Section A: User Identity -->
             <div class="flex items-start justify-between gap-3">
               <div class="flex items-center gap-3 min-w-0 flex-1">
                 <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#EAF5F1] to-[#D5EDE5] border border-[#087F70]/20 flex items-center justify-center font-black text-xs text-[#087F70] uppercase shrink-0 shadow-xs">
-                  ${escapeHtml(initials)}
+                  ${f(r)}
                 </div>
                 <div class="min-w-0 flex-1">
-                  <h4 class="text-sm font-black text-[#172B36] truncate leading-tight" title="${escapeHtml(fullName)}">
-                    ${escapeHtml(fullName)}
+                  <h4 class="text-sm font-black text-[#172B36] truncate leading-tight" title="${f(c)}">
+                    ${f(c)}
                   </h4>
-                  <p class="text-xs font-mono text-slate-500 truncate mt-0.5" title="${escapeHtml(email)}">
-                    ${escapeHtml(email)}
+                  <p class="text-xs font-mono text-slate-500 truncate mt-0.5" title="${f(o)}">
+                    ${f(o)}
                   </p>
                   <div class="flex items-center gap-1.5 mt-1">
-                    ${clerkId ? `
+                    ${m?`
                       <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/60">
                         <i class="fa-solid fa-shield-check text-[9px]"></i> SSO Linked
                       </span>
-                    ` : `
+                    `:`
                       <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200/60">
                         <i class="fa-solid fa-envelope-circle-check text-[9px]"></i> Direct Account
                       </span>
@@ -3241,8 +737,8 @@
               </div>
               
               <div class="shrink-0 flex flex-col items-end gap-1.5">
-                ${roleBadge}
-                ${statusBadge}
+                ${h}
+                ${I}
               </div>
             </div>
 
@@ -3250,1002 +746,216 @@
             <div class="p-3 rounded-xl bg-slate-50/70 border border-slate-100/80 grid grid-cols-2 gap-2 text-xs">
               <div class="min-w-0">
                 <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Workspace / Company</span>
-                <span class="font-bold text-[#172B36] truncate block mt-0.5" title="${escapeHtml(companyName || 'None')}">
-                  ${companyName ? escapeHtml(companyName) : '<span class="text-slate-400 font-normal italic">None</span>'}
+                <span class="font-bold text-[#172B36] truncate block mt-0.5" title="${f(b||"None")}">
+                  ${b?f(b):'<span class="text-slate-400 font-normal italic">None</span>'}
                 </span>
               </div>
               <div class="min-w-0">
                 <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Registered On</span>
-                <span class="font-mono text-slate-600 block mt-0.5">${escapeHtml(formattedDate)}</span>
+                <span class="font-mono text-slate-600 block mt-0.5">${f(C)}</span>
               </div>
             </div>
 
             <!-- Section C: Account Actions -->
             <div class="pt-1 border-t border-slate-100/80">
-              ${actionsHtml}
+              ${F}
             </div>
           </div>
-        `;
-      }).join('');
-    }
-
-    function openRoleChangeModal(id, targetRole, email, name) {
-      if (!isCurrentUserOwner()) {
-        showToast('Action denied: Only the Founding Super Admin may modify administrative roles.', 'error');
-        return;
-      }
-      if (email && email.toLowerCase() === 'kaziaremon@gmail.com') {
-        showToast('Protection violation: Founding Super Admin account cannot be altered.', 'error');
-        return;
-      }
-      if (isCurrentAdminSelf({ id, email })) {
-        showToast('Self-management violation: You cannot alter your own account permissions.', 'error');
-        return;
-      }
-      const modal = document.getElementById('modalRoleChange');
-      if (!modal) return;
-      const idInput = document.getElementById('roleChangeUserId');
-      const roleInput = document.getElementById('roleChangeTargetRole');
-      const newRoleSelect = document.getElementById('roleChangeNewRole');
-      const titleEl = document.getElementById('modalRoleChangeTitle');
-      const descEl = document.getElementById('modalRoleChangeDesc');
-      const submitBtn = document.getElementById('btnSubmitRoleChange');
-
-      if (idInput) idInput.value = id;
-      if (roleInput) roleInput.value = targetRole;
-      if (newRoleSelect) {
-        newRoleSelect.value = targetRole;
-        newRoleSelect.dispatchEvent(new Event('change'));
-      }
-      if (titleEl) titleEl.innerHTML = '<i class="fa-solid fa-user-gear text-[#087F70] mr-2"></i><span>Update Account Role & Permissions</span>';
-      if (descEl) descEl.textContent = `Configure new security role permissions for ${name} (${email}). An authoritative audit record will be registered.`;
-      if (submitBtn) {
-        submitBtn.innerHTML = '<i class="fa-solid fa-check text-xs mr-1"></i><span>Confirm & Update Role</span>';
-      }
-      modal.classList.remove('hidden');
-    }
-
-    // Bind action buttons
-    document.querySelectorAll('.btn-role-action').forEach(btn => {
-      btn.addEventListener('click', () => {
-        openRoleChangeModal(btn.dataset.id, btn.dataset.role, btn.dataset.email, btn.dataset.name);
-      });
-    });
-
-    document.querySelectorAll('.btn-user-view-details').forEach(btn => {
-      btn.addEventListener('click', () => {
-        openClientDetails(btn.dataset.id);
-      });
-    });
-
-    document.querySelectorAll('.btn-user-reactivate').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const uid = btn.dataset.id;
-        const res = await apiFetch(`/portal/admin/users/${uid}/status`, {
-          method: 'PUT',
-          body: JSON.stringify({ status: 'active' })
-        });
-        if (res.ok) {
-          showToast('Account reactivated.', 'success');
-          loadTeamData();
-        } else {
-          showToast('Failed to reactivate.', 'error');
-        }
-      });
-    });
-
-    document.querySelectorAll('.btn-user-suspend').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const uid = btn.dataset.id;
-        const targetUser = state.usersCache.find(u => u.id === uid);
-        if (isCurrentAdminSelf(targetUser)) {
-          showToast('Self-management violation: You cannot suspend your own account.', 'error');
-          return;
-        }
-        const isTargetOwner = targetUser?.email?.toLowerCase() === 'kaziaremon@gmail.com' || targetUser?.role === 'owner' || targetUser?.role === 'super_admin';
-        if (isTargetOwner) {
-          showToast('Protection violation: The Founding Super Admin account cannot be suspended.', 'error');
-          return;
-        }
-        if (targetUser?.role === 'admin' && !isCurrentUserOwner()) {
-          showToast('Action denied: Only the Founding Super Admin may suspend an Administrator.', 'error');
-          return;
-        }
-        if (!confirm('Suspend this user account?')) return;
-        const res = await apiFetch(`/portal/admin/users/${uid}/status`, {
-          method: 'PUT',
-          body: JSON.stringify({ status: 'suspended' })
-        });
-        if (res.ok) {
-          showToast('Account suspended.', 'success');
-          loadTeamData();
-        } else {
-          showToast('Failed to suspend.', 'error');
-        }
-      });
-    });
-
-    document.querySelectorAll('.btn-user-delete').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const uid = btn.dataset.id;
-        const uname = btn.dataset.name;
-        const targetUser = state.usersCache.find(u => u.id === uid);
-        if (isCurrentAdminSelf(targetUser)) {
-          showToast('Self-management violation: You cannot delete your own account.', 'error');
-          return;
-        }
-        const isTargetOwner = targetUser?.email?.toLowerCase() === 'kaziaremon@gmail.com' || targetUser?.role === 'owner' || targetUser?.role === 'super_admin';
-        if (isTargetOwner) {
-          showToast('Protection violation: The Founding Super Admin account cannot be deleted.', 'error');
-          return;
-        }
-        if (targetUser?.role === 'admin' && !isCurrentUserOwner()) {
-          showToast('Action denied: Only the Founding Super Admin may delete an Administrator.', 'error');
-          return;
-        }
-        if (!confirm(`Permanently delete user account for ${uname}? This action cannot be undone.`)) return;
-        const res = await apiFetch(`/portal/admin/users/${uid}`, {
-          method: 'DELETE'
-        });
-        if (res.ok) {
-          showToast('Account permanently removed.', 'success');
-          loadTeamData();
-        } else {
-          showToast('Failed to delete account.', 'error');
-        }
-      });
-    });
-  }
-
-  function renderRoleHistory() {
-    const tbody = document.getElementById('roleHistoryTableBody');
-    const cardsContainer = document.getElementById('roleHistoryCardsContainer');
-    if (!tbody) return;
-
-    const history = state.roleHistoryCache || [];
-
-    if (history.length === 0) {
-      const emptyMsg = '<tr><td colspan="6" class="px-6 py-6 text-center text-slate-500 italic">No role transition records yet.</td></tr>';
-      tbody.innerHTML = emptyMsg;
-      if (cardsContainer) {
-        cardsContainer.innerHTML = '<div class="p-6 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 italic shadow-xs">No role transition records yet.</div>';
-      }
-      return;
-    }
-
-    // Desktop Table
-    tbody.innerHTML = history.map(h => {
-      const dateStr = h.action_timestamp ? new Date(h.action_timestamp).toLocaleString('en-US', {
-        month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
-      }) : ' - ';
-      const target = resolveUserIdentity(h.target_email || h.target_name || h.target_clerk_user_id || h.user_name || 'User', 'target');
-      const actor = resolveUserIdentity(h.actor_email || h.actor_name || h.actor_clerk_user_id || h.changed_by, 'actor');
-      const prevRole = h.previous_role || 'client';
-      const nextRole = h.new_role || 'admin';
-      const result = h.action_result || 'success';
-      const reason = sanitizeAuditDetails(h.reason || 'Administrative role update');
-
-      return `
+        `}).join(""));function y(a,o,d,c){if(!Z()){v("Action denied: Only the Founding Super Admin may modify administrative roles.","error");return}if(d&&d.toLowerCase()==="kaziaremon@gmail.com"){v("Protection violation: Founding Super Admin account cannot be altered.","error");return}if(we({id:a,email:d})){v("Self-management violation: You cannot alter your own account permissions.","error");return}const r=document.getElementById("modalRoleChange");if(!r)return;const m=document.getElementById("roleChangeUserId"),b=document.getElementById("roleChangeTargetRole"),E=document.getElementById("roleChangeNewRole"),C=document.getElementById("modalRoleChangeTitle"),h=document.getElementById("modalRoleChangeDesc"),I=document.getElementById("btnSubmitRoleChange");m&&(m.value=a),b&&(b.value=o),E&&(E.value=o,E.dispatchEvent(new Event("change"))),C&&(C.innerHTML='<i class="fa-solid fa-user-gear text-[#087F70] mr-2"></i><span>Update Account Role & Permissions</span>'),h&&(h.textContent=`Configure new security role permissions for ${c} (${d}). An authoritative audit record will be registered.`),I&&(I.innerHTML='<i class="fa-solid fa-check text-xs mr-1"></i><span>Confirm & Update Role</span>'),r.classList.remove("hidden")}document.querySelectorAll(".btn-role-action").forEach(a=>{a.addEventListener("click",()=>{y(a.dataset.id,a.dataset.role,a.dataset.email,a.dataset.name)})}),document.querySelectorAll(".btn-user-view-details").forEach(a=>{a.addEventListener("click",()=>{fe(a.dataset.id)})}),document.querySelectorAll(".btn-user-reactivate").forEach(a=>{a.addEventListener("click",async()=>{const o=a.dataset.id;(await B(`/portal/admin/users/${o}/status`,{method:"PUT",body:JSON.stringify({status:"active"})})).ok?(v("Account reactivated.","success"),xe()):v("Failed to reactivate.","error")})}),document.querySelectorAll(".btn-user-suspend").forEach(a=>{a.addEventListener("click",async()=>{const o=a.dataset.id,d=g.usersCache.find(m=>m.id===o);if(we(d)){v("Self-management violation: You cannot suspend your own account.","error");return}if(d?.email?.toLowerCase()==="kaziaremon@gmail.com"||d?.role==="owner"||d?.role==="super_admin"){v("Protection violation: The Founding Super Admin account cannot be suspended.","error");return}if(d?.role==="admin"&&!Z()){v("Action denied: Only the Founding Super Admin may suspend an Administrator.","error");return}if(!confirm("Suspend this user account?"))return;(await B(`/portal/admin/users/${o}/status`,{method:"PUT",body:JSON.stringify({status:"suspended"})})).ok?(v("Account suspended.","success"),xe()):v("Failed to suspend.","error")})}),document.querySelectorAll(".btn-user-delete").forEach(a=>{a.addEventListener("click",async()=>{const o=a.dataset.id,d=a.dataset.name,c=g.usersCache.find(b=>b.id===o);if(we(c)){v("Self-management violation: You cannot delete your own account.","error");return}if(c?.email?.toLowerCase()==="kaziaremon@gmail.com"||c?.role==="owner"||c?.role==="super_admin"){v("Protection violation: The Founding Super Admin account cannot be deleted.","error");return}if(c?.role==="admin"&&!Z()){v("Action denied: Only the Founding Super Admin may delete an Administrator.","error");return}if(!confirm(`Permanently delete user account for ${d}? This action cannot be undone.`))return;(await B(`/portal/admin/users/${o}`,{method:"DELETE"})).ok?(v("Account permanently removed.","success"),xe()):v("Failed to delete account.","error")})})}function un(){const n=document.getElementById("roleHistoryTableBody"),t=document.getElementById("roleHistoryCardsContainer");if(!n)return;const s=g.roleHistoryCache||[];if(s.length===0){const e='<tr><td colspan="6" class="px-6 py-6 text-center text-slate-500 italic">No role transition records yet.</td></tr>';n.innerHTML=e,t&&(t.innerHTML='<div class="p-6 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 italic shadow-xs">No role transition records yet.</div>');return}n.innerHTML=s.map(e=>{const l=e.action_timestamp?new Date(e.action_timestamp).toLocaleString("en-US",{month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit",hour12:!0}):" - ",i=be(e.target_email||e.target_name||e.target_clerk_user_id||e.user_name||"User","target"),p=be(e.actor_email||e.actor_name||e.actor_clerk_user_id||e.changed_by,"actor"),u=e.previous_role||"client",y=e.new_role||"admin",a=e.action_result||"success",o=Ve(e.reason||"Administrative role update");return`
         <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
-          <td class="px-6 py-4 font-mono text-[11px] text-slate-500">${escapeHtml(dateStr)}</td>
-          <td class="px-6 py-4 font-bold text-[#172B36] truncate max-w-[200px]">${escapeHtml(target)}</td>
+          <td class="px-6 py-4 font-mono text-[11px] text-slate-500">${f(l)}</td>
+          <td class="px-6 py-4 font-bold text-[#172B36] truncate max-w-[200px]">${f(i)}</td>
           <td class="px-6 py-4">
             <span class="inline-flex items-center gap-1.5 text-xs font-semibold">
-              <span class="capitalize px-2 py-0.5 rounded bg-slate-100 text-slate-700">${escapeHtml(prevRole)}</span>
+              <span class="capitalize px-2 py-0.5 rounded bg-slate-100 text-slate-700">${f(u)}</span>
               <i class="fa-solid fa-arrow-right text-[10px] text-slate-400"></i>
-              <span class="capitalize px-2 py-0.5 rounded font-bold ${nextRole === 'admin' || nextRole === 'owner' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-700'}">${escapeHtml(nextRole)}</span>
+              <span class="capitalize px-2 py-0.5 rounded font-bold ${y==="admin"||y==="owner"?"bg-emerald-50 text-emerald-700 border border-emerald-200":"bg-slate-100 text-slate-700"}">${f(y)}</span>
             </span>
           </td>
-          <td class="px-6 py-4 text-slate-600 text-xs">${escapeHtml(actor)}</td>
-          <td class="px-6 py-4 text-slate-500 text-xs truncate max-w-[180px]">${escapeHtml(reason)}</td>
+          <td class="px-6 py-4 text-slate-600 text-xs">${f(p)}</td>
+          <td class="px-6 py-4 text-slate-500 text-xs truncate max-w-[180px]">${f(o)}</td>
           <td class="px-6 py-4">
-            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${result === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}">${escapeHtml(result)}</span>
+            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${a==="success"?"bg-emerald-50 text-emerald-700 border border-emerald-200":"bg-rose-50 text-rose-700 border border-rose-200"}">${f(a)}</span>
           </td>
         </tr>
-      `;
-    }).join('');
-
-    // Mobile Cards
-    if (cardsContainer) {
-      cardsContainer.innerHTML = history.map(h => {
-        const dateStr = h.action_timestamp ? new Date(h.action_timestamp).toLocaleString('en-US', {
-          month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
-        }) : ' - ';
-        const target = resolveUserIdentity(h.target_email || h.target_name || h.target_clerk_user_id || h.user_name || 'User', 'target');
-        const actor = resolveUserIdentity(h.actor_email || h.actor_name || h.actor_clerk_user_id || h.changed_by, 'actor');
-        const prevRole = h.previous_role || 'client';
-        const nextRole = h.new_role || 'admin';
-        const result = h.action_result || 'success';
-        const reason = sanitizeAuditDetails(h.reason || 'Administrative role update');
-
-        return `
+      `}).join(""),t&&(t.innerHTML=s.map(e=>{const l=e.action_timestamp?new Date(e.action_timestamp).toLocaleString("en-US",{month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit",hour12:!0}):" - ",i=be(e.target_email||e.target_name||e.target_clerk_user_id||e.user_name||"User","target"),p=be(e.actor_email||e.actor_name||e.actor_clerk_user_id||e.changed_by,"actor"),u=e.previous_role||"client",y=e.new_role||"admin",a=e.action_result||"success",o=Ve(e.reason||"Administrative role update");return`
           <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs space-y-2.5">
             <div class="flex items-center justify-between text-xs">
-              <span class="font-mono text-[11px] text-slate-500">${escapeHtml(dateStr)}</span>
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${result === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}">${escapeHtml(result)}</span>
+              <span class="font-mono text-[11px] text-slate-500">${f(l)}</span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${a==="success"?"bg-emerald-50 text-emerald-700 border border-emerald-200":"bg-rose-50 text-rose-700 border border-rose-200"}">${f(a)}</span>
             </div>
-            <div class="text-xs font-bold text-[#172B36] truncate">${escapeHtml(target)}</div>
+            <div class="text-xs font-bold text-[#172B36] truncate">${f(i)}</div>
             <div class="flex items-center gap-1.5 text-xs">
-              <span class="capitalize px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[11px]">${escapeHtml(prevRole)}</span>
+              <span class="capitalize px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[11px]">${f(u)}</span>
               <i class="fa-solid fa-arrow-right text-[9px] text-slate-400"></i>
-              <span class="capitalize px-2 py-0.5 rounded font-bold text-[11px] ${nextRole === 'admin' || nextRole === 'owner' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-700'}">${escapeHtml(nextRole)}</span>
+              <span class="capitalize px-2 py-0.5 rounded font-bold text-[11px] ${y==="admin"||y==="owner"?"bg-emerald-50 text-emerald-700 border border-emerald-200":"bg-slate-100 text-slate-700"}">${f(y)}</span>
             </div>
             <div class="text-[11px] text-slate-500 pt-1.5 border-t border-slate-100 flex items-center justify-between gap-2">
-              <span>By <strong>${escapeHtml(actor)}</strong></span>
-              <span class="truncate max-w-[160px] text-slate-400">${escapeHtml(reason)}</span>
+              <span>By <strong>${f(p)}</strong></span>
+              <span class="truncate max-w-[160px] text-slate-400">${f(o)}</span>
             </div>
           </div>
-        `;
-      }).join('');
-    }
-  }
-
-  function renderTeamManagement(teamData) {
-    const pendingTbody = document.getElementById('pendingApprovalsTableBody');
-    const pendingCards = document.getElementById('pendingApprovalsCardsContainer');
-    const pendingCount = document.getElementById('pendingApprovalsCount');
-
-    const activeTbody = document.getElementById('activeAdminsTableBody');
-    const activeCards = document.getElementById('activeAdminsCardsContainer');
-    const activeCount = document.getElementById('activeAdminsCount');
-
-    const rawAdmins = teamData.admins || [];
-    const pendingInvs = teamData.pendingInvitations || [];
-
-    const isOwnerActor = isCurrentUserOwner();
-
-    // Enable staff pre-approval form for Super Admin and Admin
-    const inviteForm = document.getElementById('adminInviteForm');
-    if (inviteForm) {
-      const canInvite = isOwnerActor || state.adminProfile?.role === 'admin';
-      const inputs = inviteForm.querySelectorAll('input, select, button');
-      inputs.forEach(el => el.disabled = !canInvite);
-      const submitBtn = inviteForm.querySelector('button[type="submit"]');
-      if (submitBtn) {
-        if (!canInvite) {
-          submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
-          submitBtn.title = 'Only Super Admin and Admin may authorize staff accounts';
-        } else {
-          submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-          submitBtn.title = '';
-        }
-      }
-    }
-
-    const pendingList = pendingInvs.length > 0
-      ? pendingInvs
-      : rawAdmins.filter(a => a.status === 'pending');
-
-    const activeList = rawAdmins.filter(a => a.status === 'active' || (a.clerk_user_id && a.status !== 'revoked' && a.status !== 'pending'));
-
-    if (pendingCount) pendingCount.textContent = `${pendingList.length} pending`;
-    if (activeCount) activeCount.textContent = `${activeList.length} active`;
-
-    // 1. Render Pending Approvals
-    if (pendingList.length === 0) {
-      const emptyPending = '<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">No pending administrator pre-approvals.</td></tr>';
-      if (pendingTbody) pendingTbody.innerHTML = emptyPending;
-      if (pendingCards) pendingCards.innerHTML = '<div class="p-6 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 italic shadow-xs">No pending administrator pre-approvals.</div>';
-    } else {
-      if (pendingTbody) {
-        pendingTbody.innerHTML = pendingList.map(p => {
-          const name = p.full_name || 'Approved Staff Member';
-          const email = p.email || p.approved_email || '';
-          const roleName = typeof formatRoleName === 'function' ? formatRoleName(p.role) : (p.role || 'Staff');
-          const roleBadge = typeof getRoleBadgeForRole === 'function' ? getRoleBadgeForRole(p.role, false) : `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-50 text-slate-700 border border-slate-200 uppercase">${escapeHtml(roleName)}</span>`;
-          const createdAt = p.created_at ? new Date(p.created_at).toLocaleDateString() : 'N/A';
-          const actionCol = isOwnerActor
-            ? `<button type="button" class="btn-revoke-invitation px-2.5 py-1 rounded-lg text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 cursor-pointer transition-all" data-id="${p.id}" data-email="${escapeHtml(email)}">
+        `}).join(""))}function mn(n){const t=document.getElementById("pendingApprovalsTableBody"),s=document.getElementById("pendingApprovalsCardsContainer"),e=document.getElementById("pendingApprovalsCount"),l=document.getElementById("activeAdminsTableBody"),i=document.getElementById("activeAdminsCardsContainer"),p=document.getElementById("activeAdminsCount"),u=n.admins||[],y=n.pendingInvitations||[],a=Z(),o=document.getElementById("adminInviteForm");if(o){const r=a||g.adminProfile?.role==="admin";o.querySelectorAll("input, select, button").forEach(E=>E.disabled=!r);const b=o.querySelector('button[type="submit"]');b&&(r?(b.classList.remove("opacity-50","cursor-not-allowed"),b.title=""):(b.classList.add("opacity-50","cursor-not-allowed"),b.title="Only Super Admin and Admin may authorize staff accounts"))}const d=y.length>0?y:u.filter(r=>r.status==="pending"),c=u.filter(r=>r.status==="active"||r.clerk_user_id&&r.status!=="revoked"&&r.status!=="pending");if(e&&(e.textContent=`${d.length} pending`),p&&(p.textContent=`${c.length} active`),d.length===0){const r='<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">No pending administrator pre-approvals.</td></tr>';t&&(t.innerHTML=r),s&&(s.innerHTML='<div class="p-6 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 italic shadow-xs">No pending administrator pre-approvals.</div>')}else t&&(t.innerHTML=d.map(r=>{const m=r.full_name||"Approved Staff Member",b=r.email||r.approved_email||"",E=typeof Ue=="function"?Ue(r.role):r.role||"Staff",C=typeof ye=="function"?ye(r.role,!1):`<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-50 text-slate-700 border border-slate-200 uppercase">${f(E)}</span>`,h=r.created_at?new Date(r.created_at).toLocaleDateString():"N/A",I=a?`<button type="button" class="btn-revoke-invitation px-2.5 py-1 rounded-lg text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 cursor-pointer transition-all" data-id="${r.id}" data-email="${f(b)}">
                 <i class="fa-solid fa-ban mr-1 text-[10px]"></i>Revoke Approval
-              </button>`
-            : '<span class="text-xs font-medium text-slate-400 italic">Owner Only</span>';
-
-          return `
+              </button>`:'<span class="text-xs font-medium text-slate-400 italic">Owner Only</span>';return`
             <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
-              <td class="px-6 py-4 font-bold text-[#172B36]">${escapeHtml(name)}</td>
-              <td class="px-6 py-4 font-mono text-xs text-slate-600">${escapeHtml(email)}</td>
-              <td class="px-6 py-4">${roleBadge}</td>
-              <td class="px-6 py-4 font-mono text-xs text-slate-500">${escapeHtml(createdAt)}</td>
+              <td class="px-6 py-4 font-bold text-[#172B36]">${f(m)}</td>
+              <td class="px-6 py-4 font-mono text-xs text-slate-600">${f(b)}</td>
+              <td class="px-6 py-4">${C}</td>
+              <td class="px-6 py-4 font-mono text-xs text-slate-500">${f(h)}</td>
               <td class="px-6 py-4"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 uppercase">Pending Verification</span></td>
-              <td class="px-6 py-4 text-right">${actionCol}</td>
+              <td class="px-6 py-4 text-right">${I}</td>
             </tr>
-          `;
-        }).join('');
-      }
-
-      if (pendingCards) {
-        pendingCards.innerHTML = pendingList.map(p => {
-          const name = p.full_name || 'Approved Administrator';
-          const email = p.email || p.approved_email || '';
-          const roleName = typeof formatRoleName === 'function' ? formatRoleName(p.role) : (p.role || 'Staff');
-          const createdAt = p.created_at ? new Date(p.created_at).toLocaleDateString() : 'N/A';
-          return `
+          `}).join("")),s&&(s.innerHTML=d.map(r=>{const m=r.full_name||"Approved Administrator",b=r.email||r.approved_email||"",E=typeof Ue=="function"?Ue(r.role):r.role||"Staff",C=r.created_at?new Date(r.created_at).toLocaleDateString():"N/A";return`
             <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E6ECE9] shadow-xs space-y-3">
               <div class="flex items-center justify-between text-xs gap-2">
-                <span class="font-bold text-[#172B36] text-sm truncate">${escapeHtml(name)}</span>
+                <span class="font-bold text-[#172B36] text-sm truncate">${f(m)}</span>
                 <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider text-slate-600 bg-slate-100 border border-slate-200"><span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> Pending</span>
               </div>
-              <div class="font-mono text-xs text-slate-500 break-all">${escapeHtml(email)}</div>
+              <div class="font-mono text-xs text-slate-500 break-all">${f(b)}</div>
               <div class="p-2.5 rounded-xl bg-slate-50/80 border border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                <span>Role: <strong class="text-slate-700">${escapeHtml(roleName)}</strong></span>
-                <span class="font-mono text-[11px]">${escapeHtml(createdAt)}</span>
+                <span>Role: <strong class="text-slate-700">${f(E)}</strong></span>
+                <span class="font-mono text-[11px]">${f(C)}</span>
               </div>
-              ${isOwnerActor ? `
-                <button type="button" class="btn-revoke-invitation w-full h-11 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-center cursor-pointer transition-all flex items-center justify-center gap-1.5 shadow-xs" data-id="${p.id}" data-email="${escapeHtml(email)}">
+              ${a?`
+                <button type="button" class="btn-revoke-invitation w-full h-11 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-center cursor-pointer transition-all flex items-center justify-center gap-1.5 shadow-xs" data-id="${r.id}" data-email="${f(b)}">
                   <i class="fa-solid fa-ban text-[10px]"></i>
                   <span>Revoke Pre-Approval</span>
                 </button>
-              ` : ''}
+              `:""}
             </div>
-          `;
-        }).join('');
-      }
-    }
-
-    // 2. Render Active Administrators
-    if (activeList.length === 0) {
-      const emptyActive = '<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">No active administrators found.</td></tr>';
-      if (activeTbody) activeTbody.innerHTML = emptyActive;
-      if (activeCards) activeCards.innerHTML = '<div class="p-6 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 italic shadow-xs">No active administrators found.</div>';
-    } else {
-      if (activeTbody) {
-        activeTbody.innerHTML = activeList.map(a => {
-          const email = a.approved_email || a.email || '';
-          const isOwner = email.toLowerCase() === 'kaziaremon@gmail.com';
-          const name = a.full_name || (isOwner ? 'Kazi Emon' : 'Administrator');
-          const clerkId = a.clerk_user_id || ' - ';
-          const isSelf = isCurrentAdminSelf(a);
-
-          const isActualOwner = email.toLowerCase() === 'kaziaremon@gmail.com' || a.role === 'owner' || a.role === 'super_admin';
-          const roleBadge = typeof getRoleBadgeForRole === 'function' ? getRoleBadgeForRole(a.role, isActualOwner) : (isActualOwner ? '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Owner</span>' : '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-blue-50 text-blue-700 border border-blue-200"><i class="fa-solid fa-shield-halved text-[9px]"></i> Admin</span>');
-          const activatedAt = a.activated_at ? new Date(a.activated_at).toLocaleDateString() : (a.created_at ? new Date(a.created_at).toLocaleDateString() : 'N/A');
-
-          let actionHtml = '';
-          if (isOwner) {
-            actionHtml = '<span class="px-2.5 py-1 rounded-lg text-xs font-bold text-emerald-800 bg-emerald-100 border border-emerald-300"><i class="fa-solid fa-shield mr-1"></i>Founding Super Admin</span>';
-          } else if (isSelf) {
-            actionHtml = '<span class="px-2.5 py-1 rounded-lg text-xs font-bold text-slate-600 bg-slate-100 border border-slate-200"><i class="fa-solid fa-user-check text-brand-whiz mr-1 text-[10px]"></i>Current Account (You)</span>';
-          } else if (isOwnerActor) {
-            actionHtml = `<button type="button" class="btn-revoke-admin-access px-2.5 py-1 rounded-lg text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 cursor-pointer transition-all" data-id="${a.id}" data-email="${escapeHtml(email)}" data-name="${escapeHtml(name)}"><i class="fa-solid fa-user-xmark mr-1 text-[10px]"></i>Revoke Admin Access</button>`;
-          } else {
-            actionHtml = '<span class="text-xs font-medium text-slate-400 italic">Protected</span>';
-          }
-
-          return `
+          `}).join(""));if(c.length===0){const r='<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">No active administrators found.</td></tr>';l&&(l.innerHTML=r),i&&(i.innerHTML='<div class="p-6 rounded-2xl bg-white border border-[#E3E9EF] text-center text-xs text-slate-500 italic shadow-xs">No active administrators found.</div>')}else l&&(l.innerHTML=c.map(r=>{const m=r.approved_email||r.email||"",b=m.toLowerCase()==="kaziaremon@gmail.com",E=r.full_name||(b?"Kazi Emon":"Administrator"),C=r.clerk_user_id||" - ",h=we(r),I=m.toLowerCase()==="kaziaremon@gmail.com"||r.role==="owner"||r.role==="super_admin",L=typeof ye=="function"?ye(r.role,I):I?'<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Owner</span>':'<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-blue-50 text-blue-700 border border-blue-200"><i class="fa-solid fa-shield-halved text-[9px]"></i> Admin</span>',P=r.activated_at?new Date(r.activated_at).toLocaleDateString():r.created_at?new Date(r.created_at).toLocaleDateString():"N/A";let M="";return b?M='<span class="px-2.5 py-1 rounded-lg text-xs font-bold text-emerald-800 bg-emerald-100 border border-emerald-300"><i class="fa-solid fa-shield mr-1"></i>Founding Super Admin</span>':h?M='<span class="px-2.5 py-1 rounded-lg text-xs font-bold text-slate-600 bg-slate-100 border border-slate-200"><i class="fa-solid fa-user-check text-brand-whiz mr-1 text-[10px]"></i>Current Account (You)</span>':a?M=`<button type="button" class="btn-revoke-admin-access px-2.5 py-1 rounded-lg text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 cursor-pointer transition-all" data-id="${r.id}" data-email="${f(m)}" data-name="${f(E)}"><i class="fa-solid fa-user-xmark mr-1 text-[10px]"></i>Revoke Admin Access</button>`:M='<span class="text-xs font-medium text-slate-400 italic">Protected</span>',`
             <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
-              <td class="px-6 py-4 font-bold text-[#172B36]">${escapeHtml(name)}</td>
-              <td class="px-6 py-4 font-mono text-xs text-slate-600">${escapeHtml(email)}</td>
-              <td class="px-6 py-4 font-mono text-[11px]">${clerkId && clerkId !== ' - ' ? '<span class="inline-flex items-center gap-1 text-emerald-700 font-semibold text-[11px]"><i class="fa-solid fa-shield-check text-[10px]"></i> SSO Linked</span>' : '<span class="text-slate-400">Direct Pending</span>'}</td>
-              <td class="px-6 py-4">${roleBadge}</td>
-              <td class="px-6 py-4 font-mono text-xs text-slate-500">${escapeHtml(activatedAt)}</td>
-              <td class="px-6 py-4 text-right">${actionHtml}</td>
+              <td class="px-6 py-4 font-bold text-[#172B36]">${f(E)}</td>
+              <td class="px-6 py-4 font-mono text-xs text-slate-600">${f(m)}</td>
+              <td class="px-6 py-4 font-mono text-[11px]">${C&&C!==" - "?'<span class="inline-flex items-center gap-1 text-emerald-700 font-semibold text-[11px]"><i class="fa-solid fa-shield-check text-[10px]"></i> SSO Linked</span>':'<span class="text-slate-400">Direct Pending</span>'}</td>
+              <td class="px-6 py-4">${L}</td>
+              <td class="px-6 py-4 font-mono text-xs text-slate-500">${f(P)}</td>
+              <td class="px-6 py-4 text-right">${M}</td>
             </tr>
-          `;
-        }).join('');
-      }
-
-      if (activeCards) {
-        activeCards.innerHTML = activeList.map(a => {
-          const email = a.approved_email || a.email || '';
-          const isOwner = email.toLowerCase() === 'kaziaremon@gmail.com' || a.role === 'owner' || a.role === 'super_admin';
-          const name = a.full_name || (isOwner ? 'Kazi Emon' : 'Administrator');
-          const clerkId = a.clerk_user_id || '';
-          const isSelf = isCurrentAdminSelf(a);
-          const activatedAt = a.activated_at ? new Date(a.activated_at).toLocaleDateString() : (a.created_at ? new Date(a.created_at).toLocaleDateString() : 'N/A');
-
-          let cardActionHtml = '';
-          if (isOwner) {
-            cardActionHtml = '<div class="p-2.5 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 flex items-center justify-between text-xs w-full"><span class="font-bold text-emerald-800"><i class="fa-solid fa-crown text-amber-500 mr-1.5"></i>Founding Owner</span><span class="text-[10px] font-mono font-extrabold uppercase bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">Immune</span></div>';
-          } else if (isSelf) {
-            cardActionHtml = '<div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs w-full"><span class="font-bold text-slate-700"><i class="fa-solid fa-user-check text-[#087F70] mr-1.5"></i>Current Account (You)</span><span class="text-[10px] font-mono font-bold uppercase bg-white text-slate-600 px-2 py-0.5 rounded-full border border-slate-200">Session</span></div>';
-          } else if (isOwnerActor) {
-            cardActionHtml = `<button type="button" class="btn-revoke-admin-access w-full h-11 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 cursor-pointer flex items-center justify-center gap-1.5 transition-all shadow-xs" data-id="${a.id}" data-email="${escapeHtml(email)}" data-name="${escapeHtml(name)}"><i class="fa-solid fa-user-minus text-[10px]"></i><span>Revoke Admin Access</span></button>`;
-          } else {
-            cardActionHtml = '<span class="text-xs font-medium text-slate-400 italic">Protected Administrator</span>';
-          }
-
-          return `
+          `}).join("")),i&&(i.innerHTML=c.map(r=>{const m=r.approved_email||r.email||"",b=m.toLowerCase()==="kaziaremon@gmail.com"||r.role==="owner"||r.role==="super_admin",E=r.full_name||(b?"Kazi Emon":"Administrator"),C=r.clerk_user_id||"",h=we(r),I=r.activated_at?new Date(r.activated_at).toLocaleDateString():r.created_at?new Date(r.created_at).toLocaleDateString():"N/A";let L="";return b?L='<div class="p-2.5 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 flex items-center justify-between text-xs w-full"><span class="font-bold text-emerald-800"><i class="fa-solid fa-crown text-amber-500 mr-1.5"></i>Founding Owner</span><span class="text-[10px] font-mono font-extrabold uppercase bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">Immune</span></div>':h?L='<div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs w-full"><span class="font-bold text-slate-700"><i class="fa-solid fa-user-check text-[#087F70] mr-1.5"></i>Current Account (You)</span><span class="text-[10px] font-mono font-bold uppercase bg-white text-slate-600 px-2 py-0.5 rounded-full border border-slate-200">Session</span></div>':a?L=`<button type="button" class="btn-revoke-admin-access w-full h-11 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 cursor-pointer flex items-center justify-center gap-1.5 transition-all shadow-xs" data-id="${r.id}" data-email="${f(m)}" data-name="${f(E)}"><i class="fa-solid fa-user-minus text-[10px]"></i><span>Revoke Admin Access</span></button>`:L='<span class="text-xs font-medium text-slate-400 italic">Protected Administrator</span>',`
             <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E6ECE9] shadow-xs space-y-3">
               <div class="flex items-center justify-between gap-2">
-                <span class="font-bold text-[#172B36] text-sm truncate">${escapeHtml(name)}</span>
-                ${typeof getRoleBadgeForRole === 'function' ? getRoleBadgeForRole(a.role, isOwner) : (isOwner ? '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-xs"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Super Admin</span>' : '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200 shadow-xs"><i class="fa-solid fa-shield-halved text-[9px]"></i> Admin</span>')}
+                <span class="font-bold text-[#172B36] text-sm truncate">${f(E)}</span>
+                ${typeof ye=="function"?ye(r.role,b):b?'<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-xs"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Super Admin</span>':'<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200 shadow-xs"><i class="fa-solid fa-shield-halved text-[9px]"></i> Admin</span>'}
               </div>
-              <div class="font-mono text-xs text-slate-500 break-all">${escapeHtml(email)}</div>
+              <div class="font-mono text-xs text-slate-500 break-all">${f(m)}</div>
               <div class="p-2.5 rounded-xl bg-slate-50/80 border border-slate-100 flex items-center justify-between text-xs text-slate-500">
                 <span>Active Since</span>
-                <span class="font-mono text-slate-700 font-semibold">${escapeHtml(activatedAt)}</span>
+                <span class="font-mono text-slate-700 font-semibold">${f(I)}</span>
               </div>
               <div class="pt-1 border-t border-slate-100">
-                ${cardActionHtml}
+                ${L}
               </div>
             </div>
-          `;
-        }).join('');
-      }
-    }
-
-    // Attach listeners for Revoke Pre-Approval
-    document.querySelectorAll('.btn-revoke-invitation').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        if (!isCurrentUserOwner()) {
-          showToast('Action denied: Only the Founding Super Admin may revoke administrator pre-approvals.', 'error');
-          return;
-        }
-        const id = btn.dataset.id;
-        const email = btn.dataset.email;
-        if (!confirm(`Are you sure you want to revoke administrator pre-approval for ${email}?`)) return;
-
-        setBtnLoading(btn, true, 'Revoking...');
-        const res = await apiFetch('/portal/admin/team/revoke', {
-          method: 'POST',
-          body: JSON.stringify({ invitationId: id, email })
-        });
-        setBtnLoading(btn, false);
-
-        if (res.ok && res.data && res.data.success) {
-          showToast(res.data.message || `Pre-approval for ${email} revoked.`, 'success');
-          loadTeamData();
-        } else {
-          showToast(res.data?.error || 'Failed to revoke pre-approval.', 'error');
-        }
-      });
-    });
-
-    // Attach listeners for Revoke Admin Access
-    document.querySelectorAll('.btn-revoke-admin-access').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const id = btn.dataset.id;
-        const email = btn.dataset.email;
-        const name = btn.dataset.name;
-        if (!isCurrentUserOwner()) {
-          showToast('Action denied: Only the Founding Super Admin may revoke administrator access.', 'error');
-          return;
-        }
-        if (isCurrentAdminSelf({ id, email })) {
-          showToast('Self-management violation: You cannot revoke your own account.', 'error');
-          return;
-        }
-        openRoleChangeModal(id, 'client', email, name);
-      });
-    });
-  }
-
-  // =========================================================================
-  // 9. AUDIT & HISTORY DATA (Redesigned Light-Themed Activity Feed - Priority 7)
-  // =========================================================================
-  let auditLogsCache = [];
-
-  const ACTION_CONFIG = {
-    'PAYMENT_RECORDED': { label: 'Payment Recorded', category: 'payments', badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: 'fa-receipt' },
-    'PAYMENT_CORRECTED': { label: 'Payment Corrected', category: 'payments', badgeClass: 'bg-amber-50 text-amber-700 border-amber-200', icon: 'fa-pen-to-square' },
-    'PAYMENT_VOIDED': { label: 'Payment Voided', category: 'payments', badgeClass: 'bg-rose-50 text-rose-700 border-rose-200', icon: 'fa-ban' },
-    'PAYMENT_DELETED': { label: 'Payment Removed', category: 'payments', badgeClass: 'bg-rose-50 text-rose-700 border-rose-200', icon: 'fa-trash' },
-    'CLIENT_CREATED': { label: 'Client Registered', category: 'clients', badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: 'fa-user-plus' },
-    'CLIENT_STATUS_UPDATED': { label: 'Client Status Changed', category: 'clients', badgeClass: 'bg-amber-50 text-amber-700 border-amber-200', icon: 'fa-user-gear' },
-    'CLIENT_SUSPENDED': { label: 'Client Suspended', category: 'clients', badgeClass: 'bg-amber-50 text-amber-700 border-amber-200', icon: 'fa-user-lock' },
-    'CLIENT_REACTIVATED': { label: 'Client Reactivated', category: 'clients', badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: 'fa-user-check' },
-    'CLIENT_DELETED': { label: 'Client Permanently Deleted', category: 'clients', badgeClass: 'bg-rose-50 text-rose-700 border-rose-200', icon: 'fa-user-xmark' },
-    'ROLE_ASSIGNED': { label: 'Access Role Assigned', category: 'access', badgeClass: 'bg-sky-50 text-sky-700 border-sky-200', icon: 'fa-shield-halved' },
-    'ROLE_REVOKED': { label: 'Access Role Revoked', category: 'access', badgeClass: 'bg-slate-100 text-slate-700 border-slate-200', icon: 'fa-user-shield' },
-    'SERVICE_PROVISIONED': { label: 'Service Provisioned', category: 'services', badgeClass: 'bg-blue-50 text-blue-700 border-blue-200', icon: 'fa-layer-group' },
-    'TASK_COMPLETED': { label: 'Task Milestone Delivered', category: 'tasks', badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: 'fa-circle-check' },
-    'TASK_CREATED': { label: 'Task Created', category: 'tasks', badgeClass: 'bg-slate-100 text-slate-700 border-slate-200', icon: 'fa-list-check' },
-    'PROJECT_CREATED': { label: 'Project Created', category: 'services', badgeClass: 'bg-indigo-50 text-indigo-700 border-indigo-200', icon: 'fa-folder-plus' }
-  };
-
-  async function loadHistoryData() {
-    const container = document.getElementById('adminFullHistoryList');
-    if (!container) return;
-
-    // Strict RBAC Guard: Audit & Operational History is strictly restricted to Admin and Super Admin
-    const userRole = state.adminProfile?.role || '';
-    const normRole = typeof normalizeRole === 'function' ? normalizeRole(userRole) : userRole.toLowerCase();
-    const isOwner = typeof isCurrentUserOwner === 'function' ? isCurrentUserOwner() : false;
-    if (!isOwner && normRole !== 'admin' && normRole !== 'super_admin') {
-      console.warn('[RBAC Guard] Unauthorized attempt to load Audit & History by role:', userRole);
-      container.innerHTML = `
+          `}).join(""));document.querySelectorAll(".btn-revoke-invitation").forEach(r=>{r.addEventListener("click",async()=>{if(!Z()){v("Action denied: Only the Founding Super Admin may revoke administrator pre-approvals.","error");return}const m=r.dataset.id,b=r.dataset.email;if(!confirm(`Are you sure you want to revoke administrator pre-approval for ${b}?`))return;A(r,!0,"Revoking...");const E=await B("/portal/admin/team/revoke",{method:"POST",body:JSON.stringify({invitationId:m,email:b})});A(r,!1),E.ok&&E.data&&E.data.success?(v(E.data.message||`Pre-approval for ${b} revoked.`,"success"),xe()):v(E.data?.error||"Failed to revoke pre-approval.","error")})}),document.querySelectorAll(".btn-revoke-admin-access").forEach(r=>{r.addEventListener("click",()=>{const m=r.dataset.id,b=r.dataset.email,E=r.dataset.name;if(!Z()){v("Action denied: Only the Founding Super Admin may revoke administrator access.","error");return}if(we({id:m,email:b})){v("Self-management violation: You cannot revoke your own account.","error");return}openRoleChangeModal(m,"client",b,E)})})}let gt=[];const Nt={PAYMENT_RECORDED:{label:"Payment Recorded",category:"payments",badgeClass:"bg-emerald-50 text-emerald-700 border-emerald-200",icon:"fa-receipt"},PAYMENT_CORRECTED:{label:"Payment Corrected",category:"payments",badgeClass:"bg-amber-50 text-amber-700 border-amber-200",icon:"fa-pen-to-square"},PAYMENT_VOIDED:{label:"Payment Voided",category:"payments",badgeClass:"bg-rose-50 text-rose-700 border-rose-200",icon:"fa-ban"},PAYMENT_DELETED:{label:"Payment Removed",category:"payments",badgeClass:"bg-rose-50 text-rose-700 border-rose-200",icon:"fa-trash"},CLIENT_CREATED:{label:"Client Registered",category:"clients",badgeClass:"bg-emerald-50 text-emerald-700 border-emerald-200",icon:"fa-user-plus"},CLIENT_STATUS_UPDATED:{label:"Client Status Changed",category:"clients",badgeClass:"bg-amber-50 text-amber-700 border-amber-200",icon:"fa-user-gear"},CLIENT_SUSPENDED:{label:"Client Suspended",category:"clients",badgeClass:"bg-amber-50 text-amber-700 border-amber-200",icon:"fa-user-lock"},CLIENT_REACTIVATED:{label:"Client Reactivated",category:"clients",badgeClass:"bg-emerald-50 text-emerald-700 border-emerald-200",icon:"fa-user-check"},CLIENT_DELETED:{label:"Client Permanently Deleted",category:"clients",badgeClass:"bg-rose-50 text-rose-700 border-rose-200",icon:"fa-user-xmark"},ROLE_ASSIGNED:{label:"Access Role Assigned",category:"access",badgeClass:"bg-sky-50 text-sky-700 border-sky-200",icon:"fa-shield-halved"},ROLE_REVOKED:{label:"Access Role Revoked",category:"access",badgeClass:"bg-slate-100 text-slate-700 border-slate-200",icon:"fa-user-shield"},SERVICE_PROVISIONED:{label:"Service Provisioned",category:"services",badgeClass:"bg-blue-50 text-blue-700 border-blue-200",icon:"fa-layer-group"},TASK_COMPLETED:{label:"Task Milestone Delivered",category:"tasks",badgeClass:"bg-emerald-50 text-emerald-700 border-emerald-200",icon:"fa-circle-check"},TASK_CREATED:{label:"Task Created",category:"tasks",badgeClass:"bg-slate-100 text-slate-700 border-slate-200",icon:"fa-list-check"},PROJECT_CREATED:{label:"Project Created",category:"services",badgeClass:"bg-indigo-50 text-indigo-700 border-indigo-200",icon:"fa-folder-plus"}};async function yt(){const n=document.getElementById("adminFullHistoryList");if(!n)return;const t=g.adminProfile?.role||"",s=typeof Se=="function"?Se(t):t.toLowerCase();if(!(typeof Z=="function"?Z():!1)&&s!=="admin"&&s!=="super_admin"){console.warn("[RBAC Guard] Unauthorized attempt to load Audit & History by role:",t),n.innerHTML=`
         <div class="p-8 rounded-2xl bg-white border border-rose-200 text-center text-rose-600 font-semibold shadow-xs">
           <i class="fa-solid fa-shield-halved text-2xl mb-2 text-rose-500 block"></i>
           Access Restricted: Audit & Operational History is strictly restricted to Administrators.
         </div>
-      `;
-      return;
-    }
-
-    container.innerHTML = `
+      `;return}n.innerHTML=`
       <div class="p-8 rounded-2xl bg-white border border-[#E3E9EF] text-center text-slate-500 italic shadow-xs">
         Loading immutable audit trail...
       </div>
-    `;
-
-    // Fetch up to 100 immutable audit entries
-    const res = await apiFetch('/audit-logs?limit=100');
-    if (res.ok && res.data && res.data.data) {
-      auditLogsCache = res.data.data;
-    } else {
-      // Fallback to recentActivity from stats
-      const statsRes = await apiFetch('/portal/admin/stats');
-      if (statsRes.ok && statsRes.data && statsRes.data.data?.recentActivity) {
-        auditLogsCache = statsRes.data.data.recentActivity;
-      }
-    }
-
-    renderAuditHistoryList();
-  }
-
-  function renderAuditHistoryList() {
-    const container = document.getElementById('adminFullHistoryList');
-    const countBadge = document.getElementById('auditLogCount');
-    if (!container) return;
-
-    const searchTerm = (document.getElementById('auditSearchInput')?.value || '').toLowerCase().trim();
-    const category = document.getElementById('auditCategoryFilter')?.value || 'all';
-
-    const filtered = auditLogsCache.filter(l => {
-      const conf = ACTION_CONFIG[l.action] || {};
-      const cat = conf.category || 'all';
-
-      const matchesCat = category === 'all' || cat === category;
-      if (!matchesCat) return false;
-
-      if (!searchTerm) return true;
-
-      const actText = (conf.label || l.action || '').toLowerCase();
-      const emailText = (l.user_email || '').toLowerCase();
-      const resText = (l.resource_type || '').toLowerCase();
-      const resId = (l.resource_id || '').toLowerCase();
-
-      return actText.includes(searchTerm) || emailText.includes(searchTerm) || resText.includes(searchTerm) || resId.includes(searchTerm);
-    });
-
-    if (countBadge) {
-      countBadge.textContent = `${filtered.length} Event${filtered.length === 1 ? '' : 's'}`;
-    }
-
-    if (filtered.length === 0) {
-      container.innerHTML = `
+    `;const l=await B("/audit-logs?limit=100");if(l.ok&&l.data&&l.data.data)gt=l.data.data;else{const i=await B("/portal/admin/stats");i.ok&&i.data&&i.data.data?.recentActivity&&(gt=i.data.data.recentActivity)}bt()}function bt(){const n=document.getElementById("adminFullHistoryList"),t=document.getElementById("auditLogCount");if(!n)return;const s=(document.getElementById("auditSearchInput")?.value||"").toLowerCase().trim(),e=document.getElementById("auditCategoryFilter")?.value||"all",l=gt.filter(i=>{const p=Nt[i.action]||{},u=p.category||"all";if(!(e==="all"||u===e))return!1;if(!s)return!0;const a=(p.label||i.action||"").toLowerCase(),o=(i.user_email||"").toLowerCase(),d=(i.resource_type||"").toLowerCase(),c=(i.resource_id||"").toLowerCase();return a.includes(s)||o.includes(s)||d.includes(s)||c.includes(s)});if(t&&(t.textContent=`${l.length} Event${l.length===1?"":"s"}`),l.length===0){n.innerHTML=`
         <div class="p-8 rounded-2xl bg-white border border-[#E3E9EF] text-center text-slate-500 italic shadow-xs">
           No audit log events match the current filter.
         </div>
-      `;
-      return;
-    }
-
-    container.innerHTML = filtered.map(l => {
-      const conf = ACTION_CONFIG[l.action] || {
-        label: (l.action || 'ACTIVITY').replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase()),
-        badgeClass: 'bg-slate-100 text-slate-700 border-slate-200',
-        icon: 'fa-clock-rotate-left'
-      };
-
-      const dateStr = l.created_at ? new Date(l.created_at).toLocaleString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-      }) : ' - ';
-
-      const actorEmail = resolveUserIdentity(l.user_email || l.user_id || l.actor_id || 'System', 'actor');
-      let resourceInfo = '';
-      if (l.resource_type) {
-        let resId = l.resource_id ? String(l.resource_id) : '';
-        if (resId.startsWith('user_') || resId.startsWith('usr_')) {
-          resId = resolveUserIdentity(resId, 'target');
-          resourceInfo = `${l.resource_type} (${resId})`;
-        } else if (resId.startsWith('org_')) {
-          resourceInfo = `${l.resource_type} (Workspace)`;
-        } else if (resId) {
-          resourceInfo = `${l.resource_type} #${resId.slice(0, 10)}`;
-        } else {
-          resourceInfo = l.resource_type;
-        }
-      }
-
-      let detailsHtml = '';
-      if (l.details) {
-        const detailsFormatted = sanitizeAuditDetails(l.details);
-
-        detailsHtml = `
+      `;return}n.innerHTML=l.map(i=>{const p=Nt[i.action]||{label:(i.action||"ACTIVITY").replace(/_/g," ").toLowerCase().replace(/\b\w/g,d=>d.toUpperCase()),badgeClass:"bg-slate-100 text-slate-700 border-slate-200",icon:"fa-clock-rotate-left"},u=i.created_at?new Date(i.created_at).toLocaleString("en-US",{month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit",hour12:!0}):" - ",y=be(i.user_email||i.user_id||i.actor_id||"System","actor");let a="";if(i.resource_type){let d=i.resource_id?String(i.resource_id):"";d.startsWith("user_")||d.startsWith("usr_")?(d=be(d,"target"),a=`${i.resource_type} (${d})`):d.startsWith("org_")?a=`${i.resource_type} (Workspace)`:d?a=`${i.resource_type} #${d.slice(0,10)}`:a=i.resource_type}let o="";if(i.details){const d=Ve(i.details);o=`
           <details class="mt-2.5 pt-2 border-t border-slate-100 text-slate-600">
             <summary class="cursor-pointer text-[#147D64] hover:underline font-semibold text-[11px] select-none inline-flex items-center gap-1">
               <i class="fa-solid fa-code text-[10px]"></i>
               <span>Inspection Details</span>
             </summary>
-            <pre class="mt-2 p-2.5 rounded-xl bg-slate-50 border border-slate-200 overflow-x-auto text-[10px] font-mono text-slate-700 leading-relaxed">${escapeHtml(detailsFormatted)}</pre>
+            <pre class="mt-2 p-2.5 rounded-xl bg-slate-50 border border-slate-200 overflow-x-auto text-[10px] font-mono text-slate-700 leading-relaxed">${f(d)}</pre>
           </details>
-        `;
-      }
-
-      return `
+        `}return`
         <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs hover:border-[#147D64]/30 hover:shadow-sm transition-all duration-150">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             <div class="flex items-center space-x-3 min-w-0">
               <div class="w-9 h-9 rounded-xl bg-slate-50 border border-[#E3E9EF] flex items-center justify-center text-slate-600 shrink-0">
-                <i class="fa-solid ${conf.icon || 'fa-clock-rotate-left'} text-xs text-[#147D64]"></i>
+                <i class="fa-solid ${p.icon||"fa-clock-rotate-left"} text-xs text-[#147D64]"></i>
               </div>
               <div class="min-w-0">
                 <div class="flex items-center gap-2 flex-wrap">
-                  <span class="font-bold text-xs text-[#172B36]">${escapeHtml(conf.label)}</span>
-                  <span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase border ${conf.badgeClass}">
-                    ${escapeHtml(l.action)}
+                  <span class="font-bold text-xs text-[#172B36]">${f(p.label)}</span>
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase border ${p.badgeClass}">
+                    ${f(i.action)}
                   </span>
                 </div>
                 <div class="text-[11px] text-slate-500 mt-0.5 flex items-center gap-2 flex-wrap">
-                  <span>By <strong class="text-slate-700">${escapeHtml(actorEmail)}</strong></span>
-                  ${resourceInfo ? `<span class="text-slate-300">•</span><span class="font-mono text-slate-600">${escapeHtml(resourceInfo)}</span>` : ''}
+                  <span>By <strong class="text-slate-700">${f(y)}</strong></span>
+                  ${a?`<span class="text-slate-300">\u2022</span><span class="font-mono text-slate-600">${f(a)}</span>`:""}
                 </div>
               </div>
             </div>
             <div class="text-left sm:text-right shrink-0">
-              <span class="text-[11px] font-mono text-slate-500">${escapeHtml(dateStr)}</span>
+              <span class="text-[11px] font-mono text-slate-500">${f(u)}</span>
             </div>
           </div>
-          ${detailsHtml}
+          ${o}
         </div>
-      `;
-    }).join('');
-  }
-
-  // Admin Panel: Pure ledger data-entry and management interface. Zero admin PDF generation.
-
-  // Finance Subtab Loaders
-  async function loadInvoicesData() {
-    const tbody = document.getElementById('adminInvoicesTableBody');
-    if (!tbody) return;
-
-    try {
-      const res = await apiFetch('/finance/invoices');
-      if (res.ok && res.data && res.data.data) {
-        const invoices = res.data.data;
-        if (invoices.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">No invoices created yet. Recording payments will auto-link invoices.</td></tr>';
-          return;
-        }
-
-        tbody.innerHTML = invoices.map(inv => {
-          const isPaid = inv.outstanding_balance_cents === 0 || inv.status === 'paid';
-          return `
+      `}).join("")}async function qt(){const n=document.getElementById("adminInvoicesTableBody");if(n)try{const t=await B("/finance/invoices");if(t.ok&&t.data&&t.data.data){const s=t.data.data;if(s.length===0){n.innerHTML='<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">No invoices created yet. Recording payments will auto-link invoices.</td></tr>';return}n.innerHTML=s.map(e=>{const l=e.outstanding_balance_cents===0||e.status==="paid";return`
             <tr class="hover:bg-slate-50/80 transition-colors border-b border-[#E3E9EF]">
-              <td class="px-6 py-4 font-mono font-bold text-[#172B36]">${escapeHtml(inv.invoice_number)}</td>
+              <td class="px-6 py-4 font-mono font-bold text-[#172B36]">${f(e.invoice_number)}</td>
               <td class="px-6 py-4">
-                <div class="font-bold text-[#172B36]">${escapeHtml(inv.organization_name || 'Client')}</div>
-                <div class="text-[11px] text-slate-400">Due: ${escapeHtml(inv.due_date || 'N/A')}</div>
+                <div class="font-bold text-[#172B36]">${f(e.organization_name||"Client")}</div>
+                <div class="text-[11px] text-slate-400">Due: ${f(e.due_date||"N/A")}</div>
               </td>
-              <td class="px-6 py-4 font-mono font-bold text-[#172B36]">${formatCurrency(inv.total_cents || 0, inv.currency || 'USD')}</td>
-              <td class="px-6 py-4 font-mono font-bold ${isPaid ? 'text-emerald-600' : 'text-amber-600'}">${formatCurrency(inv.outstanding_balance_cents || 0, inv.currency || 'USD')}</td>
+              <td class="px-6 py-4 font-mono font-bold text-[#172B36]">${Y(e.total_cents||0,e.currency||"USD")}</td>
+              <td class="px-6 py-4 font-mono font-bold ${l?"text-emerald-600":"text-amber-600"}">${Y(e.outstanding_balance_cents||0,e.currency||"USD")}</td>
               <td class="px-6 py-4">
-                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${isPaid ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}">
-                  ${isPaid ? 'Paid in Full' : 'Pending'}
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${l?"bg-emerald-50 text-emerald-700 border border-emerald-200":"bg-amber-50 text-amber-700 border border-amber-200"}">
+                  ${l?"Paid in Full":"Pending"}
                 </span>
               </td>
               <td class="px-6 py-4 text-right">
                 <span class="text-xs font-mono text-slate-400 font-semibold">Recorded</span>
               </td>
             </tr>
-          `;
-        }).join('');
-      }
-    } catch (e) {
-      console.warn('Error loading invoices:', e);
-    }
-  }
-
-  async function loadPaymentMethodsData() {
-    const container = document.getElementById('paymentMethodsConfigList');
-    if (!container) return;
-
-    try {
-      const res = await apiFetch('/finance/payment-methods');
-      if (res.ok && res.data && res.data.data) {
-        const methods = res.data.data;
-        container.innerHTML = methods.map(m => {
-          return `
+          `}).join("")}}catch(t){console.warn("Error loading invoices:",t)}}async function vt(){const n=document.getElementById("paymentMethodsConfigList");if(n)try{const t=await B("/finance/payment-methods");if(t.ok&&t.data&&t.data.data){const s=t.data.data;n.innerHTML=s.map(e=>`
             <div class="p-4 rounded-2xl bg-slate-50 border border-[#E3E9EF] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div class="space-y-1">
                 <div class="flex items-center gap-2">
-                  <span class="font-bold text-xs text-[#172B36]">${escapeHtml(m.display_name)}</span>
-                  <span class="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-white border border-[#E3E9EF] text-slate-600">${escapeHtml(m.method_key)}</span>
+                  <span class="font-bold text-xs text-[#172B36]">${f(e.display_name)}</span>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-white border border-[#E3E9EF] text-slate-600">${f(e.method_key)}</span>
                 </div>
                 <div class="text-[11px] text-slate-500">
-                  <span>Provider: <strong class="text-slate-700">${escapeHtml(m.provider_name || 'N/A')}</strong></span>
-                  <span class="mx-1.5">•</span>
-                  <span>Account: <strong class="text-slate-700">${escapeHtml(m.account_name || 'N/A')}</strong> (${escapeHtml(m.account_number || 'N/A')})</span>
-                  ${m.bank_name ? `<span class="mx-1.5">•</span><span>Bank: ${escapeHtml(m.bank_name)}</span>` : ''}
+                  <span>Provider: <strong class="text-slate-700">${f(e.provider_name||"N/A")}</strong></span>
+                  <span class="mx-1.5">\u2022</span>
+                  <span>Account: <strong class="text-slate-700">${f(e.account_name||"N/A")}</strong> (${f(e.account_number||"N/A")})</span>
+                  ${e.bank_name?`<span class="mx-1.5">\u2022</span><span>Bank: ${f(e.bank_name)}</span>`:""}
                 </div>
               </div>
-              <button type="button" class="btn-edit-method px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-[#E3E9EF] text-xs font-bold transition-all shadow-xs cursor-pointer shrink-0 self-start sm:self-auto" data-key="${m.method_key}">
+              <button type="button" class="btn-edit-method px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-[#E3E9EF] text-xs font-bold transition-all shadow-xs cursor-pointer shrink-0 self-start sm:self-auto" data-key="${e.method_key}">
                 <i class="fa-solid fa-pen-to-square mr-1 text-[#147D64]"></i> Configure Details
               </button>
             </div>
-          `;
-        }).join('');
-
-        container.querySelectorAll('.btn-edit-method').forEach(btn => {
-          btn.addEventListener('click', () => {
-            const m = methods.find(x => x.method_key === btn.dataset.key);
-            if (!m) return;
-            document.getElementById('editMethodKey').value = m.method_key;
-            document.getElementById('editMethodModalTitle').textContent = `Configure ${m.display_name}`;
-            document.getElementById('editMethodDisplayName').value = m.display_name;
-            document.getElementById('editMethodProvider').value = m.provider_name || '';
-            document.getElementById('editMethodAccountName').value = m.account_name || '';
-            document.getElementById('editMethodAccountNumber').value = m.account_number || '';
-            document.getElementById('editMethodBankName').value = m.bank_name || '';
-            document.getElementById('editMethodBranchName').value = m.branch_name || '';
-            document.getElementById('editMethodInstructions').value = m.instructions || '';
-            document.getElementById('modalEditPaymentMethod')?.classList.remove('hidden');
-          });
-        });
-      }
-    } catch (e) {
-      console.warn('Error loading payment methods:', e);
-    }
-  }
-
-  function initFinanceSubtabs() {
-    const tabPay = document.getElementById('subtabPayments');
-    const tabInv = document.getElementById('subtabInvoices');
-    const tabMet = document.getElementById('subtabMethods');
-    const secPay = document.getElementById('sectionFinancePayments');
-    const secInv = document.getElementById('sectionFinanceInvoices');
-    const secMet = document.getElementById('sectionFinanceMethods');
-
-    const setActive = (activeTab, activeSec) => {
-      [tabPay, tabInv, tabMet].forEach(t => {
-        if (!t) return;
-        t.className = (t === activeTab)
-          ? 'px-3 py-1.5 rounded-lg text-xs font-bold bg-[#147D64] text-white transition-all cursor-pointer'
-          : 'px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all cursor-pointer';
-      });
-      [secPay, secInv, secMet].forEach(s => {
-        if (!s) return;
-        s.classList.toggle('hidden', s !== activeSec);
-      });
-    };
-
-    if (tabPay) tabPay.onclick = () => { setActive(tabPay, secPay); loadFinanceData(); };
-    if (tabInv) tabInv.onclick = () => { setActive(tabInv, secInv); loadInvoicesData(); };
-    if (tabMet) tabMet.onclick = () => { setActive(tabMet, secMet); loadPaymentMethodsData(); };
-
-    // Method settings modal save
-    const formMethod = document.getElementById('formEditPaymentMethod');
-    if (formMethod && !formMethod.dataset.bound) {
-      formMethod.dataset.bound = 'true';
-      formMethod.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const key = document.getElementById('editMethodKey').value;
-        const payload = {
-          displayName: document.getElementById('editMethodDisplayName').value.trim(),
-          providerName: document.getElementById('editMethodProvider').value.trim(),
-          accountName: document.getElementById('editMethodAccountName').value.trim(),
-          accountNumber: document.getElementById('editMethodAccountNumber').value.trim(),
-          bankName: document.getElementById('editMethodBankName').value.trim() || null,
-          branchName: document.getElementById('editMethodBranchName').value.trim() || null,
-          instructions: document.getElementById('editMethodInstructions').value.trim() || null
-        };
-
-        const res = await apiFetch(`/finance/payment-methods/${key}`, {
-          method: 'PUT',
-          body: JSON.stringify(payload)
-        });
-
-        if (res.ok && res.data && res.data.success) {
-          showToast('Payment method configuration updated!', 'success');
-          document.getElementById('modalEditPaymentMethod')?.classList.add('hidden');
-          loadPaymentMethodsData();
-        } else {
-          showToast(res.data?.error || 'Failed to update payment method.', 'error');
-        }
-      });
-    }
-
-    const btnOpenMethods = document.getElementById('btnOpenPaymentMethodsModal');
-    if (btnOpenMethods) {
-      btnOpenMethods.onclick = () => {
-        setActive(tabMet, secMet);
-        loadPaymentMethodsData();
-      };
-    }
-  }
-
-  // CLERK AUTHENTICATED PASSWORD CHANGE WORKFLOW
-  // =========================================================================
-  async function handleAdminPasswordChange(e) {
-    e.preventDefault();
-    const btn = document.getElementById('adminUpdatePasswordBtn');
-    const currentPassEl = document.getElementById('adminCurrentPassword');
-    const newPassEl = document.getElementById('adminNewPassword');
-    const confirmPassEl = document.getElementById('adminConfirmNewPassword');
-    const signOthersEl = document.getElementById('adminSignOutOfOthers');
-
-    const currentPassword = currentPassEl.value;
-    const newPassword = newPassEl.value;
-    const confirmPassword = confirmPassEl.value;
-    const signOutOfOtherSessions = signOthersEl ? signOthersEl.checked : true;
-
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      showToast('Please complete all password fields.', 'warn');
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      showToast('New passwords do not match. Please verify.', 'error');
-      return;
-    }
-
-    if (newPassword.length < 8) {
-      showToast('New password must be at least 8 characters long.', 'warn');
-      return;
-    }
-
-    setBtnLoading(btn, true, 'Updating via Clerk...');
-
-    try {
-      const user = window.Clerk.user;
-      if (!user) throw new Error('No active Clerk authentication session.');
-
-      await user.updatePassword({
-        currentPassword,
-        newPassword,
-        signOutOfOtherSessions
-      });
-
-      showToast('Password updated successfully! All other sessions signed out.', 'success');
-      e.target.reset();
-    } catch (err) {
-      console.error('Password change error:', err);
-      const msg = err.errors?.[0]?.longMessage || err.errors?.[0]?.message || err.message || 'Failed to update password.';
-      showToast(msg, 'error');
-    } finally {
-      setBtnLoading(btn, false);
-    }
-  }
-
-
-  // =========================================================================
-  // 10. CLIENT SUPPORT DESK DATA & WORKFLOWS
-  // =========================================================================
-  async function loadSupportData(showNotification = false) {
-    const tbody = document.getElementById('adminSupportTableBody');
-    const cards = document.getElementById('adminSupportCardsContainer');
-    const emptyState = document.getElementById('supportEmptyState');
-    const tableCard = document.getElementById('adminSupportTableCard');
-    const refreshBtn = document.getElementById('btnRefreshSupport');
-
-    if (refreshBtn) {
-      const icon = refreshBtn.querySelector('i');
-      if (icon) icon.classList.add('fa-spin');
-    }
-
-    // Loading State
-    if (tbody) {
-      tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic"><i class="fa-solid fa-circle-notch fa-spin mr-2 text-[#087F70]"></i>Loading support tickets...</td></tr>';
-    }
-    if (cards) {
-      cards.innerHTML = '<div class="p-8 rounded-2xl bg-white border border-[#E3E9EF] text-center shadow-xs space-y-2"><i class="fa-solid fa-circle-notch fa-spin text-[#087F70] text-lg"></i><p class="text-xs text-slate-500 font-medium">Loading support requests...</p></div>';
-    }
-
-    try {
-      const res = await apiFetch('/portal/admin/support');
-      if (refreshBtn) {
-        const icon = refreshBtn.querySelector('i');
-        if (icon) icon.classList.remove('fa-spin');
-      }
-
-      if (res.ok && res.data) {
-        state.supportCache = Array.isArray(res.data.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
-        initGlassSelects();
-        renderSupport();
-        if (showNotification) showToast('Support tickets synchronized.', 'success');
-      } else {
-        const err = res.data?.error || 'Failed to retrieve support requests.';
-        console.error('Support Fetch Error:', err);
-        const errorCard = `
+          `).join(""),n.querySelectorAll(".btn-edit-method").forEach(e=>{e.addEventListener("click",()=>{const l=s.find(i=>i.method_key===e.dataset.key);l&&(document.getElementById("editMethodKey").value=l.method_key,document.getElementById("editMethodModalTitle").textContent=`Configure ${l.display_name}`,document.getElementById("editMethodDisplayName").value=l.display_name,document.getElementById("editMethodProvider").value=l.provider_name||"",document.getElementById("editMethodAccountName").value=l.account_name||"",document.getElementById("editMethodAccountNumber").value=l.account_number||"",document.getElementById("editMethodBankName").value=l.bank_name||"",document.getElementById("editMethodBranchName").value=l.branch_name||"",document.getElementById("editMethodInstructions").value=l.instructions||"",document.getElementById("modalEditPaymentMethod")?.classList.remove("hidden"))})})}}catch(t){console.warn("Error loading payment methods:",t)}}function pn(){const n=document.getElementById("subtabPayments"),t=document.getElementById("subtabInvoices"),s=document.getElementById("subtabMethods"),e=document.getElementById("sectionFinancePayments"),l=document.getElementById("sectionFinanceInvoices"),i=document.getElementById("sectionFinanceMethods"),p=(a,o)=>{[n,t,s].forEach(d=>{d&&(d.className=d===a?"px-3 py-1.5 rounded-lg text-xs font-bold bg-[#147D64] text-white transition-all cursor-pointer":"px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all cursor-pointer")}),[e,l,i].forEach(d=>{d&&d.classList.toggle("hidden",d!==o)})};n&&(n.onclick=()=>{p(n,e),ve()}),t&&(t.onclick=()=>{p(t,l),qt()}),s&&(s.onclick=()=>{p(s,i),vt()});const u=document.getElementById("formEditPaymentMethod");u&&!u.dataset.bound&&(u.dataset.bound="true",u.addEventListener("submit",async a=>{a.preventDefault();const o=document.getElementById("editMethodKey").value,d={displayName:document.getElementById("editMethodDisplayName").value.trim(),providerName:document.getElementById("editMethodProvider").value.trim(),accountName:document.getElementById("editMethodAccountName").value.trim(),accountNumber:document.getElementById("editMethodAccountNumber").value.trim(),bankName:document.getElementById("editMethodBankName").value.trim()||null,branchName:document.getElementById("editMethodBranchName").value.trim()||null,instructions:document.getElementById("editMethodInstructions").value.trim()||null},c=await B(`/finance/payment-methods/${o}`,{method:"PUT",body:JSON.stringify(d)});c.ok&&c.data&&c.data.success?(v("Payment method configuration updated!","success"),document.getElementById("modalEditPaymentMethod")?.classList.add("hidden"),vt()):v(c.data?.error||"Failed to update payment method.","error")}));const y=document.getElementById("btnOpenPaymentMethodsModal");y&&(y.onclick=()=>{p(s,i),vt()})}async function fn(n){n.preventDefault();const t=document.getElementById("adminUpdatePasswordBtn"),s=document.getElementById("adminCurrentPassword"),e=document.getElementById("adminNewPassword"),l=document.getElementById("adminConfirmNewPassword"),i=document.getElementById("adminSignOutOfOthers"),p=s.value,u=e.value,y=l.value,a=i?i.checked:!0;if(!p||!u||!y){v("Please complete all password fields.","warn");return}if(u!==y){v("New passwords do not match. Please verify.","error");return}if(u.length<8){v("New password must be at least 8 characters long.","warn");return}A(t,!0,"Updating via Clerk...");try{const o=window.Clerk.user;if(!o)throw new Error("No active Clerk authentication session.");await o.updatePassword({currentPassword:p,newPassword:u,signOutOfOtherSessions:a}),v("Password updated successfully! All other sessions signed out.","success"),n.target.reset()}catch(o){console.error("Password change error:",o);const d=o.errors?.[0]?.longMessage||o.errors?.[0]?.message||o.message||"Failed to update password.";v(d,"error")}finally{A(t,!1)}}async function We(n=!1){const t=document.getElementById("adminSupportTableBody"),s=document.getElementById("adminSupportCardsContainer"),e=document.getElementById("supportEmptyState"),l=document.getElementById("adminSupportTableCard"),i=document.getElementById("btnRefreshSupport");if(i){const p=i.querySelector("i");p&&p.classList.add("fa-spin")}t&&(t.innerHTML='<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic"><i class="fa-solid fa-circle-notch fa-spin mr-2 text-[#087F70]"></i>Loading support tickets...</td></tr>'),s&&(s.innerHTML='<div class="p-8 rounded-2xl bg-white border border-[#E3E9EF] text-center shadow-xs space-y-2"><i class="fa-solid fa-circle-notch fa-spin text-[#087F70] text-lg"></i><p class="text-xs text-slate-500 font-medium">Loading support requests...</p></div>');try{const p=await B("/portal/admin/support");if(i){const u=i.querySelector("i");u&&u.classList.remove("fa-spin")}if(p.ok&&p.data)g.supportCache=Array.isArray(p.data.data)?p.data.data:Array.isArray(p.data)?p.data:[],O(),Ge(),n&&v("Support tickets synchronized.","success");else{const u=p.data?.error||"Failed to retrieve support requests.";console.error("Support Fetch Error:",u);const y=`
           <div class="p-6 rounded-2xl sm:rounded-3xl bg-white border border-rose-200 text-center space-y-3 shadow-xs">
             <div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto text-base">
               <i class="fa-solid fa-triangle-exclamation"></i>
             </div>
-            <h4 class="text-xs font-bold text-rose-600">${escapeHtml(err)}</h4>
+            <h4 class="text-xs font-bold text-rose-600">${f(u)}</h4>
             <p class="text-xs text-slate-500 max-w-xs mx-auto">Unable to retrieve support tickets from the backend. Please check connection and retry.</p>
             <button type="button" class="btn-retry-support h-10 px-4 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-all inline-flex items-center gap-2 cursor-pointer shadow-xs">
               <i class="fa-solid fa-arrows-rotate text-xs text-[#087F70]"></i>
               <span>Retry Connection</span>
             </button>
           </div>
-        `;
-        if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-6 text-center text-rose-500 font-medium">${escapeHtml(err)} <button type="button" class="btn-retry-support ml-2 px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold cursor-pointer"><i class="fa-solid fa-arrows-rotate mr-1"></i>Retry</button></td></tr>`;
-        if (cards) cards.innerHTML = errorCard;
-        if (showNotification) showToast(err, 'error');
-      }
-    } catch (e) {
-      console.error('loadSupportData exception:', e);
-      if (refreshBtn) {
-        const icon = refreshBtn.querySelector('i');
-        if (icon) icon.classList.remove('fa-spin');
-      }
-      const failMsg = 'Network error fetching support tickets. Please retry.';
-      const errorCard = `
+        `;t&&(t.innerHTML=`<tr><td colspan="6" class="px-6 py-6 text-center text-rose-500 font-medium">${f(u)} <button type="button" class="btn-retry-support ml-2 px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold cursor-pointer"><i class="fa-solid fa-arrows-rotate mr-1"></i>Retry</button></td></tr>`),s&&(s.innerHTML=y),n&&v(u,"error")}}catch(p){if(console.error("loadSupportData exception:",p),i){const a=i.querySelector("i");a&&a.classList.remove("fa-spin")}const u="Network error fetching support tickets. Please retry.",y=`
         <div class="p-6 rounded-2xl sm:rounded-3xl bg-white border border-rose-200 text-center space-y-3 shadow-xs">
           <div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto text-base">
             <i class="fa-solid fa-triangle-exclamation"></i>
           </div>
-          <h4 class="text-xs font-bold text-rose-600">${failMsg}</h4>
+          <h4 class="text-xs font-bold text-rose-600">${u}</h4>
           <p class="text-xs text-slate-500 max-w-xs mx-auto">Unable to reach the support service. Please check connection and retry.</p>
           <button type="button" class="btn-retry-support h-10 px-4 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-all inline-flex items-center gap-2 cursor-pointer shadow-xs">
             <i class="fa-solid fa-arrows-rotate text-xs text-[#087F70]"></i>
             <span>Retry Connection</span>
           </button>
         </div>
-      `;
-      if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-6 text-center text-rose-500 font-medium">${failMsg} <button type="button" class="btn-retry-support ml-2 px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold cursor-pointer"><i class="fa-solid fa-arrows-rotate mr-1"></i>Retry</button></td></tr>`;
-      if (cards) cards.innerHTML = errorCard;
-      if (showNotification) showToast(failMsg, 'error');
-    }
-  }
-
-  function renderSupport() {
-    const tbody = document.getElementById('adminSupportTableBody');
-    const cards = document.getElementById('adminSupportCardsContainer');
-    const emptyState = document.getElementById('supportEmptyState');
-    const tableCard = document.getElementById('adminSupportTableCard');
-
-    const totalEl = document.getElementById('supportTotalCount');
-    const openEl = document.getElementById('supportOpenCount');
-    const inProgEl = document.getElementById('supportInProgressCount');
-    const resolvedEl = document.getElementById('supportResolvedCount');
-
-    const tickets = state.supportCache || [];
-
-    const totalCount = tickets.length;
-    const openCount = tickets.filter(t => t.status === 'open').length;
-    const inProgCount = tickets.filter(t => t.status === 'in_progress').length;
-    const resolvedCount = tickets.filter(t => t.status === 'resolved' || t.status === 'closed').length;
-
-    if (totalEl) totalEl.textContent = totalCount;
-    if (openEl) openEl.textContent = openCount;
-    if (inProgEl) inProgEl.textContent = inProgCount;
-    if (resolvedEl) resolvedEl.textContent = resolvedCount;
-
-    // Empty state when 0 tickets exist in DB
-    if (totalCount === 0) {
-      if (emptyState) emptyState.classList.remove('hidden');
-      if (tableCard) tableCard.classList.add('hidden');
-      if (cards) cards.innerHTML = '';
-      return;
-    } else {
-      if (emptyState) emptyState.classList.add('hidden');
-      if (tableCard) tableCard.classList.remove('hidden');
-    }
-
-    const query = (document.getElementById('supportSearchInput')?.value || '').toLowerCase().trim();
-    const statusFilter = document.getElementById('supportStatusFilter')?.value || 'all';
-
-    // Toggle search clear button
-    const searchClearBtn = document.getElementById('supportSearchClear');
-    if (searchClearBtn) {
-      searchClearBtn.classList.toggle('hidden', !query);
-    }
-
-    const filtered = tickets.filter(t => {
-      const matchQuery = !query ||
-        (t.full_name || '').toLowerCase().includes(query) ||
-        (t.email || '').toLowerCase().includes(query) ||
-        (t.organization_name || '').toLowerCase().includes(query) ||
-        (t.subject || '').toLowerCase().includes(query) ||
-        (t.message || '').toLowerCase().includes(query) ||
-        (t.id || '').toLowerCase().includes(query);
-
-      const matchStatus = statusFilter === 'all' || t.status === statusFilter;
-      return matchQuery && matchStatus;
-    });
-
-    if (filtered.length === 0) {
-      const noMatchMsg = '<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">No support requests match your search criteria.</td></tr>';
-      if (tbody) tbody.innerHTML = noMatchMsg;
-      if (cards) {
-        cards.innerHTML = `
+      `;t&&(t.innerHTML=`<tr><td colspan="6" class="px-6 py-6 text-center text-rose-500 font-medium">${u} <button type="button" class="btn-retry-support ml-2 px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold cursor-pointer"><i class="fa-solid fa-arrows-rotate mr-1"></i>Retry</button></td></tr>`),s&&(s.innerHTML=y),n&&v(u,"error")}}function Ge(){const n=document.getElementById("adminSupportTableBody"),t=document.getElementById("adminSupportCardsContainer"),s=document.getElementById("supportEmptyState"),e=document.getElementById("adminSupportTableCard"),l=document.getElementById("supportTotalCount"),i=document.getElementById("supportOpenCount"),p=document.getElementById("supportInProgressCount"),u=document.getElementById("supportResolvedCount"),y=g.supportCache||[],a=y.length,o=y.filter(h=>h.status==="open").length,d=y.filter(h=>h.status==="in_progress").length,c=y.filter(h=>h.status==="resolved"||h.status==="closed").length;if(l&&(l.textContent=a),i&&(i.textContent=o),p&&(p.textContent=d),u&&(u.textContent=c),a===0){s&&s.classList.remove("hidden"),e&&e.classList.add("hidden"),t&&(t.innerHTML="");return}else s&&s.classList.add("hidden"),e&&e.classList.remove("hidden");const r=(document.getElementById("supportSearchInput")?.value||"").toLowerCase().trim(),m=document.getElementById("supportStatusFilter")?.value||"all",b=document.getElementById("supportSearchClear");b&&b.classList.toggle("hidden",!r);const E=y.filter(h=>{const I=!r||(h.full_name||"").toLowerCase().includes(r)||(h.email||"").toLowerCase().includes(r)||(h.organization_name||"").toLowerCase().includes(r)||(h.subject||"").toLowerCase().includes(r)||(h.message||"").toLowerCase().includes(r)||(h.id||"").toLowerCase().includes(r),L=m==="all"||h.status===m;return I&&L});if(E.length===0){const h='<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">No support requests match your search criteria.</td></tr>';n&&(n.innerHTML=h),t&&(t.innerHTML=`
           <div class="p-8 rounded-2xl sm:rounded-3xl bg-white border border-[#E3E9EF] text-center shadow-xs space-y-3">
             <div class="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-center mx-auto text-slate-400">
               <i class="fa-solid fa-filter-circle-xmark text-lg"></i>
@@ -4257,273 +967,80 @@
               <span>Reset All Filters</span>
             </button>
           </div>
-        `;
-      }
-      return;
-    }
-
-    const STATUS_BADGES = {
-      open: '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200 shadow-xs"><span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Open</span>',
-      in_progress: '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200 shadow-xs"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> In Progress</span>',
-      resolved: '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-xs"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Resolved</span>',
-      closed: '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200 shadow-xs"><span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Closed</span>'
-    };
-
-    // Desktop Table View
-    if (tbody) {
-      tbody.innerHTML = filtered.map(t => {
-        const dateStr = t.created_at ? new Date(t.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
-        const excerpt = (t.message || '').length > 65 ? (t.message.slice(0, 65) + '...') : t.message;
-        const orgBadge = t.organization_name ? `<span class="text-[10px] text-slate-400 font-medium">(${escapeHtml(t.organization_name)})</span>` : '';
-        const badge = STATUS_BADGES[t.status] || STATUS_BADGES.open;
-
-        return `
+        `);return}const C={open:'<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200 shadow-xs"><span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Open</span>',in_progress:'<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200 shadow-xs"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> In Progress</span>',resolved:'<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-xs"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Resolved</span>',closed:'<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200 shadow-xs"><span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Closed</span>'};n&&(n.innerHTML=E.map(h=>{const I=h.created_at?new Date(h.created_at).toLocaleDateString(void 0,{month:"short",day:"numeric",year:"numeric"}):"N/A",L=(h.message||"").length>65?h.message.slice(0,65)+"...":h.message,P=h.organization_name?`<span class="text-[10px] text-slate-400 font-medium">(${f(h.organization_name)})</span>`:"",M=C[h.status]||C.open;return`
           <tr class="hover:bg-slate-50 transition-colors border-b border-[#E3E9EF]">
             <td class="px-6 py-4">
               <div class="font-bold text-[#172B36] flex items-center gap-1.5">
-                <span>${escapeHtml(t.full_name || 'Client')}</span>
-                ${orgBadge}
+                <span>${f(h.full_name||"Client")}</span>
+                ${P}
               </div>
-              <div class="font-mono text-xs text-slate-500">${escapeHtml(t.email)}</div>
+              <div class="font-mono text-xs text-slate-500">${f(h.email)}</div>
             </td>
-            <td class="px-6 py-4 font-semibold text-[#172B36] max-w-[200px] truncate">${escapeHtml(t.subject)}</td>
-            <td class="px-6 py-4 text-xs text-slate-600 max-w-[260px] truncate">${escapeHtml(excerpt)}</td>
-            <td class="px-6 py-4 font-mono text-xs text-slate-500">${escapeHtml(dateStr)}</td>
-            <td class="px-6 py-4">${badge}</td>
+            <td class="px-6 py-4 font-semibold text-[#172B36] max-w-[200px] truncate">${f(h.subject)}</td>
+            <td class="px-6 py-4 text-xs text-slate-600 max-w-[260px] truncate">${f(L)}</td>
+            <td class="px-6 py-4 font-mono text-xs text-slate-500">${f(I)}</td>
+            <td class="px-6 py-4">${M}</td>
             <td class="px-6 py-4 text-right">
-              <button type="button" class="btn-view-support-ticket h-9 px-3 rounded-xl text-xs font-bold bg-[#087F70]/10 text-[#087F70] hover:bg-[#087F70]/20 border border-[#087F70]/20 transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-xs" data-id="${t.id}">
+              <button type="button" class="btn-view-support-ticket h-9 px-3 rounded-xl text-xs font-bold bg-[#087F70]/10 text-[#087F70] hover:bg-[#087F70]/20 border border-[#087F70]/20 transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-xs" data-id="${h.id}">
                 <i class="fa-solid fa-eye text-[10px]"></i>
                 <span>View Request</span>
               </button>
             </td>
           </tr>
-        `;
-      }).join('');
-    }
-
-    // Mobile Cards View (Task 5: WHIZ Premium Support Command Center)
-    if (cards) {
-      cards.innerHTML = filtered.map(t => {
-        const dateStr = t.created_at ? new Date(t.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
-        const excerpt = (t.message || '').length > 120 ? (t.message.slice(0, 120) + '...') : t.message;
-        const badge = STATUS_BADGES[t.status] || STATUS_BADGES.open;
-        const rawId = t.id || '';
-        const ticketRef = rawId.length > 10 ? ('#' + rawId.slice(0, 8).toUpperCase()) : ('#' + rawId);
-        const name = t.full_name || 'Client';
-        const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'CL';
-
-        return `
+        `}).join("")),t&&(t.innerHTML=E.map(h=>{const I=h.created_at?new Date(h.created_at).toLocaleDateString(void 0,{month:"short",day:"numeric",year:"numeric"}):"N/A",L=(h.message||"").length>120?h.message.slice(0,120)+"...":h.message,P=C[h.status]||C.open,M=h.id||"",F=M.length>10?"#"+M.slice(0,8).toUpperCase():"#"+M,D=h.full_name||"Client",N=D.split(" ").map(H=>H[0]).join("").slice(0,2).toUpperCase()||"CL";return`
           <div class="support-ticket-card p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white border border-[#E6ECE9] shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_24px_rgba(20,125,100,0.08)] transition-all space-y-3.5">
             <!-- Header: Reference ID + Organization Tag + Status Badge -->
             <div class="flex items-center justify-between gap-2 pb-2.5 border-b border-slate-100">
               <div class="flex items-center gap-2 min-w-0">
                 <span class="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 font-mono text-[11px] font-bold shrink-0">
-                  ${escapeHtml(ticketRef)}
+                  ${f(F)}
                 </span>
-                ${t.organization_name ? `
-                  <span class="text-[11px] font-semibold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200/60 truncate" title="${escapeHtml(t.organization_name)}">
-                    ${escapeHtml(t.organization_name)}
+                ${h.organization_name?`
+                  <span class="text-[11px] font-semibold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200/60 truncate" title="${f(h.organization_name)}">
+                    ${f(h.organization_name)}
                   </span>
-                ` : ''}
+                `:""}
               </div>
               <div class="shrink-0 flex items-center gap-2">
-                ${badge}
+                ${P}
               </div>
             </div>
 
             <!-- Client Identity & Submission Date -->
             <div class="flex items-start gap-3">
               <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#EAF5F1] to-[#D5EDE5] border border-[#087F70]/20 flex items-center justify-center font-black text-xs text-[#087F70] uppercase shrink-0 shadow-xs">
-                ${escapeHtml(initials)}
+                ${f(N)}
               </div>
               <div class="min-w-0 flex-1">
-                <h4 class="text-sm font-black text-[#172B36] truncate leading-tight">${escapeHtml(name)}</h4>
-                <p class="text-xs font-mono text-slate-500 truncate mt-0.5">${escapeHtml(t.email)}</p>
+                <h4 class="text-sm font-black text-[#172B36] truncate leading-tight">${f(D)}</h4>
+                <p class="text-xs font-mono text-slate-500 truncate mt-0.5">${f(h.email)}</p>
                 <div class="flex items-center gap-1.5 text-[10px] text-slate-400 font-mono mt-1">
                   <i class="fa-regular fa-clock text-[9px]"></i>
-                  <span>${escapeHtml(dateStr)}</span>
+                  <span>${f(I)}</span>
                 </div>
               </div>
             </div>
 
             <!-- Ticket Subject & Message Content Excerpt -->
             <div class="p-3 rounded-xl bg-slate-50/70 border border-slate-100/80 space-y-1">
-              <div class="text-xs font-bold text-[#172B36] break-words line-clamp-1">${escapeHtml(t.subject)}</div>
-              <p class="text-xs text-slate-600 line-clamp-2 leading-relaxed">${escapeHtml(excerpt)}</p>
+              <div class="text-xs font-bold text-[#172B36] break-words line-clamp-1">${f(h.subject)}</div>
+              <p class="text-xs text-slate-600 line-clamp-2 leading-relaxed">${f(L)}</p>
             </div>
 
             <!-- Action Area (44px touch target) -->
             <div class="pt-1 flex items-center justify-end">
-              <button type="button" class="btn-view-support-ticket w-full sm:w-auto h-11 px-5 rounded-xl text-xs font-bold btn-glass-primary shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer" data-id="${t.id}">
+              <button type="button" class="btn-view-support-ticket w-full sm:w-auto h-11 px-5 rounded-xl text-xs font-bold btn-glass-primary shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer" data-id="${h.id}">
                 <i class="fa-solid fa-eye text-xs"></i>
                 <span>View &amp; Resolve Ticket</span>
               </button>
             </div>
           </div>
-        `;
-      }).join('');
-    }
-
-    // Bind View Detail Buttons
-    document.querySelectorAll('.btn-view-support-ticket').forEach(btn => {
-      btn.addEventListener('click', () => {
-        openSupportDetailModal(btn.dataset.id);
-      });
-    });
-  }
-
-  function openSupportDetailModal(ticketId) {
-    const ticket = (state.supportCache || []).find(t => t.id === ticketId);
-    if (!ticket) return;
-
-    const modal = document.getElementById('modalSupportDetail');
-    if (!modal) return;
-
-    const idEl = document.getElementById('modalSupportTicketId');
-    const nameEl = document.getElementById('modalSupportClientName');
-    const emailEl = document.getElementById('modalSupportClientEmail');
-    const orgEl = document.getElementById('modalSupportOrgName');
-    const dateEl = document.getElementById('modalSupportCreatedAt');
-    const subjEl = document.getElementById('modalSupportSubject');
-    const msgEl = document.getElementById('modalSupportMessage');
-    const statusSelect = document.getElementById('modalSupportNewStatus');
-    const notesEl = document.getElementById('modalSupportAdminNotes');
-    const hiddenId = document.getElementById('modalSupportHiddenId');
-    const badgeEl = document.getElementById('modalSupportStatusBadge');
-
-    if (idEl) idEl.textContent = ticket.id;
-    if (nameEl) nameEl.textContent = ticket.full_name || 'Client';
-    if (emailEl) emailEl.textContent = ticket.email;
-    if (orgEl) orgEl.textContent = ticket.organization_name || 'Individual Client';
-    if (dateEl) dateEl.textContent = ticket.created_at ? new Date(ticket.created_at).toLocaleString() : 'N/A';
-    if (subjEl) subjEl.textContent = ticket.subject;
-    if (msgEl) msgEl.textContent = ticket.message;
-    if (statusSelect) {
-      statusSelect.value = ticket.status || 'open';
-      statusSelect.dispatchEvent(new Event('change'));
-    }
-    if (notesEl) notesEl.value = ticket.admin_notes || '';
-    if (hiddenId) hiddenId.value = ticket.id;
-
-    if (badgeEl) {
-      badgeEl.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ' +
-        (ticket.status === 'resolved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-         ticket.status === 'in_progress' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-         'bg-blue-50 text-blue-700 border-blue-200');
-      badgeEl.textContent = (ticket.status || 'open').replace('_', ' ');
-    }
-
-    modal.classList.remove('hidden');
-  }
-
-  // =========================================================================
-  // 11. ACCOUNT SECURITY & TRUSTED DEVICES WORKFLOWS
-  // =========================================================================
-  async function loadSecurityData() {
-    const user = window.Clerk?.user || state.currentUser;
-    const profile = state.adminProfile || {};
-
-    const fullName = user?.fullName || profile.full_name || 'Administrator';
-    const email = user?.primaryEmailAddress?.emailAddress || profile.email || 'admin@example.com';
-    const username = user?.username ? `@${user.username}` : (profile.email ? `@${profile.email.split('@')[0]}` : '@admin');
-    const clerkId = user?.id || profile.clerkUserId || 'user_...';
-    const isOwner = isCurrentUserOwner();
-
-    const fullNameEl = document.getElementById('secFullName');
-    const emailEl = document.getElementById('secUserEmail');
-    const usernameEl = document.getElementById('secUsername');
-    const clerkIdEl = document.getElementById('secClerkUserId');
-    const clerkIdShortEl = document.getElementById('secClerkIdShort');
-    const roleBadgeEl = document.getElementById('secRoleBadge');
-    const authProviderEl = document.getElementById('secAuthProvider');
-    const currentDeviceEl = document.getElementById('secCurrentDevice');
-    const lastActiveEl = document.getElementById('secLastActiveTime');
-
-    if (fullNameEl) fullNameEl.textContent = fullName;
-    if (emailEl) emailEl.textContent = email;
-    if (usernameEl) usernameEl.textContent = username;
-    if (clerkIdEl) clerkIdEl.innerHTML = '<i class="fa-solid fa-shield-halved text-[#147D64]"></i> Hardware-Backed SSO Token Active';
-    if (clerkIdShortEl) clerkIdShortEl.innerHTML = '<i class="fa-solid fa-shield-halved text-[10px] mr-1"></i>SSO Session Verified';
-    if (lastActiveEl) lastActiveEl.textContent = `Session Active (${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`;
-
-    if (roleBadgeEl) {
-      roleBadgeEl.innerHTML = isOwner
-        ? '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Founding Owner</span>'
-        : (typeof getRoleBadgeForRole === 'function' ? getRoleBadgeForRole(profile.role, false) : '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-blue-50 text-blue-700 border border-blue-200"><i class="fa-solid fa-shield-halved text-[9px]"></i> ' + escapeHtml(profile.role || 'Staff') + '</span>');
-    }
-
-    const hasGoogle = user?.externalAccounts?.some(a => a.provider === 'google');
-    if (authProviderEl) {
-      if (hasGoogle) {
-        authProviderEl.innerHTML = '<i class="fa-brands fa-google text-slate-700 text-xs"></i><span>Google OAuth SSO</span>';
-      } else {
-        authProviderEl.innerHTML = '<i class="fa-solid fa-key text-slate-700 text-xs"></i><span>Clerk Password</span>';
-      }
-    }
-
-    const googleNotice = document.getElementById('adminGoogleOnlyNotice');
-    const currentPassDiv = document.getElementById('divCurrentPassword');
-    const hasPassword = user?.passwordEnabled ?? true;
-
-    if (!hasPassword && hasGoogle) {
-      if (googleNotice) googleNotice.classList.remove('hidden');
-      if (currentPassDiv) currentPassDiv.classList.add('hidden');
-    } else {
-      if (googleNotice) googleNotice.classList.add('hidden');
-      if (currentPassDiv) currentPassDiv.classList.remove('hidden');
-    }
-
-    if (currentDeviceEl) {
-      const ua = navigator.userAgent;
-      let dev = 'Desktop Browser';
-      if (/Android/i.test(ua)) dev = 'Android Device';
-      else if (/iPhone/i.test(ua)) dev = 'Apple iPhone';
-      else if (/iPad/i.test(ua)) dev = 'Apple iPad';
-      else if (/Macintosh/i.test(ua)) dev = 'macOS Workstation';
-      else if (/Windows/i.test(ua)) dev = 'Windows PC';
-      currentDeviceEl.textContent = dev;
-    }
-
-    await loadTrustedDevices();
-  }
-
-  async function loadTrustedDevices() {
-    const container = document.getElementById('trustedDevicesList');
-    if (!container) return;
-
-    try {
-      const res = await apiFetch('/security/trusted-devices');
-      if (res.ok && res.data) {
-        state.trustedDevicesCache = Array.isArray(res.data.data) ? res.data.data : [];
-        renderTrustedDevices();
-      } else {
-        container.innerHTML = `<div class="p-6 rounded-2xl bg-slate-50 border border-slate-100 text-center text-xs text-slate-500 italic">No application-trusted devices registered yet.</div>`;
-      }
-    } catch (e) {
-      console.error('loadTrustedDevices error:', e);
-      container.innerHTML = `<div class="p-6 rounded-2xl bg-rose-50 border border-rose-100 text-center text-xs text-rose-500 font-medium">Failed to load recognized devices.</div>`;
-    }
-  }
-
-  function renderTrustedDevices() {
-    const container = document.getElementById('trustedDevicesList');
-    if (!container) return;
-
-    const devices = state.trustedDevicesCache || [];
-
-    if (devices.length === 0) {
-      container.innerHTML = `
+        `}).join("")),document.querySelectorAll(".btn-view-support-ticket").forEach(h=>{h.addEventListener("click",()=>{xn(h.dataset.id)})})}function xn(n){const t=(g.supportCache||[]).find(m=>m.id===n);if(!t)return;const s=document.getElementById("modalSupportDetail");if(!s)return;const e=document.getElementById("modalSupportTicketId"),l=document.getElementById("modalSupportClientName"),i=document.getElementById("modalSupportClientEmail"),p=document.getElementById("modalSupportOrgName"),u=document.getElementById("modalSupportCreatedAt"),y=document.getElementById("modalSupportSubject"),a=document.getElementById("modalSupportMessage"),o=document.getElementById("modalSupportNewStatus"),d=document.getElementById("modalSupportAdminNotes"),c=document.getElementById("modalSupportHiddenId"),r=document.getElementById("modalSupportStatusBadge");e&&(e.textContent=t.id),l&&(l.textContent=t.full_name||"Client"),i&&(i.textContent=t.email),p&&(p.textContent=t.organization_name||"Individual Client"),u&&(u.textContent=t.created_at?new Date(t.created_at).toLocaleString():"N/A"),y&&(y.textContent=t.subject),a&&(a.textContent=t.message),o&&(o.value=t.status||"open",o.dispatchEvent(new Event("change"))),d&&(d.value=t.admin_notes||""),c&&(c.value=t.id),r&&(r.className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border "+(t.status==="resolved"?"bg-emerald-50 text-emerald-700 border-emerald-200":t.status==="in_progress"?"bg-amber-50 text-amber-700 border-amber-200":"bg-blue-50 text-blue-700 border-blue-200"),r.textContent=(t.status||"open").replace("_"," ")),s.classList.remove("hidden")}async function Rt(){const n=window.Clerk?.user||g.currentUser,t=g.adminProfile||{},s=n?.fullName||t.full_name||"Administrator",e=n?.primaryEmailAddress?.emailAddress||t.email||"admin@example.com",l=n?.username?`@${n.username}`:t.email?`@${t.email.split("@")[0]}`:"@admin",i=n?.id||t.clerkUserId||"user_...",p=Z(),u=document.getElementById("secFullName"),y=document.getElementById("secUserEmail"),a=document.getElementById("secUsername"),o=document.getElementById("secClerkUserId"),d=document.getElementById("secClerkIdShort"),c=document.getElementById("secRoleBadge"),r=document.getElementById("secAuthProvider"),m=document.getElementById("secCurrentDevice"),b=document.getElementById("secLastActiveTime");u&&(u.textContent=s),y&&(y.textContent=e),a&&(a.textContent=l),o&&(o.innerHTML='<i class="fa-solid fa-shield-halved text-[#147D64]"></i> Hardware-Backed SSO Token Active'),d&&(d.innerHTML='<i class="fa-solid fa-shield-halved text-[10px] mr-1"></i>SSO Session Verified'),b&&(b.textContent=`Session Active (${new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})})`),c&&(c.innerHTML=p?'<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-crown text-[9px] text-amber-500"></i> Founding Owner</span>':typeof ye=="function"?ye(t.role,!1):'<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-blue-50 text-blue-700 border border-blue-200"><i class="fa-solid fa-shield-halved text-[9px]"></i> '+f(t.role||"Staff")+"</span>");const E=n?.externalAccounts?.some(L=>L.provider==="google");r&&(E?r.innerHTML='<i class="fa-brands fa-google text-slate-700 text-xs"></i><span>Google OAuth SSO</span>':r.innerHTML='<i class="fa-solid fa-key text-slate-700 text-xs"></i><span>Clerk Password</span>');const C=document.getElementById("adminGoogleOnlyNotice"),h=document.getElementById("divCurrentPassword");if(!(n?.passwordEnabled??!0)&&E?(C&&C.classList.remove("hidden"),h&&h.classList.add("hidden")):(C&&C.classList.add("hidden"),h&&h.classList.remove("hidden")),m){const L=navigator.userAgent;let P="Desktop Browser";/Android/i.test(L)?P="Android Device":/iPhone/i.test(L)?P="Apple iPhone":/iPad/i.test(L)?P="Apple iPad":/Macintosh/i.test(L)?P="macOS Workstation":/Windows/i.test(L)&&(P="Windows PC"),m.textContent=P}await Ze()}async function Ze(){const n=document.getElementById("trustedDevicesList");if(n)try{const t=await B("/security/trusted-devices");t.ok&&t.data?(g.trustedDevicesCache=Array.isArray(t.data.data)?t.data.data:[],gn()):n.innerHTML='<div class="p-6 rounded-2xl bg-slate-50 border border-slate-100 text-center text-xs text-slate-500 italic">No application-trusted devices registered yet.</div>'}catch(t){console.error("loadTrustedDevices error:",t),n.innerHTML='<div class="p-6 rounded-2xl bg-rose-50 border border-rose-100 text-center text-xs text-rose-500 font-medium">Failed to load recognized devices.</div>'}}function gn(){const n=document.getElementById("trustedDevicesList");if(!n)return;const t=g.trustedDevicesCache||[];if(t.length===0){n.innerHTML=`
         <div class="p-6 rounded-2xl bg-slate-50 border border-slate-100 text-center space-y-2">
           <div class="text-xs font-bold text-[#172B36]">No Trusted Devices Registered</div>
           <p class="text-[11px] text-slate-500 max-w-sm mx-auto">Click "Trust Current Device" above to register this browser into Cloudflare security policies.</p>
         </div>
-      `;
-      return;
-    }
-
-    container.innerHTML = devices.map(d => {
-      const dateStr = d.last_used_at ? new Date(d.last_used_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recently';
-      return `
+      `;return}n.innerHTML=t.map(s=>{const e=s.last_used_at?new Date(s.last_used_at).toLocaleDateString(void 0,{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}):"Recently";return`
         <div class="p-4 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div class="flex items-center space-x-3">
             <div class="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600">
@@ -4531,882 +1048,37 @@
             </div>
             <div>
               <div class="text-xs font-bold text-[#172B36] flex items-center gap-2">
-                <span>${escapeHtml(d.device_name || 'Browser Device')}</span>
+                <span>${f(s.device_name||"Browser Device")}</span>
                 <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase">Trusted</span>
               </div>
-              <div class="text-[11px] font-mono text-slate-400 mt-0.5">${escapeHtml(d.ip_address || '127.0.0.1')} • Last active: ${escapeHtml(dateStr)}</div>
+              <div class="text-[11px] font-mono text-slate-400 mt-0.5">${f(s.ip_address||"127.0.0.1")} \u2022 Last active: ${f(e)}</div>
             </div>
           </div>
-          <button type="button" class="btn-revoke-device px-3 py-1.5 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-all self-start sm:self-auto cursor-pointer" data-id="${d.id}" data-name="${escapeHtml(d.device_name || 'Device')}">
+          <button type="button" class="btn-revoke-device px-3 py-1.5 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-all self-start sm:self-auto cursor-pointer" data-id="${s.id}" data-name="${f(s.device_name||"Device")}">
             <i class="fa-solid fa-trash-can mr-1 text-[10px]"></i>Revoke
           </button>
         </div>
-      `;
-    }).join('');
-
-    document.querySelectorAll('.btn-revoke-device').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const id = btn.dataset.id;
-        const name = btn.dataset.name;
-        if (!confirm(`Are you sure you want to revoke trust for '${name}'?`)) return;
-
-        setBtnLoading(btn, true, 'Revoking...');
-        const res = await apiFetch(`/security/trusted-devices/${id}`, { method: 'DELETE' });
-        setBtnLoading(btn, false);
-
-        if (res.ok && res.data?.success) {
-          showToast(`Device '${name}' revoked successfully.`, 'success');
-          loadTrustedDevices();
-        } else {
-          showToast(res.data?.error || 'Failed to revoke device.', 'error');
-        }
-      });
-    });
-  }
-
-  // =========================================================================
-  // MODALS & EVENT HANDLERS
-  // =========================================================================
-  function initModals() {
-    // 1. Open Add Client Modal
-    const renderAddClientServices = () => {
-      const box = document.getElementById('addClientServicesCheckboxes');
-      if (!box) return;
-      if (state.servicesCache && state.servicesCache.length > 0) {
-        box.innerHTML = state.servicesCache.map(s => {
-          const code = escapeHtml(s.code || (s.id || '').toUpperCase());
-          const name = escapeHtml(s.name || '');
-          const cat = escapeHtml(s.category || '');
-          const id = escapeHtml(s.id || '');
-          return `
+      `}).join(""),document.querySelectorAll(".btn-revoke-device").forEach(s=>{s.addEventListener("click",async()=>{const e=s.dataset.id,l=s.dataset.name;if(!confirm(`Are you sure you want to revoke trust for '${l}'?`))return;A(s,!0,"Revoking...");const i=await B(`/security/trusted-devices/${e}`,{method:"DELETE"});A(s,!1),i.ok&&i.data?.success?(v(`Device '${l}' revoked successfully.`,"success"),Ze()):v(i.data?.error||"Failed to revoke device.","error")})})}function yn(){const n=()=>{const a=document.getElementById("addClientServicesCheckboxes");a&&g.servicesCache&&g.servicesCache.length>0&&(a.innerHTML=g.servicesCache.map(o=>{const d=f(o.code||(o.id||"").toUpperCase()),c=f(o.name||""),r=f(o.category||"");return`
             <label class="service-checkbox-card group flex items-center justify-between gap-1.5 px-2.5 py-1.5 rounded-xl bg-white border border-[#E3E9EF] hover:border-[#087F70]/40 hover:bg-[#FAFCFB] transition-all cursor-pointer shadow-2xs select-none">
               <div class="flex items-center gap-2 min-w-0">
-                <input type="checkbox" name="services" value="${id}" class="service-checkbox-input w-3.5 h-3.5 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] cursor-pointer shrink-0">
-                <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">${name}</span>
+                <input type="checkbox" name="services" value="${f(o.id||"")}" class="service-checkbox-input w-3.5 h-3.5 rounded text-[#087F70] accent-[#087F70] border-slate-300 focus:ring-[#087F70] cursor-pointer shrink-0">
+                <span class="service-card-title text-xs font-semibold text-[#172B36] group-hover:text-[#087F70] transition-colors truncate">${c}</span>
               </div>
-              <span class="service-card-badge text-[9px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-1.5 py-0.5 rounded border border-[#087F70]/20 shrink-0">${code}</span>
+              <span class="service-card-badge text-[9px] font-mono font-bold uppercase tracking-wider text-[#087F70] bg-[#EAF5F1] px-1.5 py-0.5 rounded border border-[#087F70]/20 shrink-0">${d}</span>
             </label>
-          `;
-        }).join('');
-      }
-    };
-
-    // Wire up live service card highlight sync
-    const serviceBox = document.getElementById('addClientServicesCheckboxes');
-    serviceBox?.addEventListener('change', (e) => {
-      if (e.target && e.target.name === 'services') {
-        const card = e.target.closest('.service-checkbox-card');
-        if (card) {
-          card.classList.toggle('is-checked', e.target.checked);
-        }
-      }
-    });
-
-    const openAddClient = () => {
-      const modal = document.getElementById('modalAddClient');
-      if (modal) {
-        modal.classList.remove('hidden');
-        renderAddClientServices();
-        initGlassSelects();
-      }
-    };
-
-    document.getElementById('btnOpenAddClientModal')?.addEventListener('click', openAddClient);
-    document.getElementById('btnQuickAddClient')?.addEventListener('click', openAddClient);
-
-    // Form Add Client Submit
-    document.getElementById('formAddClient')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const f = e.target;
-      const submitBtn = f.querySelector('button[type="submit"]');
-      const selectedServices = Array.from(f.querySelectorAll('input[name="services"]:checked')).map(i => i.value);
-
-      const payload = {
-        fullName: f.fullName.value,
-        companyName: f.companyName.value,
-        email: f.email.value,
-        phone: f.phone.value,
-        city: f.city.value,
-        country: f.country.value,
-        address: f.address.value,
-        currency: f.currency ? f.currency.value : 'BDT',
-        selectedServiceIds: selectedServices
-      };
-
-      setBtnLoading(submitBtn, true, 'Creating client & provisioning tasks...');
-
-      const res = await apiFetch('/clients', {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      });
-
-      setBtnLoading(submitBtn, false);
-
-      if (res.ok && res.data && res.data.success) {
-        showToast(res.data.message || 'Client created successfully!', 'success');
-        f.reset();
-        initGlassSelects();
-        document.querySelectorAll('#addClientServicesCheckboxes .service-checkbox-card').forEach(c => c.classList.remove('is-checked'));
-        document.getElementById('modalAddClient')?.classList.add('hidden');
-        loadClientsData();
-        loadProjectsData();
-        loadTasksData();
-        if (res.data.data?.clientId) {
-          openClientDetails(res.data.data.clientId);
-        }
-      } else {
-        showToast(res.data?.error || 'Failed to create client.', 'error');
-      }
-    });
-
-    // 2. Client Details Workspace Handlers
-    document.getElementById('btnBackToClients')?.addEventListener('click', () => {
-      switchTab('clients');
-    });
-
-    // Client Search & Status Filter
-    document.getElementById('adminClientSearchInput')?.addEventListener('input', () => {
-      loadClientsData();
-    });
-
-    document.getElementById('adminClientStatusFilter')?.addEventListener('change', () => {
-      loadClientsData();
-    });
-
-    // Edit Client Profile & Authoritative CIF Modal
-    // Reset Client Receipt Download Limit (Phase 1 Flexibility Control & Quota Recovery)
-    document.getElementById('btnResetClientReceiptLimit')?.addEventListener('click', async () => {
-      const clientId = state.selectedClientId;
-      if (!clientId) {
-        showToast('Please select a client first.', 'error');
-        return;
-      }
-      const clientName = document.getElementById('clientCardFullName')?.textContent?.trim() || 'Client';
-      const btn = document.getElementById('btnResetClientReceiptLimit');
-      setBtnLoading(btn, true, 'Restoring limit...');
-      try {
-        const payload = {
-          clientId,
-          daily_pdf_downloads: 0,
-          organizationId: state.selectedClient?.organization_id || null,
-          userId: state.selectedClient?.id || null,
-          clerkUserId: state.selectedClient?.clerk_user_id || null,
-          email: state.selectedClient?.email || null
-        };
-        // Use POST for universal preflight and proxy compatibility
-        const res = await apiFetch(`/pdf/quota/reset/${encodeURIComponent(clientId)}`, {
-          method: 'POST',
-          body: JSON.stringify(payload)
-        });
-        setBtnLoading(btn, false);
-        if (res.ok && res.data && res.data.success) {
-          if (state.selectedClient) {
-            state.selectedClient.receiptQuota = { used: 0, max: 2, remaining: 2, isLimitReached: false };
-            state.selectedClient.dailyPdfDownloads = 0;
-          }
-          showToast(`Receipt download limit for ${clientName} has been successfully restored (2/2 allowance available).`, 'success');
-        } else {
-          showToast(res.data?.error || 'Failed to reset download limit.', 'error');
-        }
-      } catch (err) {
-        setBtnLoading(btn, false);
-        showToast('Network error while resetting quota.', 'error');
-      }
-    });
-
-    document.getElementById('btnOpenEditClientModal')?.addEventListener('click', async () => {
-      const clientId = state.selectedClientId;
-      if (!clientId) return;
-
-      const res = await apiFetch(`/clients/${clientId}`);
-      if (!res.ok || !res.data || !res.data.data?.client) return;
-
-      const c = res.data.data.client;
-      const cif = c.cif || {};
-
-      document.getElementById('editClientId').value = c.id;
-      document.getElementById('editClientFullName').value = cif.fullName || c.full_name || '';
-      document.getElementById('editClientBillingName').value = cif.billingName || cif.fullName || c.full_name || '';
-      document.getElementById('editClientCompanyName').value = cif.companyName || c.company_name || '';
-      document.getElementById('editClientEmail').value = c.email || '';
-      document.getElementById('editClientPhone').value = cif.phone || c.phone || '';
-      document.getElementById('editClientAddress').value = cif.address || c.address || '';
-      document.getElementById('editClientCity').value = cif.city || c.city || 'Dhaka';
-      document.getElementById('editClientPostalCode').value = cif.postalCode || '';
-      document.getElementById('editClientCountry').value = cif.country || c.country || 'Bangladesh';
-      document.getElementById('editClientCurrency').value = cif.currency || c.currency || 'USD';
-      document.getElementById('editClientTaxId').value = cif.taxId || '';
-
-      const lockSelect = document.getElementById('editClientIsLocked');
-      if (lockSelect) {
-        lockSelect.value = cif.isLocked ? '1' : '0';
-      }
-
-      document.getElementById('editClientStatus').value = c.status || 'active';
-
-      // Completion badge
-      const badge = document.getElementById('editClientCompletionBadge');
-      if (badge) {
-        const pct = cif.completionPercentage !== undefined ? cif.completionPercentage : (c.cif_completion_percentage || 0);
-        const locked = Boolean(cif.isLocked);
-        if (pct === 100 && locked) {
-          badge.className = 'text-xs px-2.5 py-1 rounded-full font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/60';
-          badge.textContent = '100% (Verified & Locked)';
-        } else if (pct === 100) {
-          badge.className = 'text-xs px-2.5 py-1 rounded-full font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800/60';
-          badge.textContent = '100% (Unlocked Draft)';
-        } else {
-          badge.className = 'text-xs px-2.5 py-1 rounded-full font-bold bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800/60';
-          badge.textContent = `${pct}% (Incomplete)`;
-        }
-      }
-
-      // Audit trail note
-      const auditText = document.getElementById('editClientAuditText');
-      if (auditText) {
-        const parts = [];
-        if (cif.lastModifiedBy) {
-          parts.push(`Last modified by ${cif.lastModifiedBy} (${cif.lastModifiedAt ? new Date(cif.lastModifiedAt).toLocaleDateString() : 'N/A'})`);
-        }
-        if (cif.lockedAt) {
-          parts.push(`Locked by ${cif.lockedBy || 'System'} on ${new Date(cif.lockedAt).toLocaleDateString()}`);
-        }
-        auditText.textContent = parts.length > 0 ? parts.join(' • ') : 'No modifications recorded yet.';
-      }
-
-      initGlassSelects();
-      document.getElementById('modalEditClient')?.classList.remove('hidden');
-    });
-
-    document.getElementById('formEditClient')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const f = e.target;
-      const clientId = f.clientId.value;
-      const submitBtn = f.querySelector('button[type="submit"]');
-
-      setBtnLoading(submitBtn, true, 'Saving changes...');
-
-      const payload = {
-        fullName: f.fullName.value.trim(),
-        billingName: f.billingName.value.trim(),
-        companyName: f.companyName.value.trim(),
-        phone: f.phone.value.trim(),
-        address: f.address.value.trim(),
-        city: f.city.value.trim(),
-        postalCode: f.postalCode.value.trim(),
-        country: f.country.value.trim(),
-        currency: f.currency.value,
-        taxId: f.taxId.value.trim(),
-        isLocked: f.isLocked.value === '1',
-        status: f.status.value
-      };
-
-      const res = await apiFetch(`/clients/${clientId}`, {
-        method: 'PUT',
-        body: JSON.stringify(payload)
-      });
-
-      setBtnLoading(submitBtn, false);
-
-      if (res.ok && res.data && res.data.success) {
-        showToast('Client profile and CIF updated successfully!', 'success');
-        document.getElementById('modalEditClient')?.classList.add('hidden');
-        openClientDetails(clientId);
-        loadClientsData();
-      } else {
-        showToast(res.data?.error || 'Failed to update profile.', 'error');
-      }
-    });
-
-    // Assign Service to Client
-    document.getElementById('btnOpenAssignServiceClientModal')?.addEventListener('click', () => {
-      const clientId = state.selectedClientId;
-      if (!clientId) return;
-
-      document.getElementById('assignServiceClientId').value = clientId;
-      const select = document.getElementById('assignServiceSelect');
-      const menu = document.getElementById('assignServiceMenu');
-      const triggerLabel = document.getElementById('assignServiceCurrentLabel');
-
-      if (select) {
-        select.innerHTML = '<option value="">Choose a service...</option>' + state.servicesCache.map(s => `
-          <option value="${s.id}" data-price="${(s.standard_price_cents || 100000) / 100}" data-pkg="${s.default_package || 'Standard Retainer'}">[${s.code}] ${s.name}</option>
-        `).join('');
-
-        select.addEventListener('change', () => {
-          const opt = select.selectedOptions[0];
-          if (opt) {
-            const price = opt.dataset.price;
-            if (price) document.getElementById('assignServicePrice').value = price;
-          }
-        });
-      }
-
-      if (triggerLabel) triggerLabel.textContent = 'Choose a service...';
-      if (menu) {
-        menu.innerHTML = '<button type="button" class="custom-assign-service-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-500 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left" data-value="" data-label="Choose a service..."><span>Choose a service...</span></button>' + state.servicesCache.map(s => `
-          <button type="button" class="custom-assign-service-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left" data-value="${s.id}" data-price="${(s.standard_price_cents || 100000) / 100}" data-pkg="${escapeHtml(s.default_package || 'Standard Retainer')}" data-label="[${s.code}] ${escapeHtml(s.name)}">
+          `}).join(""))};document.getElementById("addClientServicesCheckboxes")?.addEventListener("change",a=>{if(a.target&&a.target.name==="services"){const o=a.target.closest(".service-checkbox-card");o&&o.classList.toggle("is-checked",a.target.checked)}});const s=()=>{const a=document.getElementById("modalAddClient");a&&(a.classList.remove("hidden"),n(),O())};document.getElementById("btnOpenAddClientModal")?.addEventListener("click",s),document.getElementById("btnQuickAddClient")?.addEventListener("click",s),document.getElementById("formAddClient")?.addEventListener("submit",async a=>{a.preventDefault();const o=a.target,d=o.querySelector('button[type="submit"]'),c=Array.from(o.querySelectorAll('input[name="services"]:checked')).map(b=>b.value),r={fullName:o.fullName.value,companyName:o.companyName.value,email:o.email.value,phone:o.phone.value,city:o.city.value,country:o.country.value,address:o.address.value,currency:o.currency?o.currency.value:"BDT",selectedServiceIds:c};A(d,!0,"Creating client & provisioning tasks...");const m=await B("/clients",{method:"POST",body:JSON.stringify(r)});A(d,!1),m.ok&&m.data&&m.data.success?(v(m.data.message||"Client created successfully!","success"),o.reset(),O(),document.querySelectorAll("#addClientServicesCheckboxes .service-checkbox-card").forEach(b=>b.classList.remove("is-checked")),document.getElementById("modalAddClient")?.classList.add("hidden"),le(),ke(),Ie(),m.data.data?.clientId&&fe(m.data.data.clientId)):v(m.data?.error||"Failed to create client.","error")}),document.getElementById("btnBackToClients")?.addEventListener("click",()=>{X("clients")}),document.getElementById("adminClientSearchInput")?.addEventListener("input",()=>{le()}),document.getElementById("adminClientStatusFilter")?.addEventListener("change",()=>{le()}),document.getElementById("btnResetClientReceiptLimit")?.addEventListener("click",async()=>{const a=g.selectedClientId;if(!a){v("Please select a client first.","error");return}const o=document.getElementById("clientCardFullName")?.textContent?.trim()||"Client",d=document.getElementById("btnResetClientReceiptLimit");A(d,!0,"Restoring limit...");try{const c={clientId:a,daily_pdf_downloads:0,organizationId:g.selectedClient?.organization_id||null,userId:g.selectedClient?.id||null,clerkUserId:g.selectedClient?.clerk_user_id||null,email:g.selectedClient?.email||null},r=await B(`/pdf/quota/reset/${encodeURIComponent(a)}`,{method:"POST",body:JSON.stringify(c)});A(d,!1),r.ok&&r.data&&r.data.success?(g.selectedClient&&(g.selectedClient.receiptQuota={used:0,max:2,remaining:2,isLimitReached:!1},g.selectedClient.dailyPdfDownloads=0),v(`Receipt download limit for ${o} has been successfully restored (2/2 allowance available).`,"success")):v(r.data?.error||"Failed to reset download limit.","error")}catch{A(d,!1),v("Network error while resetting quota.","error")}}),document.getElementById("btnOpenEditClientModal")?.addEventListener("click",async()=>{const a=g.selectedClientId;if(!a)return;const o=await B(`/clients/${a}`);if(!o.ok||!o.data||!o.data.data?.client)return;const d=o.data.data.client,c=d.cif||{};document.getElementById("editClientId").value=d.id,document.getElementById("editClientFullName").value=c.fullName||d.full_name||"",document.getElementById("editClientBillingName").value=c.billingName||c.fullName||d.full_name||"",document.getElementById("editClientCompanyName").value=c.companyName||d.company_name||"",document.getElementById("editClientEmail").value=d.email||"",document.getElementById("editClientPhone").value=c.phone||d.phone||"",document.getElementById("editClientAddress").value=c.address||d.address||"",document.getElementById("editClientCity").value=c.city||d.city||"Dhaka",document.getElementById("editClientPostalCode").value=c.postalCode||"",document.getElementById("editClientCountry").value=c.country||d.country||"Bangladesh",document.getElementById("editClientCurrency").value=c.currency||d.currency||"USD",document.getElementById("editClientTaxId").value=c.taxId||"";const r=document.getElementById("editClientIsLocked");r&&(r.value=c.isLocked?"1":"0"),document.getElementById("editClientStatus").value=d.status||"active";const m=document.getElementById("editClientCompletionBadge");if(m){const E=c.completionPercentage!==void 0?c.completionPercentage:d.cif_completion_percentage||0,C=!!c.isLocked;E===100&&C?(m.className="text-xs px-2.5 py-1 rounded-full font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/60",m.textContent="100% (Verified & Locked)"):E===100?(m.className="text-xs px-2.5 py-1 rounded-full font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800/60",m.textContent="100% (Unlocked Draft)"):(m.className="text-xs px-2.5 py-1 rounded-full font-bold bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800/60",m.textContent=`${E}% (Incomplete)`)}const b=document.getElementById("editClientAuditText");if(b){const E=[];c.lastModifiedBy&&E.push(`Last modified by ${c.lastModifiedBy} (${c.lastModifiedAt?new Date(c.lastModifiedAt).toLocaleDateString():"N/A"})`),c.lockedAt&&E.push(`Locked by ${c.lockedBy||"System"} on ${new Date(c.lockedAt).toLocaleDateString()}`),b.textContent=E.length>0?E.join(" \u2022 "):"No modifications recorded yet."}O(),document.getElementById("modalEditClient")?.classList.remove("hidden")}),document.getElementById("formEditClient")?.addEventListener("submit",async a=>{a.preventDefault();const o=a.target,d=o.clientId.value,c=o.querySelector('button[type="submit"]');A(c,!0,"Saving changes...");const r={fullName:o.fullName.value.trim(),billingName:o.billingName.value.trim(),companyName:o.companyName.value.trim(),phone:o.phone.value.trim(),address:o.address.value.trim(),city:o.city.value.trim(),postalCode:o.postalCode.value.trim(),country:o.country.value.trim(),currency:o.currency.value,taxId:o.taxId.value.trim(),isLocked:o.isLocked.value==="1",status:o.status.value},m=await B(`/clients/${d}`,{method:"PUT",body:JSON.stringify(r)});A(c,!1),m.ok&&m.data&&m.data.success?(v("Client profile and CIF updated successfully!","success"),document.getElementById("modalEditClient")?.classList.add("hidden"),fe(d),le()):v(m.data?.error||"Failed to update profile.","error")}),document.getElementById("btnOpenAssignServiceClientModal")?.addEventListener("click",()=>{const a=g.selectedClientId;if(!a)return;document.getElementById("assignServiceClientId").value=a;const o=document.getElementById("assignServiceSelect"),d=document.getElementById("assignServiceMenu"),c=document.getElementById("assignServiceCurrentLabel");o&&(o.innerHTML='<option value="">Choose a service...</option>'+g.servicesCache.map(h=>`
+          <option value="${h.id}" data-price="${(h.standard_price_cents||1e5)/100}" data-pkg="${h.default_package||"Standard Retainer"}">[${h.code}] ${h.name}</option>
+        `).join(""),o.addEventListener("change",()=>{const h=o.selectedOptions[0];if(h){const I=h.dataset.price;I&&(document.getElementById("assignServicePrice").value=I)}})),c&&(c.textContent="Choose a service..."),d&&(d.innerHTML='<button type="button" class="custom-assign-service-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-500 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left" data-value="" data-label="Choose a service..."><span>Choose a service...</span></button>'+g.servicesCache.map(h=>`
+          <button type="button" class="custom-assign-service-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left" data-value="${h.id}" data-price="${(h.standard_price_cents||1e5)/100}" data-pkg="${f(h.default_package||"Standard Retainer")}" data-label="[${h.code}] ${f(h.name)}">
             <div class="flex items-center gap-2 min-w-0">
               <span class="w-1.5 h-1.5 rounded-full bg-[#087F70]"></span>
-              <span class="truncate">[${s.code}] ${escapeHtml(s.name)}</span>
+              <span class="truncate">[${h.code}] ${f(h.name)}</span>
             </div>
-            <span class="font-mono text-[11px] text-slate-400 group-hover:text-[#087F70] shrink-0">$${((s.standard_price_cents || 100000) / 100).toFixed(2)}</span>
+            <span class="font-mono text-[11px] text-slate-400 group-hover:text-[#087F70] shrink-0">$${((h.standard_price_cents||1e5)/100).toFixed(2)}</span>
           </button>
-        `).join('');
-
-        menu.querySelectorAll('.custom-assign-service-option').forEach(btn => {
-          btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const val = btn.dataset.value;
-            const label = btn.dataset.label;
-            const price = btn.dataset.price;
-            const pkg = btn.dataset.pkg;
-            if (triggerLabel) triggerLabel.textContent = label;
-            if (select) {
-              select.value = val;
-              select.dispatchEvent(new Event('change', { bubbles: true }));
-            }
-            if (price) {
-              const priceInput = document.getElementById('assignServicePrice');
-              if (priceInput) priceInput.value = price;
-            }
-            if (pkg) {
-              const pkgInput = document.querySelector('#formAssignService input[name="packageName"]');
-              if (pkgInput) pkgInput.value = pkg;
-            }
-            closeAssignServiceMenu();
-          });
-        });
-      }
-
-      // Sync active client's preferred currency into modal
-      const activeClient = state.clientsCache?.find(c => c.id === clientId);
-      const clientCur = (activeClient?.currency || 'USD').toUpperCase();
-      if (typeof syncAssignCurrencyDropdown === 'function') {
-        syncAssignCurrencyDropdown(clientCur);
-      }
-
-      // Sync start date & deadline datepicker displays
-      const todayIso = new Date().toISOString().split('T')[0];
-      const startInput = document.getElementById('assignServiceStartDate');
-      if (startInput) {
-        startInput.value = todayIso;
-        if (typeof updateDatePickerTrigger === 'function') updateDatePickerTrigger(startInput);
-      }
-      const deadlineInput = document.getElementById('assignServiceDeadline');
-      if (deadlineInput) {
-        deadlineInput.value = '';
-        if (typeof updateDatePickerTrigger === 'function') updateDatePickerTrigger(deadlineInput);
-      }
-      initGlassSelects();
-
-      document.getElementById('modalAssignService')?.classList.remove('hidden');
-    });
-
-    document.getElementById('formAssignService')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const f = e.target;
-      const clientId = f.clientId.value;
-      const submitBtn = f.querySelector('button[type="submit"]');
-
-      const payload = {
-        serviceId: f.serviceId.value,
-        packageName: f.packageName.value,
-        priceCents: Math.round(parseFloat(f.priceDollars.value) * 100),
-        startDate: f.startDate.value,
-        deadline: f.deadline.value || null
-      };
-
-      setBtnLoading(submitBtn, true, 'Provisioning service & tasks...');
-
-      const res = await apiFetch(`/clients/${clientId}/services`, {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      });
-
-      setBtnLoading(submitBtn, false);
-
-      if (res.ok && res.data && res.data.success) {
-        showToast(res.data.message || 'Service assigned with auto-generated SOP tasks!', 'success');
-        document.getElementById('modalAssignService')?.classList.add('hidden');
-        openClientDetails(clientId);
-        loadProjectsData();
-        loadTasksData();
-      } else {
-        showToast(res.data?.error || 'Failed to assign service.', 'error');
-      }
-    });
-
-    // Suspend Client Action
-    document.getElementById('btnSuspendClientAction')?.addEventListener('click', async () => {
-      const clientId = state.selectedClientId;
-      if (!clientId) return;
-      if (!confirm('Are you sure you want to suspend this client? The client will lose access to the portal until reactivated.')) return;
-
-      const btn = document.getElementById('btnSuspendClientAction');
-      setBtnLoading(btn, true, 'Suspending...');
-
-      const res = await apiFetch(`/clients/${clientId}/suspend`, { method: 'POST' });
-      setBtnLoading(btn, false);
-
-      if (res.ok && res.data && res.data.success) {
-        showToast(res.data.message || 'Client account suspended.', 'success');
-        openClientDetails(clientId);
-        loadClientsData();
-      } else {
-        showToast(res.data?.error || 'Failed to suspend client.', 'error');
-      }
-    });
-
-    // Reactivate Client Action
-    document.getElementById('btnReactivateClientAction')?.addEventListener('click', async () => {
-      const clientId = state.selectedClientId;
-      if (!clientId) return;
-
-      const btn = document.getElementById('btnReactivateClientAction');
-      setBtnLoading(btn, true, 'Reactivating...');
-
-      const res = await apiFetch(`/clients/${clientId}/reactivate`, { method: 'POST' });
-      setBtnLoading(btn, false);
-
-      if (res.ok && res.data && res.data.success) {
-        showToast(res.data.message || 'Client account reactivated successfully.', 'success');
-        openClientDetails(clientId);
-        loadClientsData();
-      } else {
-        showToast(res.data?.error || 'Failed to reactivate client.', 'error');
-      }
-    });
-
-    // Delete Client Action (opens modal)
-    document.getElementById('btnDeleteClientAction')?.addEventListener('click', () => {
-      const clientId = state.selectedClientId;
-      if (!clientId) return;
-      const nameEl = document.getElementById('clientCardFullName') || document.getElementById('clientDetailTitle');
-      const targetNameEl = document.getElementById('deleteClientTargetName');
-      if (targetNameEl && nameEl) targetNameEl.textContent = nameEl.textContent;
-
-      // Ensure Clerk deletion option is unchecked by default
-      const clerkOpt = document.getElementById('deleteClientClerkOption');
-      if (clerkOpt) clerkOpt.checked = false;
-
-      // Ensure delete button is reset and ready
-      const confirmBtn = document.getElementById('btnConfirmDeleteClient');
-      if (confirmBtn) {
-        confirmBtn.disabled = false;
-        confirmBtn.classList.remove('opacity-75', 'cursor-not-allowed');
-        confirmBtn.innerHTML = '<i class="fa-solid fa-trash-can text-xs"></i> <span>Permanently Delete Client</span>';
-      }
-
-      document.getElementById('modalDeleteClient')?.classList.remove('hidden');
-    });
-
-    // Confirm Permanent Delete Client
-    document.getElementById('btnConfirmDeleteClient')?.addEventListener('click', async () => {
-      const clientId = state.selectedClientId;
-      if (!clientId) return;
-
-      const btn = document.getElementById('btnConfirmDeleteClient');
-      if (btn.disabled) return;
-      setBtnLoading(btn, true, 'Deleting client...');
-
-      const deleteClerk = document.getElementById('deleteClientClerkOption')?.checked === true;
-
-      try {
-        const res = await apiFetch(`/clients/${clientId}?delete_clerk=${deleteClerk}`, { method: 'DELETE' });
-        setBtnLoading(btn, false);
-
-        if (res.ok && res.data && res.data.success) {
-          showToast(res.data.message || 'Client deleted successfully.', 'success');
-          document.getElementById('modalDeleteClient')?.classList.add('hidden');
-          switchTab('clients');
-          loadClientsData();
-          loadTeamData();
-        } else {
-          showToast(res.data?.error || 'Unable to delete this client. No changes were completed. Please retry or review the account records.', 'error');
-        }
-      } catch (err) {
-        setBtnLoading(btn, false);
-        showToast('Network error while processing client deletion. Please retry.', 'error');
-      }
-    });
-
-    // 3. Service Management Modals
-    document.getElementById('btnOpenAddServiceModal')?.addEventListener('click', () => {
-      initGlassSelects();
-      document.getElementById('modalAddService')?.classList.remove('hidden');
-    });
-
-    document.getElementById('formAddService')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const f = e.target;
-      const submitBtn = f.querySelector('button[type="submit"]');
-
-      const payload = {
-        name: f.name.value,
-        code: f.code.value,
-        category: f.category.value,
-        defaultPackage: f.defaultPackage.value,
-        standardPriceCents: Math.round(parseFloat(f.standardPriceDollars.value) * 100),
-        description: f.description.value
-      };
-
-      setBtnLoading(submitBtn, true, 'Creating service...');
-
-      const res = await apiFetch('/services', {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      });
-
-      setBtnLoading(submitBtn, false);
-
-      if (res.ok && res.data && res.data.success) {
-        showToast(res.data.message || 'Service created successfully!', 'success');
-        f.reset();
-        document.getElementById('modalAddService')?.classList.add('hidden');
-        loadServicesData();
-      } else {
-        showToast(res.data?.error || 'Failed to create service.', 'error');
-      }
-    });
-
-    document.getElementById('formEditService')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const f = e.target;
-      const srvId = f.serviceId.value;
-      const submitBtn = f.querySelector('button[type="submit"]');
-
-      const payload = {
-        name: f.name.value,
-        code: f.code.value,
-        category: f.category.value,
-        defaultPackage: f.defaultPackage.value,
-        standardPriceCents: Math.round(parseFloat(f.standardPriceDollars.value) * 100),
-        description: f.description.value,
-        isActive: f.isActive.checked
-      };
-
-      setBtnLoading(submitBtn, true, 'Saving changes & version snapshot...');
-
-      const res = await apiFetch(`/services/${srvId}`, {
-        method: 'PUT',
-        body: JSON.stringify(payload)
-      });
-
-      setBtnLoading(submitBtn, false);
-
-      if (res.ok && res.data && res.data.success) {
-        showToast(res.data.message || 'Service updated successfully!', 'success');
-        document.getElementById('modalEditService')?.classList.add('hidden');
-        loadServicesData();
-      } else {
-        showToast(res.data?.error || 'Failed to update service.', 'error');
-      }
-    });
-
-    // Delete Service Triggers & Confirmation
-    document.getElementById('btnDeleteFromEditServiceModal')?.addEventListener('click', () => {
-      const srvId = document.getElementById('editServiceId')?.value;
-      if (!srvId) return;
-      document.getElementById('modalEditService')?.classList.add('hidden');
-      openDeleteServiceModal(srvId);
-    });
-
-    document.getElementById('deleteServiceConfirmInput')?.addEventListener('input', (e) => {
-      const val = e.target.value.trim();
-      const service = state.servicesCache.find(s => s.id === state.selectedServiceId);
-      const confirmBtn = document.getElementById('btnConfirmDeleteService');
-      if (!confirmBtn || !service) return;
-
-      const isMatch = val.toUpperCase() === 'DELETE' || val.toLowerCase() === service.name.trim().toLowerCase();
-      confirmBtn.disabled = !isMatch;
-    });
-
-    document.getElementById('btnConfirmDeleteService')?.addEventListener('click', async () => {
-      const serviceId = state.selectedServiceId;
-      if (!serviceId) return;
-
-      const btn = document.getElementById('btnConfirmDeleteService');
-      if (btn.disabled) return;
-
-      const service = state.servicesCache.find(s => s.id === serviceId);
-      const serviceName = service ? service.name : 'Service';
-
-      setBtnLoading(btn, true, 'Permanently purging service & blueprints...');
-
-      try {
-        const res = await apiFetch(`/services/${serviceId}`, { method: 'DELETE' });
-        setBtnLoading(btn, false);
-
-        if (res.ok && res.data && res.data.success) {
-          showToast(`Service "${serviceName}" and all SOP blueprints permanently deleted.`, 'success');
-          document.getElementById('modalDeleteService')?.classList.add('hidden');
-
-          state.servicesCache = state.servicesCache.filter(s => s.id !== serviceId);
-          loadServicesData();
-
-          if (state.activeTab === 'service_tasks') {
-            switchTab('services');
-          }
-        } else {
-          showToast(res.data?.error || 'Failed to delete service. Check dependencies.', 'error');
-        }
-      } catch (err) {
-        setBtnLoading(btn, false);
-        showToast('Network error while deleting service.', 'error');
-      }
-    });
-
-    // 4. SOP Task Blueprint Workspace Handlers
-    document.getElementById('btnBackToServices')?.addEventListener('click', () => {
-      switchTab('services');
-    });
-
-    document.getElementById('btnOpenAddBlueprintModal')?.addEventListener('click', () => {
-      document.getElementById('addBlueprintServiceId').value = state.selectedServiceId;
-      initGlassSelects();
-      document.getElementById('modalAddBlueprint')?.classList.remove('hidden');
-    });
-
-    document.getElementById('formAddBlueprint')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const f = e.target;
-      const serviceId = f.serviceId.value;
-      const submitBtn = f.querySelector('button[type="submit"]');
-
-      const payload = {
-        taskCode: f.taskCode.value,
-        title: f.title.value,
-        phase: f.phase.value,
-        priority: f.priority.value,
-        estimatedMinutes: parseInt(f.estimatedMinutes.value) || 60,
-        steps: f.steps.value,
-        instructions: f.steps.value,
-        qaCriteria: f.qaCriteria.value
-      };
-
-      setBtnLoading(submitBtn, true, 'Adding task blueprint...');
-
-      const res = await apiFetch(`/services/${serviceId}/blueprints`, {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      });
-
-      setBtnLoading(submitBtn, false);
-
-      if (res.ok && res.data && res.data.success) {
-        showToast(res.data.message || 'Blueprint added successfully!', 'success');
-        f.reset();
-        document.getElementById('modalAddBlueprint')?.classList.add('hidden');
-        openServiceTasksWorkspace(serviceId);
-      } else {
-        showToast(res.data?.error || 'Failed to add blueprint.', 'error');
-      }
-    });
-
-    document.getElementById('formEditBlueprint')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const f = e.target;
-      const bpId = f.blueprintId.value;
-      const submitBtn = f.querySelector('button[type="submit"]');
-
-      const payload = {
-        taskCode: f.taskCode.value,
-        title: f.title.value,
-        phase: f.phase.value,
-        priority: f.priority.value,
-        sortOrder: parseInt(f.sortOrder.value) || 1,
-        estimatedMinutes: parseInt(f.estimatedMinutes.value) || 60,
-        why: f.why.value,
-        whereLocation: f.whereLocation.value,
-        steps: f.steps.value,
-        instructions: f.steps.value,
-        doneWhen: f.doneWhen.value,
-        qaCriteria: f.qaCriteria.value
-      };
-
-      setBtnLoading(submitBtn, true, 'Saving changes...');
-
-      const res = await apiFetch(`/services/blueprints/${bpId}`, {
-        method: 'PUT',
-        body: JSON.stringify(payload)
-      });
-
-      setBtnLoading(submitBtn, false);
-
-      if (res.ok && res.data && res.data.success) {
-        showToast('Task blueprint updated successfully!', 'success');
-        document.getElementById('modalEditBlueprint')?.classList.add('hidden');
-        openServiceTasksWorkspace(state.selectedServiceId);
-      } else {
-        showToast(res.data?.error || 'Failed to update blueprint.', 'error');
-      }
-    });
-
-    // Delete Task Blueprint Triggers & Confirmation
-    document.getElementById('btnDeleteFromEditBlueprintModal')?.addEventListener('click', () => {
-      const bpId = document.getElementById('editBlueprintId')?.value;
-      if (!bpId) return;
-      document.getElementById('modalEditBlueprint')?.classList.add('hidden');
-      openDeleteBlueprintModal(bpId);
-    });
-
-    document.getElementById('btnConfirmDeleteBlueprint')?.addEventListener('click', async () => {
-      const bpId = state.selectedBlueprintId;
-      if (!bpId) return;
-
-      const btn = document.getElementById('btnConfirmDeleteBlueprint');
-      if (btn.disabled) return;
-
-      setBtnLoading(btn, true, 'Permanently deleting task...');
-
-      try {
-        const res = await apiFetch(`/services/blueprints/${bpId}`, { method: 'DELETE' });
-        setBtnLoading(btn, false);
-
-        if (res.ok && res.data && res.data.success) {
-          showToast(res.data.message || 'Task blueprint permanently deleted.', 'success');
-          document.getElementById('modalDeleteBlueprint')?.classList.add('hidden');
-
-          state.currentBlueprints = state.currentBlueprints.filter(b => b.id !== bpId);
-          renderBlueprintsWorkspace();
-
-          const serviceId = state.selectedServiceId;
-          const service = state.servicesCache.find(s => s.id === serviceId);
-          if (service) {
-            service.blueprint_count = Math.max(0, (service.blueprint_count || 1) - 1);
-          }
-        } else {
-          showToast(res.data?.error || 'Unable to delete task. It may be referenced by active projects.', 'error');
-        }
-      } catch (err) {
-        setBtnLoading(btn, false);
-        showToast('Network error while deleting task blueprint.', 'error');
-      }
-    });
-
-    // Apply Template to Active Projects Modal
-    document.getElementById('btnOpenApplyTemplateModal')?.addEventListener('click', () => {
-      document.getElementById('modalApplyTemplate')?.classList.remove('hidden');
-    });
-
-    document.getElementById('btnConfirmApplyTemplate')?.addEventListener('click', async () => {
-      const serviceId = state.selectedServiceId;
-      if (!serviceId) return;
-
-      const btn = document.getElementById('btnConfirmApplyTemplate');
-      setBtnLoading(btn, true, 'Synchronizing projects...');
-
-      const res = await apiFetch(`/services/${serviceId}/apply-to-projects`, { method: 'POST' });
-      setBtnLoading(btn, false);
-
-      if (res.ok && res.data && res.data.success) {
-        showToast(res.data.message || 'Template synchronized across active client projects!', 'success');
-        document.getElementById('modalApplyTemplate')?.classList.add('hidden');
-        loadProjectsData();
-        loadTasksData();
-      } else {
-        showToast(res.data?.error || 'Failed to apply template.', 'error');
-      }
-    });
-
-    // 5. Live Task Details Form
-    document.getElementById('formLiveTaskDetail')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const f = e.target;
-      const taskId = f.taskId.value;
-      const submitBtn = f.querySelector('button[type="submit"]');
-
-      const payload = {
-        status: f.status.value,
-        priority: f.priority.value,
-        internalNotes: f.internalNotes.value
-      };
-
-      setBtnLoading(submitBtn, true, 'Updating task...');
-
-      const res = await apiFetch(`/projects/tasks/${taskId}`, {
-        method: 'PUT',
-        body: JSON.stringify(payload)
-      });
-
-      setBtnLoading(submitBtn, false);
-
-      if (res.ok && res.data && res.data.success) {
-        showToast(`Task updated! Project progress is now ${res.data.data.newProgressPercent}%.`, 'success');
-        document.getElementById('modalLiveTaskDetail')?.classList.add('hidden');
-        loadTasksData();
-        loadProjectsData();
-      } else {
-        showToast(res.data?.error || 'Failed to update task.', 'error');
-      }
-    });
-
-    // 6. Task Filter Buttons & Search Controls (WHIZ Smart Task Workspace)
-    document.querySelectorAll('.task-filter-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const filter = btn.dataset.filter;
-        state.currentTaskStatus = filter;
-        updateStatusFilterButtons(filter);
-        renderFilteredTasks();
-      });
-    });
-
-    const taskSearch = document.getElementById('taskSearchInput');
-    const taskPriority = document.getElementById('taskPriorityFilter');
-    const clearSearchBtn = document.getElementById('btnClearTaskSearch');
-
-    if (taskSearch) {
-      taskSearch.addEventListener('input', () => {
-        renderFilteredTasks();
-      });
-    }
-
-    if (clearSearchBtn) {
-      clearSearchBtn.addEventListener('click', () => {
-        if (taskSearch) {
-          taskSearch.value = '';
-          taskSearch.focus();
-        }
-        renderFilteredTasks();
-      });
-    }
-
-    if (taskPriority) {
-      taskPriority.addEventListener('change', () => {
-        renderFilteredTasks();
-      });
-    }
-
-    // 7. Open Record Payment Modal
-    const openRecordPayment = () => {
-      const modal = document.getElementById('modalRecordPayment');
-      const select = document.getElementById('paymentClientSelect');
-      const clientMenu = document.getElementById('paymentClientSelectMenu') || document.querySelector('#whizGlassSelectPortal #paymentClientSelectMenu');
-      const invSelect = document.getElementById('paymentInvoiceSelect');
-      const invMenu = document.getElementById('paymentInvoiceSelectMenu') || document.querySelector('#whizGlassSelectPortal #paymentInvoiceSelectMenu');
-      const dateInput = document.getElementById('paymentDateInput');
-      const refInput = document.getElementById('paymentReferenceInput');
-
-      if (dateInput) {
-        dateInput.value = new Date().toISOString().split('T')[0];
-        if (typeof updateDatePickerTrigger === 'function') {
-          updateDatePickerTrigger(dateInput);
-        }
-      }
-      if (refInput && !refInput.value) refInput.value = 'TXN-' + Math.floor(100000 + Math.random() * 900000);
-
-      if (modal && select) {
-        modal.classList.remove('hidden');
-
-        // Populate native select
-        select.innerHTML = '<option value="">Select client...</option>' + state.clientsCache.map(c => `
-          <option value="${c.organization_id || c.id}">${escapeHtml(c.company_name || c.full_name)} (${escapeHtml(c.email)})</option>
-        `).join('');
-
-        // Populate custom searchable glass select menu
-        if (clientMenu) {
-          clientMenu.innerHTML = `
+        `).join(""),d.querySelectorAll(".custom-assign-service-option").forEach(h=>{h.addEventListener("click",I=>{I.stopPropagation();const L=h.dataset.value,P=h.dataset.label,M=h.dataset.price,F=h.dataset.pkg;if(c&&(c.textContent=P),o&&(o.value=L,o.dispatchEvent(new Event("change",{bubbles:!0}))),M){const D=document.getElementById("assignServicePrice");D&&(D.value=M)}if(F){const D=document.querySelector('#formAssignService input[name="packageName"]');D&&(D.value=F)}closeAssignServiceMenu()})}));const m=(g.clientsCache?.find(h=>h.id===a)?.currency||"USD").toUpperCase();typeof syncAssignCurrencyDropdown=="function"&&syncAssignCurrencyDropdown(m);const b=new Date().toISOString().split("T")[0],E=document.getElementById("assignServiceStartDate");E&&(E.value=b,typeof updateDatePickerTrigger=="function"&&updateDatePickerTrigger(E));const C=document.getElementById("assignServiceDeadline");C&&(C.value="",typeof updateDatePickerTrigger=="function"&&updateDatePickerTrigger(C)),O(),document.getElementById("modalAssignService")?.classList.remove("hidden")}),document.getElementById("formAssignService")?.addEventListener("submit",async a=>{a.preventDefault();const o=a.target,d=o.clientId.value,c=o.querySelector('button[type="submit"]'),r={serviceId:o.serviceId.value,packageName:o.packageName.value,priceCents:Math.round(parseFloat(o.priceDollars.value)*100),startDate:o.startDate.value,deadline:o.deadline.value||null};A(c,!0,"Provisioning service & tasks...");const m=await B(`/clients/${d}/services`,{method:"POST",body:JSON.stringify(r)});A(c,!1),m.ok&&m.data&&m.data.success?(v(m.data.message||"Service assigned with auto-generated SOP tasks!","success"),document.getElementById("modalAssignService")?.classList.add("hidden"),fe(d),ke(),Ie()):v(m.data?.error||"Failed to assign service.","error")}),document.getElementById("btnSuspendClientAction")?.addEventListener("click",async()=>{const a=g.selectedClientId;if(!a||!confirm("Are you sure you want to suspend this client? The client will lose access to the portal until reactivated."))return;const o=document.getElementById("btnSuspendClientAction");A(o,!0,"Suspending...");const d=await B(`/clients/${a}/suspend`,{method:"POST"});A(o,!1),d.ok&&d.data&&d.data.success?(v(d.data.message||"Client account suspended.","success"),fe(a),le()):v(d.data?.error||"Failed to suspend client.","error")}),document.getElementById("btnReactivateClientAction")?.addEventListener("click",async()=>{const a=g.selectedClientId;if(!a)return;const o=document.getElementById("btnReactivateClientAction");A(o,!0,"Reactivating...");const d=await B(`/clients/${a}/reactivate`,{method:"POST"});A(o,!1),d.ok&&d.data&&d.data.success?(v(d.data.message||"Client account reactivated successfully.","success"),fe(a),le()):v(d.data?.error||"Failed to reactivate client.","error")}),document.getElementById("btnDeleteClientAction")?.addEventListener("click",()=>{if(!g.selectedClientId)return;const o=document.getElementById("clientCardFullName")||document.getElementById("clientDetailTitle"),d=document.getElementById("deleteClientTargetName");d&&o&&(d.textContent=o.textContent);const c=document.getElementById("deleteClientClerkOption");c&&(c.checked=!1);const r=document.getElementById("btnConfirmDeleteClient");r&&(r.disabled=!1,r.classList.remove("opacity-75","cursor-not-allowed"),r.innerHTML='<i class="fa-solid fa-trash-can text-xs"></i> <span>Permanently Delete Client</span>'),document.getElementById("modalDeleteClient")?.classList.remove("hidden")}),document.getElementById("btnConfirmDeleteClient")?.addEventListener("click",async()=>{const a=g.selectedClientId;if(!a)return;const o=document.getElementById("btnConfirmDeleteClient");if(o.disabled)return;A(o,!0,"Deleting client...");const d=document.getElementById("deleteClientClerkOption")?.checked===!0;try{const c=await B(`/clients/${a}?delete_clerk=${d}`,{method:"DELETE"});A(o,!1),c.ok&&c.data&&c.data.success?(v(c.data.message||"Client deleted successfully.","success"),document.getElementById("modalDeleteClient")?.classList.add("hidden"),X("clients"),le(),xe()):v(c.data?.error||"Unable to delete this client. No changes were completed. Please retry or review the account records.","error")}catch{A(o,!1),v("Network error while processing client deletion. Please retry.","error")}}),document.getElementById("btnOpenAddServiceModal")?.addEventListener("click",()=>{O(),document.getElementById("modalAddService")?.classList.remove("hidden")}),document.getElementById("formAddService")?.addEventListener("submit",async a=>{a.preventDefault();const o=a.target,d=o.querySelector('button[type="submit"]'),c={name:o.name.value,code:o.code.value,category:o.category.value,defaultPackage:o.defaultPackage.value,standardPriceCents:Math.round(parseFloat(o.standardPriceDollars.value)*100),description:o.description.value};A(d,!0,"Creating service...");const r=await B("/services",{method:"POST",body:JSON.stringify(c)});A(d,!1),r.ok&&r.data&&r.data.success?(v(r.data.message||"Service created successfully!","success"),o.reset(),document.getElementById("modalAddService")?.classList.add("hidden"),Ce()):v(r.data?.error||"Failed to create service.","error")}),document.getElementById("formEditService")?.addEventListener("submit",async a=>{a.preventDefault();const o=a.target,d=o.serviceId.value,c=o.querySelector('button[type="submit"]'),r={name:o.name.value,code:o.code.value,category:o.category.value,defaultPackage:o.defaultPackage.value,standardPriceCents:Math.round(parseFloat(o.standardPriceDollars.value)*100),description:o.description.value,isActive:o.isActive.checked};A(c,!0,"Saving changes & version snapshot...");const m=await B(`/services/${d}`,{method:"PUT",body:JSON.stringify(r)});A(c,!1),m.ok&&m.data&&m.data.success?(v(m.data.message||"Service updated successfully!","success"),document.getElementById("modalEditService")?.classList.add("hidden"),Ce()):v(m.data?.error||"Failed to update service.","error")}),document.getElementById("btnDeleteFromEditServiceModal")?.addEventListener("click",()=>{const a=document.getElementById("editServiceId")?.value;a&&(document.getElementById("modalEditService")?.classList.add("hidden"),Tt(a))}),document.getElementById("deleteServiceConfirmInput")?.addEventListener("input",a=>{const o=a.target.value.trim(),d=g.servicesCache.find(m=>m.id===g.selectedServiceId),c=document.getElementById("btnConfirmDeleteService");if(!c||!d)return;const r=o.toUpperCase()==="DELETE"||o.toLowerCase()===d.name.trim().toLowerCase();c.disabled=!r}),document.getElementById("btnConfirmDeleteService")?.addEventListener("click",async()=>{const a=g.selectedServiceId;if(!a)return;const o=document.getElementById("btnConfirmDeleteService");if(o.disabled)return;const d=g.servicesCache.find(r=>r.id===a),c=d?d.name:"Service";A(o,!0,"Permanently purging service & blueprints...");try{const r=await B(`/services/${a}`,{method:"DELETE"});A(o,!1),r.ok&&r.data&&r.data.success?(v(`Service "${c}" and all SOP blueprints permanently deleted.`,"success"),document.getElementById("modalDeleteService")?.classList.add("hidden"),g.servicesCache=g.servicesCache.filter(m=>m.id!==a),Ce(),g.activeTab==="service_tasks"&&X("services")):v(r.data?.error||"Failed to delete service. Check dependencies.","error")}catch{A(o,!1),v("Network error while deleting service.","error")}}),document.getElementById("btnBackToServices")?.addEventListener("click",()=>{X("services")}),document.getElementById("btnOpenAddBlueprintModal")?.addEventListener("click",()=>{document.getElementById("addBlueprintServiceId").value=g.selectedServiceId,O(),document.getElementById("modalAddBlueprint")?.classList.remove("hidden")}),document.getElementById("formAddBlueprint")?.addEventListener("submit",async a=>{a.preventDefault();const o=a.target,d=o.serviceId.value,c=o.querySelector('button[type="submit"]'),r={taskCode:o.taskCode.value,title:o.title.value,phase:o.phase.value,priority:o.priority.value,estimatedMinutes:parseInt(o.estimatedMinutes.value)||60,steps:o.steps.value,instructions:o.steps.value,qaCriteria:o.qaCriteria.value};A(c,!0,"Adding task blueprint...");const m=await B(`/services/${d}/blueprints`,{method:"POST",body:JSON.stringify(r)});A(c,!1),m.ok&&m.data&&m.data.success?(v(m.data.message||"Blueprint added successfully!","success"),o.reset(),document.getElementById("modalAddBlueprint")?.classList.add("hidden"),$e(d)):v(m.data?.error||"Failed to add blueprint.","error")}),document.getElementById("formEditBlueprint")?.addEventListener("submit",async a=>{a.preventDefault();const o=a.target,d=o.blueprintId.value,c=o.querySelector('button[type="submit"]'),r={taskCode:o.taskCode.value,title:o.title.value,phase:o.phase.value,priority:o.priority.value,sortOrder:parseInt(o.sortOrder.value)||1,estimatedMinutes:parseInt(o.estimatedMinutes.value)||60,why:o.why.value,whereLocation:o.whereLocation.value,steps:o.steps.value,instructions:o.steps.value,doneWhen:o.doneWhen.value,qaCriteria:o.qaCriteria.value};A(c,!0,"Saving changes...");const m=await B(`/services/blueprints/${d}`,{method:"PUT",body:JSON.stringify(r)});A(c,!1),m.ok&&m.data&&m.data.success?(v("Task blueprint updated successfully!","success"),document.getElementById("modalEditBlueprint")?.classList.add("hidden"),$e(g.selectedServiceId)):v(m.data?.error||"Failed to update blueprint.","error")}),document.getElementById("btnDeleteFromEditBlueprintModal")?.addEventListener("click",()=>{const a=document.getElementById("editBlueprintId")?.value;a&&(document.getElementById("modalEditBlueprint")?.classList.add("hidden"),$t(a))}),document.getElementById("btnConfirmDeleteBlueprint")?.addEventListener("click",async()=>{const a=g.selectedBlueprintId;if(!a)return;const o=document.getElementById("btnConfirmDeleteBlueprint");if(!o.disabled){A(o,!0,"Permanently deleting task...");try{const d=await B(`/services/blueprints/${a}`,{method:"DELETE"});if(A(o,!1),d.ok&&d.data&&d.data.success){v(d.data.message||"Task blueprint permanently deleted.","success"),document.getElementById("modalDeleteBlueprint")?.classList.add("hidden"),g.currentBlueprints=g.currentBlueprints.filter(m=>m.id!==a),Dt();const c=g.selectedServiceId,r=g.servicesCache.find(m=>m.id===c);r&&(r.blueprint_count=Math.max(0,(r.blueprint_count||1)-1))}else v(d.data?.error||"Unable to delete task. It may be referenced by active projects.","error")}catch{A(o,!1),v("Network error while deleting task blueprint.","error")}}}),document.getElementById("btnOpenApplyTemplateModal")?.addEventListener("click",()=>{document.getElementById("modalApplyTemplate")?.classList.remove("hidden")}),document.getElementById("btnConfirmApplyTemplate")?.addEventListener("click",async()=>{const a=g.selectedServiceId;if(!a)return;const o=document.getElementById("btnConfirmApplyTemplate");A(o,!0,"Synchronizing projects...");const d=await B(`/services/${a}/apply-to-projects`,{method:"POST"});A(o,!1),d.ok&&d.data&&d.data.success?(v(d.data.message||"Template synchronized across active client projects!","success"),document.getElementById("modalApplyTemplate")?.classList.add("hidden"),ke(),Ie()):v(d.data?.error||"Failed to apply template.","error")}),document.getElementById("formLiveTaskDetail")?.addEventListener("submit",async a=>{a.preventDefault();const o=a.target,d=o.taskId.value,c=o.querySelector('button[type="submit"]'),r={status:o.status.value,priority:o.priority.value,internalNotes:o.internalNotes.value};A(c,!0,"Updating task...");const m=await B(`/projects/tasks/${d}`,{method:"PUT",body:JSON.stringify(r)});A(c,!1),m.ok&&m.data&&m.data.success?(v(`Task updated! Project progress is now ${m.data.data.newProgressPercent}%.`,"success"),document.getElementById("modalLiveTaskDetail")?.classList.add("hidden"),Ie(),ke()):v(m.data?.error||"Failed to update task.","error")}),document.querySelectorAll(".task-filter-btn").forEach(a=>{a.addEventListener("click",()=>{const o=a.dataset.filter;g.currentTaskStatus=o,Qe(o),Ae()})});const e=document.getElementById("taskSearchInput"),l=document.getElementById("taskPriorityFilter"),i=document.getElementById("btnClearTaskSearch");e&&e.addEventListener("input",()=>{Ae()}),i&&i.addEventListener("click",()=>{e&&(e.value="",e.focus()),Ae()}),l&&l.addEventListener("change",()=>{Ae()});const p=()=>{const a=document.getElementById("modalRecordPayment"),o=document.getElementById("paymentClientSelect"),d=document.getElementById("paymentClientSelectMenu")||document.querySelector("#whizGlassSelectPortal #paymentClientSelectMenu"),c=document.getElementById("paymentInvoiceSelect"),r=document.getElementById("paymentInvoiceSelectMenu")||document.querySelector("#whizGlassSelectPortal #paymentInvoiceSelectMenu"),m=document.getElementById("paymentDateInput"),b=document.getElementById("paymentReferenceInput");if(m&&(m.value=new Date().toISOString().split("T")[0],typeof updateDatePickerTrigger=="function"&&updateDatePickerTrigger(m)),b&&!b.value&&(b.value="TXN-"+Math.floor(1e5+Math.random()*9e5)),a&&o){if(a.classList.remove("hidden"),o.innerHTML='<option value="">Select client...</option>'+g.clientsCache.map(E=>`
+          <option value="${E.organization_id||E.id}">${f(E.company_name||E.full_name)} (${f(E.email)})</option>
+        `).join(""),d){d.innerHTML=`
             <div class="p-2 border-b border-[#E3E9EF] sticky top-0 bg-white z-10" onclick="event.stopPropagation()">
               <div class="relative">
                 <i class="fa-solid fa-magnifying-glass text-slate-400 text-xs absolute left-2.5 top-1/2 -translate-y-1/2"></i>
@@ -5419,588 +1091,47 @@
                 <span class="select-opt-text truncate font-sans font-medium text-slate-500">Select client...</span>
                 <i class="fa-solid fa-check check-icon"></i>
               </button>
-              ${state.clientsCache.map(c => `
-                <button type="button" class="glass-select-option" data-value="${escapeHtml(c.organization_id || c.id)}" role="option" aria-selected="false">
+              ${g.clientsCache.map(C=>`
+                <button type="button" class="glass-select-option" data-value="${f(C.organization_id||C.id)}" role="option" aria-selected="false">
                   <i class="fa-solid fa-building text-[#087F70] text-xs shrink-0 option-icon"></i>
                   <div class="flex-1 min-w-0 text-left">
-                    <span class="select-opt-text truncate block font-sans font-medium text-[#172B36]">${escapeHtml(c.company_name || c.full_name)}</span>
-                    <span class="text-[11px] text-slate-400 truncate block">${escapeHtml(c.email)}</span>
+                    <span class="select-opt-text truncate block font-sans font-medium text-[#172B36]">${f(C.company_name||C.full_name)}</span>
+                    <span class="text-[11px] text-slate-400 truncate block">${f(C.email)}</span>
                   </div>
                   <i class="fa-solid fa-check check-icon"></i>
                 </button>
-              `).join('')}
+              `).join("")}
             </div>
-          `;
-
-          const searchInput = clientMenu.querySelector('#paymentClientSearchInput');
-          searchInput?.addEventListener('input', (e) => {
-            const q = e.target.value.toLowerCase().trim();
-            clientMenu.querySelectorAll('#paymentClientOptionsList .glass-select-option').forEach(opt => {
-              if (!opt.dataset.value) return; // Keep "Select client..."
-              const text = opt.textContent.toLowerCase();
-              opt.style.display = text.includes(q) ? '' : 'none';
-            });
-          });
-          searchInput?.addEventListener('keydown', (e) => e.stopPropagation());
-        }
-
-        if (invSelect) {
-          invSelect.innerHTML = '<option value="">Auto-create or match client contract...</option>';
-        }
-        if (invMenu) {
-          invMenu.innerHTML = `
+          `;const E=d.querySelector("#paymentClientSearchInput");E?.addEventListener("input",C=>{const h=C.target.value.toLowerCase().trim();d.querySelectorAll("#paymentClientOptionsList .glass-select-option").forEach(I=>{if(!I.dataset.value)return;const L=I.textContent.toLowerCase();I.style.display=L.includes(h)?"":"none"})}),E?.addEventListener("keydown",C=>C.stopPropagation())}c&&(c.innerHTML='<option value="">Auto-create or match client contract...</option>'),r&&(r.innerHTML=`
             <button type="button" class="glass-select-option selected" data-value="" role="option" aria-selected="true">
               <i class="fa-solid fa-file-invoice-dollar text-[#087F70] text-xs shrink-0 option-icon"></i>
               <span class="select-opt-text truncate font-sans font-medium text-slate-500">Auto-create or match client contract...</span>
               <i class="fa-solid fa-check check-icon"></i>
             </button>
-          `;
-        }
-
-        initGlassSelects();
-
-        if (!select.dataset.bound) {
-          select.dataset.bound = 'true';
-          select.addEventListener('change', async () => {
-            const orgId = select.value;
-            const targetInvMenu = document.getElementById('paymentInvoiceSelectMenu') || document.querySelector('#whizGlassSelectPortal #paymentInvoiceSelectMenu');
-            if (!orgId || !invSelect) return;
-            invSelect.innerHTML = '<option value="">Loading client invoices...</option>';
-            if (targetInvMenu) {
-              targetInvMenu.innerHTML = '<div class="p-2.5 text-xs text-slate-400 italic">Loading client invoices...</div>';
-            }
-            try {
-              const res = await apiFetch(`/finance/invoices?organizationId=${orgId}`);
-              if (res.ok && res.data && res.data.data) {
-                const invs = res.data.data;
-                if (invs.length === 0) {
-                  invSelect.innerHTML = '<option value="">Auto-create new invoice on commitment</option>';
-                  if (targetInvMenu) {
-                    targetInvMenu.innerHTML = `
+          `),O(),o.dataset.bound||(o.dataset.bound="true",o.addEventListener("change",async()=>{const E=o.value,C=document.getElementById("paymentInvoiceSelectMenu")||document.querySelector("#whizGlassSelectPortal #paymentInvoiceSelectMenu");if(!(!E||!c)){c.innerHTML='<option value="">Loading client invoices...</option>',C&&(C.innerHTML='<div class="p-2.5 text-xs text-slate-400 italic">Loading client invoices...</div>');try{const h=await B(`/finance/invoices?organizationId=${E}`);if(h.ok&&h.data&&h.data.data){const I=h.data.data;I.length===0?(c.innerHTML='<option value="">Auto-create new invoice on commitment</option>',C&&(C.innerHTML=`
                       <button type="button" class="glass-select-option selected" data-value="" role="option" aria-selected="true">
                         <i class="fa-solid fa-file-invoice text-slate-400 text-xs shrink-0 option-icon"></i>
                         <span class="select-opt-text truncate font-sans font-medium">Auto-create new invoice on commitment</span>
                         <i class="fa-solid fa-check check-icon"></i>
                       </button>
-                    `;
-                  }
-                } else {
-                  invSelect.innerHTML = '<option value="">Auto-create new invoice on commitment</option>' + invs.map(i => `
-                    <option value="${i.id}">${i.invoice_number}  -  Due: ${formatCurrency(i.outstanding_balance_cents || 0, i.currency || 'USD')}</option>
-                  `).join('');
-                  if (targetInvMenu) {
-                    targetInvMenu.innerHTML = `
+                    `)):(c.innerHTML='<option value="">Auto-create new invoice on commitment</option>'+I.map(L=>`
+                    <option value="${L.id}">${L.invoice_number}  -  Due: ${Y(L.outstanding_balance_cents||0,L.currency||"USD")}</option>
+                  `).join(""),C&&(C.innerHTML=`
                       <button type="button" class="glass-select-option selected" data-value="" role="option" aria-selected="true">
                         <i class="fa-solid fa-file-invoice text-slate-400 text-xs shrink-0 option-icon"></i>
                         <span class="select-opt-text truncate font-sans font-medium">Auto-create new invoice on commitment</span>
                         <i class="fa-solid fa-check check-icon"></i>
                       </button>
-                    ` + invs.map(i => `
-                      <button type="button" class="glass-select-option" data-value="${escapeHtml(i.id)}" role="option" aria-selected="false">
+                    `+I.map(L=>`
+                      <button type="button" class="glass-select-option" data-value="${f(L.id)}" role="option" aria-selected="false">
                         <i class="fa-solid fa-file-invoice-dollar text-[#087F70] text-xs shrink-0 option-icon"></i>
                         <div class="flex-1 min-w-0 text-left">
-                          <span class="select-opt-text truncate block font-sans font-medium text-[#172B36]">${escapeHtml(i.invoice_number)}</span>
-                          <span class="text-[11px] text-[#087F70] font-mono block">Due: ${formatCurrency(i.outstanding_balance_cents || 0, i.currency || 'USD')}</span>
+                          <span class="select-opt-text truncate block font-sans font-medium text-[#172B36]">${f(L.invoice_number)}</span>
+                          <span class="text-[11px] text-[#087F70] font-mono block">Due: ${Y(L.outstanding_balance_cents||0,L.currency||"USD")}</span>
                         </div>
                         <i class="fa-solid fa-check check-icon"></i>
                       </button>
-                    `).join('');
-                  }
-                }
-              } else {
-                invSelect.innerHTML = '<option value="">Auto-create new invoice on commitment</option>';
-              }
-            } catch (e) {
-              invSelect.innerHTML = '<option value="">Auto-create new invoice on commitment</option>';
-            }
-            initGlassSelects();
-          });
-        }
-      }
-    };
-
-    document.getElementById('btnOpenRecordPaymentModal')?.addEventListener('click', openRecordPayment);
-    document.getElementById('btnQuickRecordPayment')?.addEventListener('click', openRecordPayment);
-
-    // Form Record Payment Submit (Financial & Receipt Ledger Architecture)
-    document.getElementById('formRecordPayment')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const f = e.target;
-      const submitBtn = f.querySelector('button[type="submit"]');
-      const orgId = f.organizationId ? f.organizationId.value : '';
-      const serviceProvided = (f.serviceProvided ? f.serviceProvided.value.trim() : '') || 'Whiz Studio Retainer Service';
-      const amountDollars = parseFloat(f.amount.value) || 0;
-      const currency = f.currency ? f.currency.value : 'USD';
-      const rawPaymentDate = f.paymentDate ? f.paymentDate.value.trim() : '';
-      const paymentMethod = f.paymentMethod ? f.paymentMethod.value : 'bank_transfer';
-      const paymentReference = f.paymentReference ? f.paymentReference.value : ('TXN-' + Math.floor(100000 + Math.random() * 900000));
-      const financialNotes = f.financialNotes ? f.financialNotes.value.trim() : null;
-      let selectedInvoiceId = f.invoiceId ? f.invoiceId.value.trim() : '';
-
-      // Strict Frontend Validations
-      if (!orgId) {
-        showToast('Please select a client organization.', 'error');
-        return;
-      }
-
-      if (!rawPaymentDate || !/^\d{4}-\d{2}-\d{2}$/.test(rawPaymentDate) || isNaN(Date.parse(rawPaymentDate))) {
-        showToast('Please select a valid payment date.', 'error');
-        const dateTrigger = document.querySelector('[data-datepicker-target="paymentDateInput"] .custom-datepicker-trigger');
-        if (dateTrigger) {
-          dateTrigger.classList.add('ring-2', 'ring-rose-500', 'border-rose-400');
-          dateTrigger.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-          setTimeout(() => dateTrigger.classList.remove('ring-2', 'ring-rose-500', 'border-rose-400'), 3000);
-        }
-        return;
-      }
-      const paymentDate = rawPaymentDate;
-
-      if (amountDollars <= 0) {
-        showToast('Please enter a valid payment amount greater than zero.', 'error');
-        f.amount?.focus();
-        return;
-      }
-
-      if (!f.serviceProvided || !f.serviceProvided.value.trim()) {
-        showToast('Please specify the service provided for this ledger entry.', 'error');
-        f.serviceProvided?.focus();
-        return;
-      }
-
-      setBtnLoading(submitBtn, true, 'Recording payment to ledger...');
-
-      // Determine if Auto-Create is selected or needed
-      const isAutoCreate = !selectedInvoiceId || selectedInvoiceId === 'auto' || selectedInvoiceId.toLowerCase().includes('auto');
-
-      const payRes = await apiFetch('/finance/payments', {
-        method: 'POST',
-        body: JSON.stringify({
-          invoiceId: isAutoCreate ? null : selectedInvoiceId,
-          autoCreate: isAutoCreate,
-          organizationId: orgId,
-          serviceProvided,
-          amountCents: Math.round(amountDollars * 100),
-          currency,
-          paymentDate,
-          paymentMethod,
-          paymentReference,
-          financialNotes,
-          idempotencyKey: `adm_pay_${paymentReference}_${Date.now()}`
-        })
-      });
-
-      setBtnLoading(submitBtn, false);
-
-      if (payRes.ok && payRes.data && payRes.data.success) {
-        // Instant Client Ledger Synchronization
-        try {
-          const clientOption = document.querySelector(`#paymentClientSelect option[value="${orgId}"]`);
-          const clientName = clientOption ? clientOption.textContent.split('(')[0].trim() : (state.clients.find(c => c.id === orgId)?.name || 'Valued Client');
-          const receiptNumber = payRes.data.data?.receiptNumber || payRes.data.data?.receipt_no || `RCPT-2026-${Math.floor(100 + Math.random() * 900)}`;
-          const invoiceNumber = payRes.data.data?.invoiceNumber || payRes.data.data?.invoice_no || `INV-2026-${Math.floor(100 + Math.random() * 900)}`;
-          const realInvoiceId = payRes.data.data?.invoiceId || selectedInvoiceId || ('inv_' + Date.now());
-
-          const newLedgerItem = {
-            id: payRes.data.data?.id || `pay_${Date.now()}`,
-            invoice_id: realInvoiceId,
-            invoice_no: invoiceNumber,
-            invoice_number: invoiceNumber,
-            receipt_number: receiptNumber,
-            receipt_no: receiptNumber,
-            organization_id: orgId,
-            client_name: clientName,
-            service_name: serviceProvided,
-            title: serviceProvided,
-            description: serviceProvided,
-            amount_cents: Math.round(amountDollars * 100),
-            total_cents: Math.round(amountDollars * 100),
-            amount_paid_cents: Math.round(amountDollars * 100),
-            outstanding_balance_cents: 0,
-            currency: currency,
-            payment_date: paymentDate,
-            issue_date: paymentDate,
-            due_date: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
-            payment_method: paymentMethod,
-            payment_reference: paymentReference,
-            status: 'paid',
-            created_at: new Date().toISOString()
-          };
-
-          const synced = JSON.parse(localStorage.getItem('whiz_synced_ledger_records') || '[]');
-          synced.unshift(newLedgerItem);
-          localStorage.setItem('whiz_synced_ledger_records', JSON.stringify(synced));
-        } catch (syncErr) {
-          console.warn('[Ledger Sync] Failed to cache synced ledger record:', syncErr);
-        }
-
-        showToast(`Payment of ${formatCurrency(amountDollars * 100, currency)} committed! Client ledger updated instantly.`, 'success');
-        f.reset();
-        initGlassSelects();
-        document.getElementById('modalRecordPayment')?.classList.add('hidden');
-        loadFinanceData();
-        loadInvoicesData();
-      } else {
-        showToast(payRes.data?.error || 'Failed to record payment.', 'error');
-      }
-    });
-
-
-    // Form Edit Payment Submit
-    document.getElementById('formEditPayment')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const f = e.target;
-      const submitBtn = f.querySelector('button[type="submit"]');
-      const pid = f.paymentId.value;
-      const paymentDate = f.paymentDate.value;
-      const paymentMethod = f.paymentMethod.value;
-      const paymentReference = f.paymentReference.value;
-      const financialNotes = f.financialNotes.value;
-
-      setBtnLoading(submitBtn, true, 'Updating payment...');
-      const res = await apiFetch(`/finance/payments/${pid}`, {
-        method: 'PUT',
-        body: JSON.stringify({ paymentDate, paymentMethod, paymentReference, financialNotes })
-      });
-      setBtnLoading(submitBtn, false);
-
-      if (res.ok && res.data && res.data.success) {
-        showToast('Payment details updated successfully.', 'success');
-        document.getElementById('modalEditPayment')?.classList.add('hidden');
-        loadFinanceData();
-      } else {
-        showToast(res.data?.error || 'Failed to update payment details.', 'error');
-      }
-    });
-
-    // Form Correct Payment Submit
-    document.getElementById('formCorrectPayment')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const f = e.target;
-      const submitBtn = f.querySelector('button[type="submit"]');
-      const pid = f.paymentId.value;
-      const amountDollars = parseFloat(f.amount.value) || 0;
-      const currency = f.currency.value;
-      const reason = f.reason.value;
-
-      if (amountDollars <= 0) {
-        showToast('Please enter a valid positive corrected amount.', 'error');
-        return;
-      }
-      if (!reason || reason.trim().length < 3) {
-        showToast('A reason for the financial correction is required.', 'error');
-        return;
-      }
-
-      const p = paymentsCache.find(x => x.id === pid);
-      const newAmountCents = Math.round(amountDollars * 100);
-      if (state.adminProfile?.role === 'accounts' && p && newAmountCents < (p.amount_cents || 0)) {
-        showToast('Accounts Restriction: You cannot reduce a previously recorded payment amount. Reductions require Admin or Super Admin authorization.', 'error');
-        return;
-      }
-
-      setBtnLoading(submitBtn, true, 'Committing correction...');
-      const res = await apiFetch(`/finance/payments/${pid}/correct`, {
-        method: 'POST',
-        body: JSON.stringify({
-          amountCents: Math.round(amountDollars * 100),
-          currency,
-          reason
-        })
-      });
-      setBtnLoading(submitBtn, false);
-
-      if (res.ok && res.data && res.data.success) {
-        showToast('Financial correction committed! Invoice balance recalculated.', 'success');
-        document.getElementById('modalCorrectPayment')?.classList.add('hidden');
-        loadFinanceData();
-      } else {
-        showToast(res.data?.error || 'Failed to commit financial correction.', 'error');
-      }
-    });
-
-    // 8. Authorize Staff Pre-Approval Form (Phase 12)
-    document.getElementById('adminInviteForm')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const isOwner = isCurrentUserOwner();
-      const isAdmin = state.adminProfile?.role === 'admin';
-      if (!isOwner && !isAdmin) {
-        showToast('Action denied: Only Super Admin and Admin may authorize staff pre-approvals.', 'error');
-        return;
-      }
-      const f = e.target;
-      const submitBtn = f.querySelector('button[type="submit"]');
-      const fullName = (f.fullName?.value || '').trim();
-      const email = (f.email?.value || '').trim();
-      const selectedRole = (document.getElementById('inviteRole')?.value || 'employee').toLowerCase();
-
-      if (!fullName || !email) {
-        showToast('Please provide both staff member full name and email.', 'warning');
-        return;
-      }
-
-      if (isAdmin && !isOwner && (selectedRole === 'admin' || selectedRole === 'super_admin' || selectedRole === 'owner')) {
-        showToast('Hierarchy Restriction: Admins may only invite Accounts or Employee team members.', 'error');
-        return;
-      }
-
-      setBtnLoading(submitBtn, true, 'Authorizing staff member...');
-
-      const res = await apiFetch('/portal/admin/team/invite', {
-        method: 'POST',
-        body: JSON.stringify({ fullName, email, role: selectedRole })
-      });
-
-      setBtnLoading(submitBtn, false);
-
-      if (res.ok && res.data && res.data.success) {
-        showToast(res.data.message || `Administrator pre-approval granted for ${email}!`, 'success');
-        f.reset();
-        loadTeamData();
-      } else {
-        showToast(res.data?.error || 'Failed to authorize administrator.', 'error');
-      }
-    });
-
-    // 9. Role Change Form Submit
-    document.getElementById('formRoleChange')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const submitBtn = document.getElementById('btnSubmitRoleChange');
-      const userId = document.getElementById('roleChangeUserId')?.value;
-      const targetRole = document.getElementById('roleChangeNewRole')?.value || document.getElementById('roleChangeTargetRole')?.value;
-      const reason = document.getElementById('roleChangeReason')?.value || 'Role updated by Super Admin';
-
-      if (!userId || !targetRole) return;
-
-      setBtnLoading(submitBtn, true, 'Updating role...');
-
-      const res = await apiFetch(`/portal/admin/users/${userId}/role`, {
-        method: 'PUT',
-        body: JSON.stringify({ role: targetRole, reason })
-      });
-
-      setBtnLoading(submitBtn, false);
-
-      if (res.ok && res.data && res.data.success) {
-        showToast(res.data.message || 'User role successfully updated.', 'success');
-        document.getElementById('modalRoleChange')?.classList.add('hidden');
-        loadTeamData();
-      } else {
-        showToast(res.data?.error || 'Failed to update user role.', 'error');
-      }
-    });
-
-    // Refresh User Directory Button
-    document.getElementById('btnRefreshUserDir')?.addEventListener('click', async () => {
-      const icon = document.getElementById('btnRefreshUserDirIcon');
-      if (icon) icon.classList.add('fa-spin');
-      try {
-        await loadTeamData();
-        showToast('User directory refreshed.', 'success');
-      } catch (e) {
-        showToast('Failed to refresh user directory.', 'error');
-      } finally {
-        if (icon) icon.classList.remove('fa-spin');
-      }
-    });
-
-    // Search and Filter Listeners
-    document.getElementById('userDirectorySearch')?.addEventListener('input', () => renderUserDirectory());
-    document.getElementById('userDirectoryRoleFilter')?.addEventListener('change', () => renderUserDirectory());
-    document.getElementById('userDirectoryStatusFilter')?.addEventListener('change', () => renderUserDirectory());
-
-    // User Directory Search Clear Button
-    document.getElementById('userDirectorySearchClear')?.addEventListener('click', () => {
-      const searchInput = document.getElementById('userDirectorySearch');
-      if (searchInput) {
-        searchInput.value = '';
-        renderUserDirectory();
-        searchInput.focus();
-      }
-    });
-
-    // Delegated Reset Filters Button
-    document.addEventListener('click', (e) => {
-      if (e.target.closest('#btnClearUserFilters')) {
-        const searchInput = document.getElementById('userDirectorySearch');
-        if (searchInput) searchInput.value = '';
-        const roleFilter = document.getElementById('userDirectoryRoleFilter');
-        if (roleFilter) {
-          roleFilter.value = 'all';
-          roleFilter.dispatchEvent(new Event('change'));
-        }
-        const statusFilter = document.getElementById('userDirectoryStatusFilter');
-        if (statusFilter) {
-          statusFilter.value = 'all';
-          statusFilter.dispatchEvent(new Event('change'));
-        }
-        renderUserDirectory();
-      }
-    });
-
-    // =========================================================================
-    // STANDARDIZED MODAL DISMISSAL & CLOSE EVENT HANDLERS
-    // =========================================================================
-    // 1. Direct Binding for Record Payment Modal 'X' Close Button
-    const btnCloseRecordPayment = document.getElementById('btnCloseRecordPaymentModal');
-    if (btnCloseRecordPayment) {
-      btnCloseRecordPayment.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const m = document.getElementById('modalRecordPayment');
-        if (m) m.classList.add('hidden');
-        document.body.classList.remove('overflow-hidden');
-      });
-    }
-
-    // 2. Direct Binding for Record Payment Modal 'Cancel' Button
-    const btnCancelRecordPayment = document.getElementById('btnCancelRecordPaymentModal');
-    if (btnCancelRecordPayment) {
-      btnCancelRecordPayment.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const m = document.getElementById('modalRecordPayment');
-        if (m) m.classList.add('hidden');
-        document.body.classList.remove('overflow-hidden');
-      });
-    }
-
-    // 3. Global Event Delegation for ALL .btn-close-modal & [data-modal] buttons
-    document.addEventListener('click', (e) => {
-      const closeBtn = e.target.closest('.btn-close-modal, .whiz-modal-close-btn, [data-modal]');
-      if (!closeBtn) return;
-      
-      const modalId = closeBtn.dataset.modal || closeBtn.getAttribute('data-modal');
-      const isCloseAction = closeBtn.classList.contains('btn-close-modal') ||
-                            closeBtn.classList.contains('whiz-modal-close-btn') ||
-                            closeBtn.textContent.trim().toLowerCase() === 'cancel' ||
-                            closeBtn.textContent.trim().toLowerCase() === 'close';
-      
-      if (isCloseAction) {
-        e.preventDefault();
-        e.stopPropagation();
-        if (modalId) {
-          const m = document.getElementById(modalId);
-          if (m) {
-            m.classList.add('hidden');
-            document.body.classList.remove('overflow-hidden');
-          }
-        } else {
-          const parentModal = closeBtn.closest('.fixed[id^="modal"], [id^="modal"]');
-          if (parentModal) {
-            parentModal.classList.add('hidden');
-            document.body.classList.remove('overflow-hidden');
-          }
-        }
-      }
-    });
-
-    // 4. Backdrop Click Dismissal on all Modal Overlays
-    document.querySelectorAll('.fixed[id^="modal"], [id^="modal"]').forEach(modalEl => {
-      modalEl.addEventListener('click', (e) => {
-        if (e.target === modalEl) {
-          modalEl.classList.add('hidden');
-          document.body.classList.remove('overflow-hidden');
-        }
-      });
-    });
-
-    // 5. Global Keyboard ESC Dismissal
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        document.querySelectorAll('.fixed[id^="modal"]:not(.hidden), [id^="modal"]:not(.hidden)').forEach(modalEl => {
-          modalEl.classList.add('hidden');
-        });
-        document.body.classList.remove('overflow-hidden');
-      }
-    });
-
-    
-  }
-
-  function initPasswordToggles() {
-    document.querySelectorAll('.password-toggle-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const targetId = btn.dataset.target;
-        const input = document.getElementById(targetId);
-        if (input) {
-          const isPass = input.type === 'password';
-          input.type = isPass ? 'text' : 'password';
-          btn.innerHTML = `<i class="fa-solid ${isPass ? 'fa-eye-slash' : 'fa-eye'} text-xs"></i>`;
-        }
-      });
-    });
-  }
-
-  // =========================================================================
-  // CLERK AUTHENTICATION & INITIALIZATION
-  // =========================================================================
-  let clerkCheckAttempts = 0;
-  async function checkAuthAndInit() {
-    // PREVIEW & DEMO BYPASS GUARD (For isolated testing & simulator)
-    const urlParams = new URLSearchParams(window.location.search);
-    const isPreview = urlParams.get('preview') === '1' || urlParams.get('demo') === '1' || (window.self !== window.top && urlParams.get('preview') !== '0');
-
-    if (isPreview) {
-      state.isPreview = true;
-      const roleName = urlParams.get('role') || 'super_admin';
-      const profile = {
-        id: 'usr_super_admin_01',
-        fullName: 'Kazi Emon',
-        full_name: 'Kazi Emon',
-        email: (roleName === 'super_admin' || roleName === 'owner') ? 'kaziaremon@gmail.com' : `${roleName}@whizstudio.io`,
-        username: 'kaziaremon',
-        role: roleName === 'super_admin' ? 'owner' : roleName,
-        isSuperAdmin: roleName === 'super_admin' || roleName === 'owner'
-      };
-
-      state.currentUser = profile;
-      state.adminProfile = profile;
-
-      applyRoleAdaptiveUI(profile);
-      updateOverviewGreeting();
-      initGlassSelects(); // Initial setup on load
-
-      const name = profile.fullName;
-      const username = '@' + profile.username;
-      const initials = 'KE';
-
-      document.querySelectorAll('.admin-display-name').forEach(el => el.textContent = name);
-      document.querySelectorAll('.admin-display-username').forEach(el => el.textContent = username);
-      document.querySelectorAll('.admin-display-initials').forEach(el => el.textContent = initials);
-
-      const emailEl = document.getElementById('secUserEmail');
-      if (emailEl) emailEl.textContent = profile.email;
-      const emailHeaderEl = document.getElementById('secUserEmailHeader');
-      if (emailHeaderEl) emailHeaderEl.textContent = profile.email;
-      const userEl = document.getElementById('secClerkUserId');
-      if (userEl) userEl.innerHTML = '<span class="inline-flex items-center gap-1.5 text-xs text-emerald-700 font-semibold"><i class="fa-solid fa-shield-check text-[#147D64]"></i> Preview Session Active</span>';
-
-      const authGuard = document.getElementById('dashboardAuthGuard');
-      const accessDenied = document.getElementById('dashboardAccessDenied');
-      const mainLayout = document.getElementById('dashboardMainLayout');
-
-      if (authGuard) authGuard.classList.add('hidden');
-      if (accessDenied) accessDenied.classList.add('hidden');
-      if (mainLayout) mainLayout.classList.remove('hidden');
-
-      const hash = (window.location.hash || '').replace('#', '');
-      const validTabs = ['overview', 'clients', 'services', 'projects', 'tasks', 'finance', 'team', 'support', 'history', 'security'];
-      const initialTab = validTabs.includes(hash) ? hash : 'overview';
-      switchTab(initialTab, false);
-
-      loadServicesData();
-      return;
-    }
-    const authGuard = document.getElementById('dashboardAuthGuard');
-    const accessDenied = document.getElementById('dashboardAccessDenied');
-    const mainLayout = document.getElementById('dashboardMainLayout');
-
-    if (!window.Clerk) {
-      clerkCheckAttempts++;
-      if (clerkCheckAttempts > 50) {
-        console.error('Clerk SDK load timeout in admin dashboard');
-        if (authGuard) {
-          authGuard.innerHTML = `
+                    `).join("")))}else c.innerHTML='<option value="">Auto-create new invoice on commitment</option>'}catch{c.innerHTML='<option value="">Auto-create new invoice on commitment</option>'}O()}}))}};document.getElementById("btnOpenRecordPaymentModal")?.addEventListener("click",p),document.getElementById("btnQuickRecordPayment")?.addEventListener("click",p),document.getElementById("formRecordPayment")?.addEventListener("submit",async a=>{a.preventDefault();const o=a.target,d=o.querySelector('button[type="submit"]'),c=o.organizationId?o.organizationId.value:"",r=(o.serviceProvided?o.serviceProvided.value.trim():"")||"Whiz Studio Retainer Service",m=parseFloat(o.amount.value)||0,b=o.currency?o.currency.value:"USD",E=o.paymentDate?o.paymentDate.value.trim():"",C=o.paymentMethod?o.paymentMethod.value:"bank_transfer",h=o.paymentReference?o.paymentReference.value:"TXN-"+Math.floor(1e5+Math.random()*9e5),I=o.financialNotes?o.financialNotes.value.trim():null;let L=o.invoiceId?o.invoiceId.value.trim():"";if(!c){v("Please select a client organization.","error");return}if(!E||!/^\d{4}-\d{2}-\d{2}$/.test(E)||isNaN(Date.parse(E))){v("Please select a valid payment date.","error");const D=document.querySelector('[data-datepicker-target="paymentDateInput"] .custom-datepicker-trigger');D&&(D.classList.add("ring-2","ring-rose-500","border-rose-400"),D.scrollIntoView({behavior:"smooth",block:"nearest"}),setTimeout(()=>D.classList.remove("ring-2","ring-rose-500","border-rose-400"),3e3));return}const P=E;if(m<=0){v("Please enter a valid payment amount greater than zero.","error"),o.amount?.focus();return}if(!o.serviceProvided||!o.serviceProvided.value.trim()){v("Please specify the service provided for this ledger entry.","error"),o.serviceProvided?.focus();return}A(d,!0,"Recording payment to ledger...");const M=!L||L==="auto"||L.toLowerCase().includes("auto"),F=await B("/finance/payments",{method:"POST",body:JSON.stringify({invoiceId:M?null:L,autoCreate:M,organizationId:c,serviceProvided:r,amountCents:Math.round(m*100),currency:b,paymentDate:P,paymentMethod:C,paymentReference:h,financialNotes:I,idempotencyKey:`adm_pay_${h}_${Date.now()}`})});if(A(d,!1),F.ok&&F.data&&F.data.success){try{const D=document.querySelector(`#paymentClientSelect option[value="${c}"]`),N=D?D.textContent.split("(")[0].trim():g.clients.find(z=>z.id===c)?.name||"Valued Client",H=F.data.data?.receiptNumber||F.data.data?.receipt_no||`RCPT-2026-${Math.floor(100+Math.random()*900)}`,W=F.data.data?.invoiceNumber||F.data.data?.invoice_no||`INV-2026-${Math.floor(100+Math.random()*900)}`,ee=F.data.data?.invoiceId||L||"inv_"+Date.now(),J={id:F.data.data?.id||`pay_${Date.now()}`,invoice_id:ee,invoice_no:W,invoice_number:W,receipt_number:H,receipt_no:H,organization_id:c,client_name:N,service_name:r,title:r,description:r,amount_cents:Math.round(m*100),total_cents:Math.round(m*100),amount_paid_cents:Math.round(m*100),outstanding_balance_cents:0,currency:b,payment_date:P,issue_date:P,due_date:new Date(Date.now()+30*864e5).toISOString().split("T")[0],payment_method:C,payment_reference:h,status:"paid",created_at:new Date().toISOString()},V=JSON.parse(localStorage.getItem("whiz_synced_ledger_records")||"[]");V.unshift(J),localStorage.setItem("whiz_synced_ledger_records",JSON.stringify(V))}catch(D){console.warn("[Ledger Sync] Failed to cache synced ledger record:",D)}v(`Payment of ${Y(m*100,b)} committed! Client ledger updated instantly.`,"success"),o.reset(),O(),document.getElementById("modalRecordPayment")?.classList.add("hidden"),ve(),qt()}else v(F.data?.error||"Failed to record payment.","error")}),document.getElementById("formEditPayment")?.addEventListener("submit",async a=>{a.preventDefault();const o=a.target,d=o.querySelector('button[type="submit"]'),c=o.paymentId.value,r=o.paymentDate.value,m=o.paymentMethod.value,b=o.paymentReference.value,E=o.financialNotes.value;A(d,!0,"Updating payment...");const C=await B(`/finance/payments/${c}`,{method:"PUT",body:JSON.stringify({paymentDate:r,paymentMethod:m,paymentReference:b,financialNotes:E})});A(d,!1),C.ok&&C.data&&C.data.success?(v("Payment details updated successfully.","success"),document.getElementById("modalEditPayment")?.classList.add("hidden"),ve()):v(C.data?.error||"Failed to update payment details.","error")}),document.getElementById("formCorrectPayment")?.addEventListener("submit",async a=>{a.preventDefault();const o=a.target,d=o.querySelector('button[type="submit"]'),c=o.paymentId.value,r=parseFloat(o.amount.value)||0,m=o.currency.value,b=o.reason.value;if(r<=0){v("Please enter a valid positive corrected amount.","error");return}if(!b||b.trim().length<3){v("A reason for the financial correction is required.","error");return}const E=Te.find(I=>I.id===c),C=Math.round(r*100);if(g.adminProfile?.role==="accounts"&&E&&C<(E.amount_cents||0)){v("Accounts Restriction: You cannot reduce a previously recorded payment amount. Reductions require Admin or Super Admin authorization.","error");return}A(d,!0,"Committing correction...");const h=await B(`/finance/payments/${c}/correct`,{method:"POST",body:JSON.stringify({amountCents:Math.round(r*100),currency:m,reason:b})});A(d,!1),h.ok&&h.data&&h.data.success?(v("Financial correction committed! Invoice balance recalculated.","success"),document.getElementById("modalCorrectPayment")?.classList.add("hidden"),ve()):v(h.data?.error||"Failed to commit financial correction.","error")}),document.getElementById("adminInviteForm")?.addEventListener("submit",async a=>{a.preventDefault();const o=Z(),d=g.adminProfile?.role==="admin";if(!o&&!d){v("Action denied: Only Super Admin and Admin may authorize staff pre-approvals.","error");return}const c=a.target,r=c.querySelector('button[type="submit"]'),m=(c.fullName?.value||"").trim(),b=(c.email?.value||"").trim(),E=(document.getElementById("inviteRole")?.value||"employee").toLowerCase();if(!m||!b){v("Please provide both staff member full name and email.","warning");return}if(d&&!o&&(E==="admin"||E==="super_admin"||E==="owner")){v("Hierarchy Restriction: Admins may only invite Accounts or Employee team members.","error");return}A(r,!0,"Authorizing staff member...");const C=await B("/portal/admin/team/invite",{method:"POST",body:JSON.stringify({fullName:m,email:b,role:E})});A(r,!1),C.ok&&C.data&&C.data.success?(v(C.data.message||`Administrator pre-approval granted for ${b}!`,"success"),c.reset(),xe()):v(C.data?.error||"Failed to authorize administrator.","error")}),document.getElementById("formRoleChange")?.addEventListener("submit",async a=>{a.preventDefault();const o=document.getElementById("btnSubmitRoleChange"),d=document.getElementById("roleChangeUserId")?.value,c=document.getElementById("roleChangeNewRole")?.value||document.getElementById("roleChangeTargetRole")?.value,r=document.getElementById("roleChangeReason")?.value||"Role updated by Super Admin";if(!d||!c)return;A(o,!0,"Updating role...");const m=await B(`/portal/admin/users/${d}/role`,{method:"PUT",body:JSON.stringify({role:c,reason:r})});A(o,!1),m.ok&&m.data&&m.data.success?(v(m.data.message||"User role successfully updated.","success"),document.getElementById("modalRoleChange")?.classList.add("hidden"),xe()):v(m.data?.error||"Failed to update user role.","error")}),document.getElementById("btnRefreshUserDir")?.addEventListener("click",async()=>{const a=document.getElementById("btnRefreshUserDirIcon");a&&a.classList.add("fa-spin");try{await xe(),v("User directory refreshed.","success")}catch{v("Failed to refresh user directory.","error")}finally{a&&a.classList.remove("fa-spin")}}),document.getElementById("userDirectorySearch")?.addEventListener("input",()=>Pe()),document.getElementById("userDirectoryRoleFilter")?.addEventListener("change",()=>Pe()),document.getElementById("userDirectoryStatusFilter")?.addEventListener("change",()=>Pe()),document.getElementById("userDirectorySearchClear")?.addEventListener("click",()=>{const a=document.getElementById("userDirectorySearch");a&&(a.value="",Pe(),a.focus())}),document.addEventListener("click",a=>{if(a.target.closest("#btnClearUserFilters")){const o=document.getElementById("userDirectorySearch");o&&(o.value="");const d=document.getElementById("userDirectoryRoleFilter");d&&(d.value="all",d.dispatchEvent(new Event("change")));const c=document.getElementById("userDirectoryStatusFilter");c&&(c.value="all",c.dispatchEvent(new Event("change"))),Pe()}});const u=document.getElementById("btnCloseRecordPaymentModal");u&&u.addEventListener("click",a=>{a.preventDefault(),a.stopPropagation();const o=document.getElementById("modalRecordPayment");o&&o.classList.add("hidden"),document.body.classList.remove("overflow-hidden")});const y=document.getElementById("btnCancelRecordPaymentModal");y&&y.addEventListener("click",a=>{a.preventDefault(),a.stopPropagation();const o=document.getElementById("modalRecordPayment");o&&o.classList.add("hidden"),document.body.classList.remove("overflow-hidden")}),document.addEventListener("click",a=>{const o=a.target.closest(".btn-close-modal, .whiz-modal-close-btn, [data-modal]");if(!o)return;const d=o.dataset.modal||o.getAttribute("data-modal");if(o.classList.contains("btn-close-modal")||o.classList.contains("whiz-modal-close-btn")||o.textContent.trim().toLowerCase()==="cancel"||o.textContent.trim().toLowerCase()==="close")if(a.preventDefault(),a.stopPropagation(),d){const r=document.getElementById(d);r&&(r.classList.add("hidden"),document.body.classList.remove("overflow-hidden"))}else{const r=o.closest('.fixed[id^="modal"], [id^="modal"]');r&&(r.classList.add("hidden"),document.body.classList.remove("overflow-hidden"))}}),document.querySelectorAll('.fixed[id^="modal"], [id^="modal"]').forEach(a=>{a.addEventListener("click",o=>{o.target===a&&(a.classList.add("hidden"),document.body.classList.remove("overflow-hidden"))})}),document.addEventListener("keydown",a=>{a.key==="Escape"&&(document.querySelectorAll('.fixed[id^="modal"]:not(.hidden), [id^="modal"]:not(.hidden)').forEach(o=>{o.classList.add("hidden")}),document.body.classList.remove("overflow-hidden"))})}function bn(){document.querySelectorAll(".password-toggle-btn").forEach(n=>{n.addEventListener("click",()=>{const t=n.dataset.target,s=document.getElementById(t);if(s){const e=s.type==="password";s.type=e?"text":"password",n.innerHTML=`<i class="fa-solid ${e?"fa-eye-slash":"fa-eye"} text-xs"></i>`}})})}let jt=0;async function Ht(){const n=new URLSearchParams(window.location.search);if(n.get("preview")==="1"||n.get("demo")==="1"||window.self!==window.top&&n.get("preview")!=="0"){g.isPreview=!0;const i=n.get("role")||"super_admin",p={id:"usr_super_admin_01",fullName:"Kazi Emon",full_name:"Kazi Emon",email:i==="super_admin"||i==="owner"?"kaziaremon@gmail.com":`${i}@whizstudio.io`,username:"kaziaremon",role:i==="super_admin"?"owner":i,isSuperAdmin:i==="super_admin"||i==="owner"};g.currentUser=p,g.adminProfile=p,_t(p),mt(),O();const u=p.fullName,y="@"+p.username,a="KE";document.querySelectorAll(".admin-display-name").forEach(I=>I.textContent=u),document.querySelectorAll(".admin-display-username").forEach(I=>I.textContent=y),document.querySelectorAll(".admin-display-initials").forEach(I=>I.textContent=a);const o=document.getElementById("secUserEmail");o&&(o.textContent=p.email);const d=document.getElementById("secUserEmailHeader");d&&(d.textContent=p.email);const c=document.getElementById("secClerkUserId");c&&(c.innerHTML='<span class="inline-flex items-center gap-1.5 text-xs text-emerald-700 font-semibold"><i class="fa-solid fa-shield-check text-[#147D64]"></i> Preview Session Active</span>');const r=document.getElementById("dashboardAuthGuard"),m=document.getElementById("dashboardAccessDenied"),b=document.getElementById("dashboardMainLayout");r&&r.classList.add("hidden"),m&&m.classList.add("hidden"),b&&b.classList.remove("hidden");const E=(window.location.hash||"").replace("#",""),h=["overview","clients","services","projects","tasks","finance","team","support","history","security"].includes(E)?E:"overview";X(h,!1),Ce();return}const s=document.getElementById("dashboardAuthGuard"),e=document.getElementById("dashboardAccessDenied"),l=document.getElementById("dashboardMainLayout");if(!window.Clerk){if(jt++,jt>50){console.error("Clerk SDK load timeout in admin dashboard"),s&&(s.innerHTML=`
             <div class="mb-5 flex items-center justify-center">
               <img src="/assets/images/whiz-logo-v2.png?v=202611" alt="Whiz Studio" class="h-12 w-auto object-contain">
             </div>
@@ -6010,241 +1141,17 @@
               <button onclick="window.location.reload()" class="px-4 py-2 bg-[#147D64] text-white text-xs font-bold rounded-xl hover:bg-[#12694f] cursor-pointer">Retry Connection</button>
               <a href="/?login=admin" class="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-200 cursor-pointer">Return to Login</a>
             </div>
-          `;
-        }
-        return;
-      }
-      setTimeout(checkAuthAndInit, 100);
-      return;
-    }
-
-    try {
-      if (!window.Clerk.loaded) {
-        await Promise.race([
-          window.Clerk.load({
-            publishableKey: CLERK_PUBLISHABLE_KEY
-          }),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Authentication system connection timeout')), 8000))
-        ]);
-      }
-
-      const user = window.Clerk.user;
-      if (!user) {
-        console.warn('No active Clerk user found, redirecting to login...');
-        window.location.href = '/?login=admin';
-        return;
-      }
-
-      state.currentUser = user;
-
-      // Verify Administrator Authorization with Cloudflare Backend API
-      const res = await apiFetch('/portal/me');
-      if (!res.ok || !res.data || !res.data.success || !res.data.data || !res.data.data.user) {
-        console.error('Admin verification failed from API:', res);
-        if (authGuard) authGuard.classList.add('hidden');
-        if (accessDenied) accessDenied.classList.remove('hidden');
-        return;
-      }
-
-      const profile = res.data.data.user;
-      state.adminProfile = profile;
-
-      const isAuthorized = 
-        profile.role === 'owner' || 
-        profile.role === 'admin' || 
-        profile.role === 'super_admin' || 
-        profile.role === 'accounts' || 
-        profile.role === 'employee' || 
-        Boolean(profile.isSuperAdmin) ||
-        Boolean(profile.isStaff);
-
-      if (!isAuthorized) {
-        if (profile.role === 'client') {
-          console.warn('[Route Guard] Client user attempted to access admin portal. Redirecting to client dashboard...');
-          window.location.replace('/client/dashboard/');
-          return;
-        }
-        console.warn('Authenticated user does not possess staff permissions:', profile);
-        if (authGuard) authGuard.classList.add('hidden');
-        if (accessDenied) accessDenied.classList.remove('hidden');
-        return;
-      }
-
-      applyRoleAdaptiveUI(profile);
-      updateOverviewGreeting();
-
-      // Populate user info in UI
-      const name = profile.fullName || profile.full_name || user.fullName || 'Super Admin';
-      const email = profile.email || (user.primaryEmailAddress ? user.primaryEmailAddress.emailAddress : '');
-      const username = user.username ? `@${user.username}` : (email ? `@${email.split('@')[0]}` : '@admin');
-      const initials = (name || 'SA').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-
-      document.querySelectorAll('.admin-display-name').forEach(el => el.textContent = name);
-      document.querySelectorAll('.admin-display-username').forEach(el => el.textContent = username);
-      document.querySelectorAll('.admin-display-initials').forEach(el => el.textContent = initials);
-
-      const emailEl = document.getElementById('secUserEmail');
-      if (emailEl) emailEl.textContent = email;
-      const userEl = document.getElementById('secClerkUserId');
-      if (userEl) userEl.innerHTML = '<span class="inline-flex items-center gap-1.5 text-xs text-emerald-700 font-semibold"><i class="fa-solid fa-shield-check text-[#147D64]"></i> SSO Session Active</span>';
-
-      // Show Main Layout
-      if (authGuard) authGuard.classList.add('hidden');
-      if (accessDenied) accessDenied.classList.add('hidden');
-      if (mainLayout) mainLayout.classList.remove('hidden');
-      if (typeof initGlassSelects === 'function') initGlassSelects();
-
-      // Initialize initial tab or deep-linked view
-      const hash = (window.location.hash || '').replace('#', '');
-      if (hash.startsWith('client-')) {
-        const cId = hash.replace('client-', '');
-        openClientDetails(cId);
-      } else if (hash.startsWith('service-tasks-')) {
-        const sId = hash.replace('service-tasks-', '');
-        openServiceTasksWorkspace(sId);
-      } else {
-        const validTabs = ['overview', 'clients', 'services', 'projects', 'tasks', 'finance', 'team', 'support', 'history', 'security', 'settings'];
-        const initialTab = validTabs.includes(hash) ? hash : 'overview';
-        switchTab(initialTab);
-      }
-
-      // Preload catalog
-      loadServicesData();
-    } catch (err) {
-      console.error('Console Auth Error:', err);
-      if (authGuard) {
-        authGuard.innerHTML = `
+          `);return}setTimeout(Ht,100);return}try{window.Clerk.loaded||await Promise.race([window.Clerk.load({publishableKey:nn}),new Promise((E,C)=>setTimeout(()=>C(new Error("Authentication system connection timeout")),8e3))]);const i=window.Clerk.user;if(!i){console.warn("No active Clerk user found, redirecting to login..."),window.location.href="/?login=admin";return}g.currentUser=i;const p=await B("/portal/me");if(!p.ok||!p.data||!p.data.success||!p.data.data||!p.data.data.user){console.error("Admin verification failed from API:",p),s&&s.classList.add("hidden"),e&&e.classList.remove("hidden");return}const u=p.data.data.user;if(g.adminProfile=u,!(u.role==="owner"||u.role==="admin"||u.role==="super_admin"||u.role==="accounts"||u.role==="employee"||!!u.isSuperAdmin||!!u.isStaff)){if(u.role==="client"){console.warn("[Route Guard] Client user attempted to access admin portal. Redirecting to client dashboard..."),window.location.replace("/client/dashboard/");return}console.warn("Authenticated user does not possess staff permissions:",u),s&&s.classList.add("hidden"),e&&e.classList.remove("hidden");return}_t(u),mt();const a=u.fullName||u.full_name||i.fullName||"Super Admin",o=u.email||(i.primaryEmailAddress?i.primaryEmailAddress.emailAddress:""),d=i.username?`@${i.username}`:o?`@${o.split("@")[0]}`:"@admin",c=(a||"SA").split(" ").map(E=>E[0]).join("").slice(0,2).toUpperCase();document.querySelectorAll(".admin-display-name").forEach(E=>E.textContent=a),document.querySelectorAll(".admin-display-username").forEach(E=>E.textContent=d),document.querySelectorAll(".admin-display-initials").forEach(E=>E.textContent=c);const r=document.getElementById("secUserEmail");r&&(r.textContent=o);const m=document.getElementById("secClerkUserId");m&&(m.innerHTML='<span class="inline-flex items-center gap-1.5 text-xs text-emerald-700 font-semibold"><i class="fa-solid fa-shield-check text-[#147D64]"></i> SSO Session Active</span>'),s&&s.classList.add("hidden"),e&&e.classList.add("hidden"),l&&l.classList.remove("hidden"),typeof O=="function"&&O();const b=(window.location.hash||"").replace("#","");if(b.startsWith("client-")){const E=b.replace("client-","");fe(E)}else if(b.startsWith("service-tasks-")){const E=b.replace("service-tasks-","");$e(E)}else{const C=["overview","clients","services","projects","tasks","finance","team","support","history","security","settings"].includes(b)?b:"overview";X(C)}Ce()}catch(i){console.error("Console Auth Error:",i),s&&(s.innerHTML=`
           <div class="mb-5 flex items-center justify-center">
             <img src="/assets/images/whiz-logo-v2.png?v=202611" alt="Whiz Studio" class="h-12 w-auto object-contain">
           </div>
           <h2 class="text-xl font-bold text-[#172B36] tracking-tight">Workspace Initialization Failed</h2>
-          <p class="text-xs text-rose-500 mt-2 max-w-sm">${escapeHtml(err.message || 'An unexpected error occurred while preparing your workspace.')}</p>
+          <p class="text-xs text-rose-500 mt-2 max-w-sm">${f(i.message||"An unexpected error occurred while preparing your workspace.")}</p>
           <div class="mt-5 flex items-center justify-center gap-3">
             <button onclick="window.location.reload()" class="px-4 py-2 bg-[#147D64] text-white text-xs font-bold rounded-xl hover:bg-[#12694f] cursor-pointer">Retry</button>
             <a href="/" class="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-200 cursor-pointer">Return Home</a>
           </div>
-        `;
-      }
-    }
-  }
-
-  // =========================================================================
-  // 12. INQUIRIES & INBOUND CRM ENGINE (SUPER ADMIN EXCLUSIVE)
-  // =========================================================================
-  async function loadInquiriesData(showToastNotice = false) {
-    const tbody = document.getElementById('inquiriesTableBody');
-    const refreshBtn = document.getElementById('btnRefreshInquiries');
-    if (refreshBtn) {
-      const icon = refreshBtn.querySelector('i');
-      if (icon) icon.classList.add('fa-spin');
-    }
-
-    if (tbody) {
-      tbody.innerHTML = '<tr><td colspan="7" class="py-12 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin text-xl text-[#087F70] mb-2"></i><p class="text-xs font-medium">Fetching inbound leads from database...</p></td></tr>';
-    }
-
-    try {
-      const res = await apiFetch('/api/inquiries');
-      if (refreshBtn) {
-        const icon = refreshBtn.querySelector('i');
-        if (icon) icon.classList.remove('fa-spin');
-      }
-
-      if (res.ok && res.data && res.data.success) {
-        state.inquiries = res.data.inquiries || [];
-        updateInquiriesBadges();
-        renderInquiries();
-        if (showToastNotice) {
-          showToast(`Synchronized ${state.inquiries.length} inquiries from database.`, 'success');
-        }
-      } else {
-        if (tbody) {
-          tbody.innerHTML = `<tr><td colspan="7" class="py-10 text-center text-rose-500 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>${escapeHtml(res.data?.error || 'Failed to load inquiries.')}</td></tr>`;
-        }
-      }
-    } catch (err) {
-      console.error('Inquiries Load Error:', err);
-      if (refreshBtn) {
-        const icon = refreshBtn.querySelector('i');
-        if (icon) icon.classList.remove('fa-spin');
-      }
-      if (tbody) {
-        tbody.innerHTML = '<tr><td colspan="7" class="py-10 text-center text-rose-500 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Network error loading inquiries.</td></tr>';
-      }
-    }
-  }
-
-  function updateInquiriesBadges() {
-    const newCount = (state.inquiries || []).filter(i => (i.status || 'new') === 'new').length;
-    const dockBadge = document.getElementById('dockBadgeInquiries');
-    const tooltipBadge = document.getElementById('dockTooltipBadgeInquiries');
-    const drawerBadge = document.getElementById('drawerBadgeInquiries');
-
-    const updateBadgeEl = (el) => {
-      if (!el) return;
-      if (newCount > 0) {
-        el.textContent = `${newCount} New`;
-        el.classList.remove('hidden');
-      } else {
-        el.classList.add('hidden');
-      }
-    };
-
-    updateBadgeEl(dockBadge);
-    updateBadgeEl(tooltipBadge);
-    updateBadgeEl(drawerBadge);
-  }
-
-  function renderInquiries() {
-    const tbody = document.getElementById('inquiriesTableBody');
-    if (!tbody) return;
-
-    const list = state.inquiries || [];
-
-    // KPI Counters
-    const total = list.length;
-    const newCount = list.filter(i => (i.status || 'new') === 'new').length;
-    const inProgressCount = list.filter(i => i.status === 'in_progress' || i.status === 'contacted').length;
-    const closedCount = list.filter(i => i.status === 'closed').length;
-
-    const elTotal = document.getElementById('statTotalInquiries');
-    const elNew = document.getElementById('statNewInquiries');
-    const elProg = document.getElementById('statInProgressInquiries');
-    const elClosed = document.getElementById('statClosedInquiries');
-
-    if (elTotal) elTotal.textContent = total;
-    if (elNew) elNew.textContent = newCount;
-    if (elProg) elProg.textContent = inProgressCount;
-    if (elClosed) elClosed.textContent = closedCount;
-
-    // Filters & Search
-    const searchVal = (document.getElementById('searchInquiriesInput')?.value || '').toLowerCase().trim();
-    const filterVal = state.activeInquiryFilter || 'all';
-
-    const filtered = list.filter(item => {
-      if (filterVal === 'new' && (item.status || 'new') !== 'new') return false;
-      if (filterVal === 'contacted' && item.status !== 'contacted') return false;
-      if (filterVal === 'in_progress' && item.status !== 'in_progress') return false;
-      if (filterVal === 'closed' && item.status !== 'closed') return false;
-
-      if (searchVal) {
-        const textToSearch = [
-          item.name,
-          item.email,
-          item.phone,
-          item.service,
-          item.details,
-          item.notes
-        ].filter(Boolean).join(' ').toLowerCase();
-
-        if (!textToSearch.includes(searchVal)) return false;
-      }
-
-      return true;
-    });
-
-    if (filtered.length === 0) {
-      tbody.innerHTML = `
+        `)}}async function ht(n=!1){const t=document.getElementById("inquiriesTableBody"),s=document.getElementById("btnRefreshInquiries");if(s){const e=s.querySelector("i");e&&e.classList.add("fa-spin")}t&&(t.innerHTML='<tr><td colspan="7" class="py-12 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin text-xl text-[#087F70] mb-2"></i><p class="text-xs font-medium">Fetching inbound leads from database...</p></td></tr>');try{const e=await B("/api/inquiries");if(s){const l=s.querySelector("i");l&&l.classList.remove("fa-spin")}e.ok&&e.data&&e.data.success?(g.inquiries=e.data.inquiries||[],Et(),Je(),n&&v(`Synchronized ${g.inquiries.length} inquiries from database.`,"success")):t&&(t.innerHTML=`<tr><td colspan="7" class="py-10 text-center text-rose-500 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>${f(e.data?.error||"Failed to load inquiries.")}</td></tr>`)}catch(e){if(console.error("Inquiries Load Error:",e),s){const l=s.querySelector("i");l&&l.classList.remove("fa-spin")}t&&(t.innerHTML='<tr><td colspan="7" class="py-10 text-center text-rose-500 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Network error loading inquiries.</td></tr>')}}function Et(){const n=(g.inquiries||[]).filter(i=>(i.status||"new")==="new").length,t=document.getElementById("dockBadgeInquiries"),s=document.getElementById("dockTooltipBadgeInquiries"),e=document.getElementById("drawerBadgeInquiries"),l=i=>{i&&(n>0?(i.textContent=`${n} New`,i.classList.remove("hidden")):i.classList.add("hidden"))};l(t),l(s),l(e)}function Je(){const n=document.getElementById("inquiriesTableBody");if(!n)return;const t=g.inquiries||[],s=t.length,e=t.filter(r=>(r.status||"new")==="new").length,l=t.filter(r=>r.status==="in_progress"||r.status==="contacted").length,i=t.filter(r=>r.status==="closed").length,p=document.getElementById("statTotalInquiries"),u=document.getElementById("statNewInquiries"),y=document.getElementById("statInProgressInquiries"),a=document.getElementById("statClosedInquiries");p&&(p.textContent=s),u&&(u.textContent=e),y&&(y.textContent=l),a&&(a.textContent=i);const o=(document.getElementById("searchInquiriesInput")?.value||"").toLowerCase().trim(),d=g.activeInquiryFilter||"all",c=t.filter(r=>!(d==="new"&&(r.status||"new")!=="new"||d==="contacted"&&r.status!=="contacted"||d==="in_progress"&&r.status!=="in_progress"||d==="closed"&&r.status!=="closed"||o&&![r.name,r.email,r.phone,r.service,r.details,r.notes].filter(Boolean).join(" ").toLowerCase().includes(o)));if(c.length===0){n.innerHTML=`
         <tr>
           <td colspan="7" class="py-12 text-center text-slate-400">
             <div class="flex flex-col items-center justify-center gap-2">
@@ -6256,415 +1163,55 @@
             </div>
           </td>
         </tr>
-      `;
-      return;
-    }
-
-    tbody.innerHTML = filtered.map(item => {
-      const name = item.name || 'Anonymous Prospect';
-      const email = item.email || '';
-      const phone = item.phone || '';
-      const cleanPhone = phone.replace(/[^0-9]/g, '');
-      const service = item.service || 'General Inquiry';
-      const details = item.details || '';
-      const detailsSnippet = details.length > 70 ? `${details.substring(0, 70)}...` : details;
-      const status = item.status || 'new';
-      const dateStr = item.created_at || item.timestamp;
-      const formattedDate = dateStr
-        ? new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-        : 'Recent';
-
-      const initials = name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() || 'IN';
-
-      let statusBadge = '';
-      if (status === 'new') {
-        statusBadge = '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-300 shadow-2xs"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>New</span>';
-      } else if (status === 'contacted') {
-        statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs"><i class="fa-solid fa-phone text-[9px]"></i>Contacted</span>';
-      } else if (status === 'in_progress') {
-        statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-purple-50 text-purple-700 border border-purple-200 shadow-2xs"><i class="fa-solid fa-comments text-[9px]"></i>In Progress</span>';
-      } else if (status === 'closed') {
-        statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-slate-100 text-slate-600 border border-slate-200 shadow-2xs"><i class="fa-solid fa-check text-[9px]"></i>Closed</span>';
-      }
-
-      const waBtn = cleanPhone
-        ? `<a href="https://wa.me/${cleanPhone}" target="_blank" rel="noopener" class="w-7 h-7 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 flex items-center justify-center transition-colors" title="Chat on WhatsApp"><i class="fa-brands fa-whatsapp text-xs"></i></a>`
-        : '';
-
-      const mailBtn = email
-        ? `<a href="mailto:${encodeURIComponent(email)}" class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-colors" title="Send Email"><i class="fa-solid fa-envelope text-xs"></i></a>`
-        : '';
-
-      return `
-        <tr class="hover:bg-slate-50/80 transition-colors" data-inquiry-row="${escapeHtml(item.id)}">
+      `;return}n.innerHTML=c.map(r=>{const m=r.name||"Anonymous Prospect",b=r.email||"",E=r.phone||"",C=E.replace(/[^0-9]/g,""),h=r.service||"General Inquiry",I=r.details||"",L=I.length>70?`${I.substring(0,70)}...`:I,P=r.status||"new",M=r.created_at||r.timestamp,F=M?new Date(M).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}):"Recent",D=m.split(" ").map(ee=>ee[0]).slice(0,2).join("").toUpperCase()||"IN";let N="";P==="new"?N='<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-300 shadow-2xs"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>New</span>':P==="contacted"?N='<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs"><i class="fa-solid fa-phone text-[9px]"></i>Contacted</span>':P==="in_progress"?N='<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-purple-50 text-purple-700 border border-purple-200 shadow-2xs"><i class="fa-solid fa-comments text-[9px]"></i>In Progress</span>':P==="closed"&&(N='<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-slate-100 text-slate-600 border border-slate-200 shadow-2xs"><i class="fa-solid fa-check text-[9px]"></i>Closed</span>');const H=C?`<a href="https://wa.me/${C}" target="_blank" rel="noopener" class="w-7 h-7 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 flex items-center justify-center transition-colors" title="Chat on WhatsApp"><i class="fa-brands fa-whatsapp text-xs"></i></a>`:"",W=b?`<a href="mailto:${encodeURIComponent(b)}" class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-colors" title="Send Email"><i class="fa-solid fa-envelope text-xs"></i></a>`:"";return`
+        <tr class="hover:bg-slate-50/80 transition-colors" data-inquiry-row="${f(r.id)}">
           <td class="py-3.5 px-4 sm:px-6">
             <div class="flex items-center gap-3">
               <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-[#087F70] to-[#DDB92F] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
-                ${escapeHtml(initials)}
+                ${f(D)}
               </div>
               <div class="min-w-0">
-                <div class="font-extrabold text-[#172B36] text-xs truncate">${escapeHtml(name)}</div>
-                <div class="text-[11px] text-slate-500 font-mono truncate">${escapeHtml(email || 'No email')}</div>
+                <div class="font-extrabold text-[#172B36] text-xs truncate">${f(m)}</div>
+                <div class="text-[11px] text-slate-500 font-mono truncate">${f(b||"No email")}</div>
               </div>
             </div>
           </td>
           <td class="py-3.5 px-4 whitespace-nowrap">
             <div class="flex items-center gap-1.5">
-              ${waBtn}
-              ${mailBtn}
-              <span class="text-[11px] font-mono text-slate-600">${escapeHtml(phone || ' - ')}</span>
+              ${H}
+              ${W}
+              <span class="text-[11px] font-mono text-slate-600">${f(E||" - ")}</span>
             </div>
           </td>
           <td class="py-3.5 px-4 whitespace-nowrap">
             <span class="inline-block px-2.5 py-1 rounded-md text-[10px] font-bold bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20 max-w-[160px] truncate">
-              ${escapeHtml(service)}
+              ${f(h)}
             </span>
           </td>
           <td class="py-3.5 px-4 max-w-xs">
-            <div class="text-[11px] text-slate-600 truncate cursor-pointer hover:text-[#087F70]" onclick="window.__whizOpenInquiryModal('${escapeHtml(item.id)}')" title="Click to view full scope">
-              ${escapeHtml(detailsSnippet)}
+            <div class="text-[11px] text-slate-600 truncate cursor-pointer hover:text-[#087F70]" onclick="window.__whizOpenInquiryModal('${f(r.id)}')" title="Click to view full scope">
+              ${f(L)}
             </div>
           </td>
           <td class="py-3.5 px-4 whitespace-nowrap">
-            ${statusBadge}
+            ${N}
           </td>
           <td class="py-3.5 px-4 whitespace-nowrap text-slate-400 text-[11px] font-mono">
-            ${escapeHtml(formattedDate)}
+            ${f(F)}
           </td>
           <td class="py-3.5 px-4 text-right pr-6 whitespace-nowrap">
             <div class="flex items-center justify-end gap-1.5">
-              <button type="button" class="btn-view-inquiry px-3 py-1.5 rounded-lg text-xs font-bold bg-white hover:bg-slate-50 text-[#087F70] border border-[#087F70]/25 transition-all shadow-2xs flex items-center gap-1 cursor-pointer" data-inquiry-id="${escapeHtml(item.id)}">
+              <button type="button" class="btn-view-inquiry px-3 py-1.5 rounded-lg text-xs font-bold bg-white hover:bg-slate-50 text-[#087F70] border border-[#087F70]/25 transition-all shadow-2xs flex items-center gap-1 cursor-pointer" data-inquiry-id="${f(r.id)}">
                 <i class="fa-solid fa-eye text-[11px]"></i>
                 <span>View</span>
               </button>
-              <button type="button" class="btn-delete-inquiry w-7 h-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors flex items-center justify-center cursor-pointer" data-inquiry-id="${escapeHtml(item.id)}" onclick="window.__whizDeleteInquiry('${escapeHtml(item.id)}', event)" title="Delete inquiry permanently">
+              <button type="button" class="btn-delete-inquiry w-7 h-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors flex items-center justify-center cursor-pointer" data-inquiry-id="${f(r.id)}" onclick="window.__whizDeleteInquiry('${f(r.id)}', event)" title="Delete inquiry permanently">
                 <i class="fa-solid fa-trash-can text-xs"></i>
               </button>
             </div>
           </td>
         </tr>
-      `;
-    }).join('');
-
-    // Directly bind action buttons in inquiries table
-    tbody.querySelectorAll('.btn-view-inquiry').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        const id = btn.dataset.inquiryId;
-        if (id) openInquiryDetailsModal(id);
-      });
-    });
-
-    tbody.querySelectorAll('.btn-delete-inquiry').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        const id = btn.dataset.inquiryId;
-        if (id) deleteInquiry(id, e);
-      });
-    });
-  }
-
-  function openInquiryDetailsModal(id) {
-    const item = (state.inquiries || []).find(i => i.id === id);
-    if (!item) return;
-
-    state.activeInquiryModalId = id;
-
-    const modal = document.getElementById('modalInquiryDetails');
-    if (!modal) return;
-
-    const elTitle = document.getElementById('inquiryModalTitle');
-    const elDate = document.getElementById('inquiryModalDate');
-    const elClientName = document.getElementById('inquiryModalClientName');
-    const elService = document.getElementById('inquiryModalService');
-    const elEmail = document.getElementById('inquiryModalEmail');
-    const elEmailText = document.getElementById('inquiryModalEmailText');
-    const elPhoneText = document.getElementById('inquiryModalPhoneText');
-    const elWhatsAppBtn = document.getElementById('inquiryModalWhatsAppBtn');
-    const elDetails = document.getElementById('inquiryModalDetails');
-    const elNotes = document.getElementById('inquiryModalNotes');
-
-    if (elTitle) elTitle.textContent = item.name ? `Inquiry from ${item.name}` : 'Client Inquiry Details';
-    if (elDate) {
-      const dt = item.created_at || item.timestamp;
-      elDate.textContent = dt ? `Received on ${new Date(dt).toLocaleString()}` : 'Date unknown';
-    }
-    if (elClientName) elClientName.textContent = item.name || 'Anonymous';
-    if (elService) elService.textContent = item.service || 'General Inquiry';
-
-    if (elEmailText) elEmailText.textContent = item.email || 'Not provided';
-    if (elEmail) elEmail.href = item.email ? `mailto:${item.email}` : '#';
-
-    if (elPhoneText) elPhoneText.textContent = item.phone || 'Not provided';
-    const cleanPhone = (item.phone || '').replace(/[^0-9]/g, '');
-    if (elWhatsAppBtn) {
-      if (cleanPhone) {
-        elWhatsAppBtn.href = `https://wa.me/${cleanPhone}`;
-        elWhatsAppBtn.classList.remove('hidden');
-      } else {
-        elWhatsAppBtn.classList.add('hidden');
-      }
-    }
-
-    if (elDetails) elDetails.textContent = item.details || 'No project scope details provided.';
-    if (elNotes) elNotes.value = item.notes || '';
-
-    // Status Buttons Highlight
-    const currentStatus = item.status || 'new';
-    document.querySelectorAll('.inquiry-status-btn').forEach(btn => {
-      const btnStatus = btn.dataset.setStatus;
-      if (btnStatus === currentStatus) {
-        btn.className = 'inquiry-status-btn py-2 px-3 rounded-xl border text-center font-bold text-xs transition-all bg-[#087F70] text-white border-[#087F70] shadow-xs';
-        btn.setAttribute('data-active', 'true');
-      } else {
-        btn.className = 'inquiry-status-btn py-2 px-3 rounded-xl border text-center font-bold text-xs transition-all bg-slate-50 text-slate-700 border-[#E3E9EF] hover:bg-slate-100';
-        btn.removeAttribute('data-active');
-      }
-    });
-
-    modal.classList.remove('hidden');
-  }
-
-  function closeInquiryDetailsModal() {
-    state.activeInquiryModalId = null;
-    document.getElementById('modalInquiryDetails')?.classList.add('hidden');
-  }
-
-  async function saveInquiryDetails() {
-    const id = state.activeInquiryModalId;
-    if (!id) return;
-
-    const item = (state.inquiries || []).find(i => i.id === id);
-    if (!item) return;
-
-    const activeStatusBtn = document.querySelector('.inquiry-status-btn[data-active="true"]');
-    const selectedStatus = activeStatusBtn ? activeStatusBtn.dataset.setStatus : (item.status || 'new');
-    const notes = document.getElementById('inquiryModalNotes')?.value || '';
-
-    const saveBtn = document.getElementById('btnSaveInquiryModal');
-    setBtnLoading(saveBtn, true, 'Saving...');
-
-    try {
-      const res = await apiFetch('/api/inquiries', {
-        method: 'PATCH',
-        body: JSON.stringify({ id, status: selectedStatus, notes })
-      });
-
-      setBtnLoading(saveBtn, false);
-
-      if (res.ok && res.data && res.data.success) {
-        item.status = selectedStatus;
-        item.notes = notes;
-        item.updated_at = new Date().toISOString();
-        showToast('Inquiry status and notes saved successfully!', 'success');
-        closeInquiryDetailsModal();
-        updateInquiriesBadges();
-        renderInquiries();
-      } else {
-        showToast(res.data?.error || 'Failed to save inquiry changes.', 'error');
-      }
-    } catch (e) {
-      setBtnLoading(saveBtn, false);
-      showToast('Network error saving inquiry.', 'error');
-    }
-  }
-
-  async function deleteInquiry(id, event = null) {
-    if (event) {
-      if (typeof event.stopPropagation === 'function') event.stopPropagation();
-      if (typeof event.preventDefault === 'function') event.preventDefault();
-    }
-
-    if (!id) return;
-
-    if (!window.confirm('Are you sure you want to permanently delete this client inquiry? This action cannot be undone.')) {
-      return;
-    }
-
-    const btn = (event && event.currentTarget) || document.querySelector(`button.btn-delete-inquiry[data-inquiry-id="${id}"]`);
-    const row = btn?.closest('tr') || document.querySelector(`tr[data-inquiry-row="${id}"]`);
-
-    if (btn) {
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs text-rose-500"></i>';
-    }
-    if (row) {
-      row.classList.add('opacity-40', 'pointer-events-none');
-    }
-
-    try {
-      const res = await apiFetch(`/api/inquiries?id=${encodeURIComponent(id)}`, {
-        method: 'DELETE',
-        body: JSON.stringify({ id })
-      });
-
-      if (res.ok && (res.data?.success || res.status === 200 || res.status === 204)) {
-        // Real-time local state update
-        state.inquiries = (state.inquiries || []).filter(i => i.id !== id && i.id !== ('inquiry_' + id) && ('inquiry_' + i.id) !== id);
-
-        if (window.__whizAdminMock && window.__whizAdminMock.getData) {
-          const md = window.__whizAdminMock.getData();
-          if (md && md.inquiries) {
-            md.inquiries = md.inquiries.filter(i => i.id !== id && i.id !== ('inquiry_' + id) && ('inquiry_' + i.id) !== id);
-          }
-        }
-
-        // Real-time DOM removal (row disappears immediately from screen)
-        if (row) row.remove();
-
-        // Update badges and re-render remaining items
-        updateInquiriesBadges();
-        renderInquiries();
-
-        if (state.activeInquiryModalId === id) {
-          closeInquiryDetailsModal();
-        }
-
-        showToast('Inquiry permanently deleted.', 'info');
-      } else {
-        if (btn) {
-          btn.disabled = false;
-          btn.innerHTML = '<i class="fa-solid fa-trash-can text-xs"></i>';
-        }
-        if (row) {
-          row.classList.remove('opacity-40', 'pointer-events-none');
-        }
-        showToast(res.data?.error || 'Failed to delete inquiry.', 'error');
-      }
-    } catch (e) {
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-trash-can text-xs"></i>';
-      }
-      if (row) {
-        row.classList.remove('opacity-40', 'pointer-events-none');
-      }
-      showToast('Network error deleting inquiry.', 'error');
-    }
-  }
-
-  window.__whizDeleteInquiry = deleteInquiry;
-  window.__whizOpenInquiryModal = openInquiryDetailsModal;
-
-  // =========================================================================
-  // 13. REVIEW MODERATION SYSTEM ENGINE (SUPER ADMIN EXCLUSIVE)
-  // =========================================================================
-  async function loadAdminReviewsData(showToastNotice = false) {
-    const tbody = document.getElementById('reviewsTableBody');
-    const refreshBtn = document.getElementById('btnRefreshReviewsAdmin');
-    if (refreshBtn) {
-      const icon = refreshBtn.querySelector('i');
-      if (icon) icon.classList.add('fa-spin');
-    }
-
-    if (tbody) {
-      tbody.innerHTML = '<tr><td colspan="7" class="py-12 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin text-xl text-[#087F70] mb-2"></i><p class="text-xs font-medium">Fetching client reviews from database...</p></td></tr>';
-    }
-
-    try {
-      const res = await apiFetch('/api/admin-reviews');
-      if (refreshBtn) {
-        const icon = refreshBtn.querySelector('i');
-        if (icon) icon.classList.remove('fa-spin');
-      }
-
-      if (res.ok && res.data && res.data.success) {
-        state.adminReviews = res.data.reviews || [];
-        updateReviewsBadges();
-        renderAdminReviews();
-        if (showToastNotice) {
-          showToast(`Synchronized ${state.adminReviews.length} client reviews from database.`, 'success');
-        }
-      } else {
-        if (tbody) {
-          tbody.innerHTML = `<tr><td colspan="7" class="py-10 text-center text-rose-500 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>${escapeHtml(res.data?.error || 'Failed to load reviews.')}</td></tr>`;
-        }
-      }
-    } catch (err) {
-      console.error('Reviews Load Error:', err);
-      if (refreshBtn) {
-        const icon = refreshBtn.querySelector('i');
-        if (icon) icon.classList.remove('fa-spin');
-      }
-      if (tbody) {
-        tbody.innerHTML = '<tr><td colspan="7" class="py-10 text-center text-rose-500 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Network error loading reviews.</td></tr>';
-      }
-    }
-  }
-
-  function updateReviewsBadges() {
-    const pendCount = (state.adminReviews || []).filter(r => (r.moderation_status || 'pending') === 'pending').length;
-    const dockBadge = document.getElementById('dockBadgeReviews');
-    const tooltipBadge = document.getElementById('dockTooltipBadgeReviews');
-    const drawerBadge = document.getElementById('drawerBadgeReviews');
-
-    const updateBadgeEl = (el) => {
-      if (!el) return;
-      if (pendCount > 0) {
-        el.textContent = `${pendCount} Pend`;
-        el.classList.remove('hidden');
-      } else {
-        el.classList.add('hidden');
-      }
-    };
-
-    updateBadgeEl(dockBadge);
-    updateBadgeEl(tooltipBadge);
-    updateBadgeEl(drawerBadge);
-  }
-
-  function renderAdminReviews() {
-    const tbody = document.getElementById('reviewsTableBody');
-    if (!tbody) return;
-
-    const list = state.adminReviews || [];
-
-    // Counters
-    const total = list.length;
-    const pendingCount = list.filter(r => (r.moderation_status || 'pending') === 'pending').length;
-    const approvedCount = list.filter(r => (r.moderation_status === 'approved' || r.moderation_status === 'accepted') && r.visibility === 'show').length;
-    const hiddenCount = list.filter(r => r.moderation_status === 'rejected' || r.moderation_status === 'declined' || r.visibility === 'hidden').length;
-
-    const elTotal = document.getElementById('statTotalReviews');
-    const elPend = document.getElementById('statPendingReviews');
-    const elAppr = document.getElementById('statApprovedReviews');
-    const elHidd = document.getElementById('statHiddenReviews');
-
-    if (elTotal) elTotal.textContent = total;
-    if (elPend) elPend.textContent = pendingCount;
-    if (elAppr) elAppr.textContent = approvedCount;
-    if (elHidd) elHidd.textContent = hiddenCount;
-
-    // Filters & Search
-    const searchVal = (document.getElementById('searchReviewsInput')?.value || '').toLowerCase().trim();
-    const filterVal = state.activeReviewFilter || 'all';
-
-    const filtered = list.filter(item => {
-      if (filterVal === 'pending' && (item.moderation_status || 'pending') !== 'pending') return false;
-      if (filterVal === 'approved' && item.moderation_status !== 'approved' && item.moderation_status !== 'accepted') return false;
-      if (filterVal === 'rejected' && item.moderation_status !== 'rejected' && item.moderation_status !== 'declined') return false;
-      if (filterVal === 'hidden' && item.visibility !== 'hidden') return false;
-
-      if (searchVal) {
-        const textToSearch = [
-          item.clientName,
-          item.name,
-          item.role,
-          item.service,
-          item.reviewText,
-          item.text
-        ].filter(Boolean).join(' ').toLowerCase();
-
-        if (!textToSearch.includes(searchVal)) return false;
-      }
-
-      return true;
-    });
-
-    if (filtered.length === 0) {
-      tbody.innerHTML = `
+      `}).join(""),n.querySelectorAll(".btn-view-inquiry").forEach(r=>{r.addEventListener("click",m=>{m.stopPropagation(),m.preventDefault();const b=r.dataset.inquiryId;b&&wt(b)})}),n.querySelectorAll(".btn-delete-inquiry").forEach(r=>{r.addEventListener("click",m=>{m.stopPropagation(),m.preventDefault();const b=r.dataset.inquiryId;b&&et(b,m)})})}function wt(n){const t=(g.inquiries||[]).find(b=>b.id===n);if(!t)return;g.activeInquiryModalId=n;const s=document.getElementById("modalInquiryDetails");if(!s)return;const e=document.getElementById("inquiryModalTitle"),l=document.getElementById("inquiryModalDate"),i=document.getElementById("inquiryModalClientName"),p=document.getElementById("inquiryModalService"),u=document.getElementById("inquiryModalEmail"),y=document.getElementById("inquiryModalEmailText"),a=document.getElementById("inquiryModalPhoneText"),o=document.getElementById("inquiryModalWhatsAppBtn"),d=document.getElementById("inquiryModalDetails"),c=document.getElementById("inquiryModalNotes");if(e&&(e.textContent=t.name?`Inquiry from ${t.name}`:"Client Inquiry Details"),l){const b=t.created_at||t.timestamp;l.textContent=b?`Received on ${new Date(b).toLocaleString()}`:"Date unknown"}i&&(i.textContent=t.name||"Anonymous"),p&&(p.textContent=t.service||"General Inquiry"),y&&(y.textContent=t.email||"Not provided"),u&&(u.href=t.email?`mailto:${t.email}`:"#"),a&&(a.textContent=t.phone||"Not provided");const r=(t.phone||"").replace(/[^0-9]/g,"");o&&(r?(o.href=`https://wa.me/${r}`,o.classList.remove("hidden")):o.classList.add("hidden")),d&&(d.textContent=t.details||"No project scope details provided."),c&&(c.value=t.notes||"");const m=t.status||"new";document.querySelectorAll(".inquiry-status-btn").forEach(b=>{b.dataset.setStatus===m?(b.className="inquiry-status-btn py-2 px-3 rounded-xl border text-center font-bold text-xs transition-all bg-[#087F70] text-white border-[#087F70] shadow-xs",b.setAttribute("data-active","true")):(b.className="inquiry-status-btn py-2 px-3 rounded-xl border text-center font-bold text-xs transition-all bg-slate-50 text-slate-700 border-[#E3E9EF] hover:bg-slate-100",b.removeAttribute("data-active"))}),s.classList.remove("hidden")}function Xe(){g.activeInquiryModalId=null,document.getElementById("modalInquiryDetails")?.classList.add("hidden")}async function vn(){const n=g.activeInquiryModalId;if(!n)return;const t=(g.inquiries||[]).find(p=>p.id===n);if(!t)return;const s=document.querySelector('.inquiry-status-btn[data-active="true"]'),e=s?s.dataset.setStatus:t.status||"new",l=document.getElementById("inquiryModalNotes")?.value||"",i=document.getElementById("btnSaveInquiryModal");A(i,!0,"Saving...");try{const p=await B("/api/inquiries",{method:"PATCH",body:JSON.stringify({id:n,status:e,notes:l})});A(i,!1),p.ok&&p.data&&p.data.success?(t.status=e,t.notes=l,t.updated_at=new Date().toISOString(),v("Inquiry status and notes saved successfully!","success"),Xe(),Et(),Je()):v(p.data?.error||"Failed to save inquiry changes.","error")}catch{A(i,!1),v("Network error saving inquiry.","error")}}async function et(n,t=null){if(t&&(typeof t.stopPropagation=="function"&&t.stopPropagation(),typeof t.preventDefault=="function"&&t.preventDefault()),!n||!window.confirm("Are you sure you want to permanently delete this client inquiry? This action cannot be undone."))return;const s=t&&t.currentTarget||document.querySelector(`button.btn-delete-inquiry[data-inquiry-id="${n}"]`),e=s?.closest("tr")||document.querySelector(`tr[data-inquiry-row="${n}"]`);s&&(s.disabled=!0,s.innerHTML='<i class="fa-solid fa-spinner fa-spin text-xs text-rose-500"></i>'),e&&e.classList.add("opacity-40","pointer-events-none");try{const l=await B(`/api/inquiries?id=${encodeURIComponent(n)}`,{method:"DELETE",body:JSON.stringify({id:n})});if(l.ok&&(l.data?.success||l.status===200||l.status===204)){if(g.inquiries=(g.inquiries||[]).filter(i=>i.id!==n&&i.id!=="inquiry_"+n&&"inquiry_"+i.id!==n),window.__whizAdminMock&&window.__whizAdminMock.getData){const i=window.__whizAdminMock.getData();i&&i.inquiries&&(i.inquiries=i.inquiries.filter(p=>p.id!==n&&p.id!=="inquiry_"+n&&"inquiry_"+p.id!==n))}e&&e.remove(),Et(),Je(),g.activeInquiryModalId===n&&Xe(),v("Inquiry permanently deleted.","info")}else s&&(s.disabled=!1,s.innerHTML='<i class="fa-solid fa-trash-can text-xs"></i>'),e&&e.classList.remove("opacity-40","pointer-events-none"),v(l.data?.error||"Failed to delete inquiry.","error")}catch{s&&(s.disabled=!1,s.innerHTML='<i class="fa-solid fa-trash-can text-xs"></i>'),e&&e.classList.remove("opacity-40","pointer-events-none"),v("Network error deleting inquiry.","error")}}window.__whizDeleteInquiry=et,window.__whizOpenInquiryModal=wt;async function Ct(n=!1){const t=document.getElementById("reviewsTableBody"),s=document.getElementById("btnRefreshReviewsAdmin");if(s){const e=s.querySelector("i");e&&e.classList.add("fa-spin")}t&&(t.innerHTML='<tr><td colspan="7" class="py-12 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin text-xl text-[#087F70] mb-2"></i><p class="text-xs font-medium">Fetching client reviews from database...</p></td></tr>');try{const e=await B("/api/admin-reviews");if(s){const l=s.querySelector("i");l&&l.classList.remove("fa-spin")}e.ok&&e.data&&e.data.success?(g.adminReviews=e.data.reviews||[],kt(),Ye(),n&&v(`Synchronized ${g.adminReviews.length} client reviews from database.`,"success")):t&&(t.innerHTML=`<tr><td colspan="7" class="py-10 text-center text-rose-500 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>${f(e.data?.error||"Failed to load reviews.")}</td></tr>`)}catch(e){if(console.error("Reviews Load Error:",e),s){const l=s.querySelector("i");l&&l.classList.remove("fa-spin")}t&&(t.innerHTML='<tr><td colspan="7" class="py-10 text-center text-rose-500 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Network error loading reviews.</td></tr>')}}function kt(){const n=(g.adminReviews||[]).filter(i=>(i.moderation_status||"pending")==="pending").length,t=document.getElementById("dockBadgeReviews"),s=document.getElementById("dockTooltipBadgeReviews"),e=document.getElementById("drawerBadgeReviews"),l=i=>{i&&(n>0?(i.textContent=`${n} Pend`,i.classList.remove("hidden")):i.classList.add("hidden"))};l(t),l(s),l(e)}function Ye(){const n=document.getElementById("reviewsTableBody");if(!n)return;const t=g.adminReviews||[],s=t.length,e=t.filter(r=>(r.moderation_status||"pending")==="pending").length,l=t.filter(r=>(r.moderation_status==="approved"||r.moderation_status==="accepted")&&r.visibility==="show").length,i=t.filter(r=>r.moderation_status==="rejected"||r.moderation_status==="declined"||r.visibility==="hidden").length,p=document.getElementById("statTotalReviews"),u=document.getElementById("statPendingReviews"),y=document.getElementById("statApprovedReviews"),a=document.getElementById("statHiddenReviews");p&&(p.textContent=s),u&&(u.textContent=e),y&&(y.textContent=l),a&&(a.textContent=i);const o=(document.getElementById("searchReviewsInput")?.value||"").toLowerCase().trim(),d=g.activeReviewFilter||"all",c=t.filter(r=>!(d==="pending"&&(r.moderation_status||"pending")!=="pending"||d==="approved"&&r.moderation_status!=="approved"&&r.moderation_status!=="accepted"||d==="rejected"&&r.moderation_status!=="rejected"&&r.moderation_status!=="declined"||d==="hidden"&&r.visibility!=="hidden"||o&&![r.clientName,r.name,r.role,r.service,r.reviewText,r.text].filter(Boolean).join(" ").toLowerCase().includes(o)));if(c.length===0){n.innerHTML=`
         <tr>
           <td colspan="7" class="py-12 text-center text-slate-400">
             <div class="flex flex-col items-center justify-center gap-2">
@@ -6676,1396 +1223,156 @@
             </div>
           </td>
         </tr>
-      `;
-      return;
-    }
-
-    tbody.innerHTML = filtered.map(item => {
-      const name = item.clientName || item.name || 'Verified Client';
-      const role = item.role || item.service || 'Verified Ad Account Client';
-      const text = item.reviewText || item.text || '';
-      const textSnippet = text.length > 90 ? `${text.substring(0, 90)}...` : text;
-      const rating = Math.min(5, Math.max(1, Number(item.rating) || 5));
-      const modStatus = item.moderation_status || 'pending';
-      const visStatus = item.visibility || 'hidden';
-      const dateStr = item.created_at || item.timestamp;
-      const formattedDate = dateStr
-        ? new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-        : 'Recent';
-
-      const initials = name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() || 'CL';
-      const starIcons = '★'.repeat(rating) + '☆'.repeat(5 - rating);
-
-      let modBadge = '';
-      if (modStatus === 'approved' || modStatus === 'accepted') {
-        modBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-300 shadow-2xs"><i class="fa-solid fa-circle-check text-[9px]"></i>Approved</span>';
-      } else if (modStatus === 'rejected' || modStatus === 'declined') {
-        modBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-rose-50 text-rose-700 border border-rose-300 shadow-2xs"><i class="fa-solid fa-circle-xmark text-[9px]"></i>Rejected</span>';
-      } else {
-        modBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-300 shadow-2xs"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>Pending</span>';
-      }
-
-      let visBadge = '';
-      if (visStatus === 'show') {
-        visBadge = '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200"><i class="fa-solid fa-eye text-[9px]"></i>Live</span>';
-      } else {
-        visBadge = '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200"><i class="fa-solid fa-eye-slash text-[9px]"></i>Hidden</span>';
-      }
-
-      return `
-        <tr class="hover:bg-slate-50/80 transition-colors" data-review-row="${escapeHtml(item.id)}">
+      `;return}n.innerHTML=c.map(r=>{const m=r.clientName||r.name||"Verified Client",b=r.role||r.service||"Verified Ad Account Client",E=r.reviewText||r.text||"",C=E.length>90?`${E.substring(0,90)}...`:E,h=Math.min(5,Math.max(1,Number(r.rating)||5)),I=r.moderation_status||"pending",L=r.visibility||"hidden",P=r.created_at||r.timestamp,M=P?new Date(P).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}):"Recent",F=m.split(" ").map(W=>W[0]).slice(0,2).join("").toUpperCase()||"CL",D="\u2605".repeat(h)+"\u2606".repeat(5-h);let N="";I==="approved"||I==="accepted"?N='<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-300 shadow-2xs"><i class="fa-solid fa-circle-check text-[9px]"></i>Approved</span>':I==="rejected"||I==="declined"?N='<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-rose-50 text-rose-700 border border-rose-300 shadow-2xs"><i class="fa-solid fa-circle-xmark text-[9px]"></i>Rejected</span>':N='<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-300 shadow-2xs"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>Pending</span>';let H="";return L==="show"?H='<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200"><i class="fa-solid fa-eye text-[9px]"></i>Live</span>':H='<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200"><i class="fa-solid fa-eye-slash text-[9px]"></i>Hidden</span>',`
+        <tr class="hover:bg-slate-50/80 transition-colors" data-review-row="${f(r.id)}">
           <td class="py-3.5 px-4 sm:px-6">
             <div class="flex items-center gap-3">
               <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-[#087F70] to-[#DDB92F] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
-                ${escapeHtml(initials)}
+                ${f(F)}
               </div>
               <div class="min-w-0">
-                <div class="font-extrabold text-[#172B36] text-xs truncate">${escapeHtml(name)}</div>
-                <div class="text-[11px] text-slate-500 truncate">${escapeHtml(role)}</div>
+                <div class="font-extrabold text-[#172B36] text-xs truncate">${f(m)}</div>
+                <div class="text-[11px] text-slate-500 truncate">${f(b)}</div>
               </div>
             </div>
           </td>
           <td class="py-3.5 px-4 whitespace-nowrap">
             <div class="flex items-center space-x-1 text-[#DDB92F] font-bold text-xs">
-              <span>${starIcons}</span>
-              <span class="text-slate-600 text-[10px] ml-1">(${rating}/5)</span>
+              <span>${D}</span>
+              <span class="text-slate-600 text-[10px] ml-1">(${h}/5)</span>
             </div>
           </td>
           <td class="py-3.5 px-4 max-w-sm">
             <p class="text-[11px] text-slate-700 font-medium italic line-clamp-2">
-              "${escapeHtml(textSnippet)}"
+              "${f(C)}"
             </p>
           </td>
           <td class="py-3.5 px-4 whitespace-nowrap">
-            ${modBadge}
+            ${N}
           </td>
           <td class="py-3.5 px-4 whitespace-nowrap">
-            ${visBadge}
+            ${H}
           </td>
           <td class="py-3.5 px-4 whitespace-nowrap text-slate-400 text-[11px] font-mono">
-            ${escapeHtml(formattedDate)}
+            ${f(M)}
           </td>
           <td class="py-3.5 px-4 text-right pr-6 whitespace-nowrap">
             <div class="flex items-center justify-end gap-1.5">
               <!-- Approve Button -->
-              <button type="button" class="btn-approve-review px-2.5 py-1.5 rounded-lg text-xs font-bold ${modStatus === 'approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700'} border border-emerald-300 transition-all shadow-2xs flex items-center gap-1 cursor-pointer" data-review-id="${escapeHtml(item.id)}" title="Approve & Show on Homepage">
+              <button type="button" class="btn-approve-review px-2.5 py-1.5 rounded-lg text-xs font-bold ${I==="approved"?"bg-emerald-100 text-emerald-800":"bg-emerald-50 hover:bg-emerald-100 text-emerald-700"} border border-emerald-300 transition-all shadow-2xs flex items-center gap-1 cursor-pointer" data-review-id="${f(r.id)}" title="Approve & Show on Homepage">
                 <i class="fa-solid fa-check text-[10px]"></i>
                 <span>Approve</span>
               </button>
 
               <!-- Reject Button -->
-              <button type="button" class="btn-reject-review px-2.5 py-1.5 rounded-lg text-xs font-bold ${modStatus === 'rejected' ? 'bg-rose-100 text-rose-800' : 'bg-rose-50 hover:bg-rose-100 text-rose-700'} border border-rose-300 transition-all shadow-2xs flex items-center gap-1 cursor-pointer" data-review-id="${escapeHtml(item.id)}" title="Reject & Hide">
+              <button type="button" class="btn-reject-review px-2.5 py-1.5 rounded-lg text-xs font-bold ${I==="rejected"?"bg-rose-100 text-rose-800":"bg-rose-50 hover:bg-rose-100 text-rose-700"} border border-rose-300 transition-all shadow-2xs flex items-center gap-1 cursor-pointer" data-review-id="${f(r.id)}" title="Reject & Hide">
                 <i class="fa-solid fa-xmark text-[10px]"></i>
                 <span>Reject</span>
               </button>
 
               <!-- Toggle Visibility Button -->
-              <button type="button" class="btn-toggle-vis-review px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 transition-all shadow-2xs flex items-center gap-1 cursor-pointer" data-review-id="${escapeHtml(item.id)}" title="${visStatus === 'show' ? 'Hide from homepage' : 'Make visible on homepage'}">
-                <i class="fa-solid ${visStatus === 'show' ? 'fa-eye-slash text-slate-500' : 'fa-eye text-emerald-600'} text-[10px]"></i>
-                <span>${visStatus === 'show' ? 'Hide' : 'Show'}</span>
+              <button type="button" class="btn-toggle-vis-review px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 transition-all shadow-2xs flex items-center gap-1 cursor-pointer" data-review-id="${f(r.id)}" title="${L==="show"?"Hide from homepage":"Make visible on homepage"}">
+                <i class="fa-solid ${L==="show"?"fa-eye-slash text-slate-500":"fa-eye text-emerald-600"} text-[10px]"></i>
+                <span>${L==="show"?"Hide":"Show"}</span>
               </button>
 
               <!-- Delete Button -->
-              <button type="button" class="btn-delete-review w-7 h-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors flex items-center justify-center cursor-pointer" data-review-id="${escapeHtml(item.id)}" onclick="window.__whizDeleteReview('${escapeHtml(item.id)}', event)" title="Delete review permanently">
+              <button type="button" class="btn-delete-review w-7 h-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors flex items-center justify-center cursor-pointer" data-review-id="${f(r.id)}" onclick="window.__whizDeleteReview('${f(r.id)}', event)" title="Delete review permanently">
                 <i class="fa-solid fa-trash-can text-xs"></i>
               </button>
             </div>
           </td>
         </tr>
-      `;
-    }).join('');
-
-    // Directly bind action buttons in reviews table
-    tbody.querySelectorAll('.btn-approve-review').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        const id = btn.dataset.reviewId;
-        if (id) moderateReview(id, 'approve');
-      });
-    });
-
-    tbody.querySelectorAll('.btn-reject-review').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        const id = btn.dataset.reviewId;
-        if (id) moderateReview(id, 'reject');
-      });
-    });
-
-    tbody.querySelectorAll('.btn-toggle-vis-review').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        const id = btn.dataset.reviewId;
-        if (id) moderateReview(id, 'toggle_visibility');
-      });
-    });
-
-    tbody.querySelectorAll('.btn-delete-review').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        const id = btn.dataset.reviewId;
-        if (id) deleteReviewAdmin(id, e);
-      });
-    });
-  }
-
-  async function moderateReview(id, action) {
-    const item = (state.adminReviews || []).find(r => r.id === id);
-    if (!item) return;
-
-    try {
-      const res = await apiFetch('/api/admin-reviews', {
-        method: 'PATCH',
-        body: JSON.stringify({ id, action })
-      });
-
-      if (res.ok && res.data && res.data.success) {
-        if (action === 'approve') {
-          item.moderation_status = 'approved';
-          item.visibility = 'show';
-          showToast('Review approved and live on homepage!', 'success');
-        } else if (action === 'reject') {
-          item.moderation_status = 'rejected';
-          item.visibility = 'hidden';
-          showToast('Review rejected and hidden from site.', 'info');
-        } else if (action === 'toggle_visibility') {
-          item.visibility = item.visibility === 'show' ? 'hidden' : 'show';
-          showToast(`Review visibility set to ${item.visibility}.`, 'info');
-        }
-
-        item.updated_at = new Date().toISOString();
-        updateReviewsBadges();
-        renderAdminReviews();
-      } else {
-        showToast(res.data?.error || 'Failed to update review moderation.', 'error');
-      }
-    } catch (e) {
-      showToast('Network error moderating review.', 'error');
-    }
-  }
-
-  async function deleteReviewAdmin(id, event = null) {
-    if (event) {
-      if (typeof event.stopPropagation === 'function') event.stopPropagation();
-      if (typeof event.preventDefault === 'function') event.preventDefault();
-    }
-
-    if (!id) return;
-
-    if (!window.confirm('Are you sure you want to permanently delete this client review from the database? This action cannot be undone.')) {
-      return;
-    }
-
-    const btn = (event && event.currentTarget) || document.querySelector(`button.btn-delete-review[data-review-id="${id}"]`);
-    const row = btn?.closest('tr') || document.querySelector(`tr[data-review-row="${id}"]`);
-
-    if (btn) {
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs text-rose-500"></i>';
-    }
-    if (row) {
-      row.classList.add('opacity-40', 'pointer-events-none');
-    }
-
-    try {
-      const res = await apiFetch(`/api/admin-reviews?id=${encodeURIComponent(id)}`, {
-        method: 'DELETE',
-        body: JSON.stringify({ id })
-      });
-
-      if (res.ok && (res.data?.success || res.status === 200 || res.status === 204)) {
-        // Real-time local state update
-        state.adminReviews = (state.adminReviews || []).filter(r => r.id !== id && r.id !== ('review_' + id) && ('review_' + r.id) !== id);
-
-        if (window.__whizAdminMock && window.__whizAdminMock.getData) {
-          const md = window.__whizAdminMock.getData();
-          if (md && md.reviews) {
-            md.reviews = md.reviews.filter(r => r.id !== id && r.id !== ('review_' + id) && ('review_' + r.id) !== id);
-          }
-        }
-
-        // Real-time DOM removal (row disappears immediately from screen)
-        if (row) row.remove();
-
-        // Update badges and re-render remaining items
-        updateReviewsBadges();
-        renderAdminReviews();
-
-        showToast('Review permanently deleted.', 'info');
-      } else {
-        if (btn) {
-          btn.disabled = false;
-          btn.innerHTML = '<i class="fa-solid fa-trash-can text-xs"></i>';
-        }
-        if (row) {
-          row.classList.remove('opacity-40', 'pointer-events-none');
-        }
-        showToast(res.data?.error || 'Failed to delete review.', 'error');
-      }
-    } catch (e) {
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-trash-can text-xs"></i>';
-      }
-      if (row) {
-        row.classList.remove('opacity-40', 'pointer-events-none');
-      }
-      showToast('Network error deleting review.', 'error');
-    }
-  }
-
-  window.__whizDeleteReview = deleteReviewAdmin;
-
-  // =========================================================================
-  // BOOTSTRAP EVENT LISTENERS
-  // =========================================================================
-  function init() {
-    // Tab switching
-    document.querySelectorAll('[data-dash-tab]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const tab = btn.dataset.dashTab;
-        switchTab(tab);
-        const drawer = document.getElementById('mobileDrawer');
-        const backdrop = document.getElementById('mobileDrawerBackdrop');
-        if (drawer) drawer.classList.add('-translate-x-full');
-        if (backdrop) backdrop.classList.add('hidden');
-        document.body.classList.remove('overflow-hidden');
-      });
-    });
-
-    // KPI Metric Cards Navigation Mapping (Priority 1)
-    document.querySelectorAll('[data-kpi-nav]').forEach(card => {
-      const handleKpiNavigation = () => {
-        const targetTab = card.dataset.kpiNav;
-        const targetFilter = card.dataset.kpiFilter;
-        if (!targetTab) return;
-
-        // Switch to the target view
-        switchTab(targetTab);
-
-        // Apply tab-specific filters & load data
-        if (targetTab === 'clients') {
-          const filterSelect = document.getElementById('adminClientStatusFilter');
-          if (filterSelect) {
-            filterSelect.value = targetFilter || 'active';
-            syncClientStatusDropdown(filterSelect.value);
-          }
-          loadClientsData();
-        } else if (targetTab === 'projects') {
-          loadProjectsData();
-        } else if (targetTab === 'services') {
-          loadServicesData();
-        } else if (targetTab === 'tasks') {
-          const targetStatus = targetFilter || 'all';
-          document.querySelectorAll('.task-filter-btn').forEach(b => {
-            const matches = b.dataset.filter === targetStatus || (targetFilter === 'pending' && b.dataset.filter === 'in_progress');
-            if (matches) {
-              b.classList.add('bg-slate-800', 'text-white', 'font-bold');
-              b.classList.remove('text-slate-400', 'font-medium');
-            } else {
-              b.classList.remove('bg-slate-800', 'text-white', 'font-bold');
-              b.classList.add('text-slate-400', 'font-medium');
-            }
-          });
-          state.currentTaskStatus = targetStatus; updateStatusFilterButtons(targetStatus); loadTasksData(targetStatus);
-        } else if (targetTab === 'finance') {
-          loadFinanceData();
-        }
-      };
-
-      card.addEventListener('click', handleKpiNavigation);
-      card.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          handleKpiNavigation();
-        }
-      });
-    });
-
-    // Audit & History Filters & Refresh (Priority 7)
-    document.getElementById('auditSearchInput')?.addEventListener('input', () => {
-      renderAuditHistoryList();
-    });
-    document.getElementById('auditCategoryFilter')?.addEventListener('change', () => {
-      renderAuditHistoryList();
-    });
-
-    // Custom Glassmorphic Audit Category Dropdown Component
-    const auditCatTrigger = document.getElementById('btnAuditCategoryDropdown');
-    const auditCatMenu = document.getElementById('auditCategoryDropdownMenu');
-    const auditCatChevron = document.getElementById('auditCategoryDropdownChevron');
-    const auditCatLabel = document.getElementById('auditCategoryDropdownCurrentLabel');
-    const nativeAuditCatSelect = document.getElementById('auditCategoryFilter');
-
-    function toggleAuditCatMenu() {
-      if (!auditCatMenu) return;
-      const isHidden = auditCatMenu.classList.contains('hidden');
-      if (isHidden) {
-        auditCatMenu.classList.remove('hidden');
-        if (auditCatChevron) auditCatChevron.classList.add('rotate-180');
-        if (auditCatTrigger) auditCatTrigger.setAttribute('aria-expanded', 'true');
-      } else {
-        closeAuditCatMenu();
-      }
-    }
-
-    function closeAuditCatMenu() {
-      if (!auditCatMenu) return;
-      auditCatMenu.classList.add('hidden');
-      if (auditCatChevron) auditCatChevron.classList.remove('rotate-180');
-      if (auditCatTrigger) auditCatTrigger.setAttribute('aria-expanded', 'false');
-    }
-
-    if (auditCatTrigger) {
-      auditCatTrigger.addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggleAuditCatMenu();
-      });
-    }
-
-    document.querySelectorAll('.custom-audit-cat-option').forEach(opt => {
-      opt.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const val = opt.getAttribute('data-value') || 'all';
-        const labelText = opt.querySelector('span')?.textContent || 'All Categories';
-
-        if (auditCatLabel) auditCatLabel.textContent = labelText;
-
-        document.querySelectorAll('.custom-audit-cat-option').forEach(o => {
-          const isSelected = o === opt;
-          o.setAttribute('aria-selected', isSelected ? 'true' : 'false');
-          const check = o.querySelector('.audit-option-check');
-          const icon = o.querySelector('i:first-child');
-          if (isSelected) {
-            o.className = 'custom-audit-cat-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-[#087F70] bg-[#087F70]/10 hover:bg-[#087F70]/15 cursor-pointer transition-colors select-none font-sans text-left';
-            if (check) check.classList.remove('hidden');
-            if (icon) {
-              icon.classList.remove('text-slate-400');
-              icon.classList.add('text-[#087F70]');
-            }
-          } else {
-            o.className = 'custom-audit-cat-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left';
-            if (check) check.classList.add('hidden');
-            if (icon && !icon.classList.contains('fa-layer-group')) {
-              icon.classList.add('text-slate-400');
-              icon.classList.remove('text-[#087F70]');
-            }
-          }
-        });
-
-        if (nativeAuditCatSelect) {
-          nativeAuditCatSelect.value = val;
-          nativeAuditCatSelect.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-
-        closeAuditCatMenu();
-      });
-    });
-
-    document.addEventListener('click', (e) => {
-      if (auditCatMenu && !auditCatMenu.classList.contains('hidden')) {
-        if (!auditCatMenu.contains(e.target) && !auditCatTrigger?.contains(e.target)) {
-          closeAuditCatMenu();
-        }
-      }
-    });
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && auditCatMenu && !auditCatMenu.classList.contains('hidden')) {
-        closeAuditCatMenu();
-      }
-    });
-    document.getElementById('btnRefreshAuditHistory')?.addEventListener('click', async () => {
-      await loadHistoryData();
-      showToast('Audit feed updated.', 'success');
-    });
-
-    // Custom Glassmorphic Client Status Filter Dropdown Component
-    const clientStatusTrigger = document.getElementById('btnClientStatusDropdown');
-    const clientStatusMenu = document.getElementById('clientStatusDropdownMenu');
-    const clientStatusChevron = document.getElementById('clientStatusDropdownChevron');
-    const clientStatusLabel = document.getElementById('clientStatusDropdownCurrentLabel');
-    const nativeClientStatusSelect = document.getElementById('adminClientStatusFilter');
-
-    function toggleClientStatusMenu() {
-      if (!clientStatusMenu) return;
-      const isHidden = clientStatusMenu.classList.contains('hidden');
-      if (isHidden) {
-        clientStatusMenu.classList.remove('hidden');
-        if (clientStatusChevron) clientStatusChevron.classList.add('rotate-180');
-        if (clientStatusTrigger) clientStatusTrigger.setAttribute('aria-expanded', 'true');
-      } else {
-        closeClientStatusMenu();
-      }
-    }
-
-    function closeClientStatusMenu() {
-      if (!clientStatusMenu) return;
-      clientStatusMenu.classList.add('hidden');
-      if (clientStatusChevron) clientStatusChevron.classList.remove('rotate-180');
-      if (clientStatusTrigger) clientStatusTrigger.setAttribute('aria-expanded', 'false');
-    }
-
-    function syncClientStatusDropdown(val) {
-      document.querySelectorAll('.custom-client-status-option').forEach(opt => {
-        const optVal = opt.getAttribute('data-value');
-        const isSelected = optVal === val;
-        opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
-        const check = opt.querySelector('.client-status-option-check');
-        if (isSelected) {
-          opt.className = 'custom-client-status-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-[#087F70] bg-[#087F70]/10 hover:bg-[#087F70]/15 cursor-pointer transition-colors select-none font-sans text-left';
-          if (check) check.classList.remove('hidden');
-          const labelSpan = opt.querySelector('span:last-child');
-          const labelText = labelSpan ? labelSpan.textContent.trim() : (val === 'active' ? 'Active Clients Only' : (val === 'suspended' ? 'Suspended Clients' : 'All Clients'));
-          if (clientStatusLabel) clientStatusLabel.textContent = labelText;
-        } else {
-          opt.className = 'custom-client-status-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left';
-          if (check) check.classList.add('hidden');
-        }
-      });
-    }
-
-    if (clientStatusTrigger) {
-      clientStatusTrigger.addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggleClientStatusMenu();
-      });
-    }
-
-    document.querySelectorAll('.custom-client-status-option').forEach(opt => {
-      opt.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const val = opt.getAttribute('data-value') || 'active';
-        syncClientStatusDropdown(val);
-
-        if (nativeClientStatusSelect) {
-          nativeClientStatusSelect.value = val;
-          nativeClientStatusSelect.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-
-        closeClientStatusMenu();
-      });
-    });
-
-    document.addEventListener('click', (e) => {
-      if (clientStatusMenu && !clientStatusMenu.classList.contains('hidden')) {
-        if (!clientStatusMenu.contains(e.target) && !clientStatusTrigger?.contains(e.target)) {
-          closeClientStatusMenu();
-        }
-      }
-    });
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && clientStatusMenu && !clientStatusMenu.classList.contains('hidden')) {
-        closeClientStatusMenu();
-      }
-    });
-
-    if (nativeClientStatusSelect) {
-      nativeClientStatusSelect.addEventListener('change', () => {
-        syncClientStatusDropdown(nativeClientStatusSelect.value);
-      });
-      syncClientStatusDropdown(nativeClientStatusSelect.value || 'active');
-    }
-
-    // -------------------------------------------------------------------------
-    // Custom Glassmorphic Client Preferred Currency Dropdown Component
-    // -------------------------------------------------------------------------
-    const clientCurrTrigger = document.getElementById('btnClientCurrencyDropdown');
-    const clientCurrMenu = document.getElementById('clientCurrencyDropdownMenu');
-    const clientCurrChevron = document.getElementById('clientCurrencyDropdownChevron');
-    const clientCurrLabel = document.getElementById('clientCurrencyDropdownCurrentLabel');
-    const nativeClientCurrSelect = document.getElementById('clientPreferredCurrencySelect');
-
-    function toggleClientCurrMenu() {
-      if (!clientCurrMenu) return;
-      const isHidden = clientCurrMenu.classList.contains('hidden');
-      if (isHidden) {
-        clientCurrMenu.classList.remove('hidden');
-        if (clientCurrChevron) clientCurrChevron.classList.add('rotate-180');
-        if (clientCurrTrigger) clientCurrTrigger.setAttribute('aria-expanded', 'true');
-      } else {
-        closeClientCurrMenu();
-      }
-    }
-
-    function closeClientCurrMenu() {
-      if (!clientCurrMenu) return;
-      clientCurrMenu.classList.add('hidden');
-      if (clientCurrChevron) clientCurrChevron.classList.remove('rotate-180');
-      if (clientCurrTrigger) clientCurrTrigger.setAttribute('aria-expanded', 'false');
-    }
-
-    function syncClientPreferredCurrencyDropdown(val) {
-      if (!val) return;
-      const cleanVal = val.toUpperCase();
-      document.querySelectorAll('.custom-client-currency-option').forEach(opt => {
-        const optVal = (opt.getAttribute('data-value') || '').toUpperCase();
-        const isSelected = optVal === cleanVal;
-        opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
-        const check = opt.querySelector('.currency-option-check');
-        if (isSelected) {
-          opt.className = 'custom-client-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-[#087F70] bg-[#087F70]/10 hover:bg-[#087F70]/15 cursor-pointer transition-colors select-none font-sans text-left';
-          if (check) check.classList.remove('hidden');
-          const optText = opt.querySelector('span')?.textContent || opt.textContent.trim();
-          if (clientCurrLabel) clientCurrLabel.textContent = optText;
-        } else {
-          opt.className = 'custom-client-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left';
-          if (check) check.classList.add('hidden');
-        }
-      });
-      if (nativeClientCurrSelect && nativeClientCurrSelect.value !== cleanVal) {
-        nativeClientCurrSelect.value = cleanVal;
-      }
-    }
-
-    if (clientCurrTrigger) {
-      clientCurrTrigger.addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggleClientCurrMenu();
-      });
-    }
-
-    document.querySelectorAll('.custom-client-currency-option').forEach(opt => {
-      opt.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const val = opt.getAttribute('data-value') || 'USD';
-        syncClientPreferredCurrencyDropdown(val);
-        if (nativeClientCurrSelect) {
-          nativeClientCurrSelect.value = val;
-          nativeClientCurrSelect.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-        closeClientCurrMenu();
-      });
-    });
-
-    if (nativeClientCurrSelect) {
-      nativeClientCurrSelect.addEventListener('change', () => {
-        syncClientPreferredCurrencyDropdown(nativeClientCurrSelect.value);
-      });
-    }
-
-    // -------------------------------------------------------------------------
-    // Custom Glassmorphic Assign Service Modal Dropdowns
-    // -------------------------------------------------------------------------
-    const assignServiceTrigger = document.getElementById('btnAssignServiceTrigger');
-    const assignServiceMenu = document.getElementById('assignServiceMenu');
-    const assignServiceChevron = document.getElementById('assignServiceChevron');
-    const assignServiceLabel = document.getElementById('assignServiceCurrentLabel');
-    const nativeAssignServiceSelect = document.getElementById('assignServiceSelect');
-
-    function toggleAssignServiceMenu() {
-      if (!assignServiceMenu) return;
-      const isHidden = assignServiceMenu.classList.contains('hidden');
-      if (isHidden) {
-        assignServiceMenu.classList.remove('hidden');
-        if (assignServiceChevron) assignServiceChevron.classList.add('rotate-180');
-        if (assignServiceTrigger) assignServiceTrigger.setAttribute('aria-expanded', 'true');
-      } else {
-        closeAssignServiceMenu();
-      }
-    }
-
-    function closeAssignServiceMenu() {
-      if (!assignServiceMenu) return;
-      assignServiceMenu.classList.add('hidden');
-      if (assignServiceChevron) assignServiceChevron.classList.remove('rotate-180');
-      if (assignServiceTrigger) assignServiceTrigger.setAttribute('aria-expanded', 'false');
-    }
-
-    if (assignServiceTrigger) {
-      assignServiceTrigger.addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggleAssignServiceMenu();
-      });
-    }
-
-    // Assign Currency Dropdown
-    const assignCurrTrigger = document.getElementById('btnAssignCurrencyTrigger');
-    const assignCurrMenu = document.getElementById('assignCurrencyMenu');
-    const assignCurrChevron = document.getElementById('assignCurrencyChevron');
-    const assignCurrLabel = document.getElementById('assignCurrencyCurrentLabel');
-    const nativeAssignCurrSelect = document.getElementById('assignServiceCurrency');
-
-    function toggleAssignCurrencyMenu() {
-      if (!assignCurrMenu) return;
-      const isHidden = assignCurrMenu.classList.contains('hidden');
-      if (isHidden) {
-        assignCurrMenu.classList.remove('hidden');
-        if (assignCurrChevron) assignCurrChevron.classList.add('rotate-180');
-        if (assignCurrTrigger) assignCurrTrigger.setAttribute('aria-expanded', 'true');
-      } else {
-        closeAssignCurrencyMenu();
-      }
-    }
-
-    function closeAssignCurrencyMenu() {
-      if (!assignCurrMenu) return;
-      assignCurrMenu.classList.add('hidden');
-      if (assignCurrChevron) assignCurrChevron.classList.remove('rotate-180');
-      if (assignCurrTrigger) assignCurrTrigger.setAttribute('aria-expanded', 'false');
-    }
-
-    function syncAssignCurrencyDropdown(val) {
-      if (!val) return;
-      const cleanVal = val.toUpperCase();
-      document.querySelectorAll('.custom-assign-currency-option').forEach(opt => {
-        const optVal = (opt.getAttribute('data-value') || '').toUpperCase();
-        const isSelected = optVal === cleanVal;
-        opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
-        const check = opt.querySelector('.assign-currency-check');
-        if (isSelected) {
-          opt.className = 'custom-assign-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-[#087F70] bg-[#087F70]/10 hover:bg-[#087F70]/15 cursor-pointer transition-colors select-none font-sans text-left';
-          if (check) check.classList.remove('hidden');
-          const optText = opt.querySelector('span')?.textContent || opt.textContent.trim();
-          if (assignCurrLabel) assignCurrLabel.textContent = optText;
-        } else {
-          opt.className = 'custom-assign-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left';
-          if (check) check.classList.add('hidden');
-        }
-      });
-      if (nativeAssignCurrSelect && nativeAssignCurrSelect.value !== cleanVal) {
-        nativeAssignCurrSelect.value = cleanVal;
-      }
-    }
-
-    if (assignCurrTrigger) {
-      assignCurrTrigger.addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggleAssignCurrencyMenu();
-      });
-    }
-
-    document.querySelectorAll('.custom-assign-currency-option').forEach(opt => {
-      opt.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const val = opt.getAttribute('data-value') || 'USD';
-        syncAssignCurrencyDropdown(val);
-        if (nativeAssignCurrSelect) {
-          nativeAssignCurrSelect.value = val;
-          nativeAssignCurrSelect.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-        closeAssignCurrencyMenu();
-      });
-    });
-
-    // -------------------------------------------------------------------------
-    // Universal Custom Glassmorphic Date Picker Controller
-    // -------------------------------------------------------------------------
-    let _activeDatePickerTarget = null;
-    let _activeDatePickerTrigger = null;
-    let _calendarYear = new Date().getFullYear();
-    let _calendarMonth = new Date().getMonth();
-
-    function formatDisplayDate(isoDateStr) {
-      if (!isoDateStr) return 'Select date...';
-      const parts = isoDateStr.split('-').map(Number);
-      if (parts.length !== 3 || isNaN(parts[0])) return isoDateStr;
-      const [y, m, d] = parts;
-      const dateObj = new Date(y, m - 1, d);
-      return dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    }
-
-    function updateDatePickerTrigger(inputEl) {
-      if (!inputEl) return;
-      const wrapper = inputEl.closest('.custom-datepicker-wrapper') || document.querySelector(`[data-datepicker-target="${inputEl.id}"]`);
-      if (!wrapper) return;
-      const label = wrapper.querySelector('.datepicker-label');
-      if (!label) return;
-      const val = inputEl.value;
-      if (!val) {
-        label.textContent = 'Select date...';
-        label.classList.add('text-slate-400');
-        label.classList.remove('text-[#172B36]');
-      } else {
-        label.textContent = formatDisplayDate(val);
-        label.classList.remove('text-slate-400');
-        label.classList.add('text-[#172B36]');
-      }
-    }
-
-    function positionDatePicker(triggerEl, popoverEl) {
-      if (!triggerEl || !popoverEl) return;
-      const rect = triggerEl.getBoundingClientRect();
-      const popoverWidth = Math.min(300, window.innerWidth - 24);
-      popoverEl.style.width = `${popoverWidth}px`;
-      const popoverHeight = 330;
-
-      let left = rect.left;
-      if (left + popoverWidth > window.innerWidth - 12) {
-        left = Math.max(12, window.innerWidth - popoverWidth - 12);
-      }
-      if (left < 12) left = 12;
-
-      let top = rect.bottom + 6;
-      if (top + popoverHeight > window.innerHeight - 12) {
-        if (rect.top - popoverHeight - 6 >= 12) {
-          top = rect.top - popoverHeight - 6; // Flip above trigger
-        } else {
-          top = Math.max(12, window.innerHeight - popoverHeight - 12);
-        }
-      }
-
-      popoverEl.style.left = `${Math.round(left)}px`;
-      popoverEl.style.top = `${Math.round(top)}px`;
-      popoverEl.style.zIndex = '10000';
-    }
-
-    function renderCalendarGrid() {
-      const popover = document.getElementById('whizCustomDatePickerPopover');
-      const label = document.getElementById('datepickerMonthYearLabel');
-      const grid = document.getElementById('datepickerDaysGrid');
-      if (!popover || !label || !grid) return;
-
-      const monthNames = [
-        'January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'
-      ];
-      label.textContent = `${monthNames[_calendarMonth]} ${_calendarYear}`;
-
-      grid.innerHTML = '';
-
-      const firstDayIndex = new Date(_calendarYear, _calendarMonth, 1).getDay();
-      const lastDayOfMonth = new Date(_calendarYear, _calendarMonth + 1, 0).getDate();
-      const prevMonthLastDay = new Date(_calendarYear, _calendarMonth, 0).getDate();
-
-      const selectedVal = _activeDatePickerTarget ? _activeDatePickerTarget.value : '';
-      const today = new Date();
-      const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-
-      // Previous month filler days
-      for (let i = firstDayIndex - 1; i >= 0; i--) {
-        const dayNum = prevMonthLastDay - i;
-        const filler = document.createElement('div');
-        filler.className = 'w-8 h-8 rounded-lg text-xs font-normal text-slate-300 flex items-center justify-center pointer-events-none select-none';
-        filler.textContent = dayNum;
-        grid.appendChild(filler);
-      }
-
-      // Current month days
-      for (let day = 1; day <= lastDayOfMonth; day++) {
-        const isoString = `${_calendarYear}-${String(_calendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        const isSelected = selectedVal === isoString;
-        const isToday = todayIso === isoString;
-
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.textContent = day;
-        btn.dataset.isoDate = isoString;
-
-        let cls = 'w-8 h-8 rounded-lg text-xs font-medium flex items-center justify-center cursor-pointer transition-colors select-none font-sans ';
-        if (isSelected) {
-          cls += 'bg-[#087F70] text-white font-bold shadow-xs hover:bg-[#066559]';
-        } else if (isToday) {
-          cls += 'ring-1.5 ring-[#087F70] font-bold text-[#087F70] hover:bg-[#087F70]/10';
-        } else {
-          cls += 'text-[#172B36] hover:bg-[#087F70]/10 hover:text-[#087F70]';
-        }
-        btn.className = cls;
-
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          if (_activeDatePickerTarget) {
-            _activeDatePickerTarget.value = isoString;
-            _activeDatePickerTarget.dispatchEvent(new Event('input', { bubbles: true }));
-            _activeDatePickerTarget.dispatchEvent(new Event('change', { bubbles: true }));
-            updateDatePickerTrigger(_activeDatePickerTarget);
-          }
-          closeDatePicker();
-        });
-
-        grid.appendChild(btn);
-      }
-
-      // Next month filler days
-      const totalCells = firstDayIndex + lastDayOfMonth;
-      const remainingCells = (7 - (totalCells % 7)) % 7;
-      for (let j = 1; j <= remainingCells; j++) {
-        const filler = document.createElement('div');
-        filler.className = 'w-8 h-8 rounded-lg text-xs font-normal text-slate-300 flex items-center justify-center pointer-events-none select-none';
-        filler.textContent = j;
-        grid.appendChild(filler);
-      }
-    }
-
-    function openDatePicker(targetInput, triggerBtn) {
-      const popover = document.getElementById('whizCustomDatePickerPopover');
-      if (!popover || !targetInput) return;
-
-      _activeDatePickerTarget = targetInput;
-      _activeDatePickerTrigger = triggerBtn;
-
-      const currentVal = targetInput.value;
-      if (currentVal && /^\d{4}-\d{2}-\d{2}$/.test(currentVal)) {
-        const [y, m] = currentVal.split('-').map(Number);
-        _calendarYear = y;
-        _calendarMonth = m - 1;
-      } else {
-        const today = new Date();
-        _calendarYear = today.getFullYear();
-        _calendarMonth = today.getMonth();
-      }
-
-      positionDatePicker(triggerBtn, popover);
-      popover.classList.remove('hidden');
-      renderCalendarGrid();
-      positionDatePicker(triggerBtn, popover);
-      triggerBtn?.classList.add('border-[#087F70]', 'ring-2', 'ring-[#087F70]/20');
-    }
-
-    window.addEventListener('resize', () => {
-      const popover = document.getElementById('whizCustomDatePickerPopover');
-      if (_activeDatePickerTrigger && popover && !popover.classList.contains('hidden')) {
-        positionDatePicker(_activeDatePickerTrigger, popover);
-      }
-    });
-    window.addEventListener('scroll', () => {
-      const popover = document.getElementById('whizCustomDatePickerPopover');
-      if (_activeDatePickerTrigger && popover && !popover.classList.contains('hidden')) {
-        positionDatePicker(_activeDatePickerTrigger, popover);
-      }
-    }, true);
-
-    function closeDatePicker() {
-      const popover = document.getElementById('whizCustomDatePickerPopover');
-      if (popover) popover.classList.add('hidden');
-      if (_activeDatePickerTrigger) {
-        _activeDatePickerTrigger.classList.remove('border-[#087F70]', 'ring-2', 'ring-[#087F70]/20');
-      }
-      _activeDatePickerTarget = null;
-      _activeDatePickerTrigger = null;
-    }
-
-    document.getElementById('btnDatepickerPrevMonth')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      _calendarMonth--;
-      if (_calendarMonth < 0) {
-        _calendarMonth = 11;
-        _calendarYear--;
-      }
-      renderCalendarGrid();
-    });
-
-    document.getElementById('btnDatepickerNextMonth')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      _calendarMonth++;
-      if (_calendarMonth > 11) {
-        _calendarMonth = 0;
-        _calendarYear++;
-      }
-      renderCalendarGrid();
-    });
-
-    document.getElementById('btnDatepickerToday')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const today = new Date();
-      const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-      if (_activeDatePickerTarget) {
-        _activeDatePickerTarget.value = todayIso;
-        _activeDatePickerTarget.dispatchEvent(new Event('input', { bubbles: true }));
-        _activeDatePickerTarget.dispatchEvent(new Event('change', { bubbles: true }));
-        updateDatePickerTrigger(_activeDatePickerTarget);
-      }
-      closeDatePicker();
-    });
-
-    document.getElementById('btnDatepickerClear')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (_activeDatePickerTarget) {
-        _activeDatePickerTarget.value = '';
-        _activeDatePickerTarget.dispatchEvent(new Event('input', { bubbles: true }));
-        _activeDatePickerTarget.dispatchEvent(new Event('change', { bubbles: true }));
-        updateDatePickerTrigger(_activeDatePickerTarget);
-      }
-      closeDatePicker();
-    });
-
-    // Wire all datepicker triggers
-    document.querySelectorAll('.custom-datepicker-wrapper').forEach(wrapper => {
-      const targetId = wrapper.dataset.datepickerTarget;
-      const targetInput = targetId ? document.getElementById(targetId) : wrapper.querySelector('input');
-      const triggerBtn = wrapper.querySelector('.custom-datepicker-trigger');
-      if (triggerBtn && targetInput) {
-        triggerBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const popover = document.getElementById('whizCustomDatePickerPopover');
-          if (popover && !popover.classList.contains('hidden') && _activeDatePickerTarget === targetInput) {
-            closeDatePicker();
-          } else {
-            openDatePicker(targetInput, triggerBtn);
-          }
-        });
-        targetInput.addEventListener('change', () => updateDatePickerTrigger(targetInput));
-        updateDatePickerTrigger(targetInput);
-      }
-    });
-
-    // Global click outside and escape handlers for custom popovers
-    document.addEventListener('click', (e) => {
-      // Date Picker
-      const dpPopover = document.getElementById('whizCustomDatePickerPopover');
-      if (dpPopover && !dpPopover.classList.contains('hidden')) {
-        if (!dpPopover.contains(e.target) && !_activeDatePickerTrigger?.contains(e.target)) {
-          closeDatePicker();
-        }
-      }
-      // Client Currency Menu
-      if (clientCurrMenu && !clientCurrMenu.classList.contains('hidden')) {
-        if (!clientCurrMenu.contains(e.target) && !clientCurrTrigger?.contains(e.target)) {
-          closeClientCurrMenu();
-        }
-      }
-      // Assign Service Menu
-      if (assignServiceMenu && !assignServiceMenu.classList.contains('hidden')) {
-        if (!assignServiceMenu.contains(e.target) && !assignServiceTrigger?.contains(e.target)) {
-          closeAssignServiceMenu();
-        }
-      }
-      // Assign Currency Menu
-      if (assignCurrMenu && !assignCurrMenu.classList.contains('hidden')) {
-        if (!assignCurrMenu.contains(e.target) && !assignCurrTrigger?.contains(e.target)) {
-          closeAssignCurrencyMenu();
-        }
-      }
-    });
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        closeDatePicker();
-        closeClientCurrMenu();
-        closeAssignServiceMenu();
-        closeAssignCurrencyMenu();
-      }
-    });
-
-    // Hash change handler for deep linking & back/forward
-    window.addEventListener('hashchange', () => {
-      const hash = (window.location.hash || '').replace('#', '');
-      if (hash.startsWith('client-')) {
-        const cId = hash.replace('client-', '');
-        openClientDetails(cId);
-      } else if (hash.startsWith('service-tasks-')) {
-        const sId = hash.replace('service-tasks-', '');
-        openServiceTasksWorkspace(sId);
-      } else if (hash) {
-        switchTab(hash, false);
-      }
-    });
-
-    // Desktop Dock Collapse/Expand Controller & Persistence (WHIZ Adaptive Dock)
-    const desktopSidebar = document.getElementById('adminDesktopSidebar');
-    const collapseToggleBtn = document.getElementById('sidebarCollapseToggleBtn');
-    const collapseIcon = document.getElementById('sidebarCollapseIcon');
-
-    function applySidebarState(isCollapsed) {
-      if (!desktopSidebar) return;
-      if (isCollapsed) {
-        desktopSidebar.setAttribute('data-collapsed', 'true');
-        document.documentElement.classList.add('dock-init-collapsed');
-        if (collapseToggleBtn) {
-          collapseToggleBtn.setAttribute('title', 'Expand sidebar (260px)');
-          collapseToggleBtn.setAttribute('aria-label', 'Expand sidebar');
-        }
-        if (collapseIcon) {
-          collapseIcon.className = 'fa-solid fa-angles-right text-xs transition-transform duration-200';
-        }
-      } else {
-        desktopSidebar.removeAttribute('data-collapsed');
-        document.documentElement.classList.remove('dock-init-collapsed');
-        if (collapseToggleBtn) {
-          collapseToggleBtn.setAttribute('title', 'Collapse sidebar (72px)');
-          collapseToggleBtn.setAttribute('aria-label', 'Collapse sidebar');
-        }
-        if (collapseIcon) {
-          collapseIcon.className = 'fa-solid fa-angles-left text-xs transition-transform duration-200';
-        }
-      }
-    }
-
-    try {
-      const savedState = localStorage.getItem('whiz_sidebar_state');
-      applySidebarState(savedState === 'collapsed');
-    } catch (e) {
-      applySidebarState(false);
-    }
-
-    if (collapseToggleBtn) {
-      collapseToggleBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const isCollapsed = desktopSidebar?.getAttribute('data-collapsed') === 'true';
-        const nextState = !isCollapsed;
-        applySidebarState(nextState);
-        try {
-          localStorage.setItem('whiz_sidebar_state', nextState ? 'collapsed' : 'expanded');
-        } catch (err) {}
-      });
-    }
-
-    // Keyboard shortcut '[' or 'Ctrl+B' to toggle sidebar
-    document.addEventListener('keydown', (e) => {
-      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
-      if (e.key === '[' || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b')) {
-        e.preventDefault();
-        collapseToggleBtn?.click();
-      }
-    });
-
-    // Mobile Drawer Toggle with Body Scroll Locking
-    const toggleBtn = document.getElementById('mobileMenuToggleBtn');
-    const closeBtn = document.getElementById('mobileDrawerCloseBtn');
-    const drawer = document.getElementById('mobileDrawer');
-    const backdrop = document.getElementById('mobileDrawerBackdrop');
-
-    function openMobileDrawer() {
-      if (drawer && backdrop) {
-        drawer.classList.remove('-translate-x-full');
-        backdrop.classList.remove('hidden');
-        document.body.classList.add('overflow-hidden');
-      }
-    }
-
-    function closeMobileDrawer() {
-      if (drawer && backdrop) {
-        drawer.classList.add('-translate-x-full');
-        backdrop.classList.add('hidden');
-        document.body.classList.remove('overflow-hidden');
-      }
-    }
-
-    if (toggleBtn) toggleBtn.addEventListener('click', openMobileDrawer);
-    if (closeBtn) closeBtn.addEventListener('click', closeMobileDrawer);
-    if (backdrop) backdrop.addEventListener('click', closeMobileDrawer);
-
-    if (drawer) {
-      drawer.querySelectorAll('[data-dash-tab]').forEach(tabBtn => {
-        tabBtn.addEventListener('click', closeMobileDrawer);
-      });
-    }
-
-    // Interactive Profile Dropdown Menu Wiring
-    const userMenuBtn = document.getElementById('userMenuBtn');
-    const userDropdown = document.getElementById('userAccountDropdown');
-    const userChevron = document.getElementById('userMenuChevron');
-
-    function toggleUserDropdown() {
-      if (!userDropdown) return;
-      const isHidden = userDropdown.classList.contains('hidden');
-      if (isHidden) {
-        userDropdown.classList.remove('hidden');
-        if (userChevron) userChevron.classList.add('rotate-180');
-        if (userMenuBtn) userMenuBtn.setAttribute('aria-expanded', 'true');
-      } else {
-        closeUserDropdown();
-      }
-    }
-
-    function closeUserDropdown() {
-      if (!userDropdown) return;
-      userDropdown.classList.add('hidden');
-      if (userChevron) userChevron.classList.remove('rotate-180');
-      if (userMenuBtn) userMenuBtn.setAttribute('aria-expanded', 'false');
-    }
-
-    if (userMenuBtn) {
-      userMenuBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggleUserDropdown();
-      });
-    }
-
-    // Close dropdown on outside click or Escape key
-    document.addEventListener('click', (e) => {
-      if (userDropdown && !userDropdown.classList.contains('hidden')) {
-        if (!userDropdown.contains(e.target) && !userMenuBtn?.contains(e.target)) {
-          closeUserDropdown();
-        }
-      }
-    });
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        closeUserDropdown();
-        closeMobileDrawer();
-      }
-    });
-
-    // Dropdown Navigation Links
-    document.getElementById('dropdownLinkProfile')?.addEventListener('click', () => {
-      closeUserDropdown();
-      switchTab('overview');
-    });
-
-    document.getElementById('dropdownLinkSettings')?.addEventListener('click', () => {
-      closeUserDropdown();
-      switchTab('team');
-    });
-
-    document.getElementById('dropdownLinkSecurity')?.addEventListener('click', () => {
-      closeUserDropdown();
-      switchTab('security');
-    });
-
-    // Support Requests Event Listeners
-    document.getElementById('btnRefreshSupport')?.addEventListener('click', () => loadSupportData(true));
-    document.getElementById('supportSearchInput')?.addEventListener('input', () => renderSupport());
-    document.getElementById('supportStatusFilter')?.addEventListener('change', () => renderSupport());
-
-    // =========================================================================
-    // INQUIRIES & LEADS CRM EVENT LISTENERS
-    // =========================================================================
-    document.getElementById('btnRefreshInquiries')?.addEventListener('click', () => loadInquiriesData(true));
-    document.getElementById('searchInquiriesInput')?.addEventListener('input', () => renderInquiries());
-
-    document.querySelectorAll('#inquiriesStatusFilterGroup .inquiry-filter-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        state.activeInquiryFilter = btn.dataset.inquiryFilter || 'all';
-        document.querySelectorAll('#inquiriesStatusFilterGroup .inquiry-filter-btn').forEach(b => {
-          if (b === btn) {
-            b.className = 'inquiry-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/25 transition-all';
-          } else {
-            b.className = 'inquiry-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 border border-transparent transition-all';
-          }
-        });
-        renderInquiries();
-      });
-    });
-
-    // Delegated Inquiries Table Actions
-    document.addEventListener('click', (e) => {
-      const viewBtn = e.target.closest('.btn-view-inquiry');
-      if (viewBtn) {
-        const id = viewBtn.dataset.inquiryId;
-        if (id) openInquiryDetailsModal(id);
-        return;
-      }
-
-      const delBtn = e.target.closest('.btn-delete-inquiry');
-      if (delBtn) {
-        const id = delBtn.dataset.inquiryId;
-        if (id) deleteInquiry(id);
-        return;
-      }
-    });
-
-    // Inquiry Modal Buttons
-    document.getElementById('btnCloseInquiryModal')?.addEventListener('click', closeInquiryDetailsModal);
-    document.getElementById('btnCloseInquiryModalBottom')?.addEventListener('click', closeInquiryDetailsModal);
-    document.getElementById('btnSaveInquiryModal')?.addEventListener('click', saveInquiryDetails);
-    document.getElementById('btnDeleteInquiryModal')?.addEventListener('click', (e) => {
-      if (state.activeInquiryModalId) deleteInquiry(state.activeInquiryModalId, e);
-    });
-
-    // Inquiry Status Buttons inside Modal
-    document.querySelectorAll('#inquiryStatusButtonsGroup .inquiry-status-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('#inquiryStatusButtonsGroup .inquiry-status-btn').forEach(b => {
-          b.className = 'inquiry-status-btn py-2 px-3 rounded-xl border text-center font-bold text-xs transition-all bg-slate-50 text-slate-700 border-[#E3E9EF] hover:bg-slate-100';
-          b.removeAttribute('data-active');
-        });
-        btn.className = 'inquiry-status-btn py-2 px-3 rounded-xl border text-center font-bold text-xs transition-all bg-[#087F70] text-white border-[#087F70] shadow-xs';
-        btn.setAttribute('data-active', 'true');
-      });
-    });
-
-    // =========================================================================
-    // REVIEW MODERATION EVENT LISTENERS
-    // =========================================================================
-    document.getElementById('btnRefreshReviewsAdmin')?.addEventListener('click', () => loadAdminReviewsData(true));
-    document.getElementById('searchReviewsInput')?.addEventListener('input', () => renderAdminReviews());
-
-    document.querySelectorAll('#reviewsStatusFilterGroup .review-filter-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        state.activeReviewFilter = btn.dataset.reviewFilter || 'all';
-        document.querySelectorAll('#reviewsStatusFilterGroup .review-filter-btn').forEach(b => {
-          if (b === btn) {
-            b.className = 'review-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/25 transition-all';
-          } else {
-            b.className = 'review-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 border border-transparent transition-all';
-          }
-        });
-        renderAdminReviews();
-      });
-    });
-
-    // Delegated Reviews Moderation Actions
-    document.addEventListener('click', (e) => {
-      const approveBtn = e.target.closest('.btn-approve-review');
-      if (approveBtn) {
-        const id = approveBtn.dataset.reviewId;
-        if (id) moderateReview(id, 'approve');
-        return;
-      }
-
-      const rejectBtn = e.target.closest('.btn-reject-review');
-      if (rejectBtn) {
-        const id = rejectBtn.dataset.reviewId;
-        if (id) moderateReview(id, 'reject');
-        return;
-      }
-
-      const visBtn = e.target.closest('.btn-toggle-vis-review');
-      if (visBtn) {
-        const id = visBtn.dataset.reviewId;
-        if (id) moderateReview(id, 'toggle_visibility');
-        return;
-      }
-
-      const delRevBtn = e.target.closest('.btn-delete-review');
-      if (delRevBtn) {
-        const id = delRevBtn.dataset.reviewId;
-        if (id) deleteReviewAdmin(id);
-        return;
-      }
-    });
-
-    // Support Search Clear Button
-    document.getElementById('supportSearchClear')?.addEventListener('click', () => {
-      const input = document.getElementById('supportSearchInput');
-      if (input) {
-        input.value = '';
-        renderSupport();
-        input.focus();
-      }
-    });
-
-    // Delegated Reset Support Filters
-    document.addEventListener('click', (e) => {
-      if (e.target.closest('#btnClearSupportFilters')) {
-        const input = document.getElementById('supportSearchInput');
-        if (input) input.value = '';
-        const filter = document.getElementById('supportStatusFilter');
-        if (filter) {
-          filter.value = 'all';
-          filter.dispatchEvent(new Event('change'));
-        }
-        renderSupport();
-      } else if (e.target.closest('.btn-retry-support')) {
-        loadSupportData(true);
-      }
-    });
-
-    // Support Modal Close Listeners
-    const closeSupportModal = () => {
-      document.getElementById('modalSupportDetail')?.classList.add('hidden');
-    };
-    document.getElementById('btnCloseSupportModal')?.addEventListener('click', closeSupportModal);
-    document.getElementById('btnCancelSupportModal')?.addEventListener('click', closeSupportModal);
-
-    // Support Status Form Submit
-    document.getElementById('formUpdateSupportStatus')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const ticketId = document.getElementById('modalSupportHiddenId')?.value;
-      const status = document.getElementById('modalSupportNewStatus')?.value;
-      const adminNotes = document.getElementById('modalSupportAdminNotes')?.value;
-      const submitBtn = document.getElementById('btnSubmitSupportStatus');
-
-      if (!ticketId) return;
-
-      setBtnLoading(submitBtn, true, 'Saving...');
-      const res = await apiFetch(`/portal/admin/support/${ticketId}/status`, {
-        method: 'PUT',
-        body: JSON.stringify({ status, adminNotes })
-      });
-      setBtnLoading(submitBtn, false);
-
-      if (res.ok && res.data?.success) {
-        showToast(`Support request marked as ${status.replace('_', ' ')}!`, 'success');
-        closeSupportModal();
-        loadSupportData();
-      } else {
-        showToast(res.data?.error || 'Failed to update ticket status.', 'error');
-      }
-    });
-
-    // Trusted Devices Actions
-    document.getElementById('btnTrustThisDevice')?.addEventListener('click', async () => {
-      const devName = prompt('Enter a label for this trusted device (e.g. Work Laptop, Chrome on Windows):', `Device ${new Date().toLocaleDateString()}`);
-      if (!devName) return;
-
-      const res = await apiFetch('/security/trusted-devices', {
-        method: 'POST',
-        body: JSON.stringify({ deviceName: devName.trim() })
-      });
-
-      if (res.ok && res.data?.success) {
-        showToast('Device added to trusted devices!', 'success');
-        loadTrustedDevices();
-      } else {
-        showToast(res.data?.error || 'Failed to register trusted device.', 'error');
-      }
-    });
-
-    document.getElementById('btnRevokeAllDevices')?.addEventListener('click', async () => {
-      if (!confirm('Are you sure you want to revoke ALL trusted devices for your account?')) return;
-
-      const res = await apiFetch('/security/trusted-devices', { method: 'DELETE' });
-      if (res.ok && res.data?.success) {
-        showToast('All trusted devices revoked.', 'success');
-        loadTrustedDevices();
-      } else {
-        showToast(res.data?.error || 'Failed to revoke devices.', 'error');
-      }
-    });
-
-    // Mobile Quick Refresh Button
-    document.getElementById('mobileQuickRefreshBtn')?.addEventListener('click', () => {
-      const icon = document.getElementById('mobileQuickRefreshIcon');
-      if (icon) icon.classList.add('fa-spin');
-      const tabId = state.activeTab || 'overview';
-      if (tabId === 'overview') loadOverviewData();
-      else if (tabId === 'clients') loadClientsData();
-      else if (tabId === 'services') loadServicesData();
-      else if (tabId === 'projects') loadProjectsData();
-      else if (tabId === 'tasks') loadTasksData();
-      else if (tabId === 'finance') loadFinanceData();
-      else if (tabId === 'team') loadTeamData();
-      else if (tabId === 'support') loadSupportData();
-      else if (tabId === 'history') loadHistoryData();
-      else if (tabId === 'security') loadSecurityData();
-      else if (tabId === 'inquiries') loadInquiriesData();
-      else if (tabId === 'reviews_admin') loadAdminReviewsData();
-      setTimeout(() => {
-        if (icon) icon.classList.remove('fa-spin');
-        showToast('Console synchronized successfully.', 'success');
-      }, 500);
-    });
-
-    // Sign out buttons
-    document.querySelectorAll('.btn-admin-signout').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        document.cookie = 'whiz_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax; Secure';
-        try {
-          localStorage.removeItem('whiz_last_role');
-          sessionStorage.clear();
-        } catch (e) {}
-        if (window.Clerk) {
-          await window.Clerk.signOut();
-        }
-        window.location.replace('/');
-      });
-    });
-
-    // Password change form
-    const changePasswordForm = document.getElementById('adminChangePasswordForm');
-    if (changePasswordForm) {
-      changePasswordForm.addEventListener('submit', handleAdminPasswordChange);
-    }
-
-    initPasswordToggles();
-    initModals();
-    if (typeof initGlassSelects === 'function') initGlassSelects();
-
-    // Start Auth check
-    checkAuthAndInit();
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
-})();
+      `}).join(""),n.querySelectorAll(".btn-approve-review").forEach(r=>{r.addEventListener("click",m=>{m.stopPropagation(),m.preventDefault();const b=r.dataset.reviewId;b&&Me(b,"approve")})}),n.querySelectorAll(".btn-reject-review").forEach(r=>{r.addEventListener("click",m=>{m.stopPropagation(),m.preventDefault();const b=r.dataset.reviewId;b&&Me(b,"reject")})}),n.querySelectorAll(".btn-toggle-vis-review").forEach(r=>{r.addEventListener("click",m=>{m.stopPropagation(),m.preventDefault();const b=r.dataset.reviewId;b&&Me(b,"toggle_visibility")})}),n.querySelectorAll(".btn-delete-review").forEach(r=>{r.addEventListener("click",m=>{m.stopPropagation(),m.preventDefault();const b=r.dataset.reviewId;b&&It(b,m)})})}async function Me(n,t){const s=(g.adminReviews||[]).find(e=>e.id===n);if(s)try{const e=await B("/api/admin-reviews",{method:"PATCH",body:JSON.stringify({id:n,action:t})});e.ok&&e.data&&e.data.success?(t==="approve"?(s.moderation_status="approved",s.visibility="show",v("Review approved and live on homepage!","success")):t==="reject"?(s.moderation_status="rejected",s.visibility="hidden",v("Review rejected and hidden from site.","info")):t==="toggle_visibility"&&(s.visibility=s.visibility==="show"?"hidden":"show",v(`Review visibility set to ${s.visibility}.`,"info")),s.updated_at=new Date().toISOString(),kt(),Ye()):v(e.data?.error||"Failed to update review moderation.","error")}catch{v("Network error moderating review.","error")}}async function It(n,t=null){if(t&&(typeof t.stopPropagation=="function"&&t.stopPropagation(),typeof t.preventDefault=="function"&&t.preventDefault()),!n||!window.confirm("Are you sure you want to permanently delete this client review from the database? This action cannot be undone."))return;const s=t&&t.currentTarget||document.querySelector(`button.btn-delete-review[data-review-id="${n}"]`),e=s?.closest("tr")||document.querySelector(`tr[data-review-row="${n}"]`);s&&(s.disabled=!0,s.innerHTML='<i class="fa-solid fa-spinner fa-spin text-xs text-rose-500"></i>'),e&&e.classList.add("opacity-40","pointer-events-none");try{const l=await B(`/api/admin-reviews?id=${encodeURIComponent(n)}`,{method:"DELETE",body:JSON.stringify({id:n})});if(l.ok&&(l.data?.success||l.status===200||l.status===204)){if(g.adminReviews=(g.adminReviews||[]).filter(i=>i.id!==n&&i.id!=="review_"+n&&"review_"+i.id!==n),window.__whizAdminMock&&window.__whizAdminMock.getData){const i=window.__whizAdminMock.getData();i&&i.reviews&&(i.reviews=i.reviews.filter(p=>p.id!==n&&p.id!=="review_"+n&&"review_"+p.id!==n))}e&&e.remove(),kt(),Ye(),v("Review permanently deleted.","info")}else s&&(s.disabled=!1,s.innerHTML='<i class="fa-solid fa-trash-can text-xs"></i>'),e&&e.classList.remove("opacity-40","pointer-events-none"),v(l.data?.error||"Failed to delete review.","error")}catch{s&&(s.disabled=!1,s.innerHTML='<i class="fa-solid fa-trash-can text-xs"></i>'),e&&e.classList.remove("opacity-40","pointer-events-none"),v("Network error deleting review.","error")}}function hn(n){if(!n||typeof n!="string")return[];const t=n.replace(/\r\n/g,`
+`).replace(/\r/g,`
+`),s=/(?:^|\n)[ \t]*(?:\*{1,3}|_{1,3})?[ \t]*(?:content|post)[ \t]*[-#:]*[ \t]*0*([0-9]+)[ \t]*[:\-\—\–\.]*[ \t]*(.*?)(?=(?:\*{1,3}|_{1,3})?(?:\n|$))/gi,e=[];let l;for(;(l=s.exec(t))!==null;)e.push({index:l.index,fullMatchLength:l[0].length,serialNumber:parseInt(l[1],10),inlineHeader:(l[2]||"").trim()});if(e.length===0)return[];const i=[];for(let p=0;p<e.length;p++){const u=e[p],y=e[p+1],a=u.index+u.fullMatchLength,o=y?y.index:t.length;let d=t.substring(a,o).trim(),c="";u.inlineHeader&&u.inlineHeader.length>0&&(c=u.inlineHeader.replace(/^[\*\_\:\-\#\s]+|[\*\_\:\-\#\s]+$/g,"").trim());const r=d.split(`
+`).map(m=>m.trim()).filter(Boolean);if(!c&&r.length>0){const m=r[0].match(/^(?:title|topic|headline)\s*[:\-]\s*(.+)/i);m&&m[1]?c=m[1].trim():r[0].length<=80&&!r[0].includes(":")&&!r[0].startsWith("-")&&!r[0].startsWith("\u2022")&&(c=r[0])}c||(c=`Content ${u.serialNumber}`),i.push({serial_number:u.serialNumber,title:c,content_body:d})}return i}async function En(n){if(!window.mammoth)throw new Error("Mammoth parser library not loaded. Please refresh the page.");return(await window.mammoth.extractRawText({arrayBuffer:n})).value||""}async function wn(n){if(!window.pdfjsLib)throw new Error("PDF.js parser library not loaded. Please refresh the page.");window.pdfjsLib.GlobalWorkerOptions.workerSrc="/assets/js/pdf.worker.min.js";const t=await window.pdfjsLib.getDocument({data:n}).promise;let s="";for(let e=1;e<=t.numPages;e++){const p=(await(await t.getPage(e)).getTextContent()).items.map(a=>({str:a.str,x:a.transform[4],y:a.transform[5],h:a.height||10}));p.sort((a,o)=>{const d=o.y-a.y;return Math.abs(d)>4?d:a.x-o.x});let u=null,y="";for(const a of p)u===null?(y+=a.str,u=a.y):Math.abs(u-a.y)>4?(Math.abs(u-a.y)>16?y+=`
+
+`+a.str:y+=`
+`+a.str,u=a.y):y+=(y.endsWith(" ")||a.str.startsWith(" ")?"":" ")+a.str;s+=(s?`
+
+`:"")+y}return s}async function _e(n=!1){const t=document.getElementById("btnRefreshContentCal");if(t){const s=t.querySelector("i");s&&s.classList.add("fa-spin")}try{const s=await B("/api/admin/content-calendar/meta");s.ok&&s.data?.success&&(g.contentCalendarMeta={companies:s.data.companies||[],services:s.data.services||[]},Cn());const e=await B("/api/admin/content-calendar/folders");e.ok&&e.data?.success?g.contentCalendarFolders=e.data.folders||[]:g.contentCalendarFolders=[],kn(),Bt(),n&&v("Content Calendar Hub synchronized.","success")}catch(s){console.error("Error loading content calendar data:",s),v("Failed to load content calendar records.","error")}finally{if(t){const s=t.querySelector("i");s&&s.classList.remove("fa-spin")}}}function Cn(){const n=document.getElementById("contentCalCompanySelect");if(n){const s=n.value;n.innerHTML=`
+        <option value="">Select an existing client...</option>
+        ${(g.contentCalendarMeta.companies||[]).map(e=>`
+          <option value="${f(e.client_email)}" data-company="${f(e.company_name)}">
+            ${f(e.company_name)} (${f(e.client_email)})
+          </option>
+        `).join("")}
+        <option value="__custom__">+ Enter Custom Company Name</option>
+      `,s&&(n.value=s)}const t=document.getElementById("contentCalServiceSelect");if(t){const s=t.value;t.innerHTML=`
+        <option value="">Select a service...</option>
+        ${(g.contentCalendarMeta.services||[]).map(e=>`
+          <option value="${f(e)}">${f(e)}</option>
+        `).join("")}
+        <option value="__custom__">+ Enter Custom Service</option>
+      `,s&&(t.value=s)}}function kn(){const n=g.contentCalendarFolders||[],t=n.length,s=n.reduce((o,d)=>o+(Number(d.item_count)||0),0),e=new Set(n.map(o=>(o.client_email||"").toLowerCase())).size,l=t>0?(s/t).toFixed(1):0,i=document.getElementById("statTotalContentFolders"),p=document.getElementById("statTotalContentItems"),u=document.getElementById("statContentClientsCount"),y=document.getElementById("statAvgContentCards"),a=document.getElementById("contentCalFoldersCountBadge");i&&(i.textContent=t),p&&(p.textContent=s),u&&(u.textContent=e),y&&(y.textContent=l),a&&(a.textContent=`${t} Folder${t===1?"":"s"}`)}function Bt(n=null){const t=n!==null?n:g.contentCalendarFolders||[],s=document.getElementById("contentCalFoldersGrid"),e=document.getElementById("contentCalEmptyFolders");if(s){if(t.length===0){s.innerHTML="",e&&e.classList.remove("hidden");return}e&&e.classList.add("hidden"),s.innerHTML=t.map(l=>{const i=l.company_name||"Client",p=l.client_email||"",u=l.service_name||"Marketing Retainer",y=Number(l.item_count)||0,a=l.updated_at?new Date(l.updated_at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}):"Recent";return`
+        <div class="p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs hover:border-[#087F70]/30 hover:shadow-sm transition-all flex flex-col justify-between space-y-4" data-folder-card="${f(l.id)}">
+          <div class="space-y-2.5">
+            <div class="flex items-start justify-between gap-2">
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20 truncate max-w-[200px]">
+                <i class="fa-solid fa-shapes text-[9px]"></i>
+                ${f(u)}
+              </span>
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700 shrink-0">
+                <i class="fa-solid fa-layer-group text-[9px] text-slate-400"></i>
+                ${y} Cards
+              </span>
+            </div>
+
+            <div>
+              <h4 class="text-sm font-bold text-[#172B36] tracking-tight truncate" title="${f(i)}">
+                ${f(i)}
+              </h4>
+              <p class="text-xs text-slate-500 truncate mt-0.5 flex items-center gap-1.5" title="${f(p)}">
+                <i class="fa-solid fa-envelope text-slate-400 text-[10px]"></i>
+                <span>${f(p)}</span>
+              </p>
+            </div>
+          </div>
+
+          <div class="pt-3 border-t border-[#E3E9EF] flex items-center justify-between text-xs">
+            <span class="text-[10px] text-slate-400">
+              Updated: ${f(a)}
+            </span>
+            <div class="flex items-center gap-1">
+              <button type="button" class="btn-view-content-folder px-3 py-1.5 rounded-lg text-xs font-bold bg-[#EAF5F1] hover:bg-[#d8ece4] text-[#087F70] transition-colors cursor-pointer" data-folder-id="${f(l.id)}">
+                <span>View</span>
+                <i class="fa-solid fa-chevron-right text-[9px] ml-1"></i>
+              </button>
+              <button type="button" class="btn-edit-content-folder p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer" data-folder-id="${f(l.id)}" title="Edit Folder">
+                <i class="fa-solid fa-pen-to-square text-xs"></i>
+              </button>
+              <button type="button" class="btn-delete-content-folder p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer" data-folder-id="${f(l.id)}" title="Delete Folder">
+                <i class="fa-solid fa-trash-can text-xs"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      `}).join("")}}async function Ot(n){const t=document.getElementById("contentCalFoldersView"),s=document.getElementById("contentCalFolderDetailView");if(s)try{const e=await B(`/api/admin/content-calendar/folders/${n}`);if(!e.ok||!e.data?.success){v(e.data?.error||"Failed to load folder details.","error");return}g.currentContentFolder=e.data.folder,g.currentContentItems=e.data.items||[];const l=g.currentContentFolder,i=document.getElementById("contentCalDetailCompany"),p=document.getElementById("contentCalDetailService"),u=document.getElementById("contentCalDetailEmail"),y=document.getElementById("contentCalDetailItemsCount");i&&(i.textContent=l.company_name),p&&(p.textContent=l.service_name),u&&(u.textContent=l.client_email),y&&(y.textContent=`${g.currentContentItems.length} Cards`),tt(),t&&t.classList.add("hidden"),s.classList.remove("hidden"),s.scrollIntoView({behavior:"smooth",block:"start"})}catch(e){console.error("Error opening folder detail:",e),v("Error opening folder detail.","error")}}function tt(n=null){const t=n!==null?n:g.currentContentItems||[],s=document.getElementById("contentCalCardsGrid"),e=document.getElementById("contentCalEmptyCards");if(s){if(t.length===0){s.innerHTML="",e&&e.classList.remove("hidden");return}e&&e.classList.add("hidden"),s.innerHTML=t.map(l=>{const i=l.serial_number||1,p=l.title||`Content ${i}`,u=l.content_body||"";return`
+        <div class="p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs flex flex-col justify-between space-y-3.5 hover:border-[#087F70]/30 transition-all" data-content-card-id="${f(l.id)}">
+          <div class="space-y-2">
+            <div class="flex items-center justify-between gap-2">
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20">
+                <i class="fa-solid fa-hashtag text-[9px]"></i> Content ${i}
+              </span>
+              <div class="flex items-center gap-1">
+                <button type="button" class="btn-copy-content-body px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-[#EAF5F1] text-slate-700 hover:text-[#087F70] transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs" data-item-id="${f(l.id)}" title="Copy raw text">
+                  <i class="fa-solid fa-copy text-xs"></i>
+                  <span>Copy</span>
+                </button>
+                <button type="button" class="btn-delete-content-card p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer" data-item-id="${f(l.id)}" title="Delete card">
+                  <i class="fa-solid fa-trash-can text-xs"></i>
+                </button>
+              </div>
+            </div>
+
+            <h4 class="text-sm font-bold text-[#172B36] leading-snug">
+              ${f(p)}
+            </h4>
+          </div>
+
+          <div class="bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/60 max-h-72 overflow-y-auto whiz-nested-scroll">
+            <pre class="font-sans text-xs text-slate-700 leading-relaxed whitespace-pre-wrap select-text m-0">${f(u)}</pre>
+          </div>
+        </div>
+      `}).join("")}}function zt(){const n=document.getElementById("contentCalFoldersView"),t=document.getElementById("contentCalFolderDetailView");t&&t.classList.add("hidden"),n&&n.classList.remove("hidden"),g.currentContentFolder=null,g.currentContentItems=[],_e()}async function In(n){if(confirm("Are you sure you want to permanently delete this content card? The folder will remain intact."))try{const t=await B(`/api/admin/content-calendar/items/${n}`,{method:"DELETE"});if(t.ok&&t.data?.success){v("Content card deleted.","success"),g.currentContentItems=g.currentContentItems.filter(e=>e.id!==n);const s=document.getElementById("contentCalDetailItemsCount");s&&(s.textContent=`${g.currentContentItems.length} Cards`),tt()}else v(t.data?.error||"Failed to delete content card.","error")}catch(t){console.error("Delete item error:",t),v("Error deleting content card.","error")}}function Ut(n){const t=(g.contentCalendarFolders||[]).find(y=>y.id===n)||g.currentContentFolder;if(!t)return;const s=document.getElementById("modalEditContentFolder"),e=document.getElementById("editContentFolderId"),l=document.getElementById("editContentFolderCompany"),i=document.getElementById("editContentFolderEmail"),p=document.getElementById("editContentFolderService"),u=document.getElementById("editContentFolderSyncAll");e&&(e.value=t.id),l&&(l.value=t.company_name),i&&(i.value=t.client_email),p&&(p.value=t.service_name),u&&(u.checked=!1),s&&s.classList.remove("hidden")}function Lt(){const n=document.getElementById("modalEditContentFolder");n&&n.classList.add("hidden")}async function Bn(n){n.preventDefault();const t=document.getElementById("editContentFolderId")?.value,s=document.getElementById("editContentFolderCompany")?.value?.trim(),e=document.getElementById("editContentFolderEmail")?.value?.trim()?.toLowerCase(),l=document.getElementById("editContentFolderService")?.value?.trim(),i=document.getElementById("editContentFolderSyncAll")?.checked,p=document.getElementById("btnSaveEditContentFolder");if(!t||!s||!e||!l){v("Please fill out all required fields.","warn");return}setButtonLoading(p,!0,"Saving...");try{const u=await B(`/api/admin/content-calendar/folders/${t}`,{method:"PATCH",body:JSON.stringify({company_name:s,client_email:e,service_name:l,apply_to_all_client_folders:i})});if(setButtonLoading(p,!1),u.ok&&u.data?.success){if(v("Folder updated successfully.","success"),Lt(),g.currentContentFolder&&g.currentContentFolder.id===t){g.currentContentFolder.company_name=s,g.currentContentFolder.client_email=e,g.currentContentFolder.service_name=l;const y=document.getElementById("contentCalDetailCompany"),a=document.getElementById("contentCalDetailService"),o=document.getElementById("contentCalDetailEmail");y&&(y.textContent=s),a&&(a.textContent=l),o&&(o.textContent=e)}_e()}else v(u.data?.error||"Failed to update folder.","error")}catch(u){setButtonLoading(p,!1),console.error("Update folder error:",u),v("Error updating folder.","error")}}function Vt(n){const t=document.getElementById("modalDeleteContentFolder"),s=document.getElementById("deleteContentFolderId");s&&(s.value=n),t&&t.classList.remove("hidden")}function Wt(){const n=document.getElementById("modalDeleteContentFolder");n&&n.classList.add("hidden")}async function Ln(){const n=document.getElementById("deleteContentFolderId")?.value,t=document.getElementById("btnConfirmDeleteContentFolder");if(n){setButtonLoading(t,!0,"Deleting...");try{const s=await B(`/api/admin/content-calendar/folders/${n}`,{method:"DELETE"});setButtonLoading(t,!1),s.ok&&s.data?.success?(v("Folder and all content items deleted.","success"),Wt(),g.currentContentFolder&&g.currentContentFolder.id===n?zt():_e()):v(s.data?.error||"Failed to delete folder.","error")}catch(s){setButtonLoading(t,!1),console.error("Delete folder error:",s),v("Error deleting folder.","error")}}}async function Sn(n){n.preventDefault();const t=document.getElementById("contentCalCompanySelect"),s=document.getElementById("contentCalCustomCompany"),e=document.getElementById("contentCalClientEmail"),l=document.getElementById("contentCalServiceSelect"),i=document.getElementById("contentCalCustomService"),p=document.getElementById("contentCalFileInput"),u=document.getElementById("btnGenerateContentCal");let y="";if(t?.value==="__custom__")y=s?.value?.trim()||"";else if(t){const c=t.options[t.selectedIndex];y=c?.dataset?.company||c?.text?.split(" (")[0]?.trim()||""}const a=e?.value?.trim()?.toLowerCase()||"";let o="";l?.value==="__custom__"?o=i?.value?.trim()||"":l&&(o=l.value?.trim()||"");const d=g.selectedCalendarFile||p?.files?.[0];if(!y){v("Please select or enter a Company Name.","warn");return}if(!a||!a.includes("@")){v("Please enter a valid Client Email (Gmail).","warn");return}if(!o){v("Please select or enter a Service Name.","warn");return}if(!d){v("Please choose a .docx or .pdf document to parse.","warn");return}setButtonLoading(u,!0,"Parsing document in browser...");try{let c="";const r=await d.arrayBuffer(),m=d.name.toLowerCase();if(m.endsWith(".docx"))c=await En(r);else if(m.endsWith(".pdf"))c=await wn(r);else throw new Error("Unsupported file format. Please upload a .docx or .pdf file.");const b=hn(c);if(!b||b.length===0){setButtonLoading(u,!1),v("No content markers (e.g. 'Content 1', 'Content 2') were detected in this document. Please check the document formatting.","error");return}setButtonLoading(u,!0,`Uploading ${b.length} content items...`);const E=await B("/api/admin/content-calendar/upload",{method:"POST",body:JSON.stringify({company_name:y,client_email:a,service_name:o,items:b})});p&&(p.value=""),g.selectedCalendarFile=null;const C=document.getElementById("contentCalFilePreview");if(C&&C.classList.add("hidden"),setButtonLoading(u,!1),E.ok&&E.data?.success){v(`Successfully generated Content Calendar with ${b.length} cards!`,"success");const h=E.data.folder_id;await _e(),h&&Ot(h)}else v(E.data?.error||"Failed to save content calendar to database.","error")}catch(c){setButtonLoading(u,!1),console.error("Content calendar parsing error:",c),v(c.message||"Failed to parse document.","error")}}window.__whizDeleteReview=It;function Gt(){document.querySelectorAll("[data-dash-tab]").forEach(x=>{x.addEventListener("click",()=>{const w=x.dataset.dashTab;X(w);const k=document.getElementById("mobileDrawer"),T=document.getElementById("mobileDrawerBackdrop");k&&k.classList.add("-translate-x-full"),T&&T.classList.add("hidden"),document.body.classList.remove("overflow-hidden")})}),document.querySelectorAll("[data-kpi-nav]").forEach(x=>{const w=()=>{const k=x.dataset.kpiNav,T=x.dataset.kpiFilter;if(k)if(X(k),k==="clients"){const S=document.getElementById("adminClientStatusFilter");S&&(S.value=T||"active",m(S.value)),le()}else if(k==="projects")ke();else if(k==="services")Ce();else if(k==="tasks"){const S=T||"all";document.querySelectorAll(".task-filter-btn").forEach(_=>{_.dataset.filter===S||T==="pending"&&_.dataset.filter==="in_progress"?(_.classList.add("bg-slate-800","text-white","font-bold"),_.classList.remove("text-slate-400","font-medium")):(_.classList.remove("bg-slate-800","text-white","font-bold"),_.classList.add("text-slate-400","font-medium"))}),g.currentTaskStatus=S,Qe(S),Ie(S)}else k==="finance"&&ve()};x.addEventListener("click",w),x.addEventListener("keydown",k=>{(k.key==="Enter"||k.key===" ")&&(k.preventDefault(),w())})}),document.getElementById("auditSearchInput")?.addEventListener("input",()=>{bt()}),document.getElementById("auditCategoryFilter")?.addEventListener("change",()=>{bt()});const n=document.getElementById("btnAuditCategoryDropdown"),t=document.getElementById("auditCategoryDropdownMenu"),s=document.getElementById("auditCategoryDropdownChevron"),e=document.getElementById("auditCategoryDropdownCurrentLabel"),l=document.getElementById("auditCategoryFilter");function i(){if(!t)return;t.classList.contains("hidden")?(t.classList.remove("hidden"),s&&s.classList.add("rotate-180"),n&&n.setAttribute("aria-expanded","true")):p()}function p(){t&&(t.classList.add("hidden"),s&&s.classList.remove("rotate-180"),n&&n.setAttribute("aria-expanded","false"))}n&&n.addEventListener("click",x=>{x.stopPropagation(),i()}),document.querySelectorAll(".custom-audit-cat-option").forEach(x=>{x.addEventListener("click",w=>{w.stopPropagation();const k=x.getAttribute("data-value")||"all",T=x.querySelector("span")?.textContent||"All Categories";e&&(e.textContent=T),document.querySelectorAll(".custom-audit-cat-option").forEach(S=>{const _=S===x;S.setAttribute("aria-selected",_?"true":"false");const j=S.querySelector(".audit-option-check"),oe=S.querySelector("i:first-child");_?(S.className="custom-audit-cat-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-[#087F70] bg-[#087F70]/10 hover:bg-[#087F70]/15 cursor-pointer transition-colors select-none font-sans text-left",j&&j.classList.remove("hidden"),oe&&(oe.classList.remove("text-slate-400"),oe.classList.add("text-[#087F70]"))):(S.className="custom-audit-cat-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left",j&&j.classList.add("hidden"),oe&&!oe.classList.contains("fa-layer-group")&&(oe.classList.add("text-slate-400"),oe.classList.remove("text-[#087F70]")))}),l&&(l.value=k,l.dispatchEvent(new Event("change",{bubbles:!0}))),p()})}),document.addEventListener("click",x=>{t&&!t.classList.contains("hidden")&&!t.contains(x.target)&&!n?.contains(x.target)&&p()}),document.addEventListener("keydown",x=>{x.key==="Escape"&&t&&!t.classList.contains("hidden")&&p()}),document.getElementById("btnRefreshAuditHistory")?.addEventListener("click",async()=>{await yt(),v("Audit feed updated.","success")});const u=document.getElementById("btnClientStatusDropdown"),y=document.getElementById("clientStatusDropdownMenu"),a=document.getElementById("clientStatusDropdownChevron"),o=document.getElementById("clientStatusDropdownCurrentLabel"),d=document.getElementById("adminClientStatusFilter");function c(){if(!y)return;y.classList.contains("hidden")?(y.classList.remove("hidden"),a&&a.classList.add("rotate-180"),u&&u.setAttribute("aria-expanded","true")):r()}function r(){y&&(y.classList.add("hidden"),a&&a.classList.remove("rotate-180"),u&&u.setAttribute("aria-expanded","false"))}function m(x){document.querySelectorAll(".custom-client-status-option").forEach(w=>{const T=w.getAttribute("data-value")===x;w.setAttribute("aria-selected",T?"true":"false");const S=w.querySelector(".client-status-option-check");if(T){w.className="custom-client-status-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-[#087F70] bg-[#087F70]/10 hover:bg-[#087F70]/15 cursor-pointer transition-colors select-none font-sans text-left",S&&S.classList.remove("hidden");const _=w.querySelector("span:last-child"),j=_?_.textContent.trim():x==="active"?"Active Clients Only":x==="suspended"?"Suspended Clients":"All Clients";o&&(o.textContent=j)}else w.className="custom-client-status-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left",S&&S.classList.add("hidden")})}u&&u.addEventListener("click",x=>{x.stopPropagation(),c()}),document.querySelectorAll(".custom-client-status-option").forEach(x=>{x.addEventListener("click",w=>{w.stopPropagation();const k=x.getAttribute("data-value")||"active";m(k),d&&(d.value=k,d.dispatchEvent(new Event("change",{bubbles:!0}))),r()})}),document.addEventListener("click",x=>{y&&!y.classList.contains("hidden")&&!y.contains(x.target)&&!u?.contains(x.target)&&r()}),document.addEventListener("keydown",x=>{x.key==="Escape"&&y&&!y.classList.contains("hidden")&&r()}),d&&(d.addEventListener("change",()=>{m(d.value)}),m(d.value||"active"));const b=document.getElementById("btnClientCurrencyDropdown"),E=document.getElementById("clientCurrencyDropdownMenu"),C=document.getElementById("clientCurrencyDropdownChevron"),h=document.getElementById("clientCurrencyDropdownCurrentLabel"),I=document.getElementById("clientPreferredCurrencySelect");function L(){if(!E)return;E.classList.contains("hidden")?(E.classList.remove("hidden"),C&&C.classList.add("rotate-180"),b&&b.setAttribute("aria-expanded","true")):P()}function P(){E&&(E.classList.add("hidden"),C&&C.classList.remove("rotate-180"),b&&b.setAttribute("aria-expanded","false"))}function M(x){if(!x)return;const w=x.toUpperCase();document.querySelectorAll(".custom-client-currency-option").forEach(k=>{const S=(k.getAttribute("data-value")||"").toUpperCase()===w;k.setAttribute("aria-selected",S?"true":"false");const _=k.querySelector(".currency-option-check");if(S){k.className="custom-client-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-[#087F70] bg-[#087F70]/10 hover:bg-[#087F70]/15 cursor-pointer transition-colors select-none font-sans text-left",_&&_.classList.remove("hidden");const j=k.querySelector("span")?.textContent||k.textContent.trim();h&&(h.textContent=j)}else k.className="custom-client-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left",_&&_.classList.add("hidden")}),I&&I.value!==w&&(I.value=w)}b&&b.addEventListener("click",x=>{x.stopPropagation(),L()}),document.querySelectorAll(".custom-client-currency-option").forEach(x=>{x.addEventListener("click",w=>{w.stopPropagation();const k=x.getAttribute("data-value")||"USD";M(k),I&&(I.value=k,I.dispatchEvent(new Event("change",{bubbles:!0}))),P()})}),I&&I.addEventListener("change",()=>{M(I.value)});const F=document.getElementById("btnAssignServiceTrigger"),D=document.getElementById("assignServiceMenu"),N=document.getElementById("assignServiceChevron"),H=document.getElementById("assignServiceCurrentLabel"),W=document.getElementById("assignServiceSelect");function ee(){if(!D)return;D.classList.contains("hidden")?(D.classList.remove("hidden"),N&&N.classList.add("rotate-180"),F&&F.setAttribute("aria-expanded","true")):J()}function J(){D&&(D.classList.add("hidden"),N&&N.classList.remove("rotate-180"),F&&F.setAttribute("aria-expanded","false"))}F&&F.addEventListener("click",x=>{x.stopPropagation(),ee()});const V=document.getElementById("btnAssignCurrencyTrigger"),z=document.getElementById("assignCurrencyMenu"),Q=document.getElementById("assignCurrencyChevron"),ue=document.getElementById("assignCurrencyCurrentLabel"),te=document.getElementById("assignServiceCurrency");function me(){if(!z)return;z.classList.contains("hidden")?(z.classList.remove("hidden"),Q&&Q.classList.add("rotate-180"),V&&V.setAttribute("aria-expanded","true")):ie()}function ie(){z&&(z.classList.add("hidden"),Q&&Q.classList.remove("rotate-180"),V&&V.setAttribute("aria-expanded","false"))}function pe(x){if(!x)return;const w=x.toUpperCase();document.querySelectorAll(".custom-assign-currency-option").forEach(k=>{const S=(k.getAttribute("data-value")||"").toUpperCase()===w;k.setAttribute("aria-selected",S?"true":"false");const _=k.querySelector(".assign-currency-check");if(S){k.className="custom-assign-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-[#087F70] bg-[#087F70]/10 hover:bg-[#087F70]/15 cursor-pointer transition-colors select-none font-sans text-left",_&&_.classList.remove("hidden");const j=k.querySelector("span")?.textContent||k.textContent.trim();ue&&(ue.textContent=j)}else k.className="custom-assign-currency-option w-full group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#087F70]/10 hover:text-[#087F70] cursor-pointer transition-colors select-none font-sans text-left",_&&_.classList.add("hidden")}),te&&te.value!==w&&(te.value=w)}V&&V.addEventListener("click",x=>{x.stopPropagation(),me()}),document.querySelectorAll(".custom-assign-currency-option").forEach(x=>{x.addEventListener("click",w=>{w.stopPropagation();const k=x.getAttribute("data-value")||"USD";pe(k),te&&(te.value=k,te.dispatchEvent(new Event("change",{bubbles:!0}))),ie()})});let q=null,ne=null,K=new Date().getFullYear(),G=new Date().getMonth();function $(x){if(!x)return"Select date...";const w=x.split("-").map(Number);if(w.length!==3||isNaN(w[0]))return x;const[k,T,S]=w;return new Date(k,T-1,S).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}function U(x){if(!x)return;const w=x.closest(".custom-datepicker-wrapper")||document.querySelector(`[data-datepicker-target="${x.id}"]`);if(!w)return;const k=w.querySelector(".datepicker-label");if(!k)return;const T=x.value;T?(k.textContent=$(T),k.classList.remove("text-slate-400"),k.classList.add("text-[#172B36]")):(k.textContent="Select date...",k.classList.add("text-slate-400"),k.classList.remove("text-[#172B36]"))}function R(x,w){if(!x||!w)return;const k=x.getBoundingClientRect(),T=Math.min(300,window.innerWidth-24);w.style.width=`${T}px`;const S=330;let _=k.left;_+T>window.innerWidth-12&&(_=Math.max(12,window.innerWidth-T-12)),_<12&&(_=12);let j=k.bottom+6;j+S>window.innerHeight-12&&(k.top-S-6>=12?j=k.top-S-6:j=Math.max(12,window.innerHeight-S-12)),w.style.left=`${Math.round(_)}px`,w.style.top=`${Math.round(j)}px`,w.style.zIndex="10000"}function Ne(){const x=document.getElementById("whizCustomDatePickerPopover"),w=document.getElementById("datepickerMonthYearLabel"),k=document.getElementById("datepickerDaysGrid");if(!x||!w||!k)return;const T=["January","February","March","April","May","June","July","August","September","October","November","December"];w.textContent=`${T[G]} ${K}`,k.innerHTML="";const S=new Date(K,G,1).getDay(),_=new Date(K,G+1,0).getDate(),j=new Date(K,G,0).getDate(),oe=q?q.value:"",Le=new Date,Dn=`${Le.getFullYear()}-${String(Le.getMonth()+1).padStart(2,"0")}-${String(Le.getDate()).padStart(2,"0")}`;for(let de=S-1;de>=0;de--){const ge=j-de,Ke=document.createElement("div");Ke.className="w-8 h-8 rounded-lg text-xs font-normal text-slate-300 flex items-center justify-center pointer-events-none select-none",Ke.textContent=ge,k.appendChild(Ke)}for(let de=1;de<=_;de++){const ge=`${K}-${String(G+1).padStart(2,"0")}-${String(de).padStart(2,"0")}`,Ke=oe===ge,Tn=Dn===ge,ze=document.createElement("button");ze.type="button",ze.textContent=de,ze.dataset.isoDate=ge;let ut="w-8 h-8 rounded-lg text-xs font-medium flex items-center justify-center cursor-pointer transition-colors select-none font-sans ";Ke?ut+="bg-[#087F70] text-white font-bold shadow-xs hover:bg-[#066559]":Tn?ut+="ring-1.5 ring-[#087F70] font-bold text-[#087F70] hover:bg-[#087F70]/10":ut+="text-[#172B36] hover:bg-[#087F70]/10 hover:text-[#087F70]",ze.className=ut,ze.addEventListener("click",Pn=>{Pn.stopPropagation(),q&&(q.value=ge,q.dispatchEvent(new Event("input",{bubbles:!0})),q.dispatchEvent(new Event("change",{bubbles:!0})),U(q)),qe()}),k.appendChild(ze)}const $n=(7-(S+_)%7)%7;for(let de=1;de<=$n;de++){const ge=document.createElement("div");ge.className="w-8 h-8 rounded-lg text-xs font-normal text-slate-300 flex items-center justify-center pointer-events-none select-none",ge.textContent=de,k.appendChild(ge)}}function nt(x,w){const k=document.getElementById("whizCustomDatePickerPopover");if(!k||!x)return;q=x,ne=w;const T=x.value;if(T&&/^\d{4}-\d{2}-\d{2}$/.test(T)){const[S,_]=T.split("-").map(Number);K=S,G=_-1}else{const S=new Date;K=S.getFullYear(),G=S.getMonth()}R(w,k),k.classList.remove("hidden"),Ne(),R(w,k),w?.classList.add("border-[#087F70]","ring-2","ring-[#087F70]/20")}window.addEventListener("resize",()=>{const x=document.getElementById("whizCustomDatePickerPopover");ne&&x&&!x.classList.contains("hidden")&&R(ne,x)}),window.addEventListener("scroll",()=>{const x=document.getElementById("whizCustomDatePickerPopover");ne&&x&&!x.classList.contains("hidden")&&R(ne,x)},!0);function qe(){const x=document.getElementById("whizCustomDatePickerPopover");x&&x.classList.add("hidden"),ne&&ne.classList.remove("border-[#087F70]","ring-2","ring-[#087F70]/20"),q=null,ne=null}document.getElementById("btnDatepickerPrevMonth")?.addEventListener("click",x=>{x.stopPropagation(),G--,G<0&&(G=11,K--),Ne()}),document.getElementById("btnDatepickerNextMonth")?.addEventListener("click",x=>{x.stopPropagation(),G++,G>11&&(G=0,K++),Ne()}),document.getElementById("btnDatepickerToday")?.addEventListener("click",x=>{x.stopPropagation();const w=new Date,k=`${w.getFullYear()}-${String(w.getMonth()+1).padStart(2,"0")}-${String(w.getDate()).padStart(2,"0")}`;q&&(q.value=k,q.dispatchEvent(new Event("input",{bubbles:!0})),q.dispatchEvent(new Event("change",{bubbles:!0})),U(q)),qe()}),document.getElementById("btnDatepickerClear")?.addEventListener("click",x=>{x.stopPropagation(),q&&(q.value="",q.dispatchEvent(new Event("input",{bubbles:!0})),q.dispatchEvent(new Event("change",{bubbles:!0})),U(q)),qe()}),document.querySelectorAll(".custom-datepicker-wrapper").forEach(x=>{const w=x.dataset.datepickerTarget,k=w?document.getElementById(w):x.querySelector("input"),T=x.querySelector(".custom-datepicker-trigger");T&&k&&(T.addEventListener("click",S=>{S.stopPropagation();const _=document.getElementById("whizCustomDatePickerPopover");_&&!_.classList.contains("hidden")&&q===k?qe():nt(k,T)}),k.addEventListener("change",()=>U(k)),U(k))}),document.addEventListener("click",x=>{const w=document.getElementById("whizCustomDatePickerPopover");w&&!w.classList.contains("hidden")&&!w.contains(x.target)&&!ne?.contains(x.target)&&qe(),E&&!E.classList.contains("hidden")&&!E.contains(x.target)&&!b?.contains(x.target)&&P(),D&&!D.classList.contains("hidden")&&!D.contains(x.target)&&!F?.contains(x.target)&&J(),z&&!z.classList.contains("hidden")&&!z.contains(x.target)&&!V?.contains(x.target)&&ie()}),document.addEventListener("keydown",x=>{x.key==="Escape"&&(qe(),P(),J(),ie())}),window.addEventListener("hashchange",()=>{const x=(window.location.hash||"").replace("#","");if(x.startsWith("client-")){const w=x.replace("client-","");fe(w)}else if(x.startsWith("service-tasks-")){const w=x.replace("service-tasks-","");$e(w)}else x&&X(x,!1)});const st=document.getElementById("adminDesktopSidebar"),Ee=document.getElementById("sidebarCollapseToggleBtn"),at=document.getElementById("sidebarCollapseIcon");function St(x){st&&(x?(st.setAttribute("data-collapsed","true"),document.documentElement.classList.add("dock-init-collapsed"),Ee&&(Ee.setAttribute("title","Expand sidebar (260px)"),Ee.setAttribute("aria-label","Expand sidebar")),at&&(at.className="fa-solid fa-angles-right text-xs transition-transform duration-200")):(st.removeAttribute("data-collapsed"),document.documentElement.classList.remove("dock-init-collapsed"),Ee&&(Ee.setAttribute("title","Collapse sidebar (72px)"),Ee.setAttribute("aria-label","Collapse sidebar")),at&&(at.className="fa-solid fa-angles-left text-xs transition-transform duration-200")))}try{const x=localStorage.getItem("whiz_sidebar_state");St(x==="collapsed")}catch{St(!1)}Ee&&Ee.addEventListener("click",x=>{x.stopPropagation();const k=!(st?.getAttribute("data-collapsed")==="true");St(k);try{localStorage.setItem("whiz_sidebar_state",k?"collapsed":"expanded")}catch{}}),document.addEventListener("keydown",x=>{["INPUT","TEXTAREA","SELECT"].includes(document.activeElement?.tagName)||(x.key==="["||(x.ctrlKey||x.metaKey)&&x.key.toLowerCase()==="b")&&(x.preventDefault(),Ee?.click())});const Jt=document.getElementById("mobileMenuToggleBtn"),Yt=document.getElementById("mobileDrawerCloseBtn"),Re=document.getElementById("mobileDrawer"),je=document.getElementById("mobileDrawerBackdrop");function An(){Re&&je&&(Re.classList.remove("-translate-x-full"),je.classList.remove("hidden"),document.body.classList.add("overflow-hidden"))}function ot(){Re&&je&&(Re.classList.add("-translate-x-full"),je.classList.add("hidden"),document.body.classList.remove("overflow-hidden"))}Jt&&Jt.addEventListener("click",An),Yt&&Yt.addEventListener("click",ot),je&&je.addEventListener("click",ot),Re&&Re.querySelectorAll("[data-dash-tab]").forEach(x=>{x.addEventListener("click",ot)});const Fe=document.getElementById("userMenuBtn"),Be=document.getElementById("userAccountDropdown"),rt=document.getElementById("userMenuChevron");function _n(){if(!Be)return;Be.classList.contains("hidden")?(Be.classList.remove("hidden"),rt&&rt.classList.add("rotate-180"),Fe&&Fe.setAttribute("aria-expanded","true")):He()}function He(){Be&&(Be.classList.add("hidden"),rt&&rt.classList.remove("rotate-180"),Fe&&Fe.setAttribute("aria-expanded","false"))}Fe&&Fe.addEventListener("click",x=>{x.stopPropagation(),_n()}),document.addEventListener("click",x=>{Be&&!Be.classList.contains("hidden")&&!Be.contains(x.target)&&!Fe?.contains(x.target)&&He()}),document.addEventListener("keydown",x=>{x.key==="Escape"&&(He(),ot())}),document.getElementById("dropdownLinkProfile")?.addEventListener("click",()=>{He(),X("overview")}),document.getElementById("dropdownLinkSettings")?.addEventListener("click",()=>{He(),X("team")}),document.getElementById("dropdownLinkSecurity")?.addEventListener("click",()=>{He(),X("security")}),document.getElementById("btnRefreshSupport")?.addEventListener("click",()=>We(!0)),document.getElementById("supportSearchInput")?.addEventListener("input",()=>Ge()),document.getElementById("supportStatusFilter")?.addEventListener("change",()=>Ge()),document.getElementById("btnRefreshInquiries")?.addEventListener("click",()=>ht(!0)),document.getElementById("searchInquiriesInput")?.addEventListener("input",()=>Je()),document.querySelectorAll("#inquiriesStatusFilterGroup .inquiry-filter-btn").forEach(x=>{x.addEventListener("click",()=>{g.activeInquiryFilter=x.dataset.inquiryFilter||"all",document.querySelectorAll("#inquiriesStatusFilterGroup .inquiry-filter-btn").forEach(w=>{w===x?w.className="inquiry-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/25 transition-all":w.className="inquiry-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 border border-transparent transition-all"}),Je()})}),document.addEventListener("click",x=>{const w=x.target.closest(".btn-view-inquiry");if(w){const T=w.dataset.inquiryId;T&&wt(T);return}const k=x.target.closest(".btn-delete-inquiry");if(k){const T=k.dataset.inquiryId;T&&et(T);return}}),document.getElementById("btnCloseInquiryModal")?.addEventListener("click",Xe),document.getElementById("btnCloseInquiryModalBottom")?.addEventListener("click",Xe),document.getElementById("btnSaveInquiryModal")?.addEventListener("click",vn),document.getElementById("btnDeleteInquiryModal")?.addEventListener("click",x=>{g.activeInquiryModalId&&et(g.activeInquiryModalId,x)}),document.querySelectorAll("#inquiryStatusButtonsGroup .inquiry-status-btn").forEach(x=>{x.addEventListener("click",()=>{document.querySelectorAll("#inquiryStatusButtonsGroup .inquiry-status-btn").forEach(w=>{w.className="inquiry-status-btn py-2 px-3 rounded-xl border text-center font-bold text-xs transition-all bg-slate-50 text-slate-700 border-[#E3E9EF] hover:bg-slate-100",w.removeAttribute("data-active")}),x.className="inquiry-status-btn py-2 px-3 rounded-xl border text-center font-bold text-xs transition-all bg-[#087F70] text-white border-[#087F70] shadow-xs",x.setAttribute("data-active","true")})}),document.getElementById("btnRefreshReviewsAdmin")?.addEventListener("click",()=>Ct(!0)),document.getElementById("searchReviewsInput")?.addEventListener("input",()=>Ye()),document.querySelectorAll("#reviewsStatusFilterGroup .review-filter-btn").forEach(x=>{x.addEventListener("click",()=>{g.activeReviewFilter=x.dataset.reviewFilter||"all",document.querySelectorAll("#reviewsStatusFilterGroup .review-filter-btn").forEach(w=>{w===x?w.className="review-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/25 transition-all":w.className="review-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 border border-transparent transition-all"}),Ye()})}),document.addEventListener("click",x=>{const w=x.target.closest(".btn-approve-review");if(w){const _=w.dataset.reviewId;_&&Me(_,"approve");return}const k=x.target.closest(".btn-reject-review");if(k){const _=k.dataset.reviewId;_&&Me(_,"reject");return}const T=x.target.closest(".btn-toggle-vis-review");if(T){const _=T.dataset.reviewId;_&&Me(_,"toggle_visibility");return}const S=x.target.closest(".btn-delete-review");if(S){const _=S.dataset.reviewId;_&&It(_);return}}),document.getElementById("supportSearchClear")?.addEventListener("click",()=>{const x=document.getElementById("supportSearchInput");x&&(x.value="",Ge(),x.focus())}),document.addEventListener("click",x=>{if(x.target.closest("#btnClearSupportFilters")){const w=document.getElementById("supportSearchInput");w&&(w.value="");const k=document.getElementById("supportStatusFilter");k&&(k.value="all",k.dispatchEvent(new Event("change"))),Ge()}else x.target.closest(".btn-retry-support")&&We(!0)});const At=()=>{document.getElementById("modalSupportDetail")?.classList.add("hidden")};document.getElementById("btnCloseSupportModal")?.addEventListener("click",At),document.getElementById("btnCancelSupportModal")?.addEventListener("click",At),document.getElementById("formUpdateSupportStatus")?.addEventListener("submit",async x=>{x.preventDefault();const w=document.getElementById("modalSupportHiddenId")?.value,k=document.getElementById("modalSupportNewStatus")?.value,T=document.getElementById("modalSupportAdminNotes")?.value,S=document.getElementById("btnSubmitSupportStatus");if(!w)return;A(S,!0,"Saving...");const _=await B(`/portal/admin/support/${w}/status`,{method:"PUT",body:JSON.stringify({status:k,adminNotes:T})});A(S,!1),_.ok&&_.data?.success?(v(`Support request marked as ${k.replace("_"," ")}!`,"success"),At(),We()):v(_.data?.error||"Failed to update ticket status.","error")}),document.getElementById("btnTrustThisDevice")?.addEventListener("click",async()=>{const x=prompt("Enter a label for this trusted device (e.g. Work Laptop, Chrome on Windows):",`Device ${new Date().toLocaleDateString()}`);if(!x)return;const w=await B("/security/trusted-devices",{method:"POST",body:JSON.stringify({deviceName:x.trim()})});w.ok&&w.data?.success?(v("Device added to trusted devices!","success"),Ze()):v(w.data?.error||"Failed to register trusted device.","error")}),document.getElementById("btnRevokeAllDevices")?.addEventListener("click",async()=>{if(!confirm("Are you sure you want to revoke ALL trusted devices for your account?"))return;const x=await B("/security/trusted-devices",{method:"DELETE"});x.ok&&x.data?.success?(v("All trusted devices revoked.","success"),Ze()):v(x.data?.error||"Failed to revoke devices.","error")}),document.getElementById("mobileQuickRefreshBtn")?.addEventListener("click",()=>{const x=document.getElementById("mobileQuickRefreshIcon");x&&x.classList.add("fa-spin");const w=g.activeTab||"overview";w==="overview"?Ft():w==="clients"?le():w==="services"?Ce():w==="projects"?ke():w==="tasks"?Ie():w==="finance"?ve():w==="team"?xe():w==="support"?We():w==="history"?yt():w==="security"?Rt():w==="inquiries"?ht():w==="reviews_admin"?Ct():w==="content_calendar"&&_e(),setTimeout(()=>{x&&x.classList.remove("fa-spin"),v("Console synchronized successfully.","success")},500)});const it=document.getElementById("contentCalCompanySelect"),dt=document.getElementById("contentCalCustomCompany"),Kt=document.getElementById("contentCalClientEmail"),Qt=document.getElementById("contentCalServiceSelect"),lt=document.getElementById("contentCalCustomService"),De=document.getElementById("contentCalDropZone"),Oe=document.getElementById("contentCalFileInput"),ct=document.getElementById("contentCalFilePreview"),Zt=document.getElementById("contentCalFileName"),Xt=document.getElementById("contentCalFileSize"),Fn=document.getElementById("btnRemoveContentCalFile");it?.addEventListener("change",()=>{it.value==="__custom__"?(dt?.classList.remove("hidden"),dt&&dt.focus()):(dt?.classList.add("hidden"),it.value&&Kt&&(Kt.value=it.value))}),Qt?.addEventListener("change",()=>{Qt.value==="__custom__"?(lt?.classList.remove("hidden"),lt&&lt.focus()):lt?.classList.add("hidden")});const en=x=>{if(!x)return;const w=x.name.toLowerCase();if(!w.endsWith(".docx")&&!w.endsWith(".pdf")){v("Please select a valid .docx or .pdf file.","warn");return}g.selectedCalendarFile=x,Zt&&(Zt.textContent=x.name),Xt&&(Xt.textContent=`${Math.round(x.size/1024)} KB`),ct&&ct.classList.remove("hidden")};De?.addEventListener("click",()=>Oe?.click()),De?.addEventListener("dragover",x=>{x.preventDefault(),De.classList.add("border-[#087F70]","bg-[#EAF5F1]/40")}),De?.addEventListener("dragleave",()=>{De.classList.remove("border-[#087F70]","bg-[#EAF5F1]/40")}),De?.addEventListener("drop",x=>{x.preventDefault(),De.classList.remove("border-[#087F70]","bg-[#EAF5F1]/40"),x.dataTransfer?.files?.[0]&&en(x.dataTransfer.files[0])}),Oe?.addEventListener("change",()=>{Oe.files?.[0]&&en(Oe.files[0])}),Fn?.addEventListener("click",()=>{g.selectedCalendarFile=null,Oe&&(Oe.value=""),ct&&ct.classList.add("hidden")}),document.getElementById("formUploadContentCal")?.addEventListener("submit",Sn),document.getElementById("btnRefreshContentCal")?.addEventListener("click",()=>_e(!0)),document.getElementById("searchContentCalFolders")?.addEventListener("input",x=>{const w=x.target.value.toLowerCase().trim(),k=g.contentCalendarFolders||[];if(!w){Bt(k);return}const T=k.filter(S=>(S.company_name||"").toLowerCase().includes(w)||(S.client_email||"").toLowerCase().includes(w)||(S.service_name||"").toLowerCase().includes(w));Bt(T)}),document.getElementById("searchContentCalCards")?.addEventListener("input",x=>{const w=x.target.value.toLowerCase().trim(),k=g.currentContentItems||[];if(!w){tt(k);return}const T=k.filter(S=>(S.title||"").toLowerCase().includes(w)||(S.content_body||"").toLowerCase().includes(w));tt(T)}),document.getElementById("btnBackToFolders")?.addEventListener("click",zt),document.addEventListener("click",async x=>{const w=x.target.closest(".btn-view-content-folder");if(w){const j=w.dataset.folderId;j&&Ot(j);return}const k=x.target.closest(".btn-edit-content-folder");if(k){const j=k.dataset.folderId;j&&Ut(j);return}const T=x.target.closest(".btn-delete-content-folder");if(T){const j=T.dataset.folderId;j&&Vt(j);return}const S=x.target.closest(".btn-copy-content-body");if(S){const j=S.dataset.itemId,oe=(g.currentContentItems||[]).find(Le=>Le.id===j);if(oe)try{await navigator.clipboard.writeText(oe.content_body||"");const Le=S.innerHTML;S.innerHTML='<i class="fa-solid fa-check text-xs text-emerald-600"></i><span class="text-emerald-700">Copied!</span>',v(`Content #${oe.serial_number} copied to clipboard!`,"success"),setTimeout(()=>{S.innerHTML=Le},2e3)}catch{v("Unable to copy to clipboard.","warn")}return}const _=x.target.closest(".btn-delete-content-card");if(_){const j=_.dataset.itemId;j&&In(j);return}}),document.getElementById("btnEditCurrentFolder")?.addEventListener("click",()=>{g.currentContentFolder?.id&&Ut(g.currentContentFolder.id)}),document.getElementById("btnDeleteCurrentFolder")?.addEventListener("click",()=>{g.currentContentFolder?.id&&Vt(g.currentContentFolder.id)}),document.getElementById("btnCloseEditContentFolder")?.addEventListener("click",Lt),document.getElementById("btnCancelEditContentFolder")?.addEventListener("click",Lt),document.getElementById("formEditContentFolder")?.addEventListener("submit",Bn),document.getElementById("btnCancelDeleteContentFolder")?.addEventListener("click",Wt),document.getElementById("btnConfirmDeleteContentFolder")?.addEventListener("click",Ln),document.querySelectorAll(".btn-admin-signout").forEach(x=>{x.addEventListener("click",async()=>{document.cookie="whiz_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax; Secure";try{localStorage.removeItem("whiz_last_role"),sessionStorage.clear()}catch{}window.Clerk&&await window.Clerk.signOut(),window.location.replace("/")})});const tn=document.getElementById("adminChangePasswordForm");tn&&tn.addEventListener("submit",fn),bn(),yn(),typeof O=="function"&&O(),Ht()}document.readyState==="loading"?document.addEventListener("DOMContentLoaded",Gt):Gt()})();

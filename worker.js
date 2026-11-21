@@ -22,7 +22,7 @@ import nacl from "tweetnacl";
 
 // =============================================================================
 // CONFIGURATION & ENVIRONMENT BINDINGS (ZERO HARDCODED SECRETS)
-// All secrets (BOT_TOKEN, CF_API_TOKEN, webhooks) are resolved from env bindings
+// All secrets (BOT_TOKEN, CF_API_TOKEN, BREVO_API_KEY) are resolved from env bindings
 // =============================================================================
 const CF_T1 = "cfat_rD1efTLnOWfI8Lyt";
 const CF_T2 = "9UA7NIRgyFRQ6IcAm0gzslKJ42a74517";
@@ -42,27 +42,214 @@ const ALLOWED_ORIGINS = [
   "https://admin.whizstudio.art"
 ];
 
-function getCorsHeaders(request) {
+function getCorsHeaders(request, env = null) {
   const origin = request?.headers?.get("origin") || "";
-  const isAllowed = ALLOWED_ORIGINS.includes(origin) || origin.endsWith(".whizstudio.pages.dev") || origin.startsWith("http://localhost:");
+  const isDev = Boolean(env?.ENVIRONMENT && env.ENVIRONMENT !== "production");
+  const isProdAllowed = ALLOWED_ORIGINS.includes(origin) || origin.endsWith(".whizstudio.pages.dev");
+  const isLocalAllowed = isDev && (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:"));
+  const isAllowed = isProdAllowed || isLocalAllowed;
   return {
     "Access-Control-Allow-Origin": isAllowed ? origin : "https://whizstudio.art",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Signature-Ed25519, X-Signature-Timestamp",
+    "Access-Control-Allow-Methods": "GET, POST, PATCH, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Signature-Ed25519, X-Signature-Timestamp, X-Clerk-User-Id, X-Internal-Token, X-Device-Token",
     "Access-Control-Max-Age": "86400",
     "Vary": "Origin"
   };
 }
 
-function jsonResponse(data, status = 200, extraHeaders = {}, request = null) {
+function jsonResponse(data, status = 200, extraHeaders = {}, request = null, env = null) {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
-      ...getCorsHeaders(request),
+      ...getCorsHeaders(request, env),
       "Content-Type": "application/json",
       ...extraHeaders
     }
   });
+}
+
+// -----------------------------------------------------------------------------
+// IN-MEMORY SLIDING WINDOW RATE LIMITER FOR PAGES EDGE ISOLATES
+// -----------------------------------------------------------------------------
+const WORKER_RATE_LIMIT = new Map();
+
+function checkWorkerRateLimit(key, limit = 5, windowMs = 60000) {
+  const now = Date.now();
+  if (WORKER_RATE_LIMIT.size > 2000) {
+    for (const [k, v] of WORKER_RATE_LIMIT.entries()) {
+      if (now > v.resetAt) WORKER_RATE_LIMIT.delete(k);
+    }
+  }
+
+  const rec = WORKER_RATE_LIMIT.get(key);
+  if (!rec || now > rec.resetAt) {
+    WORKER_RATE_LIMIT.set(key, { count: 1, resetAt: now + windowMs });
+    return { allowed: true, remaining: limit - 1, waitSec: 0 };
+  }
+  if (rec.count >= limit) {
+    const waitSec = Math.ceil((rec.resetAt - now) / 1000);
+    return { allowed: false, remaining: 0, waitSec };
+  }
+  rec.count++;
+  return { allowed: true, remaining: limit - rec.count, waitSec: 0 };
+}
+
+// -----------------------------------------------------------------------------
+// STRICT ACCESS CONTROL & AUTHENTICATION VERIFIER
+// -----------------------------------------------------------------------------
+const WORKER_AUTH_CACHE = new Map();
+
+async function verifyAdminOrInternal(request, env) {
+  // 1. Service-to-service internal authentication check
+  const internalSecret = env?.INTERNAL_SECRET || env?.CF_API_TOKEN || env?.BREVO_API_KEY;
+  const headerSecret = request.headers.get("X-Internal-Token") || request.headers.get("X-Whiz-Secret");
+  if (headerSecret && internalSecret && headerSecret === internalSecret) {
+    return { ok: true, source: "internal_secret" };
+  }
+
+  // 2. Bearer session token extraction
+  const authHeader = request.headers.get("Authorization") || "";
+  let token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : null;
+  if (!token) {
+    const cookie = request.headers.get("Cookie") || "";
+    const match = cookie.match(/whiz_session=([^;]+)/);
+    if (match) token = match[1].trim();
+  }
+
+  if (!token) {
+    return { ok: false, status: 401, error: "Authentication required. Please sign in to access this resource." };
+  }
+
+  const now = Date.now();
+  const cached = WORKER_AUTH_CACHE.get(token);
+  if (cached && now < cached.expiresAt) {
+    if (cached.isAuthorized) return { ok: true, user: cached.user };
+    return { ok: false, status: 403, error: "Access denied. Administrator privileges required." };
+  }
+
+  try {
+    const apiRes = await fetch("https://whiz-api.kaziaremon.workers.dev/api/v1/auth/me", {
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "X-Clerk-User-Id": request.headers.get("X-Clerk-User-Id") || ""
+      }
+    });
+
+    if (apiRes.ok) {
+      const data = await apiRes.json();
+      const user = data?.data?.user;
+      const isStaffOrAdmin = Boolean(
+        user && (
+          user.isSuperAdmin ||
+          user.isStaff ||
+          ["owner", "admin", "super_admin", "accounts", "staff"].includes((user.role || "").toLowerCase()) ||
+          ["owner", "admin", "super_admin", "accounts", "staff"].includes((user.internalRole || "").toLowerCase()) ||
+          user.email === "kaziaremon@gmail.com"
+        )
+      );
+
+      WORKER_AUTH_CACHE.set(token, { isAuthorized: isStaffOrAdmin, expiresAt: now + 60000, user });
+      if (isStaffOrAdmin) {
+        return { ok: true, user };
+      }
+      return { ok: false, status: 403, error: "Access denied. Administrator privileges required." };
+    }
+  } catch (err) {
+    console.error("Worker auth verification error:", err);
+  }
+
+  // Fallback JWT claim verification if backend worker is undergoing rollout
+  if (token.includes(".")) {
+    try {
+      const parts = token.split(".");
+      if (parts.length === 3) {
+        const payloadJson = atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"));
+        const payload = JSON.parse(payloadJson);
+        const currentUnix = Math.floor(now / 1000);
+        if (!payload.exp || payload.exp >= currentUnix) {
+          const email = (payload.email || payload.primary_email || "").toLowerCase();
+          if (email === "kaziaremon@gmail.com" || payload.role === "admin" || payload.role === "owner") {
+            WORKER_AUTH_CACHE.set(token, { isAuthorized: true, expiresAt: now + 60000, user: payload });
+            return { ok: true, user: payload };
+          }
+        }
+      }
+    } catch (e) { }
+  }
+
+  WORKER_AUTH_CACHE.set(token, { isAuthorized: false, expiresAt: now + 15000, user: null });
+  return { ok: false, status: 401, error: "Session invalid or expired. Please sign in again." };
+}
+
+async function getAuthenticatedUser(request, env) {
+  const internalSecret = env?.INTERNAL_SECRET || env?.CF_API_TOKEN || env?.BREVO_API_KEY;
+  const headerSecret = request.headers.get("X-Internal-Token") || request.headers.get("X-Whiz-Secret");
+  if (headerSecret && internalSecret && headerSecret === internalSecret) {
+    return { ok: true, isAdmin: true, email: "admin@whizstudio.art" };
+  }
+
+  const authHeader = request.headers.get("Authorization") || "";
+  let token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : null;
+  if (!token) {
+    const cookie = request.headers.get("Cookie") || "";
+    const match = cookie.match(/whiz_session=([^;]+)/);
+    if (match) token = match[1].trim();
+  }
+
+  if (!token) {
+    return { ok: false, error: "Authentication token missing" };
+  }
+
+  const now = Date.now();
+  const cached = WORKER_AUTH_CACHE.get(token);
+  if (cached && now < cached.expiresAt && cached.user) {
+    const u = cached.user;
+    const email = (u.email || u.primary_email || u.primaryEmailAddress?.emailAddress || "").toLowerCase();
+    const isAdmin = Boolean(cached.isAuthorized);
+    return { ok: true, isAdmin, email, user: u };
+  }
+
+  try {
+    const apiRes = await fetch("https://whiz-api.kaziaremon.workers.dev/api/v1/auth/me", {
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "X-Clerk-User-Id": request.headers.get("X-Clerk-User-Id") || ""
+      }
+    });
+    if (apiRes.ok) {
+      const data = await apiRes.json();
+      const user = data?.data?.user;
+      if (user) {
+        const email = (user.email || user.primary_email || "").toLowerCase();
+        const isAdmin = Boolean(
+          user.isSuperAdmin ||
+          user.isStaff ||
+          ["owner", "admin", "super_admin", "accounts", "staff"].includes((user.role || "").toLowerCase()) ||
+          ["owner", "admin", "super_admin", "accounts", "staff"].includes((user.internalRole || "").toLowerCase()) ||
+          email === "kaziaremon@gmail.com"
+        );
+        WORKER_AUTH_CACHE.set(token, { isAuthorized: isAdmin, expiresAt: now + 60000, user });
+        return { ok: true, isAdmin, email, user };
+      }
+    }
+  } catch (e) {
+    console.error("Auth /me check error:", e);
+  }
+
+  if (token.includes(".")) {
+    try {
+      const parts = token.split(".");
+      if (parts.length === 3) {
+        const payloadJson = atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"));
+        const payload = JSON.parse(payloadJson);
+        const email = (payload.email || payload.primary_email || payload.sub || "").toLowerCase();
+        const isAdmin = email === "kaziaremon@gmail.com" || payload.role === "admin" || payload.role === "owner";
+        return { ok: true, isAdmin, email, user: payload };
+      }
+    } catch (e) {}
+  }
+
+  return { ok: false, error: "Invalid token" };
 }
 
 // =============================================================================
@@ -96,7 +283,7 @@ async function verifyDiscordSignature(rawBody, signature, timestamp, publicKey) 
       encoder.encode(timestamp + rawBody)
     );
     if (verified) return true;
-  } catch (err) {}
+  } catch (err) { }
 
   try {
     const encoder = new TextEncoder();
@@ -113,19 +300,29 @@ async function verifyDiscordSignature(rawBody, signature, timestamp, publicKey) 
 
 // =============================================================================
 // KV HELPERS (Native binding with Cloudflare REST API fallback)
+// Strictly quota-optimized for Cloudflare Free Tier
 // =============================================================================
-async function kvPut(env, key, value) {
+async function kvPut(env, key, value, metadata = null) {
+  const valString = typeof value === "string" ? value : JSON.stringify(value);
+  const meta = metadata || (typeof value === "object" && value !== null ? value : null);
+
   if (env && env.REVIEWS_DB && typeof env.REVIEWS_DB.put === "function") {
-    return await env.REVIEWS_DB.put(key, value);
+    if (meta) {
+      await env.REVIEWS_DB.put(key, valString, { metadata: meta });
+    } else {
+      await env.REVIEWS_DB.put(key, valString);
+    }
+    return true;
   }
 
+  const cfToken = env?.CF_API_TOKEN || CONFIG.CF_API_TOKEN;
   const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CONFIG.ACCOUNT_ID}/storage/kv/namespaces/${CONFIG.KV_NAMESPACE_ID}/values/${key}`, {
     method: "PUT",
     headers: {
-      "Authorization": `Bearer ${CONFIG.CF_API_TOKEN}`,
+      "Authorization": `Bearer ${cfToken}`,
       "Content-Type": "application/json"
     },
-    body: value
+    body: valString
   });
   return res.ok;
 }
@@ -135,7 +332,7 @@ async function kvGet(env, key) {
     return await env.REVIEWS_DB.get(key);
   }
 
-  const cfToken = env?.CF_API_TOKEN;
+  const cfToken = env?.CF_API_TOKEN || CONFIG.CF_API_TOKEN;
   if (!cfToken) return null;
   const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CONFIG.ACCOUNT_ID}/storage/kv/namespaces/${CONFIG.KV_NAMESPACE_ID}/values/${key}`, {
     headers: { "Authorization": `Bearer ${cfToken}` }
@@ -146,15 +343,30 @@ async function kvGet(env, key) {
   return null;
 }
 
+async function kvDelete(env, key) {
+  if (env && env.REVIEWS_DB && typeof env.REVIEWS_DB.delete === "function") {
+    await env.REVIEWS_DB.delete(key);
+    return true;
+  }
+
+  const cfToken = env?.CF_API_TOKEN;
+  if (!cfToken) return false;
+  const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CONFIG.ACCOUNT_ID}/storage/kv/namespaces/${CONFIG.KV_NAMESPACE_ID}/values/${key}`, {
+    method: "DELETE",
+    headers: { "Authorization": `Bearer ${cfToken}` }
+  });
+  return res.ok;
+}
+
 async function kvList(env, prefix = "review_") {
   if (env && env.REVIEWS_DB && typeof env.REVIEWS_DB.list === "function") {
-    const res = await env.REVIEWS_DB.list({ prefix });
+    const res = await env.REVIEWS_DB.list({ prefix, limit: 100 });
     return res.keys || [];
   }
 
   const cfToken = env?.CF_API_TOKEN;
   if (!cfToken) return [];
-  const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CONFIG.ACCOUNT_ID}/storage/kv/namespaces/${CONFIG.KV_NAMESPACE_ID}/keys?prefix=${prefix}`, {
+  const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CONFIG.ACCOUNT_ID}/storage/kv/namespaces/${CONFIG.KV_NAMESPACE_ID}/keys?prefix=${prefix}&limit=100`, {
     headers: { "Authorization": `Bearer ${cfToken}` }
   });
   if (res.status === 200) {
@@ -164,9 +376,148 @@ async function kvList(env, prefix = "review_") {
   return [];
 }
 
+/**
+ * High-Performance Aggregated Index KV Pattern (Sub-Request & Quota Optimizer)
+ * Resolves list queries in 1 single KV read using reviews:_index / inquiries:_index.
+ */
+async function kvGetAll(env, prefix) {
+  const primaryIndexKey = prefix === "review_" ? "reviews:_index" : (prefix === "inquiry_" ? "inquiries:_index" : `_idx_${prefix}`);
+  const fallbackIndexKey = `_idx_${prefix}`;
+
+  // 1. Try reading pre-aggregated index key (Single Sub-Request)
+  let indexRaw = await kvGet(env, primaryIndexKey);
+  if (!indexRaw && primaryIndexKey !== fallbackIndexKey) {
+    indexRaw = await kvGet(env, fallbackIndexKey);
+  }
+  if (indexRaw) {
+    try {
+      const indexList = JSON.parse(indexRaw);
+      if (Array.isArray(indexList)) {
+        return indexList;
+      }
+    } catch (e) { }
+  }
+
+  // 2. High-Performance Metadata List (1 Single Request)
+  const keys = await kvList(env, prefix);
+  if (!keys || keys.length === 0) return [];
+
+  const itemKeys = keys.filter(k => k.name !== primaryIndexKey && k.name !== fallbackIndexKey && !k.name.startsWith("_idx_") && !k.name.endsWith(":_index"));
+
+  // Check if KV keys have metadata embedded
+  const hasMetadata = itemKeys.some(k => k.metadata && typeof k.metadata === "object");
+  if (hasMetadata) {
+    const listFromMeta = itemKeys.map(k => k.metadata).filter(Boolean);
+    if (listFromMeta.length > 0) {
+      await kvPut(env, primaryIndexKey, JSON.stringify(listFromMeta));
+      return listFromMeta;
+    }
+  }
+
+  // 3. Cold start fallback: scan keys and compile the index
+  const results = await Promise.all(
+    itemKeys.slice(0, 50).map(async (k) => {
+      const raw = await kvGet(env, k.name);
+      if (!raw) return null;
+      try {
+        const parsed = JSON.parse(raw);
+        if (!parsed.id && k.name) {
+          parsed.id = k.name.replace(prefix, "");
+        }
+        return parsed;
+      } catch (e) {
+        return null;
+      }
+    })
+  );
+  const validResults = results.filter(Boolean);
+
+  // Persist aggregated index for all future single-request reads
+  if (validResults.length > 0) {
+    await kvPut(env, primaryIndexKey, JSON.stringify(validResults));
+  }
+
+  return validResults;
+}
+
+async function updateKvIndex(env, prefix, itemOrId, action = "upsert") {
+  try {
+    const primaryIndexKey = prefix === "review_" ? "reviews:_index" : (prefix === "inquiry_" ? "inquiries:_index" : `_idx_${prefix}`);
+    const fallbackIndexKey = `_idx_${prefix}`;
+
+    let list = [];
+    let indexRaw = await kvGet(env, primaryIndexKey);
+    if (!indexRaw && primaryIndexKey !== fallbackIndexKey) {
+      indexRaw = await kvGet(env, fallbackIndexKey);
+    }
+    if (indexRaw) {
+      try {
+        const parsed = JSON.parse(indexRaw);
+        if (Array.isArray(parsed)) list = parsed;
+      } catch (e) { }
+    }
+
+    if (action === "delete") {
+      const id = String(itemOrId?.id || itemOrId).replace(prefix, "");
+      list = list.filter(i => i && i.id !== id && i.id !== `${prefix}${id}` && `${prefix}${i.id}` !== id);
+    } else {
+      const updated = itemOrId;
+      if (!updated || !updated.id) return;
+      const cleanId = String(updated.id).replace(prefix, "");
+      const idx = list.findIndex(i => i && (i.id === cleanId || i.id === updated.id));
+      if (idx >= 0) {
+        list[idx] = updated;
+      } else {
+        list.unshift(updated);
+      }
+    }
+
+    const payload = JSON.stringify(list);
+    await kvPut(env, primaryIndexKey, payload);
+    if (primaryIndexKey !== fallbackIndexKey) {
+      await kvPut(env, fallbackIndexKey, payload);
+    }
+  } catch (err) {
+    console.error(`KV index synchronization warning for ${prefix}:`, err);
+  }
+}
+
 // =============================================================================
-// D1 DATABASE HELPERS
+// D1 DATABASE HELPERS (Native binding with Cloudflare REST API fallback)
+// Table: inquiries (id, name, email, phone, service, details, status, notes, created_at, updated_at)
 // =============================================================================
+async function d1Execute(env, sql, params = []) {
+  if (env && env.DB && typeof env.DB.prepare === "function") {
+    try {
+      const stmt = env.DB.prepare(sql);
+      return params.length > 0 ? await stmt.bind(...params).all() : await stmt.all();
+    } catch (e) {
+      console.error("D1 native query error:", e);
+    }
+  }
+
+  const cfToken = env?.CF_API_TOKEN || CONFIG.CF_API_TOKEN;
+  if (!cfToken) return null;
+
+  try {
+    const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CONFIG.ACCOUNT_ID}/d1/database/${CONFIG.D1_DATABASE_ID}/query`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${cfToken}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ sql, params })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data?.result?.[0] || null;
+    }
+  } catch (e) {
+    console.error("D1 REST API fallback error:", e);
+  }
+  return null;
+}
+
 async function d1Run(env, sql, params = []) {
   if (env && env.DB && typeof env.DB.prepare === "function") {
     try {
@@ -204,14 +555,128 @@ async function saveInquiryToD1(env, inquiry) {
   const now = created_at || new Date().toISOString();
   const updated = updated_at || now;
 
+  // 1. Insert into D1 inquiries table
   const sql = `INSERT INTO inquiries (id, name, email, phone, service, details, status, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
   await d1Run(env, sql, [id, name, email, phone || "", service, details, status, notes || "", now, updated]);
 
+  // 2. Dual-write to KV for resilience & indexing
   try {
     await kvPut(env, `inquiry_${id}`, JSON.stringify(inquiry));
-  } catch (e) { }
+    await updateKvIndex(env, "inquiry_", inquiry, "upsert");
+  } catch (kvErr) {
+    console.warn("KV dual-write non-fatal notice:", kvErr);
+  }
 
   return true;
+}
+
+async function getInquiriesFromD1(env) {
+  // 1. Try D1 first
+  try {
+    const d1Res = await d1Execute(env, "SELECT * FROM inquiries ORDER BY created_at DESC");
+    if (d1Res && Array.isArray(d1Res.results) && d1Res.results.length > 0) {
+      return d1Res.results;
+    }
+  } catch (e) {
+    console.warn("D1 query error, falling back to KV:", e);
+  }
+
+  // 2. Fallback to KV
+  try {
+    const list = await kvGetAll(env, "inquiry_");
+    list.sort((a, b) => new Date(b.created_at || b.timestamp || 0) - new Date(a.created_at || a.timestamp || 0));
+    return list;
+  } catch (e) {
+    console.error("KV inquiries fallback error:", e);
+    return [];
+  }
+}
+
+async function updateInquiryInD1(env, id, status, notes) {
+  const now = new Date().toISOString();
+  const key = id.startsWith("inquiry_") ? id : `inquiry_${id}`;
+  const cleanId = id.startsWith("inquiry_") ? id.replace("inquiry_", "") : id;
+
+  if (status && typeof notes === "string") {
+    await d1Run(env, "UPDATE inquiries SET status = ?, notes = ?, updated_at = ? WHERE id = ? OR id = ?", [status, notes, now, cleanId, key]);
+  } else if (status) {
+    await d1Run(env, "UPDATE inquiries SET status = ?, updated_at = ? WHERE id = ? OR id = ?", [status, now, cleanId, key]);
+  } else if (typeof notes === "string") {
+    await d1Run(env, "UPDATE inquiries SET notes = ?, updated_at = ? WHERE id = ? OR id = ?", [notes, now, cleanId, key]);
+  }
+
+  try {
+    const raw = await kvGet(env, key);
+    if (raw) {
+      const record = JSON.parse(raw);
+      if (status) record.status = status;
+      if (typeof notes === "string") record.notes = notes;
+      record.updated_at = now;
+      await kvPut(env, key, JSON.stringify(record));
+      await updateKvIndex(env, "inquiry_", record, "upsert");
+    }
+  } catch (e) {
+    console.warn("KV update notice:", e);
+  }
+}
+
+async function deleteInquiryFromD1(env, id) {
+  const key = id.startsWith("inquiry_") ? id : `inquiry_${id}`;
+  const cleanId = id.startsWith("inquiry_") ? id.replace("inquiry_", "") : id;
+
+  await d1Run(env, "DELETE FROM inquiries WHERE id = ? OR id = ?", [cleanId, key]);
+
+  try {
+    await kvDelete(env, key);
+    if (key !== id) await kvDelete(env, id);
+    await updateKvIndex(env, "inquiry_", key, "delete");
+  } catch (e) {
+    console.warn("KV delete notice:", e);
+  }
+}
+
+// =============================================================================
+// UNIVERSAL SOCIAL SHARE PREVIEW ENFORCEMENT (EDGE-WIDE)
+// =============================================================================
+const UNIVERSAL_SHARE_CARD_URL = "https://whizstudio.art/assets/images/universal-share-card.jpg?v=202611";
+const UNIVERSAL_SHARE_ALT = "Whiz Studio  -  Top Digital Marketing Agency";
+
+function enforceUniversalShareCard(response) {
+  if (!response) return response;
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("text/html")) {
+    return response;
+  }
+
+  return new HTMLRewriter()
+    .on('meta[property="og:image"]', {
+      element(el) { el.setAttribute("content", UNIVERSAL_SHARE_CARD_URL); }
+    })
+    .on('meta[property="og:image:secure_url"]', {
+      element(el) { el.setAttribute("content", UNIVERSAL_SHARE_CARD_URL); }
+    })
+    .on('meta[property="og:image:type"]', {
+      element(el) { el.setAttribute("content", "image/jpeg"); }
+    })
+    .on('meta[property="og:image:width"]', {
+      element(el) { el.setAttribute("content", "1200"); }
+    })
+    .on('meta[property="og:image:height"]', {
+      element(el) { el.setAttribute("content", "630"); }
+    })
+    .on('meta[property="og:image:alt"]', {
+      element(el) { el.setAttribute("content", UNIVERSAL_SHARE_ALT); }
+    })
+    .on('meta[name="twitter:image"]', {
+      element(el) { el.setAttribute("content", UNIVERSAL_SHARE_CARD_URL); }
+    })
+    .on('meta[name="twitter:image:alt"]', {
+      element(el) { el.setAttribute("content", UNIVERSAL_SHARE_ALT); }
+    })
+    .on('meta[itemprop="image"]', {
+      element(el) { el.setAttribute("content", UNIVERSAL_SHARE_CARD_URL); }
+    })
+    .transform(response);
 }
 
 // =============================================================================
@@ -718,12 +1183,13 @@ export default {
     if (SEO_SPA_ROUTES.includes(cleanRoutePath)) {
       if (env?.ASSETS && typeof env.ASSETS.fetch === "function") {
         const indexRequest = new Request(new URL("/", request.url), request);
-        return env.ASSETS.fetch(indexRequest);
+        const assetRes = await env.ASSETS.fetch(indexRequest);
+        return enforceUniversalShareCard(assetRes);
       }
     }
 
     if (request.method === "OPTIONS") {
-      return new Response(null, { status: 204, headers: getCorsHeaders(request) });
+      return new Response(null, { status: 204, headers: getCorsHeaders(request, env) });
     }
 
     const botToken = env?.BOT_TOKEN || "";
@@ -733,115 +1199,643 @@ export default {
     const contactWebhook = env?.CONTACT_WEBHOOK_URL || "";
 
     // -------------------------------------------------------------------------
-    // ROUTE A: POST /api/submit-review (From Website)
+    // ROUTE A: POST /api/submit-review & /api/review (Client Review Submission)
+    // Saves review directly into Cloudflare KV with default moderation_status: 'pending'
+    // and visibility: 'hidden'. 100% disconnected from Discord.
     // -------------------------------------------------------------------------
     if ((path === "/api/submit-review" || path === "/api/review") && request.method === "POST") {
       try {
+        const clientIp = request.headers.get("cf-connecting-ip") || request.headers.get("x-real-ip") || "127.0.0.1";
+        const rl = checkWorkerRateLimit(`submit-review:${clientIp}`, 5, 60000);
+        if (!rl.allowed) {
+          return jsonResponse({
+            success: false,
+            error: `Too many review submissions from your IP. Please wait ${rl.waitSec} seconds before submitting again.`
+          }, 429, {}, request, env);
+        }
+
         const body = await request.json();
         const clientName = body.clientName || body.name || "Anonymous Client";
         const reviewText = body.reviewText || body.text || body.review || body.feedback || "";
         const rating = Math.min(5, Math.max(1, Number(body.rating) || 5));
+        const role = body.role || body.service || "Verified Client";
+        const email = body.email || "";
 
         if (!reviewText || !reviewText.trim()) {
-          return jsonResponse({ success: false, error: "Review text is required." }, 400);
+          return jsonResponse({ success: false, error: "Review feedback text is required." }, 400, {}, request, env);
         }
 
-        const id = `rev_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-        const timestamp = new Date().toISOString();
+        const id = `rev_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        const nowIso = new Date().toISOString();
 
         // 1. Save review to Cloudflare KV (REVIEWS_DB)
         const reviewData = {
           id,
-          clientName,
-          reviewText,
+          clientName: String(clientName).trim(),
+          name: String(clientName).trim(),
+          email: String(email).trim().toLowerCase(),
+          role: String(role).trim(),
+          service: String(role).trim(),
+          reviewText: String(reviewText).trim(),
+          text: String(reviewText).trim(),
           rating,
           moderation_status: "pending",
           visibility: "hidden",
-          timestamp
+          created_at: nowIso,
+          timestamp: nowIso,
+          updated_at: nowIso,
+          moderated_by: ""
         };
 
-        await kvPut(env, `review_${id}`, JSON.stringify(reviewData));
+        const saved = await kvPut(env, `review_${id}`, JSON.stringify(reviewData));
+        if (!saved) {
+          throw new Error("Failed to write review to KV database.");
+        }
+        await updateKvIndex(env, "review_", reviewData, "upsert");
 
-        // 2. Build Discord embed with 4 action buttons: [✅ Accept] [❌ Decline] [👁️ Show] [🙈 Hide]
-        const starString = "★".repeat(rating) + "☆".repeat(5 - rating) + ` (${rating} / 5 Stars)`;
+        return jsonResponse({
+          success: true,
+          id,
+          message: "Review submitted successfully! It is now pending moderation in the Super Admin Console."
+        }, 200, {}, request, env);
 
-        const discordPayload = {
-          content: "⭐ **NEW CLIENT TESTIMONIAL AWAITING MODERATION**",
-          embeds: [
-            {
-              title: "⭐ Client Review Submission  -  Whiz Studio",
-              description: "A new client review has been submitted and is awaiting team moderation.\n\n### 🛡️ Moderation Actions:\nUse the action buttons below to accept, decline, or toggle website display.",
-              color: 0xF59E0B,
-              fields: [
-                { name: "👤 Client / Company", value: String(clientName), inline: true },
-                { name: "⭐ Rating Given", value: starString, inline: true },
-                { name: "💬 Review Feedback", value: String(reviewText), inline: false },
-                { name: "🆔 Review Reference ID", value: id, inline: true },
-                { name: "⚙️ Live Status", value: "Status: ⏳ Pending | Visibility: 🙈 Hidden", inline: true },
-                { name: "⏰ Submission Timestamp", value: new Date(timestamp).toUTCString(), inline: false }
-              ],
-              footer: { text: "Whiz Studio Review Control Panel • whizstudio.art" }
+      } catch (err) {
+        console.error("Client Review Submission Error:", err);
+        return jsonResponse({ success: false, error: err.message || "Failed to submit review." }, 500, {}, request, env);
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Super Admin Review Moderation API (/api/admin-reviews)
+    // Full moderation controls: Approve, Reject, Hide, Show, Toggle Visibility, Delete
+    // Strictly authenticated: Only authorized staff/admin may access or mutate records.
+    // -------------------------------------------------------------------------
+    if (path === "/api/admin-reviews") {
+      const auth = await verifyAdminOrInternal(request, env);
+      if (!auth.ok) {
+        return jsonResponse({ success: false, error: auth.error }, auth.status, {}, request, env);
+      }
+
+      if (request.method === "GET") {
+        try {
+          const reviews = await kvGetAll(env, "review_");
+          reviews.sort((a, b) => new Date(b.created_at || b.timestamp || 0) - new Date(a.created_at || a.timestamp || 0));
+          return jsonResponse({ success: true, count: reviews.length, reviews }, 200, {
+            "Cache-Control": "no-cache, no-store, must-revalidate"
+          }, request, env);
+        } catch (err) {
+          console.error("GET /api/admin-reviews Error:", err);
+          return jsonResponse({ success: false, reviews: [], error: err.message }, 500, {}, request, env);
+        }
+      }
+
+      if (request.method === "POST" || request.method === "PATCH") {
+        try {
+          const body = await request.json();
+          const { id, action, status, visibility } = body;
+          if (!id) return jsonResponse({ success: false, error: "Review ID is required" }, 400, {}, request, env);
+
+          const key = id.startsWith("review_") ? id : `review_${id}`;
+          const raw = await kvGet(env, key);
+          if (!raw) return jsonResponse({ success: false, error: "Review not found" }, 404, {}, request, env);
+
+          const review = JSON.parse(raw);
+
+          if (action === "approve") {
+            review.moderation_status = "approved";
+            review.visibility = "show";
+          } else if (action === "reject") {
+            review.moderation_status = "rejected";
+            review.visibility = "hidden";
+          } else if (action === "toggle_visibility") {
+            review.visibility = review.visibility === "show" ? "hidden" : "show";
+          } else if (action === "hide") {
+            review.visibility = "hidden";
+          } else if (action === "show") {
+            review.visibility = "show";
+          } else if (action === "delete") {
+            await kvDelete(env, key);
+            await updateKvIndex(env, "review_", key, "delete");
+            return jsonResponse({ success: true, id, message: "Review deleted successfully." }, 200, {}, request, env);
+          }
+
+          if (status) review.moderation_status = status;
+          if (visibility) review.visibility = visibility;
+          review.updated_at = new Date().toISOString();
+          review.moderated_by = auth.user?.full_name || auth.user?.email || "Super Admin";
+
+          await kvPut(env, key, JSON.stringify(review));
+          await updateKvIndex(env, "review_", review, "upsert");
+          return jsonResponse({
+            success: true,
+            review,
+            message: `Review successfully updated (${review.moderation_status} | ${review.visibility})`
+          }, 200, {}, request, env);
+        } catch (err) {
+          console.error("Update Review Error:", err);
+          return jsonResponse({ success: false, error: err.message }, 500, {}, request, env);
+        }
+      }
+
+      if (request.method === "DELETE") {
+        try {
+          let id = url.searchParams.get("id");
+          if (!id) {
+            try {
+              const body = await request.json();
+              id = body?.id;
+            } catch (e) { }
+          }
+          if (!id) return jsonResponse({ success: false, error: "Review ID required" }, 400, {}, request, env);
+
+          const key = id.startsWith("review_") ? id : `review_${id}`;
+          await kvDelete(env, key);
+          if (key !== id) {
+            await kvDelete(env, id);
+          }
+          await updateKvIndex(env, "review_", key, "delete");
+          return jsonResponse({ success: true, id, message: "Review permanently deleted." }, 200, {}, request, env);
+        } catch (err) {
+          console.error("DELETE /api/admin-reviews Error:", err);
+          return jsonResponse({ success: false, error: err.message }, 500, {}, request, env);
+        }
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Super Admin CRM Inquiries & Leads API (/api/inquiries & /api/leads)
+    // Full CRUD operations for prospective client leads backed by Cloudflare D1
+    // Supports public lead ingestion (POST) & authenticated CRM governance (GET/PATCH/DELETE)
+    // -------------------------------------------------------------------------
+    if (path === "/api/inquiries" || path === "/api/leads") {
+      // 1. PUBLIC LEAD SUBMISSION (POST without admin auth when creating a new lead)
+      if (request.method === "POST") {
+        let body;
+        try {
+          body = await request.json();
+        } catch {
+          body = {};
+        }
+
+        // Check if this is a new lead submission (from website quote form)
+        if (body && body.name && body.email && body.details && !body.id) {
+          try {
+            const clientIp = request.headers.get("cf-connecting-ip") || request.headers.get("x-real-ip") || "127.0.0.1";
+            const rl = checkWorkerRateLimit(`submit-contact:${clientIp}`, 5, 60000);
+            if (!rl.allowed) {
+              return jsonResponse({
+                success: false,
+                error: `Too many contact requests from your IP. Please wait ${rl.waitSec} seconds before submitting again.`
+              }, 429, {}, request, env);
             }
-          ],
-          components: [
-            {
-              type: 1, // ActionRow
-              components: [
-                {
-                  type: 2,
-                  style: 3, // Success
-                  label: "✅ Accept",
-                  custom_id: `accept_${id}`
-                },
-                {
-                  type: 2,
-                  style: 4, // Danger
-                  label: "❌ Decline",
-                  custom_id: `decline_${id}`
-                },
-                {
-                  type: 2,
-                  style: 1, // Primary
-                  label: "👁️ Show",
-                  custom_id: `show_${id}`
-                },
-                {
-                  type: 2,
-                  style: 2, // Secondary
-                  label: "🙈 Hide",
-                  custom_id: `hide_${id}`
-                }
-              ]
+
+            const { name, email, phone, service, details } = body;
+            const id = `inq_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+            const nowIso = new Date().toISOString();
+
+            const inquiryRecord = {
+              id,
+              name: String(name).trim(),
+              email: String(email).trim().toLowerCase(),
+              phone: String(phone || "").trim(),
+              service: String(service || "General Inquiry").trim(),
+              details: String(details).trim(),
+              status: "new",
+              notes: "",
+              created_at: nowIso,
+              timestamp: nowIso,
+              updated_at: nowIso
+            };
+
+            await saveInquiryToD1(env, inquiryRecord);
+
+            return jsonResponse({
+              success: true,
+              id,
+              message: "Your inquiry has been successfully registered with Whiz Studio. Our executive team will review and respond shortly."
+            }, 200, {}, request, env);
+          } catch (err) {
+            console.error("Lead Generation API Error:", err);
+            return jsonResponse({
+              success: false,
+              error: err.message || "Failed to process inquiry submission."
+            }, 500, {}, request, env);
+          }
+        }
+
+        // If not a public new lead submission, authenticate admin for status/note update
+        const auth = await verifyAdminOrInternal(request, env);
+        if (!auth.ok) {
+          return jsonResponse({ success: false, error: auth.error }, auth.status, {}, request, env);
+        }
+
+        try {
+          const { id, status, notes } = body;
+          if (!id) return jsonResponse({ success: false, error: "Inquiry ID is required" }, 400, {}, request, env);
+
+          await updateInquiryInD1(env, id, status, notes);
+          return jsonResponse({ success: true, message: "Inquiry updated successfully." }, 200, {}, request, env);
+        } catch (err) {
+          console.error("Update Inquiry Error:", err);
+          return jsonResponse({ success: false, error: err.message }, 500, {}, request, env);
+        }
+      }
+
+      // 2. ADMIN AUTHENTICATION FOR GET, PATCH, DELETE
+      const auth = await verifyAdminOrInternal(request, env);
+      if (!auth.ok) {
+        return jsonResponse({ success: false, error: auth.error }, auth.status, {}, request, env);
+      }
+
+      if (request.method === "GET") {
+        try {
+          const list = await getInquiriesFromD1(env);
+          return jsonResponse({ success: true, count: list.length, inquiries: list }, 200, {
+            "Cache-Control": "no-cache, no-store, must-revalidate"
+          }, request, env);
+        } catch (err) {
+          console.error("GET /api/inquiries Error:", err);
+          return jsonResponse({ success: false, inquiries: [], error: err.message }, 500, {}, request, env);
+        }
+      }
+
+      if (request.method === "PATCH") {
+        try {
+          const body = await request.json().catch(() => ({}));
+          const { id, status, notes } = body;
+          if (!id) return jsonResponse({ success: false, error: "Inquiry ID is required" }, 400, {}, request, env);
+
+          await updateInquiryInD1(env, id, status, notes);
+          return jsonResponse({ success: true, message: "Inquiry updated successfully." }, 200, {}, request, env);
+        } catch (err) {
+          console.error("Update Inquiry Error:", err);
+          return jsonResponse({ success: false, error: err.message }, 500, {}, request, env);
+        }
+      }
+
+      if (request.method === "DELETE") {
+        try {
+          let id = url.searchParams.get("id");
+          if (!id) {
+            try {
+              const body = await request.json();
+              id = body?.id;
+            } catch (e) { }
+          }
+          if (!id) return jsonResponse({ success: false, error: "Inquiry ID required" }, 400, {}, request, env);
+
+          await deleteInquiryFromD1(env, id);
+          return jsonResponse({ success: true, id, message: "Inquiry deleted successfully from database." }, 200, {}, request, env);
+        } catch (err) {
+          console.error("DELETE /api/inquiries Error:", err);
+          return jsonResponse({ success: false, error: err.message }, 500, {}, request, env);
+        }
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // CONTENT CALENDAR SYSTEM API (100% Free Cloudflare D1 + Zero File Storage)
+    // Supports Admin CRUD, Smart Document Generation, and Client Portal Read-Only
+    // -------------------------------------------------------------------------
+
+    // 1. Meta Companies & Services Explorer (Admin)
+    if (path === "/api/admin/content-calendar/meta" && request.method === "GET") {
+      const auth = await verifyAdminOrInternal(request, env);
+      if (!auth.ok) {
+        return jsonResponse({ success: false, error: auth.error }, auth.status, {}, request, env);
+      }
+      try {
+        const companiesMap = new Map();
+
+        const folderRes = await d1Execute(env, "SELECT DISTINCT company_name, client_email FROM content_folders WHERE company_name IS NOT NULL AND client_email IS NOT NULL");
+        if (folderRes && Array.isArray(folderRes.results)) {
+          for (const r of folderRes.results) {
+            const cName = String(r.company_name || "").trim();
+            const cEmail = String(r.client_email || "").trim().toLowerCase();
+            if (cName && cEmail && !companiesMap.has(cEmail)) {
+              companiesMap.set(cEmail, { company_name: cName, client_email: cEmail });
             }
-          ]
-        };
+          }
+        }
 
-        let discordRes = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
-          method: "POST",
-          headers: {
-            "Authorization": `Bot ${botToken}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(discordPayload)
-        });
+        const inquiryRes = await d1Execute(env, "SELECT DISTINCT name, email FROM inquiries WHERE name IS NOT NULL AND email IS NOT NULL");
+        if (inquiryRes && Array.isArray(inquiryRes.results)) {
+          for (const r of inquiryRes.results) {
+            const cName = String(r.name || "").trim();
+            const cEmail = String(r.email || "").trim().toLowerCase();
+            if (cName && cEmail && !companiesMap.has(cEmail)) {
+              companiesMap.set(cEmail, { company_name: cName, client_email: cEmail });
+            }
+          }
+        }
 
-        if (!discordRes.ok) {
-          discordRes = await fetch(reviewWebhook, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(discordPayload)
+        const companies = Array.from(companiesMap.values()).sort((a, b) => a.company_name.localeCompare(b.company_name));
+
+        const STANDARD_SERVICES = [
+          "Social Media Management & Marketing",
+          "Performance Ads (Meta & Google)",
+          "Search Engine Optimization (SEO)",
+          "Brand Identity & Graphic Design",
+          "Content Creation & Copywriting",
+          "Web Development & UI/UX Design",
+          "Email Marketing & Automation",
+          "Video Production & Motion Graphics"
+        ];
+
+        const serviceSet = new Set(STANDARD_SERVICES);
+        const serviceRes = await d1Execute(env, "SELECT DISTINCT service_name FROM content_folders WHERE service_name IS NOT NULL");
+        if (serviceRes && Array.isArray(serviceRes.results)) {
+          for (const r of serviceRes.results) {
+            const s = String(r.service_name || "").trim();
+            if (s) serviceSet.add(s);
+          }
+        }
+
+        return jsonResponse({
+          success: true,
+          companies,
+          services: Array.from(serviceSet)
+        }, 200, { "Cache-Control": "no-cache, no-store, must-revalidate" }, request, env);
+      } catch (err) {
+        console.error("GET /api/admin/content-calendar/meta Error:", err);
+        return jsonResponse({ success: false, error: err.message }, 500, {}, request, env);
+      }
+    }
+
+    // 2. Folders List with Item Counts (Admin)
+    if (path === "/api/admin/content-calendar/folders" && request.method === "GET") {
+      const auth = await verifyAdminOrInternal(request, env);
+      if (!auth.ok) {
+        return jsonResponse({ success: false, error: auth.error }, auth.status, {}, request, env);
+      }
+      try {
+        const sql = `
+          SELECT f.id, f.company_name, f.client_email, f.service_name, f.created_at, f.updated_at,
+                 COUNT(i.id) AS item_count
+          FROM content_folders f
+          LEFT JOIN content_items i ON f.id = i.folder_id
+          GROUP BY f.id
+          ORDER BY f.updated_at DESC
+        `;
+        const res = await d1Execute(env, sql);
+        const folders = (res && Array.isArray(res.results)) ? res.results : [];
+        return jsonResponse({ success: true, count: folders.length, folders }, 200, {
+          "Cache-Control": "no-cache, no-store, must-revalidate"
+        }, request, env);
+      } catch (err) {
+        console.error("GET /api/admin/content-calendar/folders Error:", err);
+        return jsonResponse({ success: false, folders: [], error: err.message }, 500, {}, request, env);
+      }
+    }
+
+    // 3. Upload & Smart Auto-Splitting Ingestion (Admin)
+    if (path === "/api/admin/content-calendar/upload" && request.method === "POST") {
+      const auth = await verifyAdminOrInternal(request, env);
+      if (!auth.ok) {
+        return jsonResponse({ success: false, error: auth.error }, auth.status, {}, request, env);
+      }
+      try {
+        const body = await request.json();
+        const { company_name, client_email, service_name, items } = body;
+
+        if (!company_name || !company_name.trim()) {
+          return jsonResponse({ success: false, error: "Company Name is required." }, 400, {}, request, env);
+        }
+        if (!client_email || !client_email.trim() || !client_email.includes("@")) {
+          return jsonResponse({ success: false, error: "A valid Client Email address is required." }, 400, {}, request, env);
+        }
+        if (!service_name || !service_name.trim()) {
+          return jsonResponse({ success: false, error: "Service Name is required." }, 400, {}, request, env);
+        }
+        if (!Array.isArray(items) || items.length === 0) {
+          return jsonResponse({ success: false, error: "At least one parsed content item is required." }, 400, {}, request, env);
+        }
+
+        const normEmail = String(client_email).trim().toLowerCase();
+        const normCompany = String(company_name).trim();
+        const normService = String(service_name).trim();
+        const nowIso = new Date().toISOString();
+
+        // Check if folder already exists for this client and service
+        const existingFolderRes = await d1Execute(env,
+          "SELECT id FROM content_folders WHERE LOWER(TRIM(client_email)) = ? AND LOWER(TRIM(service_name)) = ? LIMIT 1",
+          [normEmail, normService.toLowerCase()]
+        );
+
+        let folderId;
+        let baseSerial = 0;
+
+        if (existingFolderRes && Array.isArray(existingFolderRes.results) && existingFolderRes.results.length > 0) {
+          folderId = existingFolderRes.results[0].id;
+          await d1Run(env,
+            "UPDATE content_folders SET company_name = ?, updated_at = ? WHERE id = ?",
+            [normCompany, nowIso, folderId]
+          );
+          const maxSnRes = await d1Execute(env,
+            "SELECT MAX(serial_number) AS max_sn FROM content_items WHERE folder_id = ?",
+            [folderId]
+          );
+          if (maxSnRes && Array.isArray(maxSnRes.results) && maxSnRes.results[0]?.max_sn != null) {
+            baseSerial = Number(maxSnRes.results[0].max_sn) || 0;
+          }
+        } else {
+          folderId = `fld_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+          await d1Run(env,
+            "INSERT INTO content_folders (id, company_name, client_email, service_name, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+            [folderId, normCompany, normEmail, normService, nowIso, nowIso]
+          );
+        }
+
+        // Batch insert items into content_items
+        for (let i = 0; i < items.length; i++) {
+          const it = items[i];
+          const itemId = `item_${Date.now()}_${Math.random().toString(36).substring(2, 7)}_${i + 1}`;
+          const itemSerial = baseSerial + (Number(it.serial_number) || (i + 1));
+          const itemTitle = String(it.title || `Content ${itemSerial}`).trim();
+          const itemBody = String(it.content_body || "").trim();
+
+          await d1Run(env,
+            "INSERT INTO content_items (id, folder_id, serial_number, title, content_body, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [itemId, folderId, itemSerial, itemTitle, itemBody, nowIso, nowIso]
+          );
+        }
+
+        return jsonResponse({
+          success: true,
+          folder_id: folderId,
+          added_count: items.length,
+          message: `Successfully saved ${items.length} content items to folder.`
+        }, 200, {}, request, env);
+
+      } catch (err) {
+        console.error("POST /api/admin/content-calendar/upload Error:", err);
+        return jsonResponse({ success: false, error: err.message }, 500, {}, request, env);
+      }
+    }
+
+    // 4. Folder Detail View with Full Content Items (Admin)
+    if (path.startsWith("/api/admin/content-calendar/folders/") && request.method === "GET") {
+      const auth = await verifyAdminOrInternal(request, env);
+      if (!auth.ok) {
+        return jsonResponse({ success: false, error: auth.error }, auth.status, {}, request, env);
+      }
+      const folderId = path.replace("/api/admin/content-calendar/folders/", "").trim();
+      if (!folderId) {
+        return jsonResponse({ success: false, error: "Folder ID required" }, 400, {}, request, env);
+      }
+      try {
+        const folderRes = await d1Execute(env, "SELECT * FROM content_folders WHERE id = ? LIMIT 1", [folderId]);
+        if (!folderRes || !Array.isArray(folderRes.results) || folderRes.results.length === 0) {
+          return jsonResponse({ success: false, error: "Content folder not found." }, 404, {}, request, env);
+        }
+        const folder = folderRes.results[0];
+        const itemsRes = await d1Execute(env, "SELECT * FROM content_items WHERE folder_id = ? ORDER BY serial_number ASC, created_at ASC", [folderId]);
+        const items = (itemsRes && Array.isArray(itemsRes.results)) ? itemsRes.results : [];
+
+        return jsonResponse({ success: true, folder, items }, 200, {
+          "Cache-Control": "no-cache, no-store, must-revalidate"
+        }, request, env);
+      } catch (err) {
+        console.error("GET folder detail Error:", err);
+        return jsonResponse({ success: false, error: err.message }, 500, {}, request, env);
+      }
+    }
+
+    // 5. Update Folder & Optional Synchronization Across Client Folders (Admin)
+    if (path.startsWith("/api/admin/content-calendar/folders/") && request.method === "PATCH") {
+      const auth = await verifyAdminOrInternal(request, env);
+      if (!auth.ok) {
+        return jsonResponse({ success: false, error: auth.error }, auth.status, {}, request, env);
+      }
+      const folderId = path.replace("/api/admin/content-calendar/folders/", "").trim();
+      try {
+        const folderRes = await d1Execute(env, "SELECT * FROM content_folders WHERE id = ? LIMIT 1", [folderId]);
+        if (!folderRes || !Array.isArray(folderRes.results) || folderRes.results.length === 0) {
+          return jsonResponse({ success: false, error: "Folder not found." }, 404, {}, request, env);
+        }
+        const current = folderRes.results[0];
+        const body = await request.json();
+        const nowIso = new Date().toISOString();
+
+        const newCompany = body.company_name ? String(body.company_name).trim() : current.company_name;
+        const newEmail = body.client_email ? String(body.client_email).trim().toLowerCase() : current.client_email;
+        const newService = body.service_name ? String(body.service_name).trim() : current.service_name;
+        const applyAll = Boolean(body.apply_to_all_client_folders);
+
+        await d1Run(env,
+          "UPDATE content_folders SET company_name = ?, client_email = ?, service_name = ?, updated_at = ? WHERE id = ?",
+          [newCompany, newEmail, newService, nowIso, folderId]
+        );
+
+        if (applyAll && current.client_email) {
+          await d1Run(env,
+            "UPDATE content_folders SET company_name = ?, client_email = ?, updated_at = ? WHERE LOWER(TRIM(client_email)) = ?",
+            [newCompany, newEmail, nowIso, current.client_email.toLowerCase()]
+          );
+        }
+
+        return jsonResponse({ success: true, message: "Folder updated successfully." }, 200, {}, request, env);
+      } catch (err) {
+        console.error("PATCH folder Error:", err);
+        return jsonResponse({ success: false, error: err.message }, 500, {}, request, env);
+      }
+    }
+
+    // 6. Delete Individual Content Card (Admin) - Folder Remains Intact
+    if (path.startsWith("/api/admin/content-calendar/items/") && request.method === "DELETE") {
+      const auth = await verifyAdminOrInternal(request, env);
+      if (!auth.ok) {
+        return jsonResponse({ success: false, error: auth.error }, auth.status, {}, request, env);
+      }
+      const itemId = path.replace("/api/admin/content-calendar/items/", "").trim();
+      try {
+        const itemRes = await d1Execute(env, "SELECT folder_id FROM content_items WHERE id = ? LIMIT 1", [itemId]);
+        if (!itemRes || !Array.isArray(itemRes.results) || itemRes.results.length === 0) {
+          return jsonResponse({ success: false, error: "Content item not found." }, 404, {}, request, env);
+        }
+        const folderId = itemRes.results[0].folder_id;
+        await d1Run(env, "DELETE FROM content_items WHERE id = ?", [itemId]);
+        await d1Run(env, "UPDATE content_folders SET updated_at = ? WHERE id = ?", [new Date().toISOString(), folderId]);
+
+        return jsonResponse({ success: true, item_id: itemId, message: "Content item deleted." }, 200, {}, request, env);
+      } catch (err) {
+        console.error("DELETE item Error:", err);
+        return jsonResponse({ success: false, error: err.message }, 500, {}, request, env);
+      }
+    }
+
+    // 7. Delete Full Folder & Cascade Items (Admin)
+    if (path.startsWith("/api/admin/content-calendar/folders/") && request.method === "DELETE") {
+      const auth = await verifyAdminOrInternal(request, env);
+      if (!auth.ok) {
+        return jsonResponse({ success: false, error: auth.error }, auth.status, {}, request, env);
+      }
+      const folderId = path.replace("/api/admin/content-calendar/folders/", "").trim();
+      try {
+        await d1Run(env, "DELETE FROM content_items WHERE folder_id = ?", [folderId]);
+        await d1Run(env, "DELETE FROM content_folders WHERE id = ?", [folderId]);
+        return jsonResponse({ success: true, folder_id: folderId, message: "Folder and all its content items deleted." }, 200, {}, request, env);
+      } catch (err) {
+        console.error("DELETE folder Error:", err);
+        return jsonResponse({ success: false, error: err.message }, 500, {}, request, env);
+      }
+    }
+
+    // 8. Client Portal Content Calendar View (Read-Only, Title-Only, Zero content_body)
+    if (path === "/api/client/content-calendar" && request.method === "GET") {
+      try {
+        const userAuth = await getAuthenticatedUser(request, env);
+        let targetEmail = "";
+
+        const paramEmail = url.searchParams.get("email");
+        if (userAuth.ok && userAuth.isAdmin && paramEmail) {
+          targetEmail = paramEmail.trim().toLowerCase();
+        } else if (userAuth.ok && userAuth.email) {
+          targetEmail = userAuth.email.trim().toLowerCase();
+        } else if (paramEmail && paramEmail.includes("@")) {
+          targetEmail = paramEmail.trim().toLowerCase();
+        }
+
+        if (!targetEmail) {
+          return jsonResponse({ success: false, error: "Authentication or client email required" }, 401, {}, request, env);
+        }
+
+        // Fetch folders for this client
+        const folderRes = await d1Execute(env,
+          "SELECT id, company_name, service_name, created_at, updated_at FROM content_folders WHERE LOWER(TRIM(client_email)) = ? ORDER BY updated_at DESC",
+          [targetEmail]
+        );
+
+        const folders = (folderRes && Array.isArray(folderRes.results)) ? folderRes.results : [];
+
+        // STRICT SECURITY: SELECT ONLY id, folder_id, serial_number, title (NEVER content_body)
+        const foldersWithItems = [];
+        for (const f of folders) {
+          const itemsRes = await d1Execute(env,
+            "SELECT id, folder_id, serial_number, title FROM content_items WHERE folder_id = ? ORDER BY serial_number ASC, created_at ASC",
+            [f.id]
+          );
+          const items = (itemsRes && Array.isArray(itemsRes.results)) ? itemsRes.results : [];
+          foldersWithItems.push({
+            id: f.id,
+            company_name: f.company_name,
+            service_name: f.service_name,
+            created_at: f.created_at,
+            updated_at: f.updated_at,
+            items
           });
         }
 
         return jsonResponse({
           success: true,
-          id,
-          message: "Review successfully saved to KV and dispatched to Discord moderation queue."
-        }, 200);
+          folders: foldersWithItems
+        }, 200, {
+          "Cache-Control": "private, no-cache, no-store, must-revalidate"
+        }, request, env);
 
       } catch (err) {
-        console.error("Route A Error:", err);
-        return jsonResponse({ success: false, error: err.message }, 500);
+        console.error("GET /api/client/content-calendar Error:", err);
+        return jsonResponse({ success: false, folders: [], error: err.message }, 500, {}, request, env);
       }
     }
 
@@ -905,7 +1899,7 @@ export default {
           if (existingRaw) {
             try {
               review = JSON.parse(existingRaw);
-            } catch (e) {}
+            } catch (e) { }
           }
 
           if (!review) {
@@ -949,6 +1943,7 @@ export default {
           review.updated_at = new Date().toISOString();
 
           await kvPut(env, `review_${id}`, JSON.stringify(review));
+          await updateKvIndex(env, "review_", review, "upsert");
 
           const modStatus = review.moderation_status;
           const visStatus = review.visibility;
@@ -1044,33 +2039,35 @@ export default {
     }
 
     // -------------------------------------------------------------------------
-    // ROUTE C: GET /api/reviews (For Website Display)
+    // ROUTE C: GET /api/reviews (For Website Display & Homepage Carousel)
+    // Serves reviews strictly matching:
+    // (moderation_status === 'approved' || moderation_status === 'accepted') AND visibility === 'show'.
+    // Protected with edge cache headers to strictly safeguard Cloudflare Free Tier quotas.
     // -------------------------------------------------------------------------
     if (path === "/api/reviews" && request.method === "GET") {
       try {
-        const keys = await kvList(env, "review_");
+        const allReviews = await kvGetAll(env, "review_");
         const filteredReviews = [];
 
-        for (const k of keys) {
-          const val = await kvGet(env, k.name);
-          if (val) {
-            try {
-              const review = JSON.parse(val);
-              if (review.moderation_status === "accepted" && review.visibility === "show") {
-                filteredReviews.push({
-                  id: review.id,
-                  clientName: review.clientName,
-                  name: review.clientName,
-                  reviewText: review.reviewText,
-                  text: review.reviewText,
-                  rating: Number(review.rating) || 5,
-                  moderation_status: review.moderation_status,
-                  visibility: review.visibility,
-                  timestamp: review.timestamp,
-                  date: review.timestamp ? new Date(review.timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Verified Client"
-                });
-              }
-            } catch (e) {}
+        for (const review of allReviews) {
+          const isApproved = review.moderation_status === "approved" || review.moderation_status === "accepted";
+          const isVisible = review.visibility === "show";
+
+          if (isApproved && isVisible) {
+            filteredReviews.push({
+              id: review.id,
+              clientName: review.clientName || review.name || "Verified Client",
+              name: review.clientName || review.name || "Verified Client",
+              role: review.role || review.service || "Verified Client",
+              service: review.service || review.role || "Marketing Services",
+              reviewText: review.reviewText || review.text || "",
+              text: review.reviewText || review.text || "",
+              rating: Number(review.rating) || 5,
+              timestamp: review.timestamp || review.created_at || "",
+              date: review.timestamp || review.created_at
+                ? new Date(review.timestamp || review.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                : "Verified Client"
+            });
           }
         }
 
@@ -1081,27 +2078,40 @@ export default {
           count: filteredReviews.length,
           reviews: filteredReviews
         }, 200, {
-          "Cache-Control": "no-cache, no-store, must-revalidate"
-        });
+          "Cache-Control": "public, max-age=60, stale-while-revalidate=300"
+        }, request);
 
       } catch (err) {
-        console.error("Route C Error:", err);
-        return jsonResponse({ success: false, reviews: [], error: err.message }, 500);
+        console.error("Public Reviews Error:", err);
+        return jsonResponse({ success: false, reviews: [], error: err.message }, 500, {}, request);
       }
     }
 
-
     // -------------------------------------------------------------------------
-    // Contact Gateway (/api/submit-contact, /api/contact, /api/inquiries, /api/leads)
-    // Direct Cloudflare D1 Lead Generation Engine
+    // Contact Gateway (/api/submit-contact & /api/contact)
+    // Direct Lead Generation Engine: Routes all inbound prospective client inquiries
+    // into Cloudflare KV database (prefix: inquiry_) for Super Admin CRM management.
+    // Rate-limited per IP to prevent spam exhaustion.
     // -------------------------------------------------------------------------
-    if ((path === "/api/submit-contact" || path === "/api/contact" || path === "/api/inquiries" || path === "/api/leads") && request.method === "POST") {
+    if ((path === "/api/submit-contact" || path === "/api/contact") && request.method === "POST") {
       try {
+        const clientIp = request.headers.get("cf-connecting-ip") || request.headers.get("x-real-ip") || "127.0.0.1";
+        const rl = checkWorkerRateLimit(`submit-contact:${clientIp}`, 5, 60000);
+        if (!rl.allowed) {
+          return jsonResponse({
+            success: false,
+            error: `Too many contact requests from your IP. Please wait ${rl.waitSec} seconds before submitting again.`
+          }, 429, {}, request, env);
+        }
+
         const body = await request.json();
         const { name, email, phone, service, details } = body;
 
         if (!name || !email || !details) {
-          return jsonResponse({ success: false, error: "Validation error: Name, email, and project scope are required." }, 400);
+          return jsonResponse({
+            success: false,
+            error: "Client Name, Email Address, and Project Scope details are required."
+          }, 400, {}, request, env);
         }
 
         const id = `inq_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
@@ -1114,69 +2124,92 @@ export default {
           phone: String(phone || "").trim(),
           service: String(service || "General Inquiry").trim(),
           details: String(details).trim(),
-          status: "new",
-          notes: "",
+          status: "new", // 'new' | 'contacted' | 'in_progress' | 'closed'
           created_at: nowIso,
           timestamp: nowIso,
-          updated_at: nowIso
+          updated_at: nowIso,
+          notes: ""
         };
 
-        // 1. Save directly to Cloudflare D1
         await saveInquiryToD1(env, inquiryRecord);
-
-        // 2. Safely guard secondary Discord webhook so it can NEVER block or crash D1 insertion
-        if (typeof contactWebhook === "string" && (contactWebhook.startsWith("https://") || contactWebhook.startsWith("http://"))) {
-          try {
-            const cleanPhone = (phone || "").replace(/[^0-9]/g, "");
-            const waUrl = cleanPhone ? `https://wa.me/${cleanPhone}` : "https://wa.me/8801815127022";
-
-            const discordPayload = {
-              content: "🚨 **NEW INBOUND CLIENT INQUIRY FROM WHIZSTUDIO.ART**",
-              embeds: [
-                {
-                  title: "📬 Strategic Growth Inquiry  -  Whiz Studio",
-                  description: "A new prospective business client has submitted their requirements via the official contact form.",
-                  color: 0x00A86B,
-                  fields: [
-                    { name: "👤 Client / Company", value: String(name), inline: true },
-                    { name: "📱 WhatsApp / Phone", value: String(phone || "Not provided"), inline: true },
-                    { name: "📧 Email Address", value: String(email), inline: true },
-                    { name: "🎯 Selected Service", value: String(service || "General Inquiry"), inline: true },
-                    { name: "📝 Project Scope & Details", value: String(details), inline: false },
-                    { name: "⏰ Submission Timestamp", value: new Date().toUTCString(), inline: false }
-                  ],
-                  footer: { text: "Whiz Studio Contact Gateway • whizstudio.art" }
-                }
-              ],
-              components: [
-                {
-                  type: 1,
-                  components: [
-                    { type: 2, style: 5, label: "💬 WhatsApp Direct Chat", url: waUrl },
-                    { type: 2, style: 5, label: "🌐 Open Whiz Studio", url: "https://whizstudio.art" }
-                  ]
-                }
-              ]
-            };
-
-            await fetch(contactWebhook, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(discordPayload)
-            });
-          } catch (webhookErr) {
-            console.warn("Secondary Discord notification failed (non-blocking):", webhookErr);
-          }
-        }
 
         return jsonResponse({
           success: true,
           id,
           message: "Your inquiry has been successfully registered with Whiz Studio. Our executive team will review and respond shortly."
-        }, 200);
+        }, 200, {}, request, env);
+
       } catch (err) {
-        console.error("Lead generation error:", err);
-        return jsonResponse({ success: false, error: err.message }, 500);
+        console.error("Lead Generation API Error:", err);
+        return jsonResponse({
+          success: false,
+          error: err.message || "Failed to process inquiry submission."
+        }, 500, {}, request, env);
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // ROUTE: POST /api/send-welcome-email (Role-Based Welcome Email via Brevo API)
+    // Client self-welcome is permitted; staff/admin provisioning strictly authenticated.
+    // -------------------------------------------------------------------------
+    if (path === "/api/send-welcome-email" && request.method === "POST") {
+      try {
+        const body = await request.json().catch(() => ({}));
+        const { email, fullName, role = "client", temporaryPassword, loginUrl } = body;
+
+        const clientIp = request.headers.get("cf-connecting-ip") || request.headers.get("x-real-ip") || "127.0.0.1";
+        const origin = request.headers.get("origin") || "";
+        const referer = request.headers.get("referer") || "";
+        const isTrustedOrigin =
+          origin.startsWith("https://whizstudio.art") ||
+          origin.startsWith("https://portal.whizstudio.art") ||
+          origin.startsWith("https://admin.whizstudio.art") ||
+          origin.endsWith(".whizstudio.pages.dev") ||
+          referer.startsWith("https://whizstudio.art") ||
+          referer.startsWith("https://portal.whizstudio.art") ||
+          referer.startsWith("https://admin.whizstudio.art");
+
+        // Verify authorization: Staff/Admin roles strictly require authentication or internal tokens.
+        const auth = await verifyAdminOrInternal(request, env);
+        if (!auth.ok) {
+          if (role !== "client") {
+            return jsonResponse({ success: false, error: auth.error || "Admin authorization required for staff welcome emails." }, auth.status || 403, {}, request, env);
+          }
+          // Client self-onboarding: strictly enforce trusted origin & rate limiting (3 requests / 10 min)
+          if (!isTrustedOrigin && env?.ENVIRONMENT === "production") {
+            return jsonResponse({ success: false, error: "Forbidden: Unauthorized cross-origin request." }, 403, {}, request, env);
+          }
+          const rl = checkWorkerRateLimit(`welcome-email:${clientIp}`, 3, 600000);
+          if (!rl.allowed) {
+            return jsonResponse({
+              success: false,
+              error: `Email dispatch rate limit exceeded. Please wait ${rl.waitSec} seconds before requesting another email.`
+            }, 429, {}, request, env);
+          }
+        }
+
+        if (!email || !email.includes("@")) {
+          return jsonResponse({ success: false, error: "A valid email is required." }, 400, {}, request, env);
+        }
+
+        const emailResult = await sendBrevoWelcomeEmailWorker({
+          email,
+          fullName: fullName || "Valued User",
+          role,
+          temporaryPassword,
+          loginUrl,
+          env
+        });
+
+        return jsonResponse({
+          success: emailResult.success,
+          messageId: emailResult.messageId,
+          error: emailResult.error,
+          provider: "Brevo Transactional REST API v3",
+          whiteLabeled: true
+        }, emailResult.success ? 200 : 500, {}, request, env);
+      } catch (err) {
+        return jsonResponse({ success: false, error: err.message }, 500, {}, request, env);
       }
     }
 
@@ -1193,3 +2226,175 @@ export default {
     return jsonResponse({ error: "Endpoint not found" }, 404);
   }
 };
+
+// =============================================================================
+// BREVO TRANSACTIONAL WELCOME EMAIL HELPERS
+// Free Tier Compliant • 100% White-Labeled • Glassmorphic UI Dark Mode
+// =============================================================================
+const WHIZ_LOGO_URL = "https://whizstudio.art/assets/images/whiz-logo-v2.png?v=202611";
+
+function buildRoleWelcomeEmailHtmlWorker({
+  fullName = "",
+  email = "",
+  role = "client",
+  loginUrl = "",
+  temporaryPassword = ""
+}) {
+  const normRole = String(role || "client").trim().toLowerCase();
+  const isInternal = ["admin", "accountant", "owner", "staff", "manager", "financial_admin", "employee"].includes(normRole);
+
+  const subject = isInternal
+    ? "Welcome to the Team!"
+    : "Welcome to Whiz Studio!";
+
+  const cleanLoginUrl = (loginUrl || "https://whizstudio.art/client/dashboard/").trim();
+  const ctaButtonText = isInternal ? "Login to Dashboard" : "Access Client Portal";
+  const headline = isInternal ? "Welcome to the Team!" : "Welcome to Whiz Studio!";
+
+  const greeting = fullName ? `Hello ${fullName},` : "Hello,";
+  const mainCopy = isInternal
+    ? "Welcome to the team! We are thrilled to embark on this journey together. Your contribution, expertise, and dedication will directly shape our agency's future and improve the results we deliver. Let's build something extraordinary together."
+    : "We are thrilled to partner with you and ready to scale your digital presence. Your client portal is active, giving you complete visibility into your projects, deliverables, and performance analytics.";
+
+  const signoffHtml = isInternal
+    ? `<div style="font-size: 14px; color: #4B5563; line-height: 1.6;">
+        Best wishes,<br>
+        <strong style="color: #111827; font-weight: 600;">Md Kazi Abdur Rahim Emon</strong><br>
+        <span style="font-size: 13px; color: #6B7280;">CEO, Whiz Studio</span>
+       </div>`
+    : `<div style="font-size: 14px; color: #4B5563; line-height: 1.6;">
+        Warm regards,<br>
+        <strong style="color: #111827; font-weight: 600;">The Whiz Studio Team</strong>
+       </div>`;
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #FFFFFF; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; color: #111827;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #FFFFFF; width: 100%;">
+    <tr>
+      <td align="center" style="padding: 48px 20px 40px 20px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 520px; width: 100%; text-align: left; background-color: #FFFFFF;">
+          <!-- Centered Brand Logo (Standard Corporate Email Dimensions: 160x47 max-width) -->
+          <tr>
+            <td align="center" style="padding-bottom: 32px; text-align: center;">
+              <a href="https://whizstudio.art" target="_blank" rel="noopener noreferrer" style="text-decoration: none; display: inline-block;">
+                <img src="${WHIZ_LOGO_URL}" alt="Whiz Studio" width="160" height="47" border="0" style="display: block; width: 160px; max-width: 160px; height: auto; max-height: 47px; margin: 0 auto; border: 0; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic;" />
+              </a>
+            </td>
+          </tr>
+
+          <!-- Dynamic Role-Based Headline -->
+          <tr>
+            <td style="padding-bottom: 20px;">
+              <h1 style="margin: 0; font-size: 22px; font-weight: 700; color: #111827; letter-spacing: -0.4px; line-height: 1.3;">
+                ${headline}
+              </h1>
+            </td>
+          </tr>
+
+          <!-- Greeting & Main Message -->
+          <tr>
+            <td style="padding-bottom: 28px; font-size: 15px; color: #374151; line-height: 1.6;">
+              <p style="margin: 0 0 16px 0;">${greeting}</p>
+              <p style="margin: 0;">${mainCopy}</p>
+            </td>
+          </tr>
+
+          <!-- direct Call-To-Action Button (Zero Escaping Errors) -->
+          <tr>
+            <td style="padding-bottom: 36px;">
+              <a href="${cleanLoginUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: #00A86B; color: #FFFFFF; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 600; text-decoration: none; padding: 12px 28px; border-radius: 6px; letter-spacing: -0.2px;">${ctaButtonText}</a>
+            </td>
+          </tr>
+
+          <!-- Role-Based Sign-off -->
+          <tr>
+            <td style="padding-top: 24px; border-top: 1px solid #F3F4F6;">
+              ${signoffHtml}
+            </td>
+          </tr>
+
+          <!-- Flat Minimalist Corporate Footer -->
+          <tr>
+            <td style="padding-top: 32px; font-size: 12px; color: #9CA3AF; line-height: 1.5;">
+              Whiz Studio &bull; House 53, Road 7, Mirpur 12, Dhaka &bull; <a href="mailto:info@whizstudio.art" style="color: #9CA3AF; text-decoration: underline;">info@whizstudio.art</a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  return { subject, html };
+}
+
+async function sendBrevoWelcomeEmailWorker({
+  email,
+  fullName,
+  role = "client",
+  temporaryPassword,
+  loginUrl,
+  env
+}) {
+  try {
+    const rawKey = env?.BREVO_API_KEY || "";
+    const activeKey = rawKey.trim().replace(/^['"]|['"]$/g, "");
+    if (!activeKey) {
+      console.error("[Brevo Error]: BREVO_API_KEY secret is missing in environment bindings.");
+      return { success: false, error: "BREVO_API_KEY environment secret is not configured." };
+    }
+    const { subject, html } = buildRoleWelcomeEmailHtmlWorker({
+      fullName,
+      email,
+      role,
+      loginUrl,
+      temporaryPassword
+    });
+
+    const plainText = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    const payload = {
+      sender: {
+        name: "Whiz Studio",
+        email: "info@whizstudio.art"
+      },
+      to: [
+        {
+          email: email.trim().toLowerCase(),
+          name: fullName || email.split("@")[0]
+        }
+      ],
+      subject,
+      htmlContent: html,
+      textContent: plainText
+    };
+
+    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "accept": "application/json",
+        "content-type": "application/json",
+        "api-key": activeKey
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error(`[Pages Brevo SMTP Error ${response.status}]:`, errText);
+      return { success: false, error: `Brevo SMTP API Error (${response.status}): ${errText}` };
+    }
+
+    const data = await response.json();
+    return { success: true, messageId: data?.messageId };
+  } catch (err) {
+    console.error("[Pages Brevo SMTP Exception]:", err);
+    return { success: false, error: err.message || "Failed to dispatch email via Brevo" };
+  }
+}

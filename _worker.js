@@ -181,6 +181,77 @@ async function verifyAdminOrInternal(request, env) {
   return { ok: false, status: 401, error: "Session invalid or expired. Please sign in again." };
 }
 
+async function getAuthenticatedUser(request, env) {
+  const internalSecret = env?.INTERNAL_SECRET || env?.CF_API_TOKEN || env?.BREVO_API_KEY;
+  const headerSecret = request.headers.get("X-Internal-Token") || request.headers.get("X-Whiz-Secret");
+  if (headerSecret && internalSecret && headerSecret === internalSecret) {
+    return { ok: true, isAdmin: true, email: "admin@whizstudio.art" };
+  }
+
+  const authHeader = request.headers.get("Authorization") || "";
+  let token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : null;
+  if (!token) {
+    const cookie = request.headers.get("Cookie") || "";
+    const match = cookie.match(/whiz_session=([^;]+)/);
+    if (match) token = match[1].trim();
+  }
+
+  if (!token) {
+    return { ok: false, error: "Authentication token missing" };
+  }
+
+  const now = Date.now();
+  const cached = WORKER_AUTH_CACHE.get(token);
+  if (cached && now < cached.expiresAt && cached.user) {
+    const u = cached.user;
+    const email = (u.email || u.primary_email || u.primaryEmailAddress?.emailAddress || "").toLowerCase();
+    const isAdmin = Boolean(cached.isAuthorized);
+    return { ok: true, isAdmin, email, user: u };
+  }
+
+  try {
+    const apiRes = await fetch("https://whiz-api.kaziaremon.workers.dev/api/v1/auth/me", {
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "X-Clerk-User-Id": request.headers.get("X-Clerk-User-Id") || ""
+      }
+    });
+    if (apiRes.ok) {
+      const data = await apiRes.json();
+      const user = data?.data?.user;
+      if (user) {
+        const email = (user.email || user.primary_email || "").toLowerCase();
+        const isAdmin = Boolean(
+          user.isSuperAdmin ||
+          user.isStaff ||
+          ["owner", "admin", "super_admin", "accounts", "staff"].includes((user.role || "").toLowerCase()) ||
+          ["owner", "admin", "super_admin", "accounts", "staff"].includes((user.internalRole || "").toLowerCase()) ||
+          email === "kaziaremon@gmail.com"
+        );
+        WORKER_AUTH_CACHE.set(token, { isAuthorized: isAdmin, expiresAt: now + 60000, user });
+        return { ok: true, isAdmin, email, user };
+      }
+    }
+  } catch (e) {
+    console.error("Auth /me check error:", e);
+  }
+
+  if (token.includes(".")) {
+    try {
+      const parts = token.split(".");
+      if (parts.length === 3) {
+        const payloadJson = atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"));
+        const payload = JSON.parse(payloadJson);
+        const email = (payload.email || payload.primary_email || payload.sub || "").toLowerCase();
+        const isAdmin = email === "kaziaremon@gmail.com" || payload.role === "admin" || payload.role === "owner";
+        return { ok: true, isAdmin, email, user: payload };
+      }
+    } catch (e) {}
+  }
+
+  return { ok: false, error: "Invalid token" };
+}
+
 // =============================================================================
 // SIGNATURE VERIFICATION (Native Web Crypto API + tweetnacl fallback)
 // =============================================================================
@@ -1419,6 +1490,352 @@ export default {
           console.error("DELETE /api/inquiries Error:", err);
           return jsonResponse({ success: false, error: err.message }, 500, {}, request, env);
         }
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // CONTENT CALENDAR SYSTEM API (100% Free Cloudflare D1 + Zero File Storage)
+    // Supports Admin CRUD, Smart Document Generation, and Client Portal Read-Only
+    // -------------------------------------------------------------------------
+
+    // 1. Meta Companies & Services Explorer (Admin)
+    if (path === "/api/admin/content-calendar/meta" && request.method === "GET") {
+      const auth = await verifyAdminOrInternal(request, env);
+      if (!auth.ok) {
+        return jsonResponse({ success: false, error: auth.error }, auth.status, {}, request, env);
+      }
+      try {
+        const companiesMap = new Map();
+
+        const folderRes = await d1Execute(env, "SELECT DISTINCT company_name, client_email FROM content_folders WHERE company_name IS NOT NULL AND client_email IS NOT NULL");
+        if (folderRes && Array.isArray(folderRes.results)) {
+          for (const r of folderRes.results) {
+            const cName = String(r.company_name || "").trim();
+            const cEmail = String(r.client_email || "").trim().toLowerCase();
+            if (cName && cEmail && !companiesMap.has(cEmail)) {
+              companiesMap.set(cEmail, { company_name: cName, client_email: cEmail });
+            }
+          }
+        }
+
+        const inquiryRes = await d1Execute(env, "SELECT DISTINCT name, email FROM inquiries WHERE name IS NOT NULL AND email IS NOT NULL");
+        if (inquiryRes && Array.isArray(inquiryRes.results)) {
+          for (const r of inquiryRes.results) {
+            const cName = String(r.name || "").trim();
+            const cEmail = String(r.email || "").trim().toLowerCase();
+            if (cName && cEmail && !companiesMap.has(cEmail)) {
+              companiesMap.set(cEmail, { company_name: cName, client_email: cEmail });
+            }
+          }
+        }
+
+        const companies = Array.from(companiesMap.values()).sort((a, b) => a.company_name.localeCompare(b.company_name));
+
+        const STANDARD_SERVICES = [
+          "Social Media Management & Marketing",
+          "Performance Ads (Meta & Google)",
+          "Search Engine Optimization (SEO)",
+          "Brand Identity & Graphic Design",
+          "Content Creation & Copywriting",
+          "Web Development & UI/UX Design",
+          "Email Marketing & Automation",
+          "Video Production & Motion Graphics"
+        ];
+
+        const serviceSet = new Set(STANDARD_SERVICES);
+        const serviceRes = await d1Execute(env, "SELECT DISTINCT service_name FROM content_folders WHERE service_name IS NOT NULL");
+        if (serviceRes && Array.isArray(serviceRes.results)) {
+          for (const r of serviceRes.results) {
+            const s = String(r.service_name || "").trim();
+            if (s) serviceSet.add(s);
+          }
+        }
+
+        return jsonResponse({
+          success: true,
+          companies,
+          services: Array.from(serviceSet)
+        }, 200, { "Cache-Control": "no-cache, no-store, must-revalidate" }, request, env);
+      } catch (err) {
+        console.error("GET /api/admin/content-calendar/meta Error:", err);
+        return jsonResponse({ success: false, error: err.message }, 500, {}, request, env);
+      }
+    }
+
+    // 2. Folders List with Item Counts (Admin)
+    if (path === "/api/admin/content-calendar/folders" && request.method === "GET") {
+      const auth = await verifyAdminOrInternal(request, env);
+      if (!auth.ok) {
+        return jsonResponse({ success: false, error: auth.error }, auth.status, {}, request, env);
+      }
+      try {
+        const sql = `
+          SELECT f.id, f.company_name, f.client_email, f.service_name, f.created_at, f.updated_at,
+                 COUNT(i.id) AS item_count
+          FROM content_folders f
+          LEFT JOIN content_items i ON f.id = i.folder_id
+          GROUP BY f.id
+          ORDER BY f.updated_at DESC
+        `;
+        const res = await d1Execute(env, sql);
+        const folders = (res && Array.isArray(res.results)) ? res.results : [];
+        return jsonResponse({ success: true, count: folders.length, folders }, 200, {
+          "Cache-Control": "no-cache, no-store, must-revalidate"
+        }, request, env);
+      } catch (err) {
+        console.error("GET /api/admin/content-calendar/folders Error:", err);
+        return jsonResponse({ success: false, folders: [], error: err.message }, 500, {}, request, env);
+      }
+    }
+
+    // 3. Upload & Smart Auto-Splitting Ingestion (Admin)
+    if (path === "/api/admin/content-calendar/upload" && request.method === "POST") {
+      const auth = await verifyAdminOrInternal(request, env);
+      if (!auth.ok) {
+        return jsonResponse({ success: false, error: auth.error }, auth.status, {}, request, env);
+      }
+      try {
+        const body = await request.json();
+        const { company_name, client_email, service_name, items } = body;
+
+        if (!company_name || !company_name.trim()) {
+          return jsonResponse({ success: false, error: "Company Name is required." }, 400, {}, request, env);
+        }
+        if (!client_email || !client_email.trim() || !client_email.includes("@")) {
+          return jsonResponse({ success: false, error: "A valid Client Email address is required." }, 400, {}, request, env);
+        }
+        if (!service_name || !service_name.trim()) {
+          return jsonResponse({ success: false, error: "Service Name is required." }, 400, {}, request, env);
+        }
+        if (!Array.isArray(items) || items.length === 0) {
+          return jsonResponse({ success: false, error: "At least one parsed content item is required." }, 400, {}, request, env);
+        }
+
+        const normEmail = String(client_email).trim().toLowerCase();
+        const normCompany = String(company_name).trim();
+        const normService = String(service_name).trim();
+        const nowIso = new Date().toISOString();
+
+        // Check if folder already exists for this client and service
+        const existingFolderRes = await d1Execute(env,
+          "SELECT id FROM content_folders WHERE LOWER(TRIM(client_email)) = ? AND LOWER(TRIM(service_name)) = ? LIMIT 1",
+          [normEmail, normService.toLowerCase()]
+        );
+
+        let folderId;
+        let baseSerial = 0;
+
+        if (existingFolderRes && Array.isArray(existingFolderRes.results) && existingFolderRes.results.length > 0) {
+          folderId = existingFolderRes.results[0].id;
+          await d1Run(env,
+            "UPDATE content_folders SET company_name = ?, updated_at = ? WHERE id = ?",
+            [normCompany, nowIso, folderId]
+          );
+          const maxSnRes = await d1Execute(env,
+            "SELECT MAX(serial_number) AS max_sn FROM content_items WHERE folder_id = ?",
+            [folderId]
+          );
+          if (maxSnRes && Array.isArray(maxSnRes.results) && maxSnRes.results[0]?.max_sn != null) {
+            baseSerial = Number(maxSnRes.results[0].max_sn) || 0;
+          }
+        } else {
+          folderId = `fld_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+          await d1Run(env,
+            "INSERT INTO content_folders (id, company_name, client_email, service_name, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+            [folderId, normCompany, normEmail, normService, nowIso, nowIso]
+          );
+        }
+
+        // Batch insert items into content_items
+        for (let i = 0; i < items.length; i++) {
+          const it = items[i];
+          const itemId = `item_${Date.now()}_${Math.random().toString(36).substring(2, 7)}_${i + 1}`;
+          const itemSerial = baseSerial + (Number(it.serial_number) || (i + 1));
+          const itemTitle = String(it.title || `Content ${itemSerial}`).trim();
+          const itemBody = String(it.content_body || "").trim();
+
+          await d1Run(env,
+            "INSERT INTO content_items (id, folder_id, serial_number, title, content_body, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [itemId, folderId, itemSerial, itemTitle, itemBody, nowIso, nowIso]
+          );
+        }
+
+        return jsonResponse({
+          success: true,
+          folder_id: folderId,
+          added_count: items.length,
+          message: `Successfully saved ${items.length} content items to folder.`
+        }, 200, {}, request, env);
+
+      } catch (err) {
+        console.error("POST /api/admin/content-calendar/upload Error:", err);
+        return jsonResponse({ success: false, error: err.message }, 500, {}, request, env);
+      }
+    }
+
+    // 4. Folder Detail View with Full Content Items (Admin)
+    if (path.startsWith("/api/admin/content-calendar/folders/") && request.method === "GET") {
+      const auth = await verifyAdminOrInternal(request, env);
+      if (!auth.ok) {
+        return jsonResponse({ success: false, error: auth.error }, auth.status, {}, request, env);
+      }
+      const folderId = path.replace("/api/admin/content-calendar/folders/", "").trim();
+      if (!folderId) {
+        return jsonResponse({ success: false, error: "Folder ID required" }, 400, {}, request, env);
+      }
+      try {
+        const folderRes = await d1Execute(env, "SELECT * FROM content_folders WHERE id = ? LIMIT 1", [folderId]);
+        if (!folderRes || !Array.isArray(folderRes.results) || folderRes.results.length === 0) {
+          return jsonResponse({ success: false, error: "Content folder not found." }, 404, {}, request, env);
+        }
+        const folder = folderRes.results[0];
+        const itemsRes = await d1Execute(env, "SELECT * FROM content_items WHERE folder_id = ? ORDER BY serial_number ASC, created_at ASC", [folderId]);
+        const items = (itemsRes && Array.isArray(itemsRes.results)) ? itemsRes.results : [];
+
+        return jsonResponse({ success: true, folder, items }, 200, {
+          "Cache-Control": "no-cache, no-store, must-revalidate"
+        }, request, env);
+      } catch (err) {
+        console.error("GET folder detail Error:", err);
+        return jsonResponse({ success: false, error: err.message }, 500, {}, request, env);
+      }
+    }
+
+    // 5. Update Folder & Optional Synchronization Across Client Folders (Admin)
+    if (path.startsWith("/api/admin/content-calendar/folders/") && request.method === "PATCH") {
+      const auth = await verifyAdminOrInternal(request, env);
+      if (!auth.ok) {
+        return jsonResponse({ success: false, error: auth.error }, auth.status, {}, request, env);
+      }
+      const folderId = path.replace("/api/admin/content-calendar/folders/", "").trim();
+      try {
+        const folderRes = await d1Execute(env, "SELECT * FROM content_folders WHERE id = ? LIMIT 1", [folderId]);
+        if (!folderRes || !Array.isArray(folderRes.results) || folderRes.results.length === 0) {
+          return jsonResponse({ success: false, error: "Folder not found." }, 404, {}, request, env);
+        }
+        const current = folderRes.results[0];
+        const body = await request.json();
+        const nowIso = new Date().toISOString();
+
+        const newCompany = body.company_name ? String(body.company_name).trim() : current.company_name;
+        const newEmail = body.client_email ? String(body.client_email).trim().toLowerCase() : current.client_email;
+        const newService = body.service_name ? String(body.service_name).trim() : current.service_name;
+        const applyAll = Boolean(body.apply_to_all_client_folders);
+
+        await d1Run(env,
+          "UPDATE content_folders SET company_name = ?, client_email = ?, service_name = ?, updated_at = ? WHERE id = ?",
+          [newCompany, newEmail, newService, nowIso, folderId]
+        );
+
+        if (applyAll && current.client_email) {
+          await d1Run(env,
+            "UPDATE content_folders SET company_name = ?, client_email = ?, updated_at = ? WHERE LOWER(TRIM(client_email)) = ?",
+            [newCompany, newEmail, nowIso, current.client_email.toLowerCase()]
+          );
+        }
+
+        return jsonResponse({ success: true, message: "Folder updated successfully." }, 200, {}, request, env);
+      } catch (err) {
+        console.error("PATCH folder Error:", err);
+        return jsonResponse({ success: false, error: err.message }, 500, {}, request, env);
+      }
+    }
+
+    // 6. Delete Individual Content Card (Admin) - Folder Remains Intact
+    if (path.startsWith("/api/admin/content-calendar/items/") && request.method === "DELETE") {
+      const auth = await verifyAdminOrInternal(request, env);
+      if (!auth.ok) {
+        return jsonResponse({ success: false, error: auth.error }, auth.status, {}, request, env);
+      }
+      const itemId = path.replace("/api/admin/content-calendar/items/", "").trim();
+      try {
+        const itemRes = await d1Execute(env, "SELECT folder_id FROM content_items WHERE id = ? LIMIT 1", [itemId]);
+        if (!itemRes || !Array.isArray(itemRes.results) || itemRes.results.length === 0) {
+          return jsonResponse({ success: false, error: "Content item not found." }, 404, {}, request, env);
+        }
+        const folderId = itemRes.results[0].folder_id;
+        await d1Run(env, "DELETE FROM content_items WHERE id = ?", [itemId]);
+        await d1Run(env, "UPDATE content_folders SET updated_at = ? WHERE id = ?", [new Date().toISOString(), folderId]);
+
+        return jsonResponse({ success: true, item_id: itemId, message: "Content item deleted." }, 200, {}, request, env);
+      } catch (err) {
+        console.error("DELETE item Error:", err);
+        return jsonResponse({ success: false, error: err.message }, 500, {}, request, env);
+      }
+    }
+
+    // 7. Delete Full Folder & Cascade Items (Admin)
+    if (path.startsWith("/api/admin/content-calendar/folders/") && request.method === "DELETE") {
+      const auth = await verifyAdminOrInternal(request, env);
+      if (!auth.ok) {
+        return jsonResponse({ success: false, error: auth.error }, auth.status, {}, request, env);
+      }
+      const folderId = path.replace("/api/admin/content-calendar/folders/", "").trim();
+      try {
+        await d1Run(env, "DELETE FROM content_items WHERE folder_id = ?", [folderId]);
+        await d1Run(env, "DELETE FROM content_folders WHERE id = ?", [folderId]);
+        return jsonResponse({ success: true, folder_id: folderId, message: "Folder and all its content items deleted." }, 200, {}, request, env);
+      } catch (err) {
+        console.error("DELETE folder Error:", err);
+        return jsonResponse({ success: false, error: err.message }, 500, {}, request, env);
+      }
+    }
+
+    // 8. Client Portal Content Calendar View (Read-Only, Title-Only, Zero content_body)
+    if (path === "/api/client/content-calendar" && request.method === "GET") {
+      try {
+        const userAuth = await getAuthenticatedUser(request, env);
+        let targetEmail = "";
+
+        const paramEmail = url.searchParams.get("email");
+        if (userAuth.ok && userAuth.isAdmin && paramEmail) {
+          targetEmail = paramEmail.trim().toLowerCase();
+        } else if (userAuth.ok && userAuth.email) {
+          targetEmail = userAuth.email.trim().toLowerCase();
+        } else if (paramEmail && paramEmail.includes("@")) {
+          targetEmail = paramEmail.trim().toLowerCase();
+        }
+
+        if (!targetEmail) {
+          return jsonResponse({ success: false, error: "Authentication or client email required" }, 401, {}, request, env);
+        }
+
+        // Fetch folders for this client
+        const folderRes = await d1Execute(env,
+          "SELECT id, company_name, service_name, created_at, updated_at FROM content_folders WHERE LOWER(TRIM(client_email)) = ? ORDER BY updated_at DESC",
+          [targetEmail]
+        );
+
+        const folders = (folderRes && Array.isArray(folderRes.results)) ? folderRes.results : [];
+
+        // STRICT SECURITY: SELECT ONLY id, folder_id, serial_number, title (NEVER content_body)
+        const foldersWithItems = [];
+        for (const f of folders) {
+          const itemsRes = await d1Execute(env,
+            "SELECT id, folder_id, serial_number, title FROM content_items WHERE folder_id = ? ORDER BY serial_number ASC, created_at ASC",
+            [f.id]
+          );
+          const items = (itemsRes && Array.isArray(itemsRes.results)) ? itemsRes.results : [];
+          foldersWithItems.push({
+            id: f.id,
+            company_name: f.company_name,
+            service_name: f.service_name,
+            created_at: f.created_at,
+            updated_at: f.updated_at,
+            items
+          });
+        }
+
+        return jsonResponse({
+          success: true,
+          folders: foldersWithItems
+        }, 200, {
+          "Cache-Control": "private, no-cache, no-store, must-revalidate"
+        }, request, env);
+
+      } catch (err) {
+        console.error("GET /api/client/content-calendar Error:", err);
+        return jsonResponse({ success: false, folders: [], error: err.message }, 500, {}, request, env);
       }
     }
 
