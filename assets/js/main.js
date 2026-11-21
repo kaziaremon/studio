@@ -855,12 +855,13 @@ function initGsapAnimations() {
     gsap.from(".hero-visual", { scale: 0.96, opacity: 0, duration: 0.8, delay: 0.4, ease: "power3.out" });
     gsap.from(".hero-pills > *", { y: 20, opacity: 0, duration: 0.6, stagger: 0.1, delay: 0.6, ease: "power3.out" });
 
-    // 2. Exact Standard GSAP ScrollTrigger Animations for Viewport Elements
+    // 2. Exact Standard GSAP ScrollTrigger Animations for Viewport Elements (optimized once: true)
     gsap.utils.toArray('.gsap-header').forEach(element => {
       gsap.from(element, {
         scrollTrigger: {
           trigger: element,
           start: "top 88%",
+          once: true,
           toggleActions: "play none none none"
         },
         y: 50,
@@ -875,6 +876,7 @@ function initGsapAnimations() {
         scrollTrigger: {
           trigger: element,
           start: "top 88%",
+          once: true,
           toggleActions: "play none none none"
         },
         y: 50,
@@ -889,6 +891,7 @@ function initGsapAnimations() {
         scrollTrigger: {
           trigger: element,
           start: "top 88%",
+          once: true,
           toggleActions: "play none none none"
         },
         y: 50,
@@ -903,6 +906,7 @@ function initGsapAnimations() {
         scrollTrigger: {
           trigger: element,
           start: "top 88%",
+          once: true,
           toggleActions: "play none none none"
         },
         y: 50,
@@ -917,6 +921,7 @@ function initGsapAnimations() {
         scrollTrigger: {
           trigger: element,
           start: "top 88%",
+          once: true,
           toggleActions: "play none none none"
         },
         y: 50,
@@ -1102,14 +1107,26 @@ function initNavigation() {
   const mobileLinks = document.querySelectorAll('.mobile-nav-link');
   const allNavLinks = document.querySelectorAll('nav a.nav-link, #mobileMenu a.nav-link');
 
-  // Navbar glass background scroll reactivity
+  // Navbar glass background scroll reactivity (RAF throttled with state caching)
+  let isNavScrolled = false;
+  let navTicking = false;
   window.addEventListener('scroll', () => {
-    if (window.scrollY > 30) {
-      nav.classList.add('shadow-md', 'bg-white/90');
-      nav.classList.remove('bg-white/70');
-    } else {
-      nav.classList.remove('shadow-md', 'bg-white/90');
-      nav.classList.add('bg-white/70');
+    if (!navTicking) {
+      window.requestAnimationFrame(() => {
+        const scrolled = window.scrollY > 30;
+        if (scrolled !== isNavScrolled) {
+          isNavScrolled = scrolled;
+          if (scrolled) {
+            nav.classList.add('shadow-md', 'bg-white/90');
+            nav.classList.remove('bg-white/70');
+          } else {
+            nav.classList.remove('shadow-md', 'bg-white/90');
+            nav.classList.add('bg-white/70');
+          }
+        }
+        navTicking = false;
+      });
+      navTicking = true;
     }
   }, { passive: true });
 
@@ -1363,19 +1380,26 @@ function initNavigation() {
     sections.forEach(section => sectionObserver.observe(section));
   }
 
-  // Precise scroll position fallback (handles top of page, bottom bounce, and fast scroll)
+  // Precise scroll position fallback (cached dimensions prevent forced reflow on scroll)
   let scrollThrottleTimeout = null;
+  let cachedDocHeight = 0;
+  let cachedWinHeight = 0;
+  function updateScrollMetrics() {
+    cachedDocHeight = document.documentElement.scrollHeight;
+    cachedWinHeight = window.innerHeight;
+  }
+  updateScrollMetrics();
+  window.addEventListener('resize', updateScrollMetrics, { passive: true });
+
   window.addEventListener('scroll', () => {
     if (scrollThrottleTimeout) return;
     scrollThrottleTimeout = setTimeout(() => {
       scrollThrottleTimeout = null;
 
-      const scrollPosition = window.scrollY + 140;
-      const windowHeight = window.innerHeight;
-      const documentHeight = document.documentElement.scrollHeight;
+      const y = window.scrollY;
 
       // Top of page edge case -> Clean Root /
-      if (window.scrollY < 100) {
+      if (y < 100) {
         setActiveNavLink('home');
         const currentPath = window.location.pathname.replace(/\/+$/, '') || '/';
         if (currentPath !== '/' && currentPath !== '/login' && currentPath !== '/register') {
@@ -1385,7 +1409,7 @@ function initNavigation() {
       }
 
       // Bottom of page edge case -> /contact
-      if (window.scrollY + windowHeight >= documentHeight - 60) {
+      if (cachedDocHeight > 0 && y + cachedWinHeight >= cachedDocHeight - 60) {
         setActiveNavLink('contact');
         const currentPath = window.location.pathname.replace(/\/+$/, '') || '/';
         if (currentPath !== '/contact' && currentPath !== '/login' && currentPath !== '/register') {
@@ -1393,7 +1417,7 @@ function initNavigation() {
         }
         return;
       }
-    }, 80);
+    }, 100);
   }, { passive: true });
 
   // Handle direct URL visit / deep linking on fresh page load
