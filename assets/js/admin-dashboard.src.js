@@ -80,7 +80,8 @@
     contentCalendarMeta: { companies: [], services: [] },
     currentContentFolder: null,
     currentContentItems: [],
-    selectedCalendarFile: null
+    selectedCalendarFile: null,
+    isGeneratingContentCalendar: false
   };
 
   // =========================================================================
@@ -504,6 +505,12 @@
 
     if (window.Clerk && window.Clerk.user) {
       headers['X-Clerk-User-Id'] = window.Clerk.user.id;
+      const primaryEmail = window.Clerk.user.primaryEmailAddress?.emailAddress 
+        || (window.Clerk.user.emailAddresses && window.Clerk.user.emailAddresses[0]?.emailAddress)
+        || '';
+      if (primaryEmail) {
+        headers['X-Clerk-User-Email'] = primaryEmail;
+      }
     }
 
     try {
@@ -7136,58 +7143,102 @@
     return cards;
   }
 
-  let parsersLoadingPromise = null;
-  function ensureDocumentParsersLoaded() {
-    if (parsersLoadingPromise) return parsersLoadingPromise;
-    parsersLoadingPromise = (async () => {
-      // 1. Mammoth for Word (.docx) documents
-      if (!window.mammoth) {
-        try {
-          await loadScriptDynamically('/assets/js/mammoth.browser.min.js');
-        } catch (e1) {
-          console.warn('Local mammoth.browser.min.js failed, loading CDN fallback:', e1);
-          await loadScriptDynamically('https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js');
+  function loadScriptWithCheck(src, isReadyCheck, timeoutMs = 8000) {
+    if (isReadyCheck()) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      let timer = null;
+      let checkInterval = null;
+
+      const cleanup = () => {
+        if (timer) clearTimeout(timer);
+        if (checkInterval) clearInterval(checkInterval);
+      };
+
+      // Poll periodically in case it loaded already
+      checkInterval = setInterval(() => {
+        if (isReadyCheck()) {
+          cleanup();
+          resolve();
         }
+      }, 50);
+
+      timer = setTimeout(() => {
+        cleanup();
+        if (isReadyCheck()) {
+          resolve();
+        } else {
+          reject(new Error(`Timed out loading ${src}`));
+        }
+      }, timeoutMs);
+
+      const existing = document.querySelector(`script[src="${src}"]`);
+      if (existing) {
+        existing.addEventListener('load', () => {
+          cleanup();
+          if (isReadyCheck()) resolve();
+        });
+        existing.addEventListener('error', (err) => {
+          cleanup();
+          reject(err);
+        });
+        return;
       }
-      // 2. PDF.js for Adobe (.pdf) documents
-      if (!window.pdfjsLib) {
-        try {
-          await loadScriptDynamically('/assets/js/pdf.min.js');
-        } catch (e2) {
-          console.warn('Local pdf.min.js failed, loading CDN fallback:', e2);
-          await loadScriptDynamically('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
-        }
+
+      const s = document.createElement('script');
+      s.src = src;
+      s.async = true;
+      s.onload = () => {
+        cleanup();
+        resolve();
+      };
+      s.onerror = (err) => {
+        cleanup();
+        reject(new Error(`Failed to load script ${src}`));
+      };
+      document.head.appendChild(s);
+    });
+  }
+
+  let mammothLoadPromise = null;
+  async function ensureMammothLoaded() {
+    if (window.mammoth) return;
+    if (mammothLoadPromise) return mammothLoadPromise;
+    mammothLoadPromise = (async () => {
+      try {
+        await loadScriptWithCheck('/assets/js/mammoth.browser.min.js', () => !!window.mammoth, 6000);
+      } catch (e1) {
+        console.warn('Local mammoth.browser.min.js failed or timed out, trying CDN...', e1);
+        await loadScriptWithCheck('https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js', () => !!window.mammoth, 8000);
+      }
+    })();
+    return mammothLoadPromise;
+  }
+
+  let pdfJsLoadPromise = null;
+  async function ensurePdfJsLoaded() {
+    if (window.pdfjsLib) {
+      if (!window.pdfjsLib.GlobalWorkerOptions.workerSrc) {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = '/assets/js/pdf.worker.min.js';
+      }
+      return;
+    }
+    if (pdfJsLoadPromise) return pdfJsLoadPromise;
+    pdfJsLoadPromise = (async () => {
+      try {
+        await loadScriptWithCheck('/assets/js/pdf.min.js', () => !!window.pdfjsLib, 6000);
+      } catch (e1) {
+        console.warn('Local pdf.min.js failed or timed out, trying CDN...', e1);
+        await loadScriptWithCheck('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', () => !!window.pdfjsLib, 8000);
       }
       if (window.pdfjsLib) {
         window.pdfjsLib.GlobalWorkerOptions.workerSrc = '/assets/js/pdf.worker.min.js';
       }
     })();
-    return parsersLoadingPromise;
-  }
-
-  function loadScriptDynamically(src) {
-    return new Promise((resolve, reject) => {
-      const existing = document.querySelector(`script[src="${src}"]`);
-      if (existing) {
-        if (existing.dataset.loaded === 'true') return resolve();
-        existing.addEventListener('load', () => resolve());
-        existing.addEventListener('error', (err) => reject(err));
-        return;
-      }
-      const s = document.createElement('script');
-      s.src = src;
-      s.async = true;
-      s.onload = () => {
-        s.dataset.loaded = 'true';
-        resolve();
-      };
-      s.onerror = (err) => reject(new Error(`Failed to load ${src}`));
-      document.head.appendChild(s);
-    });
+    return pdfJsLoadPromise;
   }
 
   async function parseDocxFile(arrayBuffer) {
-    await ensureDocumentParsersLoaded();
+    await ensureMammothLoaded();
     if (!window.mammoth) {
       throw new Error('Mammoth parser library not available. Please check your internet connection.');
     }
@@ -7196,7 +7247,7 @@
   }
 
   async function parsePdfFile(arrayBuffer) {
-    await ensureDocumentParsersLoaded();
+    await ensurePdfJsLoaded();
     if (!window.pdfjsLib) {
       throw new Error('PDF.js parser library not available. Please check your internet connection.');
     }
@@ -7688,32 +7739,47 @@
     }
   }
 
-  function setContentCalStatus(type, message) {
+  function setContentCalStatus(type, message = '') {
     const banner = document.getElementById('contentCalStatusBanner');
     const icon = document.getElementById('contentCalStatusIcon');
     const text = document.getElementById('contentCalStatusText');
     if (!banner || !icon || !text) return;
 
     if (type === 'hide') {
-      banner.className = 'hidden p-3.5 rounded-xl text-xs font-semibold items-center gap-2.5 transition-all';
+      banner.style.display = 'none';
       text.textContent = '';
       icon.innerHTML = '';
       return;
     }
 
-    banner.classList.remove('hidden', 'bg-rose-50', 'text-rose-800', 'border-rose-200', 'bg-amber-50', 'text-amber-800', 'border-amber-200', 'bg-emerald-50', 'text-emerald-800', 'border-emerald-200');
+    // Explicit inline CSS styles to guarantee visibility regardless of Tailwind purge/compilation
+    banner.style.display = 'flex';
+    banner.style.alignItems = 'center';
+    banner.style.gap = '10px';
+    banner.style.padding = '12px 16px';
+    banner.style.borderRadius = '12px';
+    banner.style.fontSize = '13px';
+    banner.style.fontWeight = '600';
+    banner.style.transition = 'all 0.2s ease-in-out';
+    banner.style.marginTop = '10px';
 
     if (type === 'error') {
-      banner.className = 'p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2.5 bg-rose-50 text-rose-800 border border-rose-200 transition-all';
-      icon.innerHTML = '<i class="fa-solid fa-circle-exclamation text-rose-600 text-sm"></i>';
+      banner.style.backgroundColor = '#FEF2F2';
+      banner.style.border = '1px solid #FCA5A5';
+      banner.style.color = '#991B1B';
+      icon.innerHTML = '<i class="fa-solid fa-circle-exclamation" style="color: #DC2626; font-size: 16px;"></i>';
       text.textContent = message;
     } else if (type === 'loading') {
-      banner.className = 'p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2.5 bg-amber-50 text-amber-800 border border-amber-200 transition-all';
-      icon.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-amber-600 text-sm"></i>';
+      banner.style.backgroundColor = '#FFFBEB';
+      banner.style.border = '1px solid #FCD34D';
+      banner.style.color = '#92400E';
+      icon.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin" style="color: #D97706; font-size: 16px;"></i>';
       text.textContent = message;
     } else if (type === 'success') {
-      banner.className = 'p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2.5 bg-emerald-50 text-emerald-800 border border-emerald-200 transition-all';
-      icon.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-600 text-sm"></i>';
+      banner.style.backgroundColor = '#ECFDF5';
+      banner.style.border = '1px solid #6EE7B7';
+      banner.style.color = '#065F46';
+      icon.innerHTML = '<i class="fa-solid fa-circle-check" style="color: #059669; font-size: 16px;"></i>';
       text.textContent = message;
     }
   }
@@ -7731,6 +7797,7 @@
       if (icon) {
         icon.innerHTML = '<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>';
         icon.classList.add('animate-spin');
+        icon.setAttribute('style', 'width:18px;height:18px;min-width:18px;max-width:18px;flex-shrink:0;display:block;');
       }
     } else {
       btn.disabled = false;
@@ -7739,6 +7806,7 @@
       if (icon) {
         icon.classList.remove('animate-spin');
         icon.innerHTML = '<path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M12 14v4M10 16h4"/>';
+        icon.setAttribute('style', 'width:18px;height:18px;min-width:18px;max-width:18px;flex-shrink:0;display:block;');
       }
     }
   }
@@ -7774,7 +7842,14 @@
   }
 
   async function handleGenerateContentCalendar(e) {
+    console.log("[CC] Generate clicked", e);
     if (e && e.preventDefault) e.preventDefault();
+
+    if (state.isGeneratingContentCalendar) {
+      console.warn("[CC] Already generating, ignoring click");
+      return;
+    }
+
     const compSelect = document.getElementById('contentCalCompanySelect');
     const customComp = document.getElementById('contentCalCustomCompany');
     const emailInput = document.getElementById('contentCalClientEmail');
@@ -7785,7 +7860,7 @@
     let company = '';
     if (compSelect?.value === '__custom__') {
       company = customComp?.value?.trim() || '';
-    } else if (compSelect) {
+    } else if (compSelect && compSelect.value) {
       const opt = compSelect.options[compSelect.selectedIndex];
       company = opt?.dataset?.company || opt?.text?.split(' (')[0]?.trim() || '';
     }
@@ -7795,8 +7870,8 @@
     let service = '';
     if (srvSelect?.value === '__custom__') {
       service = customSrv?.value?.trim() || '';
-    } else if (srvSelect) {
-      service = srvSelect.value?.trim() || '';
+    } else if (srvSelect && srvSelect.value) {
+      service = srvSelect.value.trim();
     }
 
     const file = state.selectedCalendarFile || fileInput?.files?.[0];
@@ -7831,8 +7906,9 @@
       return;
     }
 
-    setGenerateButtonState(true, 'Reading document...');
-    setContentCalStatus('loading', 'Reading document in browser...');
+    state.isGeneratingContentCalendar = true;
+    setGenerateButtonState(true, 'Step 1/3: Reading...');
+    setContentCalStatus('loading', 'Step 1/3: Reading document in browser...');
 
     try {
       let rawText = '';
@@ -7851,8 +7927,8 @@
         throw new Error('No readable text could be extracted from this document.');
       }
 
-      setGenerateButtonState(true, 'Detecting content cards...');
-      setContentCalStatus('loading', 'Detecting content cards (Title to Address)...');
+      setGenerateButtonState(true, 'Step 2/3: Extracting...');
+      setContentCalStatus('loading', 'Step 2/3: Extracting content cards (Title to Address)...');
 
       const cards = parseContentCalendarText(rawText);
 
@@ -7860,8 +7936,8 @@
         throw new Error('No content cards could be parsed from the document. Please verify the document structure.');
       }
 
-      setGenerateButtonState(true, `Saving ${cards.length} cards...`);
-      setContentCalStatus('loading', `Saving ${cards.length} content items into ${company}...`);
+      setGenerateButtonState(true, `Step 3/3: Saving (${cards.length})...`);
+      setContentCalStatus('loading', `Step 3/3: Saving ${cards.length} content cards to Content Calendar...`);
 
       const res = await apiFetch('/api/admin/content-calendar/upload', {
         method: 'POST',
@@ -7874,12 +7950,13 @@
       });
 
       if (!res.ok || !res.data?.success) {
-        throw new Error(res.data?.error || `Failed to save content calendar (HTTP ${res.status || '500'}).`);
+        const errorMsg = res.data?.error || `Failed to save content calendar (HTTP ${res.status || '500'}).`;
+        throw new Error(errorMsg);
       }
 
       // Success
-      setContentCalStatus('success', `Successfully generated ${cards.length} content items into ${company}!`);
-      showToast(`Successfully generated Content Calendar with ${cards.length} cards!`, 'success');
+      setContentCalStatus('success', `Created ${cards.length} content cards in ${company} - ${service}!`);
+      showToast(`Successfully created ${cards.length} content cards!`, 'success');
 
       if (fileInput) fileInput.value = '';
       state.selectedCalendarFile = null;
@@ -7896,13 +7973,14 @@
 
       setTimeout(() => {
         setContentCalStatus('hide');
-      }, 5000);
+      }, 6000);
 
     } catch (err) {
-      console.error('Content calendar parsing/upload error:', err);
-      setContentCalStatus('error', `${err.message || 'Failed to generate content calendar.'} Please check the file and try again.`);
+      console.error('[CC] Generation Error:', err);
+      setContentCalStatus('error', `Generation Failed: ${err.message || 'Unknown error'}`);
       showToast(err.message || 'Failed to generate content calendar.', 'error');
     } finally {
+      state.isGeneratingContentCalendar = false;
       setGenerateButtonState(false);
     }
   }
@@ -9109,6 +9187,7 @@
 
     btnGenerate?.addEventListener('click', (e) => {
       e.preventDefault();
+      e.stopPropagation();
       handleGenerateContentCalendar(e);
     });
 

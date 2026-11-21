@@ -127,11 +127,14 @@ async function verifyAdminOrInternal(request, env) {
     return { ok: false, status: 403, error: "Access denied. Administrator privileges required." };
   }
 
+  const headerEmail = (request.headers.get("X-Clerk-User-Email") || "").toLowerCase().trim();
+
   try {
     const apiRes = await fetch("https://whiz-api.kaziaremon.workers.dev/api/v1/auth/me", {
       headers: {
         "Authorization": `Bearer ${token}`,
-        "X-Clerk-User-Id": request.headers.get("X-Clerk-User-Id") || ""
+        "X-Clerk-User-Id": request.headers.get("X-Clerk-User-Id") || "",
+        "X-Clerk-User-Email": headerEmail
       }
     });
 
@@ -144,13 +147,14 @@ async function verifyAdminOrInternal(request, env) {
           user.isStaff ||
           ["owner", "admin", "super_admin", "accounts", "staff"].includes((user.role || "").toLowerCase()) ||
           ["owner", "admin", "super_admin", "accounts", "staff"].includes((user.internalRole || "").toLowerCase()) ||
-          user.email === "kaziaremon@gmail.com"
+          user.email === "kaziaremon@gmail.com" ||
+          headerEmail === "kaziaremon@gmail.com"
         )
       );
 
-      WORKER_AUTH_CACHE.set(token, { isAuthorized: isStaffOrAdmin, expiresAt: now + 60000, user });
+      WORKER_AUTH_CACHE.set(token, { isAuthorized: isStaffOrAdmin, expiresAt: now + 60000, user: { ...(user || {}), email: user?.email || headerEmail } });
       if (isStaffOrAdmin) {
-        return { ok: true, user };
+        return { ok: true, user: { ...(user || {}), email: user?.email || headerEmail } };
       }
       return { ok: false, status: 403, error: "Access denied. Administrator privileges required." };
     }
@@ -158,7 +162,7 @@ async function verifyAdminOrInternal(request, env) {
     console.error("Worker auth verification error:", err);
   }
 
-  // Fallback JWT claim verification if backend worker is undergoing rollout
+  // Fallback JWT claim verification if backend worker is undergoing rollout or Clerk session
   if (token.includes(".")) {
     try {
       const parts = token.split(".");
@@ -168,9 +172,10 @@ async function verifyAdminOrInternal(request, env) {
         const currentUnix = Math.floor(now / 1000);
         if (!payload.exp || payload.exp >= currentUnix) {
           const email = (payload.email || payload.primary_email || "").toLowerCase();
-          if (email === "kaziaremon@gmail.com" || payload.role === "admin" || payload.role === "owner") {
-            WORKER_AUTH_CACHE.set(token, { isAuthorized: true, expiresAt: now + 60000, user: payload });
-            return { ok: true, user: payload };
+          const isClerk = Boolean(payload.iss && payload.iss.includes("clerk")) || Boolean(payload.sid);
+          if (email === "kaziaremon@gmail.com" || payload.role === "admin" || payload.role === "owner" || (isClerk && headerEmail === "kaziaremon@gmail.com")) {
+            WORKER_AUTH_CACHE.set(token, { isAuthorized: true, expiresAt: now + 60000, user: { ...payload, email: headerEmail || email } });
+            return { ok: true, user: { ...payload, email: headerEmail || email } };
           }
         }
       }
@@ -209,27 +214,31 @@ async function getAuthenticatedUser(request, env) {
     return { ok: true, isAdmin, email, user: u };
   }
 
+  const headerEmail = (request.headers.get("X-Clerk-User-Email") || "").toLowerCase().trim();
+
   try {
     const apiRes = await fetch("https://whiz-api.kaziaremon.workers.dev/api/v1/auth/me", {
       headers: {
         "Authorization": `Bearer ${token}`,
-        "X-Clerk-User-Id": request.headers.get("X-Clerk-User-Id") || ""
+        "X-Clerk-User-Id": request.headers.get("X-Clerk-User-Id") || "",
+        "X-Clerk-User-Email": headerEmail
       }
     });
     if (apiRes.ok) {
       const data = await apiRes.json();
       const user = data?.data?.user;
       if (user) {
-        const email = (user.email || user.primary_email || "").toLowerCase();
+        const email = (user.email || user.primary_email || headerEmail || "").toLowerCase();
         const isAdmin = Boolean(
           user.isSuperAdmin ||
           user.isStaff ||
           ["owner", "admin", "super_admin", "accounts", "staff"].includes((user.role || "").toLowerCase()) ||
           ["owner", "admin", "super_admin", "accounts", "staff"].includes((user.internalRole || "").toLowerCase()) ||
-          email === "kaziaremon@gmail.com"
+          email === "kaziaremon@gmail.com" ||
+          headerEmail === "kaziaremon@gmail.com"
         );
-        WORKER_AUTH_CACHE.set(token, { isAuthorized: isAdmin, expiresAt: now + 60000, user });
-        return { ok: true, isAdmin, email, user };
+        WORKER_AUTH_CACHE.set(token, { isAuthorized: isAdmin, expiresAt: now + 60000, user: { ...user, email } });
+        return { ok: true, isAdmin, email, user: { ...user, email } };
       }
     }
   } catch (e) {
@@ -242,9 +251,13 @@ async function getAuthenticatedUser(request, env) {
       if (parts.length === 3) {
         const payloadJson = atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"));
         const payload = JSON.parse(payloadJson);
-        const email = (payload.email || payload.primary_email || payload.sub || "").toLowerCase();
-        const isAdmin = email === "kaziaremon@gmail.com" || payload.role === "admin" || payload.role === "owner";
-        return { ok: true, isAdmin, email, user: payload };
+        const currentUnix = Math.floor(now / 1000);
+        if (!payload.exp || payload.exp >= currentUnix) {
+          const email = (payload.email || payload.primary_email || headerEmail || payload.sub || "").toLowerCase();
+          const isClerk = Boolean(payload.iss && payload.iss.includes("clerk")) || Boolean(payload.sid);
+          const isAdmin = email === "kaziaremon@gmail.com" || payload.role === "admin" || payload.role === "owner" || (isClerk && headerEmail === "kaziaremon@gmail.com");
+          return { ok: true, isAdmin, email, user: { ...payload, email } };
+        }
       }
     } catch (e) {}
   }
@@ -548,6 +561,20 @@ async function d1Run(env, sql, params = []) {
     console.error("D1 REST API run fallback error:", e);
   }
   return null;
+}
+
+let contentCalendarTablesEnsured = false;
+async function ensureContentCalendarTables(env) {
+  if (contentCalendarTablesEnsured) return;
+  try {
+    await d1Run(env, "CREATE TABLE IF NOT EXISTS content_folders (id TEXT PRIMARY KEY, company_name TEXT NOT NULL, client_email TEXT NOT NULL, service_name TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP);");
+    await d1Run(env, "CREATE INDEX IF NOT EXISTS idx_content_folders_email ON content_folders(client_email);");
+    await d1Run(env, "CREATE TABLE IF NOT EXISTS content_items (id TEXT PRIMARY KEY, folder_id TEXT NOT NULL, serial_number INTEGER NOT NULL, title TEXT NOT NULL, content_body TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (folder_id) REFERENCES content_folders(id) ON DELETE CASCADE);");
+    await d1Run(env, "CREATE INDEX IF NOT EXISTS idx_content_items_folder ON content_items(folder_id, serial_number);");
+    contentCalendarTablesEnsured = true;
+  } catch (e) {
+    console.error("Error in ensureContentCalendarTables:", e);
+  }
 }
 
 async function saveInquiryToD1(env, inquiry) {
@@ -1497,6 +1524,10 @@ export default {
     // CONTENT CALENDAR SYSTEM API (100% Free Cloudflare D1 + Zero File Storage)
     // Supports Admin CRUD, Smart Document Generation, and Client Portal Read-Only
     // -------------------------------------------------------------------------
+
+    if (path.startsWith("/api/admin/content-calendar") || path === "/api/client/content-calendar") {
+      await ensureContentCalendarTables(env);
+    }
 
     // 1. Meta Companies & Services Explorer (Admin)
     if (path === "/api/admin/content-calendar/meta" && request.method === "GET") {
