@@ -1218,9 +1218,9 @@ function initNavigation() {
       const targetRoute = dataRoute || href;
 
       const isMatch = (
-        (activeId === 'home' && (targetRoute === '/' || targetRoute === '/home' || targetRoute === '#home')) ||
-        (activeId === 'testimonials' && (targetRoute === '/reviews' || targetRoute === '/testimonials' || targetRoute === '#testimonials' || targetRoute === '#reviews')) ||
-        (targetRoute === `/${activeId}` || targetRoute === `#${activeId}`)
+        (activeId === 'home' && (targetRoute === '/' || targetRoute === '/home' || targetRoute === '#home' || targetRoute === '/#home')) ||
+        (activeId === 'testimonials' && (targetRoute === '/reviews' || targetRoute === '/testimonials' || targetRoute === '#testimonials' || targetRoute === '#reviews' || targetRoute === '/#reviews' || targetRoute === '/#testimonials')) ||
+        (targetRoute === `/${activeId}` || targetRoute === `#${activeId}` || targetRoute === `/#${activeId}`)
       );
 
       if (isMatch) {
@@ -1261,17 +1261,15 @@ function initNavigation() {
     }
 
     const targetElement = document.getElementById(targetId) || (targetId === 'reviews' ? document.getElementById('testimonials') : null);
-    if (!targetElement) return;
+    if (!targetElement) {
+      const isHomepage = window.location.pathname === '/' || window.location.pathname === '' || window.location.pathname === '/index.html';
+      if (!isHomepage) {
+        window.location.href = `/#${targetId}`;
+      }
+      return;
+    }
 
-    const headerOffset = (header ? header.offsetHeight : 80) + 16;
-    const elementPosition = targetElement.getBoundingClientRect().top;
-    const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
-
-    window.scrollTo({
-      top: Math.max(0, offsetPosition),
-      behavior: 'smooth'
-    });
-
+    targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
     setActiveNavLink(targetId);
 
     if (updateUrl) {
@@ -1294,13 +1292,22 @@ function initNavigation() {
 
     let targetSectionId = null;
 
-    if (href.startsWith('#')) {
+    if (href.startsWith('/#')) {
+      const hashId = href.substring(2);
+      if (hashId === 'home' || hashId === '') {
+        targetSectionId = 'home';
+      } else if (hashId === 'testimonials' || hashId === 'reviews') {
+        targetSectionId = 'testimonials';
+      } else if (sectionToRoute[hashId] || hashId === 'services' || hashId === 'pricing') {
+        targetSectionId = hashId;
+      }
+    } else if (href.startsWith('#')) {
       const hashId = href.substring(1);
       if (hashId === 'home' || hashId === '') {
         targetSectionId = 'home';
       } else if (hashId === 'testimonials' || hashId === 'reviews') {
         targetSectionId = 'testimonials';
-      } else if (sectionToRoute[hashId]) {
+      } else if (sectionToRoute[hashId] || hashId === 'services' || hashId === 'pricing') {
         targetSectionId = hashId;
       }
     } else {
@@ -1315,19 +1322,27 @@ function initNavigation() {
     }
 
     if (targetSectionId) {
-      e.preventDefault();
-      scrollToSection(targetSectionId, true, true);
+      const isHomepage = window.location.pathname === '/' || window.location.pathname === '' || window.location.pathname === '/index.html';
+      const targetElement = document.getElementById(targetSectionId) || (targetSectionId === 'reviews' ? document.getElementById('testimonials') : null);
 
-      if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
-        mobileMenu.classList.add('hidden');
-        if (mobileToggle) {
-          mobileToggle.setAttribute('aria-expanded', 'false');
-          const toggleIcon = mobileToggle.querySelector('i');
-          if (toggleIcon) {
-            toggleIcon.classList.remove('fa-xmark');
-            toggleIcon.classList.add('fa-bars');
+      if (isHomepage && targetElement) {
+        e.preventDefault();
+        scrollToSection(targetSectionId, true, true);
+
+        if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
+          mobileMenu.classList.add('hidden');
+          if (mobileToggle) {
+            mobileToggle.setAttribute('aria-expanded', 'false');
+            const toggleIcon = mobileToggle.querySelector('i');
+            if (toggleIcon) {
+              toggleIcon.classList.remove('fa-xmark');
+              toggleIcon.classList.add('fa-bars');
+            }
           }
         }
+      } else if (!isHomepage) {
+        e.preventDefault();
+        window.location.href = `/#${targetSectionId}`;
       }
     }
   });

@@ -1734,11 +1734,17 @@ button {
 /* 1. Below-the-fold content visibility & intrinsic size budgeting */
 #campaign-monitor-section,
 #services,
+#pricing,
 #testimonials,
 #faq,
 #contact {
   content-visibility: auto;
   contain-intrinsic-size: auto 600px;
+}
+
+#services,
+#pricing {
+  scroll-margin-top: 96px;
 }
 
 /* 2. Overrides for repeated cards inside scrolling grids: zero backdrop-filter */

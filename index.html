@@ -304,7 +304,7 @@
   </div>
 
   <!-- Toast Notification Dispatcher -->
-  <div id="toastContainer" class="fixed top-24 right-5 z-[100] flex flex-col space-y-3 max-w-sm w-full pointer-events-auto"></div>
+  <div id="toastContainer" class="fixed top-24 right-5 z-[100] flex flex-col space-y-3 max-w-sm w-full pointer-events-none"></div>
 
   <!-- =========================================================================
        HEADER / GLASS NAVIGATION BAR
@@ -322,8 +322,8 @@
         <div id="desktopNavLinks" class="hidden lg:flex items-center space-x-1 xl:space-x-2 text-sm font-semibold text-slate-800">
           <a href="/" class="nav-link px-4 py-1.5 rounded-full" data-route="/">Home</a>
           <a href="/about" class="nav-link px-4 py-1.5 rounded-full">About Us</a>
-          <a href="/services" class="nav-link px-4 py-1.5 rounded-full" data-route="/services">Services</a>
-          <a href="/pricing" class="nav-link px-4 py-1.5 rounded-full" data-route="/pricing">Pricing</a>
+          <a href="/#services" class="nav-link px-4 py-1.5 rounded-full" data-route="/services">Services</a>
+          <a href="/#pricing" class="nav-link px-4 py-1.5 rounded-full" data-route="/pricing">Pricing</a>
           <a href="/articles" class="nav-link px-4 py-1.5 rounded-full">Articles</a>
           <a href="/reviews" class="nav-link px-4 py-1.5 rounded-full" data-route="/reviews">Reviews</a>
           <a href="/faq" class="nav-link px-4 py-1.5 rounded-full" data-route="/faq">FAQ</a>
@@ -355,8 +355,8 @@
       <div id="mobileMenu" class="hidden lg:hidden mt-2 bg-white/30 backdrop-blur-xl border border-white/40 shadow-[0_12px_40px_rgba(0,168,107,0.12)] rounded-3xl p-5 sm:p-6 flex flex-col items-center justify-center space-y-2 text-center">
         <a href="/" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]" data-route="/">Home</a>
         <a href="/about" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]">About Us</a>
-        <a href="/services" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]" data-route="/services">Services</a>
-        <a href="/pricing" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]" data-route="/pricing">Pricing</a>
+        <a href="/#services" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]" data-route="/services">Services</a>
+        <a href="/#pricing" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]" data-route="/pricing">Pricing</a>
         <a href="/articles" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]">Articles</a>
         <a href="/reviews" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]" data-route="/reviews">Reviews</a>
         <a href="/faq" class="mobile-nav-link nav-link inline-flex items-center justify-center text-center px-6 py-2.5 rounded-full text-sm font-bold text-slate-800 transition-all min-h-[44px]" data-route="/faq">FAQ</a>
@@ -568,21 +568,151 @@
     <!-- =======================================================================
          2. SERVICES SECTION: ALL SIX DISTINCT SERVICES (RESTORED COMPLETELY)
          ======================================================================= -->
-    <section id="services" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-24 scroll-mt-24 md:scroll-mt-28">
+    <section id="services" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-24 scroll-mt-24 md:scroll-mt-28" style="scroll-margin-top: 96px;">
       <div class="text-center max-w-3xl mx-auto mb-10 md:mb-16 space-y-4 gsap-header">
         <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-bold text-emerald-900 bg-emerald-100/90 border border-emerald-300">
           <span>Core Capabilities</span>
         </div>
         <h2 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight leading-snug">
-              Verified Client Partnerships &amp; Growth Outcomes.
-            </h2>
-            <p class="text-sm sm:text-base text-slate-700 leading-relaxed font-normal">
-              Read authentic feedback from founders and operators who partner with Whiz Studio for Facebook Ads management, profile optimization, and digital marketing strategy.
+          Strategic Platform Services Grounded in Market Reality.
+        </h2>
+        <p class="text-sm sm:text-base text-slate-700 leading-relaxed font-normal">
+          Every service is engineered around business viability. Click any service to examine why modern brands urgently require it and who benefits most.
+        </p>
+      </div>
+
+      <!-- EXACTLY SIX DISTINCT SERVICES IN RESPONSIVE GRID -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+        
+        <!-- Service 1: Facebook Marketing -->
+        <div class="service-card bg-white/10 backdrop-blur-md border border-white/20 shadow-[0_4px_30px_rgba(0,0,0,0.1)] rounded-2xl p-7 flex flex-col justify-between hover:border-emerald-400 transition-all">
+          <div>
+            <div class="w-14 h-14 rounded-2xl bg-white/30 text-brand-whiz flex items-center justify-center mb-5 border border-white/40 shadow-xs">
+              <i class="fa-brands fa-facebook text-2xl"></i>
+            </div>
+            <span class="text-xs font-bold text-emerald-950 bg-emerald-100/90 px-3 py-1 rounded-md border border-emerald-300">Retention & Community</span>
+            <h3 class="text-xl font-bold text-slate-900 mt-3 mb-2">Facebook Marketing</h3>
+            <p class="text-sm text-slate-700 leading-relaxed mb-6 font-normal">
+              Build an authentic organic storefront that validates your legitimacy, nurtures warm audiences, and prevents prospective buyers from leaving for active competitors.
             </p>
+          </div>
+          <button onclick="openServiceModal('facebook-marketing')" class="w-full py-3 px-4 rounded-xl text-sm font-bold bg-white/30 hover:bg-white/60 text-emerald-900 border border-white/40 hover:border-brand-whiz shadow-xs flex items-center justify-center space-x-2 transition-all">
+            <span>Learn More</span>
+            <i class="fa-solid fa-circle-info text-brand-whiz text-sm"></i>
+          </button>
         </div>
 
-        <!-- 3 CATEGORIES: NO FIXED PRICES - ELEGANT BADGE PLACEMENT & NO OVERLAPS -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 items-stretch pt-4 sm:pt-6">
+        <!-- Service 2: Instagram Marketing -->
+        <div class="service-card bg-white/10 backdrop-blur-md border border-white/20 shadow-[0_4px_30px_rgba(0,0,0,0.1)] rounded-2xl p-7 flex flex-col justify-between hover:border-emerald-400 transition-all">
+          <div>
+            <div class="w-14 h-14 rounded-2xl bg-white/30 text-brand-whiz flex items-center justify-center mb-5 border border-white/40 shadow-xs">
+              <i class="fa-brands fa-instagram text-2xl"></i>
+            </div>
+            <span class="text-xs font-bold text-emerald-950 bg-emerald-100/90 px-3 py-1 rounded-md border border-emerald-300">Visual Authority</span>
+            <h3 class="text-xl font-bold text-slate-900 mt-3 mb-2">Instagram Marketing</h3>
+            <p class="text-sm text-slate-700 leading-relaxed mb-6 font-normal">
+              Establish premium aesthetic credibility. Curate visual proof, consistent brand storytelling, and high-trust highlights that justify premium pricing.
+            </p>
+          </div>
+          <button onclick="openServiceModal('instagram-marketing')" class="w-full py-3 px-4 rounded-xl text-sm font-bold bg-white/30 hover:bg-white/60 text-emerald-900 border border-white/40 hover:border-brand-whiz shadow-xs flex items-center justify-center space-x-2 transition-all">
+            <span>Learn More</span>
+            <i class="fa-solid fa-circle-info text-brand-whiz text-sm"></i>
+          </button>
+        </div>
+
+        <!-- Service 3: Facebook Ads -->
+        <div class="service-card bg-white/10 backdrop-blur-md border border-white/20 shadow-[0_4px_30px_rgba(0,0,0,0.1)] rounded-2xl p-7 flex flex-col justify-between hover:border-emerald-400 transition-all">
+          <div>
+            <div class="w-14 h-14 rounded-2xl bg-white/30 text-brand-whiz flex items-center justify-center mb-5 border border-white/40 shadow-xs">
+              <i class="fa-solid fa-bullseye text-2xl"></i>
+            </div>
+            <span class="text-xs font-bold text-emerald-950 bg-emerald-100/90 px-3 py-1 rounded-md border border-emerald-300">Direct Response Ads</span>
+            <h3 class="text-xl font-bold text-slate-900 mt-3 mb-2">Facebook Ads</h3>
+            <p class="text-sm text-slate-700 leading-relaxed mb-6 font-normal">
+              Scalable paid acquisition systems. Stop relying on algorithm luck and build a repeatable monthly pipeline of leads and direct customer purchases.
+            </p>
+          </div>
+          <button onclick="openServiceModal('facebook-ads')" class="w-full py-3 px-4 rounded-xl text-sm font-bold bg-white/30 hover:bg-white/60 text-emerald-900 border border-white/40 hover:border-brand-whiz shadow-xs flex items-center justify-center space-x-2 transition-all">
+            <span>Learn More</span>
+            <i class="fa-solid fa-circle-info text-brand-whiz text-sm"></i>
+          </button>
+        </div>
+
+        <!-- Service 4: Instagram Ads -->
+        <div class="service-card bg-white/10 backdrop-blur-md border border-white/20 shadow-[0_4px_30px_rgba(0,0,0,0.1)] rounded-2xl p-7 flex flex-col justify-between hover:border-emerald-400 transition-all">
+          <div>
+            <div class="w-14 h-14 rounded-2xl bg-white/30 text-brand-whiz flex items-center justify-center mb-5 border border-white/40 shadow-xs">
+              <i class="fa-solid fa-mobile-screen-button text-2xl"></i>
+            </div>
+            <span class="text-xs font-bold text-emerald-950 bg-emerald-100/90 px-3 py-1 rounded-md border border-emerald-300">Vertical Video Capture</span>
+            <h3 class="text-xl font-bold text-slate-900 mt-3 mb-2">Instagram Ads</h3>
+            <p class="text-sm text-slate-700 leading-relaxed mb-6 font-normal">
+              High-converting Reels and Stories campaigns. Capture mobile attention with thumb-stopping creative hooks that drive frictionless impulse conversions.
+            </p>
+          </div>
+          <button onclick="openServiceModal('instagram-ads')" class="w-full py-3 px-4 rounded-xl text-sm font-bold bg-white/30 hover:bg-white/60 text-emerald-900 border border-white/40 hover:border-brand-whiz shadow-xs flex items-center justify-center space-x-2 transition-all">
+            <span>Learn More</span>
+            <i class="fa-solid fa-circle-info text-brand-whiz text-sm"></i>
+          </button>
+        </div>
+
+        <!-- Service 5: Social Media Optimization -->
+        <div class="service-card bg-white/10 backdrop-blur-md border border-white/20 shadow-[0_4px_30px_rgba(0,0,0,0.1)] rounded-2xl p-7 flex flex-col justify-between hover:border-emerald-400 transition-all">
+          <div>
+            <div class="w-14 h-14 rounded-2xl bg-white/30 text-brand-whiz flex items-center justify-center mb-5 border border-white/40 shadow-xs">
+              <i class="fa-solid fa-sliders text-2xl"></i>
+            </div>
+            <span class="text-xs font-bold text-emerald-950 bg-emerald-100/90 px-3 py-1 rounded-md border border-emerald-300">Conversion Hygiene</span>
+            <h3 class="text-xl font-bold text-slate-900 mt-3 mb-2">Social Media Optimization</h3>
+            <p class="text-sm text-slate-700 leading-relaxed mb-6 font-normal">
+              Fix leaky profiles before spending on advertising. Complete audit and restructuring of bio copy, highlight architecture, keywords, and CTAs.
+            </p>
+          </div>
+          <button onclick="openServiceModal('social-media-optimization')" class="w-full py-3 px-4 rounded-xl text-sm font-bold bg-white/30 hover:bg-white/60 text-emerald-900 border border-white/40 hover:border-brand-whiz shadow-xs flex items-center justify-center space-x-2 transition-all">
+            <span>Learn More</span>
+            <i class="fa-solid fa-circle-info text-brand-whiz text-sm"></i>
+          </button>
+        </div>
+
+        <!-- Service 6: LinkedIn Optimization -->
+        <div class="service-card bg-white/10 backdrop-blur-md border border-white/20 shadow-[0_4px_30px_rgba(0,0,0,0.1)] rounded-2xl p-7 flex flex-col justify-between hover:border-emerald-400 transition-all">
+          <div>
+            <div class="w-14 h-14 rounded-2xl bg-white/30 text-brand-whiz flex items-center justify-center mb-5 border border-white/40 shadow-xs">
+              <i class="fa-brands fa-linkedin-in text-2xl"></i>
+            </div>
+            <span class="text-xs font-bold text-emerald-950 bg-emerald-100/90 px-3 py-1 rounded-md border border-emerald-300">Executive B2B Authority</span>
+            <h3 class="text-xl font-bold text-slate-900 mt-3 mb-2">LinkedIn Optimization</h3>
+            <p class="text-sm text-slate-700 leading-relaxed mb-6 font-normal">
+              Position founders and enterprise pages for high-ticket contracts. Turn your profile into an executive landing page that commands institutional trust.
+            </p>
+          </div>
+          <button onclick="openServiceModal('linkedin-optimization')" class="w-full py-3 px-4 rounded-xl text-sm font-bold bg-white/30 hover:bg-white/60 text-emerald-900 border border-white/40 hover:border-brand-whiz shadow-xs flex items-center justify-center space-x-2 transition-all">
+            <span>Learn More</span>
+            <i class="fa-solid fa-circle-info text-brand-whiz text-sm"></i>
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- =======================================================================
+         3. PRICING SECTION (ALL THREE CATEGORIES DISPLAYED)
+         ======================================================================= -->
+    <section id="pricing" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-24 scroll-mt-24 md:scroll-mt-28" style="scroll-margin-top: 96px;">
+      <div class="text-center max-w-3xl mx-auto mb-10 md:mb-16 space-y-4 gsap-header">
+        <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-bold text-emerald-900 bg-emerald-100/90 border border-emerald-300">
+          <span>Tailored Growth Packages</span>
+        </div>
+        <h2 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight leading-snug">
+          Value-Driven Retainers Customized to Your Platform Standing.
+        </h2>
+        <p class="text-sm sm:text-base text-slate-700 leading-relaxed font-normal">
+          We do not sell arbitrary packages. Every business operates with distinct unit economics and competitive standing. Explore our core service retainers or request a custom proposal tailored to your targets.
+        </p>
+      </div>
+
+      <!-- 3 CATEGORIES: NO FIXED PRICES - ELEGANT BADGE PLACEMENT & NO OVERLAPS -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 items-stretch pt-4 sm:pt-6">
           
           <!-- Category 1: Facebook & Instagram -->
           <div class="pricing-card bg-white/10 backdrop-blur-md border border-white/20 shadow-[0_4px_30px_rgba(0,0,0,0.1)] rounded-2xl p-7 sm:p-8 flex flex-col justify-between hover:border-emerald-300 transition-all">
