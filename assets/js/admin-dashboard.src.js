@@ -591,6 +591,7 @@
       btn.classList.remove('opacity-75', 'cursor-not-allowed');
     }
   }
+  const setButtonLoading = setBtnLoading;
 
   // =========================================================================
   // TAB NAVIGATION & ROUTING
@@ -7032,10 +7033,214 @@
   function cleanContentTitleString(str) {
     if (!str) return '';
     return str
-      .replace(/^[\*\_#\->:\s]+|[\*\_#\->:\s]+$/g, '')
-      .replace(/^(?:title|টাইটেল|শীর্ষক|headline|topic)\s*[:\-\—\–]\s*/i, '')
-      .replace(/^[\*\_#\->:\s]+|[\*\_#\->:\s]+$/g, '')
+      .replace(/^[\*\_#\->:\s|]+|[\*\_#\->:\s|]+$/g, '')
+      .replace(/^(?:title|টাইটেল|শিরোনাম|শীর্ষক|headline|topic)\s*[:\-\—\–]?\s*/i, '')
+      .replace(/^[\*\_#\->:\s|]+|[\*\_#\->:\s|]+$/g, '')
       .trim();
+  }
+
+  const CC_SECTION_HEADERS = [
+    { key: 'title', regex: /^(?:title|টাইটেল|শিরোনাম|topic|headline)\b[\*\_]*\s*[:\-\—\–]?\s*(.*)$/i },
+    { key: 'subtitle', regex: /^(?:subtitle|সাবটাইটেল|sub[- ]?headline|hook|হুক)\b[\*\_]*\s*[:\-\—\–]?\s*(.*)$/i },
+    { key: 'content', regex: /^(?:content|caption|body|description|script|post\s+copy|কনটেন্ট|ক্যাপশন|বিস্তারিত)\b[\*\_]*\s*[:\-\—\–]?\s*(.*)$/i },
+    { key: 'cta', regex: /^(?:call\s+to\s+action|cta|কল\s+টু\s+অ্যাকশন)\b[\*\_]*\s*[:\-\—\–]?\s*(.*)$/i },
+    { key: 'hashtags', regex: /^(?:hashtags|tags|হ্যাশট্যাগ)\b[\*\_]*\s*[:\-\—\–]?\s*(.*)$/i },
+    { key: 'address', regex: /^(?:(?:office\s+)?address|ঠিকানা|location|লোকেশন|campus|branch|outlet|শাখা|অফিস)\b[\*\_]*\s*[:\-\—\–]?\s*(.*)$/i },
+    { key: 'contact', regex: /^(?:whatsapp|phone|hotline|call|contact|mobile|website|email|web|যোগাযোগ|ফোন|হটলাইন|ওয়েবসাইট)\b[\*\_]*\s*[:\-\—\–]?\s*(.*)$/i }
+  ];
+
+  function isCCContactMarker(line) {
+    const clean = line.replace(/^[\*\_#\->\s]+/, '').trim();
+    return /^(?:whatsapp|phone|hotline|call|contact|mobile|website|email|web|যোগাযোগ|ফোন|হটলাইন|ওয়েবসাইট)[\*\_]*\s*[:\-\—\–]?/i.test(clean);
+  }
+
+  function isCCRealContentPost(lines) {
+    const text = lines.join(' ').toLowerCase();
+    const nonBlank = lines.filter(l => l.trim().length > 0);
+    if (nonBlank.length < 2) return false;
+
+    const coverPhrases = [
+      'content calendar',
+      'social media content plan',
+      'social media content calendar',
+      'content strategy',
+      'monthly plan',
+      'monthly content plan',
+      'table of contents',
+      'prepared by',
+      'prepared for'
+    ];
+
+    const hasCoverPhrase = coverPhrases.some(phrase => text.includes(phrase));
+
+    const contentIndicators = [
+      /\b(?:title|টাইটেল|শিরোনাম)\b/i,
+      /\b(?:subtitle|সাবটাইটেল|hook|হুক)\b/i,
+      /\b(?:content|caption|body|কনটেন্ট|ক্যাপশন|বিস্তারিত)\b/i,
+      /\b(?:call\s+to\s+action|cta|কল\s+টু\s+অ্যাকশন)\b/i,
+      /\b(?:address|ঠিকানা|location|লোকেশন)\b/i
+    ];
+
+    const matchedIndicators = contentIndicators.filter(regex => regex.test(text)).length;
+
+    if (hasCoverPhrase && matchedIndicators < 2) {
+      return false;
+    }
+
+    const wordCount = text.split(/\s+/).filter(Boolean).length;
+    if (wordCount < 15 && matchedIndicators === 0) {
+      return false;
+    }
+
+    return true;
+  }
+
+  function parseStructuredCCPost(lines) {
+    const cleanedLines = [];
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      if (/^(?:page\s+\d+(?:\s+of\s+\d+)?|\d+\s*\/\s*\d+|\d+)$/i.test(trimmed)) continue;
+      if (/^\|?\s*(?:30[- ]day\s+)?content\s+calendar$/i.test(trimmed)) continue;
+      if (/^\|?\s*social\s+media\s+content\s+(?:plan|calendar|strategy)$/i.test(trimmed)) continue;
+      if (/^(?:day|post|content)\s*#?\s*\d+\s*\|\s*(?:30[- ]day\s+)?content\s+calendar$/i.test(trimmed)) continue;
+      cleanedLines.push(trimmed);
+    }
+
+    const sections = {
+      title: '',
+      subtitle: '',
+      content: [],
+      cta: '',
+      hashtags: '',
+      address: [],
+      contact: []
+    };
+
+    let currentSection = null;
+
+    for (let i = 0; i < cleanedLines.length; i++) {
+      const line = cleanedLines[i];
+
+      const dayHeaderMatch = line.match(/^(?:day|content|post|reel|slide|দিন|পোস্ট|কন্টেন্ট)\s*#?\s*[0-9\u09E6-\u09EF]+[\s:\-\—\–]*(.*)$/i);
+      if (dayHeaderMatch) {
+        const remainder = dayHeaderMatch[1]?.replace(/^[\*\_#\->:\s|]+|[\*\_#\->:\s|]+$/g, '').trim();
+        if (remainder && !/^\|?\s*(?:30[- ]day\s+)?content\s+calendar$/i.test(remainder)) {
+          if (!sections.title) {
+            sections.title = cleanContentTitleString(remainder);
+          }
+        }
+        continue;
+      }
+
+      let matchedHeader = null;
+      let inlineContent = '';
+
+      for (const h of CC_SECTION_HEADERS) {
+        const m = line.match(h.regex);
+        if (m) {
+          matchedHeader = h.key;
+          inlineContent = m[1]?.trim() || '';
+          break;
+        }
+      }
+
+      if (!matchedHeader && line.startsWith('#')) {
+        matchedHeader = 'hashtags';
+        inlineContent = line;
+      }
+
+      if (matchedHeader) {
+        currentSection = matchedHeader;
+        if (inlineContent) {
+          if (currentSection === 'title') {
+            sections.title = cleanContentTitleString(inlineContent);
+          } else if (currentSection === 'subtitle') {
+            sections.subtitle = inlineContent;
+          } else if (currentSection === 'cta') {
+            sections.cta = inlineContent;
+          } else if (currentSection === 'hashtags') {
+            sections.hashtags = sections.hashtags ? `${sections.hashtags} ${inlineContent}` : inlineContent;
+          } else if (currentSection === 'address') {
+            sections.address.push(inlineContent);
+          } else if (currentSection === 'contact') {
+            sections.contact.push(line.trim());
+          } else if (currentSection === 'content') {
+            sections.content.push(inlineContent);
+          }
+        }
+        continue;
+      }
+
+      if (currentSection === 'title') {
+        if (!sections.title) {
+          sections.title = cleanContentTitleString(line);
+        } else {
+          currentSection = 'content';
+          sections.content.push(line);
+        }
+      } else if (currentSection === 'subtitle') {
+        if (!sections.subtitle) {
+          sections.subtitle = line;
+        } else {
+          currentSection = 'content';
+          sections.content.push(line);
+        }
+      } else if (currentSection === 'cta') {
+        if (!sections.cta) {
+          sections.cta = line;
+        } else {
+          sections.cta += ' ' + line;
+        }
+      } else if (currentSection === 'hashtags') {
+        sections.hashtags = sections.hashtags ? `${sections.hashtags} ${line}` : line;
+      } else if (currentSection === 'address') {
+        if (isCCContactMarker(line)) {
+          sections.contact.push(line);
+        } else {
+          sections.address.push(line);
+        }
+      } else if (currentSection === 'contact') {
+        sections.contact.push(line);
+      } else if (currentSection === 'content') {
+        if (isCCContactMarker(line)) {
+          currentSection = 'contact';
+          sections.contact.push(line);
+        } else {
+          sections.content.push(line);
+        }
+      } else {
+        if (!sections.title) {
+          sections.title = cleanContentTitleString(line);
+        } else {
+          sections.content.push(line);
+        }
+      }
+    }
+
+    if (!sections.title && sections.content.length > 0) {
+      sections.title = cleanContentTitleString(sections.content.shift());
+    }
+
+    return sections;
+  }
+
+  function formatStructuredCCBody(sections) {
+    const parts = [];
+    if (sections.title) parts.push(`Title: ${sections.title}`);
+    if (sections.subtitle) parts.push(`Subtitle: ${sections.subtitle}`);
+    if (sections.content && sections.content.length > 0) {
+      parts.push(`Content:\n${sections.content.join('\n')}`);
+    }
+    if (sections.cta) parts.push(`Call to Action: ${sections.cta}`);
+    if (sections.hashtags) parts.push(`Hashtags: ${sections.hashtags}`);
+    if (sections.address && sections.address.length > 0) {
+      parts.push(`Address: ${sections.address.join(', ')}`);
+    }
+    if (sections.contact && sections.contact.length > 0) {
+      parts.push(`Contact:\n${sections.contact.join('\n')}`);
+    }
+    return parts.join('\n\n');
   }
 
   function parseContentCalendarText(rawText) {
@@ -7044,168 +7249,84 @@
     const text = rawText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
     const allLines = text.split('\n');
 
-    const isAddressLine = (line) => {
-      const clean = line.replace(/^\s*[\*\_#\->\s]+/, '').trim();
+    const isPostStart = (line) => {
+      const clean = line.replace(/^[\*\_#\->\s]+|[\*\_#\->\s]+$/g, '').trim();
       if (!clean) return false;
-      return /^(?:(?:office\s+)?address|ঠিকানা|location|লোকেশন|অবস্থান|branch|outlet|visit\s+us|শাখা|অফিস)[\*\_]*\s*[:\-\—\–]/i.test(clean);
+      return /^(?:day|content|post|reel|slide|দিন|পোস্ট|কন্টেন্ট)\s*#?\s*[0-9\u09E6-\u09EF]+/i.test(clean);
     };
 
-    const isCardStartLine = (line) => {
-      const clean = line.replace(/^\s*[\*\_#\->\s]+/, '').trim();
-      if (!clean) return false;
-      if (/^(?:title|টাইটেল|শীর্ষক|headline|topic|বিষয়|বিষয়)[\*\_]*\s*[:\-\—\–]/i.test(clean)) return true;
-      if (/^(?:day|content|post|reel|slide|দিন|পোস্ট|কন্টেন্ট)\s*#?\s*[0-9\u09E6-\u09EF]+/i.test(clean)) return true;
-      if (/^[0-9\u09E6-\u09EF]{1,2}\.\s*(?:title|টাইটেল|[^\s])/i.test(clean) && clean.length <= 80) return true;
-      return false;
+    const isAddressStart = (line) => {
+      const clean = line.replace(/^[\*\_#\->\s]+/, '').trim();
+      return /^(?:(?:office\s+)?address|ঠিকানা|location|লোকেশন|campus|branch|outlet|শাখা|অফিস)[\*\_]*\s*[:\-\—\–]?/i.test(clean);
     };
 
     const isSeparator = (line) => /^\s*[-=_*]{3,}\s*$/.test(line);
-    const isPageNumber = (line) => /^\s*(?:page\s+\d+(?:\s+of\s+\d+)?|\d+)\s*$/i.test(line);
 
-    const hasAddressMarkers = allLines.some(l => isAddressLine(l));
-    const cards = [];
+    const rawBlocks = [];
+    let currentBlock = [];
 
-    function pushCard(lines) {
-      const rawCardText = lines.join('\n').trim();
-      if (!rawCardText) return;
+    const hasDayMarkers = allLines.some(l => isPostStart(l));
 
-      const nonBlank = lines.filter(l => l.trim().length > 0);
-      if (nonBlank.length === 0) return;
-
-      const serial = cards.length + 1;
-      let title = '';
-
-      // 1. Look for explicit Title / টাইটেল line
-      for (const l of lines) {
-        const clean = l.replace(/^\s*[\*\_#\->\s]+/, '').trim();
-        const tm = clean.match(/^(?:title|টাইটেল|শীর্ষক|headline|topic|বিষয়|বিষয়)[\*\_]*\s*[:\-\—\–]\s*[\*\_]*(.+)/i);
-        if (tm && tm[1] && tm[1].trim()) {
-          title = cleanContentTitleString(tm[1]);
-          if (title) break;
+    if (hasDayMarkers) {
+      for (let i = 0; i < allLines.length; i++) {
+        const line = allLines[i];
+        if (isPostStart(line) && currentBlock.length > 0) {
+          rawBlocks.push(currentBlock);
+          currentBlock = [];
         }
+        currentBlock.push(line);
       }
+      if (currentBlock.length > 0) {
+        rawBlocks.push(currentBlock);
+      }
+    } else {
+      let inAddressContact = false;
+      for (let i = 0; i < allLines.length; i++) {
+        const line = allLines[i];
+        if (isSeparator(line)) {
+          if (currentBlock.length > 0) {
+            rawBlocks.push(currentBlock);
+            currentBlock = [];
+            inAddressContact = false;
+          }
+          continue;
+        }
 
-      // 2. Look for Day / Post with title: e.g. "Post 1: How to scale" or "Day 01 - Tips"
-      if (!title) {
-        for (const l of lines) {
-          const clean = l.replace(/^\s*[\*\_#\->\s]+/, '').trim();
-          const dm = clean.match(/^(?:day|content|post|reel|slide|দিন|পোস্ট|কন্টেন্ট)\s*#?\s*[0-9\u09E6-\u09EF]+[\s:\-\—\–]+(.+)/i);
-          if (dm && dm[1] && dm[1].trim()) {
-            const sub = cleanContentTitleString(dm[1]);
-            if (sub.length > 0 && sub.length <= 120) {
-              title = sub;
-              break;
-            }
+        if (isAddressStart(line)) {
+          inAddressContact = true;
+        } else if (inAddressContact) {
+          const isContinuation = isCCContactMarker(line) || line.trim().startsWith('#') || (!line.trim() && currentBlock.length > 0);
+          if (!isContinuation && CC_SECTION_HEADERS.some(h => h.key === 'title' && h.regex.test(line))) {
+            rawBlocks.push(currentBlock);
+            currentBlock = [];
+            inAddressContact = false;
           }
         }
-      }
 
-      // 3. First non-empty meaningful line
-      if (!title && nonBlank.length > 0) {
-        const first = nonBlank[0].replace(/^\s*[\*\_#\->\s]+/, '').trim();
-        const cleaned = cleanContentTitleString(
-          first
-            .replace(/^(?:day|content|post|reel|slide|দিন|পোস্ট|কন্টেন্ট)\s*#?\s*[0-9\u09E6-\u09EF]+[\s:\-\—\–]*/i, '')
-            .replace(/^[0-9\u09E6-\u09EF]{1,2}\.[\s\-:]*/, '')
-        );
-        if (cleaned.length > 0 && cleaned.length <= 120) {
-          title = cleaned;
-        }
+        currentBlock.push(line);
       }
+      if (currentBlock.length > 0) {
+        rawBlocks.push(currentBlock);
+      }
+    }
 
-      if (!title) {
-        title = `Content ${serial}`;
-      }
+    // Filter out Cover Pages & non-content blocks
+    const validBlocks = rawBlocks.filter(block => isCCRealContentPost(block));
+    const finalBlocks = validBlocks.length > 0 ? validBlocks : rawBlocks.filter(b => b.some(l => l.trim()));
+
+    const cards = [];
+    for (let idx = 0; idx < finalBlocks.length; idx++) {
+      const block = finalBlocks[idx];
+      const sections = parseStructuredCCPost(block);
+      const serial = idx + 1;
+      const title = sections.title || `Content ${serial}`;
+      const formattedBody = formatStructuredCCBody(sections);
 
       cards.push({
         serial_number: serial,
         title: title,
-        content_body: rawCardText
+        content_body: formattedBody
       });
-    }
-
-    if (hasAddressMarkers) {
-      // TIER 1: Title-to-Address boundary detection
-      let currentLines = [];
-      let state = 'SEEKING';
-
-      for (let i = 0; i < allLines.length; i++) {
-        const line = allLines[i];
-        if (isPageNumber(line) && currentLines.length === 0) continue;
-        if (isSeparator(line)) {
-          if (currentLines.length > 0) {
-            pushCard(currentLines);
-            currentLines = [];
-            state = 'SEEKING';
-          }
-          continue;
-        }
-
-        if (state === 'JUST_HIT_ADDRESS') {
-          // Check if current line is an address continuation line
-          if (line.trim() && !isCardStartLine(line) && !isAddressLine(line) && line.trim().length < 120 && !line.includes('http')) {
-            currentLines.push(line);
-            pushCard(currentLines);
-            currentLines = [];
-            state = 'SEEKING';
-            continue;
-          } else {
-            pushCard(currentLines);
-            currentLines = [];
-            state = 'SEEKING';
-          }
-        }
-
-        if (isCardStartLine(line) && currentLines.length > 0) {
-          const nonBlank = currentLines.filter(l => l.trim().length > 0);
-          if (nonBlank.length >= 2) {
-            pushCard(currentLines);
-            currentLines = [];
-          }
-        }
-
-        currentLines.push(line);
-
-        if (isAddressLine(line)) {
-          state = 'JUST_HIT_ADDRESS';
-        }
-      }
-
-      if (currentLines.length > 0) {
-        pushCard(currentLines);
-      }
-    } else {
-      // TIER 2: Fallback on structural markers (Day, Content, Post, Title)
-      let currentLines = [];
-      for (let i = 0; i < allLines.length; i++) {
-        const line = allLines[i];
-        if (isPageNumber(line) && currentLines.length === 0) continue;
-        if (isSeparator(line)) {
-          if (currentLines.length > 0) {
-            pushCard(currentLines);
-            currentLines = [];
-          }
-          continue;
-        }
-
-        if (isCardStartLine(line) && currentLines.length > 0) {
-          const nonBlank = currentLines.filter(l => l.trim().length > 0);
-          if (nonBlank.length >= 2) {
-            pushCard(currentLines);
-            currentLines = [];
-          }
-        }
-
-        currentLines.push(line);
-      }
-      if (currentLines.length > 0) {
-        pushCard(currentLines);
-      }
-    }
-
-    // TIER 3: If still 0 cards, use the entire text as 1 card
-    if (cards.length === 0 && text.trim().length > 0) {
-      pushCard(allLines);
     }
 
     return cards;
@@ -7617,14 +7738,14 @@
       const body = it.content_body || '';
 
       return `
-        <div class="p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs flex flex-col justify-between space-y-3.5 hover:border-[#087F70]/30 transition-all" data-content-card-id="${escapeHtml(it.id)}">
+        <div class="p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs flex flex-col space-y-3.5 hover:border-[#087F70]/30 transition-all" data-content-card-id="${escapeHtml(it.id)}">
           <div class="space-y-2">
             <div class="flex items-center justify-between gap-2">
               <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20">
                 <i class="fa-solid fa-hashtag text-[9px]"></i> Content ${serial}
               </span>
               <div class="flex items-center gap-1.5">
-                <button type="button" class="btn-copy-content-body px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-[#EAF5F1] text-slate-700 hover:text-[#087F70] transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs" data-item-id="${escapeHtml(it.id)}" title="Copy raw text">
+                <button type="button" class="btn-copy-content-body px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-[#EAF5F1] text-slate-700 hover:text-[#087F70] transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs" data-item-id="${escapeHtml(it.id)}" title="Copy formatted text">
                   <i class="fa-solid fa-copy text-xs"></i>
                   <span>Copy</span>
                 </button>
@@ -7640,8 +7761,8 @@
             </h4>
           </div>
 
-          <div class="bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/60 max-h-72 overflow-y-auto whiz-nested-scroll">
-            <pre class="font-sans text-xs text-slate-700 leading-relaxed whitespace-pre-wrap select-text m-0" style="word-break: break-word;">${escapeHtml(body)}</pre>
+          <div class="bg-slate-50/80 p-4 rounded-xl border border-slate-200/70 max-h-80 overflow-y-auto whiz-nested-scroll">
+            <pre class="font-sans text-xs text-slate-700 leading-relaxed whitespace-pre-wrap select-text m-0 break-words" style="word-break: break-word; font-family: inherit;">${escapeHtml(body)}</pre>
           </div>
         </div>
       `;
@@ -7726,10 +7847,10 @@
       return;
     }
 
-    setButtonLoading(saveBtn, true, 'Saving...');
+    setBtnLoading(saveBtn, true, 'Saving...');
 
     try {
-      const res = await apiFetch(`/api/admin/content-calendar/folders/${id}`, {
+      const res = await apiFetch(`/api/admin/content-calendar/folders/${encodeURIComponent(id)}`, {
         method: 'PATCH',
         body: JSON.stringify({
           company_name: company,
@@ -7739,7 +7860,7 @@
         })
       });
 
-      setButtonLoading(saveBtn, false);
+      setBtnLoading(saveBtn, false);
 
       if (res.ok && res.data?.success) {
         showToast('Folder updated successfully.', 'success');
@@ -7755,12 +7876,12 @@
           if (elService) elService.textContent = service;
           if (elEmail) elEmail.textContent = email;
         }
-        loadContentCalendarData();
+        await loadContentCalendarData();
       } else {
         showToast(res.data?.error || 'Failed to update folder.', 'error');
       }
     } catch (err) {
-      setButtonLoading(saveBtn, false);
+      setBtnLoading(saveBtn, false);
       console.error('Update folder error:', err);
       showToast('Error updating folder.', 'error');
     }
@@ -7783,11 +7904,11 @@
     const confirmBtn = document.getElementById('btnConfirmDeleteContentFolder');
     if (!id) return;
 
-    setButtonLoading(confirmBtn, true, 'Deleting...');
+    setBtnLoading(confirmBtn, true, 'Deleting...');
 
     try {
-      const res = await apiFetch(`/api/admin/content-calendar/folders/${id}`, { method: 'DELETE' });
-      setButtonLoading(confirmBtn, false);
+      const res = await apiFetch(`/api/admin/content-calendar/folders/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      setBtnLoading(confirmBtn, false);
 
       if (res.ok && res.data?.success) {
         showToast('Folder and all content items deleted.', 'success');
@@ -7795,13 +7916,13 @@
         if (state.currentContentFolder && state.currentContentFolder.id === id) {
           closeContentFolderDetail();
         } else {
-          loadContentCalendarData();
+          await loadContentCalendarData();
         }
       } else {
         showToast(res.data?.error || 'Failed to delete folder.', 'error');
       }
     } catch (err) {
-      setButtonLoading(confirmBtn, false);
+      setBtnLoading(confirmBtn, false);
       console.error('Delete folder error:', err);
       showToast('Error deleting folder.', 'error');
     }
@@ -9340,7 +9461,11 @@
         const item = (state.currentContentItems || []).find(i => i.id === itemId);
         if (item) {
           try {
-            await navigator.clipboard.writeText(item.content_body || '');
+            let textToCopy = (item.content_body || '').trim();
+            if (item.title && !textToCopy.toLowerCase().startsWith('title:')) {
+              textToCopy = `Title: ${item.title}\n\n${textToCopy}`;
+            }
+            await navigator.clipboard.writeText(textToCopy);
             const origHtml = copyBtn.innerHTML;
             copyBtn.innerHTML = '<i class="fa-solid fa-check text-xs text-emerald-600"></i><span class="text-emerald-700">Copied!</span>';
             showToast(`Content #${item.serial_number} copied to clipboard!`, 'success');

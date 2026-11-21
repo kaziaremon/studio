@@ -1717,7 +1717,7 @@ export default {
       if (!auth.ok) {
         return jsonResponse({ success: false, error: auth.error }, auth.status, {}, request, env);
       }
-      const folderId = path.replace("/api/admin/content-calendar/folders/", "").trim();
+      const folderId = decodeURIComponent(path.replace("/api/admin/content-calendar/folders/", "").trim());
       if (!folderId) {
         return jsonResponse({ success: false, error: "Folder ID required" }, 400, {}, request, env);
       }
@@ -1745,7 +1745,7 @@ export default {
       if (!auth.ok) {
         return jsonResponse({ success: false, error: auth.error }, auth.status, {}, request, env);
       }
-      const folderId = path.replace("/api/admin/content-calendar/folders/", "").trim();
+      const folderId = decodeURIComponent(path.replace("/api/admin/content-calendar/folders/", "").trim());
       try {
         const folderRes = await d1Execute(env, "SELECT * FROM content_folders WHERE id = ? LIMIT 1", [folderId]);
         if (!folderRes || !Array.isArray(folderRes.results) || folderRes.results.length === 0) {
@@ -1785,7 +1785,7 @@ export default {
       if (!auth.ok) {
         return jsonResponse({ success: false, error: auth.error }, auth.status, {}, request, env);
       }
-      const itemId = path.replace("/api/admin/content-calendar/items/", "").trim();
+      const itemId = decodeURIComponent(path.replace("/api/admin/content-calendar/items/", "").trim());
       try {
         const itemRes = await d1Execute(env, "SELECT folder_id FROM content_items WHERE id = ? LIMIT 1", [itemId]);
         if (!itemRes || !Array.isArray(itemRes.results) || itemRes.results.length === 0) {
@@ -1808,7 +1808,7 @@ export default {
       if (!auth.ok) {
         return jsonResponse({ success: false, error: auth.error }, auth.status, {}, request, env);
       }
-      const folderId = path.replace("/api/admin/content-calendar/folders/", "").trim();
+      const folderId = decodeURIComponent(path.replace("/api/admin/content-calendar/folders/", "").trim());
       try {
         await d1Run(env, "DELETE FROM content_items WHERE folder_id = ?", [folderId]);
         await d1Run(env, "DELETE FROM content_folders WHERE id = ?", [folderId]);
