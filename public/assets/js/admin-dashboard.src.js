@@ -107,14 +107,21 @@
   }
 
   function isCurrentUserOwner() {
+    if (state.currentUser) {
+      const uEmail = String(state.currentUser.primaryEmailAddress?.emailAddress || '').toLowerCase().trim();
+      if (uEmail === 'kaziaremon@gmail.com') return true;
+      if (state.currentUser.emailAddresses?.some(e => String(e.emailAddress || '').toLowerCase().trim() === 'kaziaremon@gmail.com')) return true;
+      const uRole = String(state.currentUser.publicMetadata?.role || '').toLowerCase().trim();
+      if (uRole === 'owner' || uRole === 'super_admin' || Boolean(state.currentUser.publicMetadata?.isSuperAdmin)) return true;
+    }
     if (!state.adminProfile) return false;
-    const role = (state.adminProfile.role || '').toLowerCase();
+    const email = String(state.adminProfile.email || '').toLowerCase().trim();
+    if (email === 'kaziaremon@gmail.com') return true;
+    const role = (state.adminProfile.role || '').toLowerCase().trim();
     // Non-owner roles are NEVER improved regardless of email or flags
     if (role === 'accountant' || role === 'accounts' || role === 'employee' || role === 'client') {
       return false;
     }
-    const email = (state.adminProfile.email || '').toLowerCase();
-    if (email === 'kaziaremon@gmail.com') return true;
     if (role === 'owner' || role === 'super_admin' || role === 'superadmin') return true;
     const isa = state.adminProfile.isSuperAdmin ?? state.adminProfile.is_super_admin;
     return isa === true || isa === 1 || isa === 'true' || isa === '1';
@@ -505,12 +512,6 @@
 
     if (window.Clerk && window.Clerk.user) {
       headers['X-Clerk-User-Id'] = window.Clerk.user.id;
-      const primaryEmail = window.Clerk.user.primaryEmailAddress?.emailAddress 
-        || (window.Clerk.user.emailAddresses && window.Clerk.user.emailAddresses[0]?.emailAddress)
-        || '';
-      if (primaryEmail) {
-        headers['X-Clerk-User-Email'] = primaryEmail;
-      }
     }
 
     try {
@@ -518,6 +519,12 @@
       if (endpoint.startsWith('/api/')) {
         const isLocal = window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
         url = isLocal ? `https://whizstudio.art${endpoint}` : endpoint;
+        const primaryEmail = window.Clerk?.user?.primaryEmailAddress?.emailAddress 
+          || (window.Clerk?.user?.emailAddresses && window.Clerk?.user?.emailAddresses[0]?.emailAddress)
+          || '';
+        if (primaryEmail) {
+          headers['X-Clerk-User-Email'] = primaryEmail;
+        }
       } else {
         url = `${API_BASE}${endpoint}`;
       }
@@ -6069,29 +6076,90 @@
 
       state.currentUser = user;
 
+      // Extract and normalize all verified/associated emails from Clerk user
+      const userEmails = [
+        user.primaryEmailAddress?.emailAddress,
+        ...(user.emailAddresses?.map(e => e.emailAddress) || [])
+      ].filter(Boolean).map(e => String(e).toLowerCase().trim());
+
+      const userRoleMeta = String(user.publicMetadata?.role || '').toLowerCase().trim();
+      const isKnownSuperAdmin = 
+        userEmails.includes('kaziaremon@gmail.com') ||
+        userRoleMeta === 'super_admin' ||
+        userRoleMeta === 'owner' ||
+        userRoleMeta === 'admin' ||
+        Boolean(user.publicMetadata?.isSuperAdmin) ||
+        Boolean(user.publicMetadata?.is_super_admin);
+
       // Verify Administrator Authorization with Cloudflare Backend API
-      const res = await apiFetch('/portal/me');
-      if (!res.ok || !res.data || !res.data.success || !res.data.data || !res.data.data.user) {
+      let res = null;
+      try {
+        res = await apiFetch('/portal/me');
+      } catch (err) {
+        console.error('Admin verification network failure:', err);
+      }
+
+      let profile = (res && res.ok && res.data?.success && res.data?.data?.user) ? res.data.data.user : null;
+
+      // Resilient fallback for Super Admin if backend /portal/me is experiencing a cold start, 500, or network glitch
+      if (!profile && isKnownSuperAdmin) {
+        console.warn('[Route Guard] Backend /portal/me did not return user, but authenticated Clerk user is verified Super Admin. Granting Super Admin workspace access.');
+        profile = {
+          id: user.id,
+          email: user.primaryEmailAddress?.emailAddress || 'kaziaremon@gmail.com',
+          role: 'super_admin',
+          isSuperAdmin: true,
+          isStaff: true,
+          fullName: user.fullName || 'Kazi Remon',
+          full_name: user.fullName || 'Kazi Remon'
+        };
+      }
+
+      if (!profile) {
         console.error('Admin verification failed from API:', res);
+        // If it's a 500 server error or network connection failure, NEVER falsely show "Access Denied" lockout
+        if (!res || (!res.ok && (res.status >= 500 || res.status === 0))) {
+          if (authGuard) {
+            authGuard.innerHTML = `
+              <div class="mb-5 flex items-center justify-center">
+                <img src="/assets/images/whiz-logo-v2.png?v=202611" alt="Whiz Studio" class="h-12 w-auto object-contain">
+              </div>
+              <h2 class="text-xl font-bold text-[#172B36] tracking-tight">System Temporarily Unavailable</h2>
+              <p class="text-xs text-rose-500 mt-2 max-w-sm">Unable to verify workspace authorization due to a server connection failure (HTTP ${res?.status || 500}). Please retry.</p>
+              <div class="mt-5 flex items-center justify-center gap-3">
+                <button onclick="window.location.reload()" class="px-4 py-2 bg-[#147D64] text-white text-xs font-bold rounded-xl hover:bg-[#12694f] cursor-pointer">Retry Connection</button>
+                <a href="/" class="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-200 cursor-pointer">Return to Home</a>
+              </div>
+            `;
+          }
+          return;
+        }
+
         if (authGuard) authGuard.classList.add('hidden');
         if (accessDenied) accessDenied.classList.remove('hidden');
         return;
       }
 
-      const profile = res.data.data.user;
       state.adminProfile = profile;
 
+      const profileRole = String(profile.role || '').toLowerCase().trim();
+      const profileEmail = String(profile.email || user.primaryEmailAddress?.emailAddress || '').toLowerCase().trim();
+
       const isAuthorized = 
-        profile.role === 'owner' || 
-        profile.role === 'admin' || 
-        profile.role === 'super_admin' || 
-        profile.role === 'accounts' || 
-        profile.role === 'employee' || 
+        profileRole === 'owner' || 
+        profileRole === 'admin' || 
+        profileRole === 'super_admin' || 
+        profileRole === 'accounts' || 
+        profileRole === 'employee' || 
+        profileRole === 'staff' || 
         Boolean(profile.isSuperAdmin) ||
-        Boolean(profile.isStaff);
+        Boolean(profile.isStaff) ||
+        profileEmail === 'kaziaremon@gmail.com' ||
+        userEmails.includes('kaziaremon@gmail.com') ||
+        isKnownSuperAdmin;
 
       if (!isAuthorized) {
-        if (profile.role === 'client') {
+        if (profileRole === 'client') {
           console.warn('[Route Guard] Client user attempted to access admin portal. Redirecting to client dashboard...');
           window.location.replace('/client/dashboard/');
           return;

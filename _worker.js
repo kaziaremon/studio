@@ -51,7 +51,7 @@ function getCorsHeaders(request, env = null) {
   return {
     "Access-Control-Allow-Origin": isAllowed ? origin : "https://whizstudio.art",
     "Access-Control-Allow-Methods": "GET, POST, PATCH, PUT, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Signature-Ed25519, X-Signature-Timestamp, X-Clerk-User-Id, X-Internal-Token, X-Device-Token",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Signature-Ed25519, X-Signature-Timestamp, X-Clerk-User-Id, X-Clerk-User-Email, X-Internal-Token, X-Device-Token",
     "Access-Control-Max-Age": "86400",
     "Vary": "Origin"
   };
