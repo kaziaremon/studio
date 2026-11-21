@@ -731,6 +731,44 @@
   border-color: #64748B !important;
 }
 
+/* ==========================================================================
+   CONTENT CALENDAR ACTION BUTTON & FORM CONTROLS POLISH
+   ========================================================================== */
+#btnGenerateContentCal {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 10px !important;
+  padding: 12px 28px !important;
+  height: 48px !important;
+  border-radius: 10px !important;
+  white-space: nowrap !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.01em !important;
+  line-height: 1 !important;
+  color: #111827 !important;
+  width: auto !important;
+  min-width: max-content !important;
+}
+
+@media (max-width: 639px) {
+  #btnGenerateContentCal {
+    width: 100% !important;
+    min-width: 100% !important;
+    padding-left: 18px !important;
+    padding-right: 18px !important;
+  }
+}
+
+#contentCalCompanySelect,
+#contentCalServiceSelect {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  background-image: none !important;
+}
+
   </style>
 </head>
 <body class="h-full bg-[#F8FAFC] text-slate-800 flex flex-col font-sans antialiased selection:bg-[#147D64] selection:text-white">
@@ -3353,7 +3391,7 @@
                       <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                         <i class="fa-solid fa-building text-xs"></i>
                       </div>
-                      <select id="contentCalCompanySelect" class="w-full h-11 pl-9 pr-8 rounded-[10px] bg-white border border-slate-300 text-xs font-medium text-[#172B36] focus:outline-none focus:ring-2 focus:ring-[#087F70]/20 focus:border-[#087F70] transition-all cursor-pointer appearance-none shadow-2xs">
+                      <select id="contentCalCompanySelect" class="w-full h-11 pl-9 pr-8 rounded-[10px] bg-white border border-slate-300 text-xs font-medium text-[#172B36] focus:outline-none focus:ring-2 focus:ring-[#087F70]/20 focus:border-[#087F70] transition-all cursor-pointer shadow-2xs" style="appearance: none; -webkit-appearance: none; -moz-appearance: none; background-image: none !important;">
                         <option value="">Select an existing client...</option>
                         <option value="__custom__">+ Enter Custom Company Name</option>
                       </select>
@@ -3376,7 +3414,6 @@
                       </div>
                       <input type="email" id="contentCalClientEmail" placeholder="client@gmail.com" class="w-full h-11 pl-9 pr-3.5 rounded-[10px] bg-white border border-slate-300 text-xs font-medium text-[#172B36] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#087F70]/20 focus:border-[#087F70] transition-all shadow-2xs">
                     </div>
-                    <p class="text-[11px] text-slate-400 leading-tight">Calendar automatically links when client logs in with this Gmail.</p>
                   </div>
 
                   <!-- Service Name Dropdown with Standard Whiz Services + Custom Option -->
@@ -3389,7 +3426,7 @@
                       <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                         <i class="fa-solid fa-briefcase text-xs"></i>
                       </div>
-                      <select id="contentCalServiceSelect" class="w-full h-11 pl-9 pr-8 rounded-[10px] bg-white border border-slate-300 text-xs font-medium text-[#172B36] focus:outline-none focus:ring-2 focus:ring-[#087F70]/20 focus:border-[#087F70] transition-all cursor-pointer appearance-none shadow-2xs">
+                      <select id="contentCalServiceSelect" class="w-full h-11 pl-9 pr-8 rounded-[10px] bg-white border border-slate-300 text-xs font-medium text-[#172B36] focus:outline-none focus:ring-2 focus:ring-[#087F70]/20 focus:border-[#087F70] transition-all cursor-pointer shadow-2xs" style="appearance: none; -webkit-appearance: none; -moz-appearance: none; background-image: none !important;">
                         <option value="">Select a service...</option>
                         <option value="Facebook Marketing">Facebook Marketing</option>
                         <option value="Instagram Marketing">Instagram Marketing</option>
@@ -3411,12 +3448,12 @@
                 <!-- 3. Dedicated Centered Action Footer -->
                 <div class="pt-5 border-t border-slate-100 flex flex-col items-center justify-center gap-3.5 w-full text-center">
                   <div class="w-full flex items-center justify-center">
-                    <button type="button" id="btnGenerateContentCal" class="w-full sm:w-auto min-w-0 sm:min-w-[270px] h-[46px] px-8 rounded-xl btn-liquid-primary shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all select-none flex items-center justify-center gap-2.5 text-sm font-extrabold tracking-wide cursor-pointer text-[#0F172A]">
-                      <svg id="btnGenerateContentCalIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;min-width:18px;max-width:18px;flex-shrink:0;display:block;" aria-hidden="true">
+                    <button type="button" id="btnGenerateContentCal" class="btn-liquid-primary shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all select-none cursor-pointer" style="display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 12px 28px; height: 48px; border-radius: 10px; white-space: nowrap; font-size: 14px; font-weight: 600; letter-spacing: 0.01em; line-height: 1; color: #111827; width: auto; min-width: max-content;">
+                      <svg id="btnGenerateContentCalIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width: 18px; height: 18px; min-width: 18px; max-width: 18px; flex-shrink: 0; display: block;" aria-hidden="true">
                         <path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/>
                         <path d="M12 14v4M10 16h4"/>
                       </svg>
-                      <span id="btnGenerateContentCalText" class="tracking-wide">Generate Content Calendar</span>
+                      <span id="btnGenerateContentCalText" style="white-space: nowrap; display: inline-block;">Generate Content Calendar</span>
                     </button>
                   </div>
 
@@ -3441,9 +3478,9 @@
                   <span id="contentCalFoldersCountBadge" class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20">0 Folders</span>
                 </div>
                 <div class="flex items-center gap-2.5 w-full sm:w-auto">
-                  <div class="relative flex-1 sm:w-72 md:w-80">
+                  <div class="relative flex-1 sm:w-80 md:w-96">
                     <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                    <input type="text" id="searchContentCalFolders" placeholder="Search by client, service, or email..." class="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#087F70]/20 focus:border-[#087F70] transition-all">
+                    <input type="text" id="searchContentCalFolders" placeholder="Search client, email, or service..." class="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#087F70]/20 focus:border-[#087F70] transition-all">
                   </div>
                   <button type="button" id="btnRefreshContentCal" class="h-9 px-3.5 rounded-xl text-xs font-bold bg-[#EAF5F1] hover:bg-[#d8ece4] text-[#087F70] border border-[#087F70]/20 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer shadow-2xs hover:shadow-xs active:scale-95" title="Refresh content folders">
                     <i class="fa-solid fa-arrows-rotate text-xs"></i>
@@ -6042,7 +6079,7 @@
 
   <!-- Admin Dashboard JavaScript Controller -->
   <script src="/assets/js/admin-mock-data.js?v=4.0"></script>
-  <script src="/assets/js/admin-dashboard.min.js?v=202611-v7"></script>
+  <script src="/assets/js/admin-dashboard.min.js?v=202611-v8"></script>
 
 </body>
 </html>
