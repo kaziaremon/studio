@@ -6954,55 +6954,183 @@
   // 14. CONTENT CALENDAR SYSTEM & IN-BROWSER PARSER (ZERO FILE STORAGE)
   // =========================================================================
 
-  function parseContentCalendarText(text) {
-    if (!text || typeof text !== 'string') return [];
-    const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-    const markerRegex = /(?:^|\n)[ \t]*(?:\*{1,3}|_{1,3})?[ \t]*(?:content|post)[ \t]*[-#:]*[ \t]*0*([0-9]+)[ \t]*[:\-\—\–\.]*[ \t]*(.*?)(?=(?:\*{1,3}|_{1,3})?(?:\n|$))/gi;
-    const matches = [];
-    let m;
-    while ((m = markerRegex.exec(normalized)) !== null) {
-      matches.push({
-        index: m.index,
-        fullMatchLength: m[0].length,
-        serialNumber: parseInt(m[1], 10),
-        inlineHeader: (m[2] || '').trim()
-      });
-    }
+  function cleanContentTitleString(str) {
+    if (!str) return '';
+    return str
+      .replace(/^[\*\_#\->:\s]+|[\*\_#\->:\s]+$/g, '')
+      .replace(/^(?:title|টাইটেল|শীর্ষক|headline|topic)\s*[:\-\—\–]\s*/i, '')
+      .replace(/^[\*\_#\->:\s]+|[\*\_#\->:\s]+$/g, '')
+      .trim();
+  }
 
-    if (matches.length === 0) return [];
+  function parseContentCalendarText(rawText) {
+    if (!rawText || typeof rawText !== 'string' || !rawText.trim()) return [];
 
+    const text = rawText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    const allLines = text.split('\n');
+
+    const isAddressLine = (line) => {
+      const clean = line.replace(/^\s*[\*\_#\->\s]+/, '').trim();
+      if (!clean) return false;
+      return /^(?:(?:office\s+)?address|ঠিকানা|location|লোকেশন|অবস্থান|branch|outlet|visit\s+us|শাখা|অফিস)[\*\_]*\s*[:\-\—\–]/i.test(clean);
+    };
+
+    const isCardStartLine = (line) => {
+      const clean = line.replace(/^\s*[\*\_#\->\s]+/, '').trim();
+      if (!clean) return false;
+      if (/^(?:title|টাইটেল|শীর্ষক|headline|topic|বিষয়|বিষয়)[\*\_]*\s*[:\-\—\–]/i.test(clean)) return true;
+      if (/^(?:day|content|post|reel|slide|দিন|পোস্ট|কন্টেন্ট)\s*#?\s*[0-9\u09E6-\u09EF]+/i.test(clean)) return true;
+      if (/^[0-9\u09E6-\u09EF]{1,2}\.\s*(?:title|টাইটেল|[^\s])/i.test(clean) && clean.length <= 80) return true;
+      return false;
+    };
+
+    const isSeparator = (line) => /^\s*[-=_*]{3,}\s*$/.test(line);
+    const isPageNumber = (line) => /^\s*(?:page\s+\d+(?:\s+of\s+\d+)?|\d+)\s*$/i.test(line);
+
+    const hasAddressMarkers = allLines.some(l => isAddressLine(l));
     const cards = [];
-    for (let i = 0; i < matches.length; i++) {
-      const current = matches[i];
-      const next = matches[i + 1];
-      const start = current.index + current.fullMatchLength;
-      const end = next ? next.index : normalized.length;
-      let body = normalized.substring(start, end).trim();
 
+    function pushCard(lines) {
+      const rawCardText = lines.join('\n').trim();
+      if (!rawCardText) return;
+
+      const nonBlank = lines.filter(l => l.trim().length > 0);
+      if (nonBlank.length === 0) return;
+
+      const serial = cards.length + 1;
       let title = '';
-      if (current.inlineHeader && current.inlineHeader.length > 0) {
-        title = current.inlineHeader.replace(/^[\*\_\:\-\#\s]+|[\*\_\:\-\#\s]+$/g, '').trim();
+
+      // 1. Look for explicit Title / টাইটেল line
+      for (const l of lines) {
+        const clean = l.replace(/^\s*[\*\_#\->\s]+/, '').trim();
+        const tm = clean.match(/^(?:title|টাইটেল|শীর্ষক|headline|topic|বিষয়|বিষয়)[\*\_]*\s*[:\-\—\–]\s*[\*\_]*(.+)/i);
+        if (tm && tm[1] && tm[1].trim()) {
+          title = cleanContentTitleString(tm[1]);
+          if (title) break;
+        }
       }
 
-      const lines = body.split('\n').map(l => l.trim()).filter(Boolean);
-      if (!title && lines.length > 0) {
-        const titleMatch = lines[0].match(/^(?:title|topic|headline)\s*[:\-]\s*(.+)/i);
-        if (titleMatch && titleMatch[1]) {
-          title = titleMatch[1].trim();
-        } else if (lines[0].length <= 80 && !lines[0].includes(':') && !lines[0].startsWith('-') && !lines[0].startsWith('•')) {
-          title = lines[0];
+      // 2. Look for Day / Post with title: e.g. "Post 1: How to scale" or "Day 01 - Tips"
+      if (!title) {
+        for (const l of lines) {
+          const clean = l.replace(/^\s*[\*\_#\->\s]+/, '').trim();
+          const dm = clean.match(/^(?:day|content|post|reel|slide|দিন|পোস্ট|কন্টেন্ট)\s*#?\s*[0-9\u09E6-\u09EF]+[\s:\-\—\–]+(.+)/i);
+          if (dm && dm[1] && dm[1].trim()) {
+            const sub = cleanContentTitleString(dm[1]);
+            if (sub.length > 0 && sub.length <= 120) {
+              title = sub;
+              break;
+            }
+          }
+        }
+      }
+
+      // 3. First non-empty meaningful line
+      if (!title && nonBlank.length > 0) {
+        const first = nonBlank[0].replace(/^\s*[\*\_#\->\s]+/, '').trim();
+        const cleaned = cleanContentTitleString(
+          first
+            .replace(/^(?:day|content|post|reel|slide|দিন|পোস্ট|কন্টেন্ট)\s*#?\s*[0-9\u09E6-\u09EF]+[\s:\-\—\–]*/i, '')
+            .replace(/^[0-9\u09E6-\u09EF]{1,2}\.[\s\-:]*/, '')
+        );
+        if (cleaned.length > 0 && cleaned.length <= 120) {
+          title = cleaned;
         }
       }
 
       if (!title) {
-        title = `Content ${current.serialNumber}`;
+        title = `Content ${serial}`;
       }
 
       cards.push({
-        serial_number: current.serialNumber,
+        serial_number: serial,
         title: title,
-        content_body: body
+        content_body: rawCardText
       });
+    }
+
+    if (hasAddressMarkers) {
+      // TIER 1: Title-to-Address boundary detection
+      let currentLines = [];
+      let state = 'SEEKING';
+
+      for (let i = 0; i < allLines.length; i++) {
+        const line = allLines[i];
+        if (isPageNumber(line) && currentLines.length === 0) continue;
+        if (isSeparator(line)) {
+          if (currentLines.length > 0) {
+            pushCard(currentLines);
+            currentLines = [];
+            state = 'SEEKING';
+          }
+          continue;
+        }
+
+        if (state === 'JUST_HIT_ADDRESS') {
+          // Check if current line is an address continuation line
+          if (line.trim() && !isCardStartLine(line) && !isAddressLine(line) && line.trim().length < 120 && !line.includes('http')) {
+            currentLines.push(line);
+            pushCard(currentLines);
+            currentLines = [];
+            state = 'SEEKING';
+            continue;
+          } else {
+            pushCard(currentLines);
+            currentLines = [];
+            state = 'SEEKING';
+          }
+        }
+
+        if (isCardStartLine(line) && currentLines.length > 0) {
+          const nonBlank = currentLines.filter(l => l.trim().length > 0);
+          if (nonBlank.length >= 2) {
+            pushCard(currentLines);
+            currentLines = [];
+          }
+        }
+
+        currentLines.push(line);
+
+        if (isAddressLine(line)) {
+          state = 'JUST_HIT_ADDRESS';
+        }
+      }
+
+      if (currentLines.length > 0) {
+        pushCard(currentLines);
+      }
+    } else {
+      // TIER 2: Fallback on structural markers (Day, Content, Post, Title)
+      let currentLines = [];
+      for (let i = 0; i < allLines.length; i++) {
+        const line = allLines[i];
+        if (isPageNumber(line) && currentLines.length === 0) continue;
+        if (isSeparator(line)) {
+          if (currentLines.length > 0) {
+            pushCard(currentLines);
+            currentLines = [];
+          }
+          continue;
+        }
+
+        if (isCardStartLine(line) && currentLines.length > 0) {
+          const nonBlank = currentLines.filter(l => l.trim().length > 0);
+          if (nonBlank.length >= 2) {
+            pushCard(currentLines);
+            currentLines = [];
+          }
+        }
+
+        currentLines.push(line);
+      }
+      if (currentLines.length > 0) {
+        pushCard(currentLines);
+      }
+    }
+
+    // TIER 3: If still 0 cards, use the entire text as 1 card
+    if (cards.length === 0 && text.trim().length > 0) {
+      pushCard(allLines);
     }
 
     return cards;
@@ -7215,6 +7343,9 @@
       `;
       if (currentVal) srvSelect.value = currentVal;
     }
+
+    syncCompanyCustomInput();
+    syncServiceCustomInput();
   }
 
   function updateContentCalendarStats() {
@@ -7557,15 +7688,99 @@
     }
   }
 
-  async function handleContentCalendarUpload(e) {
-    e.preventDefault();
+  function setContentCalStatus(type, message) {
+    const banner = document.getElementById('contentCalStatusBanner');
+    const icon = document.getElementById('contentCalStatusIcon');
+    const text = document.getElementById('contentCalStatusText');
+    if (!banner || !icon || !text) return;
+
+    if (type === 'hide') {
+      banner.className = 'hidden p-3.5 rounded-xl text-xs font-semibold items-center gap-2.5 transition-all';
+      text.textContent = '';
+      icon.innerHTML = '';
+      return;
+    }
+
+    banner.classList.remove('hidden', 'bg-rose-50', 'text-rose-800', 'border-rose-200', 'bg-amber-50', 'text-amber-800', 'border-amber-200', 'bg-emerald-50', 'text-emerald-800', 'border-emerald-200');
+
+    if (type === 'error') {
+      banner.className = 'p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2.5 bg-rose-50 text-rose-800 border border-rose-200 transition-all';
+      icon.innerHTML = '<i class="fa-solid fa-circle-exclamation text-rose-600 text-sm"></i>';
+      text.textContent = message;
+    } else if (type === 'loading') {
+      banner.className = 'p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2.5 bg-amber-50 text-amber-800 border border-amber-200 transition-all';
+      icon.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-amber-600 text-sm"></i>';
+      text.textContent = message;
+    } else if (type === 'success') {
+      banner.className = 'p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2.5 bg-emerald-50 text-emerald-800 border border-emerald-200 transition-all';
+      icon.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-600 text-sm"></i>';
+      text.textContent = message;
+    }
+  }
+
+  function setGenerateButtonState(isLoading, loadingText = '') {
+    const btn = document.getElementById('btnGenerateContentCal');
+    const icon = document.getElementById('btnGenerateContentCalIcon');
+    const text = document.getElementById('btnGenerateContentCalText');
+    if (!btn) return;
+
+    if (isLoading) {
+      btn.disabled = true;
+      btn.classList.add('opacity-75', 'cursor-not-allowed');
+      if (text) text.textContent = loadingText || 'Generating...';
+      if (icon) {
+        icon.innerHTML = '<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>';
+        icon.classList.add('animate-spin');
+      }
+    } else {
+      btn.disabled = false;
+      btn.classList.remove('opacity-75', 'cursor-not-allowed');
+      if (text) text.textContent = 'Generate Content Calendar';
+      if (icon) {
+        icon.classList.remove('animate-spin');
+        icon.innerHTML = '<path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M12 14v4M10 16h4"/>';
+      }
+    }
+  }
+
+  function syncCompanyCustomInput() {
+    const compSelect = document.getElementById('contentCalCompanySelect');
+    const customComp = document.getElementById('contentCalCustomCompany');
+    const emailInput = document.getElementById('contentCalClientEmail');
+    if (!compSelect) return;
+
+    if (compSelect.value === '__custom__') {
+      customComp?.classList.remove('hidden');
+      customComp?.focus();
+    } else {
+      customComp?.classList.add('hidden');
+      if (compSelect.value && emailInput && !emailInput.value) {
+        emailInput.value = compSelect.value;
+      }
+    }
+  }
+
+  function syncServiceCustomInput() {
+    const srvSelect = document.getElementById('contentCalServiceSelect');
+    const customSrv = document.getElementById('contentCalCustomService');
+    if (!srvSelect) return;
+
+    if (srvSelect.value === '__custom__') {
+      customSrv?.classList.remove('hidden');
+      customSrv?.focus();
+    } else {
+      customSrv?.classList.add('hidden');
+    }
+  }
+
+  async function handleGenerateContentCalendar(e) {
+    if (e && e.preventDefault) e.preventDefault();
     const compSelect = document.getElementById('contentCalCompanySelect');
     const customComp = document.getElementById('contentCalCustomCompany');
     const emailInput = document.getElementById('contentCalClientEmail');
     const srvSelect = document.getElementById('contentCalServiceSelect');
     const customSrv = document.getElementById('contentCalCustomService');
     const fileInput = document.getElementById('contentCalFileInput');
-    const submitBtn = document.getElementById('btnGenerateContentCal');
 
     let company = '';
     if (compSelect?.value === '__custom__') {
@@ -7586,24 +7801,38 @@
 
     const file = state.selectedCalendarFile || fileInput?.files?.[0];
 
-    if (!company) {
-      showToast('Please select or enter a Company Name.', 'warn');
-      return;
-    }
-    if (!email || !email.includes('@')) {
-      showToast('Please enter a valid Client Email (Gmail).', 'warn');
-      return;
-    }
-    if (!service) {
-      showToast('Please select or enter a Service Name.', 'warn');
-      return;
-    }
+    // Explicit inline visual feedback on missing fields - NEVER fails silently
     if (!file) {
-      showToast('Please choose a .docx or .pdf document to parse.', 'warn');
+      setContentCalStatus('error', 'Please select a .pdf or .docx file first.');
+      showToast('Please select a .pdf or .docx file first.', 'warn');
       return;
     }
 
-    setButtonLoading(submitBtn, true, 'Parsing document in browser...');
+    if (!company) {
+      setContentCalStatus('error', 'Please select or enter a Company Name.');
+      showToast('Please select or enter a Company Name.', 'warn');
+      if (compSelect?.value === '__custom__') customComp?.focus();
+      else compSelect?.focus();
+      return;
+    }
+
+    if (!email || !email.includes('@')) {
+      setContentCalStatus('error', 'Please enter a valid Client Email (Gmail).');
+      showToast('Please enter a valid Client Email (Gmail).', 'warn');
+      emailInput?.focus();
+      return;
+    }
+
+    if (!service) {
+      setContentCalStatus('error', 'Please select or enter a Service Name.');
+      showToast('Please select or enter a Service Name.', 'warn');
+      if (srvSelect?.value === '__custom__') customSrv?.focus();
+      else srvSelect?.focus();
+      return;
+    }
+
+    setGenerateButtonState(true, 'Reading document...');
+    setContentCalStatus('loading', 'Reading document in browser...');
 
     try {
       let rawText = '';
@@ -7618,15 +7847,21 @@
         throw new Error('Unsupported file format. Please upload a .docx or .pdf file.');
       }
 
+      if (!rawText || !rawText.trim()) {
+        throw new Error('No readable text could be extracted from this document.');
+      }
+
+      setGenerateButtonState(true, 'Detecting content cards...');
+      setContentCalStatus('loading', 'Detecting content cards (Title to Address)...');
+
       const cards = parseContentCalendarText(rawText);
 
       if (!cards || cards.length === 0) {
-        setButtonLoading(submitBtn, false);
-        showToast("No content markers (e.g. 'Content 1', 'Content 2') were detected in this document. Please check the document formatting.", 'error');
-        return;
+        throw new Error('No content cards could be parsed from the document. Please verify the document structure.');
       }
 
-      setButtonLoading(submitBtn, true, `Uploading ${cards.length} content items...`);
+      setGenerateButtonState(true, `Saving ${cards.length} cards...`);
+      setContentCalStatus('loading', `Saving ${cards.length} content items into ${company}...`);
 
       const res = await apiFetch('/api/admin/content-calendar/upload', {
         method: 'POST',
@@ -7638,30 +7873,41 @@
         })
       });
 
+      if (!res.ok || !res.data?.success) {
+        throw new Error(res.data?.error || `Failed to save content calendar (HTTP ${res.status || '500'}).`);
+      }
+
+      // Success
+      setContentCalStatus('success', `Successfully generated ${cards.length} content items into ${company}!`);
+      showToast(`Successfully generated Content Calendar with ${cards.length} cards!`, 'success');
+
       if (fileInput) fileInput.value = '';
       state.selectedCalendarFile = null;
       const preview = document.getElementById('contentCalFilePreview');
       if (preview) preview.classList.add('hidden');
+      if (customComp) customComp.value = '';
+      if (customSrv) customSrv.value = '';
 
-      setButtonLoading(submitBtn, false);
-
-      if (res.ok && res.data?.success) {
-        showToast(`Successfully generated Content Calendar with ${cards.length} cards!`, 'success');
-        const folderId = res.data.folder_id;
-        await loadContentCalendarData();
-        if (folderId) {
-          openContentFolderDetail(folderId);
-        }
-      } else {
-        showToast(res.data?.error || 'Failed to save content calendar to database.', 'error');
+      const folderId = res.data.folder_id;
+      await loadContentCalendarData();
+      if (folderId) {
+        openContentFolderDetail(folderId);
       }
 
+      setTimeout(() => {
+        setContentCalStatus('hide');
+      }, 5000);
+
     } catch (err) {
-      setButtonLoading(submitBtn, false);
-      console.error('Content calendar parsing error:', err);
-      showToast(err.message || 'Failed to parse document.', 'error');
+      console.error('Content calendar parsing/upload error:', err);
+      setContentCalStatus('error', `${err.message || 'Failed to generate content calendar.'} Please check the file and try again.`);
+      showToast(err.message || 'Failed to generate content calendar.', 'error');
+    } finally {
+      setGenerateButtonState(false);
     }
   }
+
+  const handleContentCalendarUpload = handleGenerateContentCalendar;
 
   window.__whizDeleteReview = deleteReviewAdmin;
 
@@ -8798,32 +9044,20 @@
     const fileNameEl = document.getElementById('contentCalFileName');
     const fileSizeEl = document.getElementById('contentCalFileSize');
     const btnRemoveFile = document.getElementById('btnRemoveContentCalFile');
+    const btnGenerate = document.getElementById('btnGenerateContentCal');
 
-    compSelect?.addEventListener('change', () => {
-      if (compSelect.value === '__custom__') {
-        customComp?.classList.remove('hidden');
-        if (customComp) customComp.focus();
-      } else {
-        customComp?.classList.add('hidden');
-        if (compSelect.value && emailInput) {
-          emailInput.value = compSelect.value;
-        }
-      }
-    });
+    compSelect?.addEventListener('change', syncCompanyCustomInput);
+    srvSelect?.addEventListener('change', syncServiceCustomInput);
 
-    srvSelect?.addEventListener('change', () => {
-      if (srvSelect.value === '__custom__') {
-        customSrv?.classList.remove('hidden');
-        if (customSrv) customSrv.focus();
-      } else {
-        customSrv?.classList.add('hidden');
-      }
-    });
+    // Initial sync of dropdown states
+    syncCompanyCustomInput();
+    syncServiceCustomInput();
 
     const updateSelectedFile = (file) => {
       if (!file) return;
       const name = file.name.toLowerCase();
       if (!name.endsWith('.docx') && !name.endsWith('.pdf')) {
+        setContentCalStatus('error', 'Please select a valid .docx or .pdf file.');
         showToast('Please select a valid .docx or .pdf file.', 'warn');
         return;
       }
@@ -8831,18 +9065,27 @@
       if (fileNameEl) fileNameEl.textContent = file.name;
       if (fileSizeEl) fileSizeEl.textContent = `${Math.round(file.size / 1024)} KB`;
       if (filePreview) filePreview.classList.remove('hidden');
+      setContentCalStatus('hide');
     };
 
-    dropZone?.addEventListener('click', () => fileInput?.click());
-    dropZone?.addEventListener('dragover', (e) => {
+    dropZone?.addEventListener('dragenter', (e) => {
       e.preventDefault();
+      e.stopPropagation();
       dropZone.classList.add('border-[#087F70]', 'bg-[#EAF5F1]/40');
     });
-    dropZone?.addEventListener('dragleave', () => {
+    dropZone?.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.add('border-[#087F70]', 'bg-[#EAF5F1]/40');
+    });
+    dropZone?.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       dropZone.classList.remove('border-[#087F70]', 'bg-[#EAF5F1]/40');
     });
     dropZone?.addEventListener('drop', (e) => {
       e.preventDefault();
+      e.stopPropagation();
       dropZone.classList.remove('border-[#087F70]', 'bg-[#EAF5F1]/40');
       if (e.dataTransfer?.files?.[0]) {
         updateSelectedFile(e.dataTransfer.files[0]);
@@ -8855,13 +9098,25 @@
       }
     });
 
-    btnRemoveFile?.addEventListener('click', () => {
+    btnRemoveFile?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       state.selectedCalendarFile = null;
       if (fileInput) fileInput.value = '';
       if (filePreview) filePreview.classList.add('hidden');
+      setContentCalStatus('hide');
     });
 
-    document.getElementById('formUploadContentCal')?.addEventListener('submit', handleContentCalendarUpload);
+    btnGenerate?.addEventListener('click', (e) => {
+      e.preventDefault();
+      handleGenerateContentCalendar(e);
+    });
+
+    document.getElementById('formUploadContentCal')?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      handleGenerateContentCalendar(e);
+    });
+
     document.getElementById('btnRefreshContentCal')?.addEventListener('click', () => loadContentCalendarData(true));
 
     document.getElementById('searchContentCalFolders')?.addEventListener('input', (e) => {
@@ -8897,6 +9152,13 @@
     document.getElementById('btnRetryContentCalLoad')?.addEventListener('click', () => loadContentCalendarData(true));
 
     document.addEventListener('click', async (e) => {
+      const genBtn = e.target.closest('#btnGenerateContentCal');
+      if (genBtn) {
+        e.preventDefault();
+        handleGenerateContentCalendar(e);
+        return;
+      }
+
       const viewFolderBtn = e.target.closest('.btn-view-content-folder');
       if (viewFolderBtn) {
         const fId = viewFolderBtn.dataset.folderId;

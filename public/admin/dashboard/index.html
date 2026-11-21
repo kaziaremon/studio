@@ -3324,12 +3324,12 @@
               <form id="formUploadContentCal" class="space-y-5">
                 <!-- 1. Document Drop Zone / File Picker (TOP) -->
                 <div>
-                  <label class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 mb-1.5">
+                  <span class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 mb-1.5">
                     Content Document (.pdf or .docx) <span class="text-rose-500">*</span>
-                  </label>
-                  <input type="file" id="contentCalFileInput" accept=".docx, .pdf" class="hidden">
-                  <div id="contentCalDropZone" class="border-2 border-dashed border-[#E3E9EF] hover:border-[#087F70] rounded-2xl p-6 sm:p-8 text-center bg-slate-50/60 hover:bg-[#EAF5F1]/30 transition-all cursor-pointer">
-                    <div class="flex flex-col items-center justify-center space-y-2">
+                  </span>
+                  <input type="file" id="contentCalFileInput" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" class="sr-only">
+                  <label for="contentCalFileInput" id="contentCalDropZone" class="block border-2 border-dashed border-[#E3E9EF] hover:border-[#087F70] rounded-2xl p-6 sm:p-8 text-center bg-slate-50/60 hover:bg-[#EAF5F1]/30 transition-all cursor-pointer">
+                    <div class="flex flex-col items-center justify-center space-y-2 pointer-events-none">
                       <div class="w-12 h-12 rounded-2xl bg-white border border-[#E3E9EF] shadow-2xs flex items-center justify-center text-xl text-[#087F70]">
                         <i class="fa-solid fa-file-arrow-up"></i>
                       </div>
@@ -3337,10 +3337,10 @@
                         Click to browse or drag &amp; drop document
                       </div>
                       <p class="text-[11px] text-slate-400 max-w-sm">
-                        Accepts .docx and .pdf files containing structured editorial blocks (Content 1, Content 2, etc.)
+                        Accepts .docx and .pdf files — automatically detects each content card from Title to Address
                       </p>
                     </div>
-                  </div>
+                  </label>
 
                   <!-- File Preview Chip -->
                   <div id="contentCalFilePreview" class="hidden mt-3 p-3 rounded-xl bg-[#EAF5F1] border border-[#087F70]/25 flex items-center justify-between gap-3">
@@ -3351,7 +3351,7 @@
                         <div id="contentCalFileSize" class="text-[10px] text-slate-500">12 KB</div>
                       </div>
                     </div>
-                    <button type="button" id="btnRemoveContentCalFile" class="text-slate-400 hover:text-rose-600 p-1 transition-colors cursor-pointer" title="Remove file">
+                    <button type="button" id="btnRemoveContentCalFile" class="text-slate-400 hover:text-rose-600 p-1.5 transition-colors cursor-pointer rounded-lg hover:bg-rose-50" title="Remove file">
                       <i class="fa-solid fa-xmark text-sm"></i>
                     </button>
                   </div>
@@ -3376,7 +3376,7 @@
                     <label for="contentCalClientEmail" class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 mb-1.5">
                       Client Gmail <span class="text-rose-500">*</span>
                     </label>
-                    <input type="email" id="contentCalClientEmail" placeholder="client@gmail.com" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:outline-none focus:border-[#087F70] transition-all">
+                    <input type="email" id="contentCalClientEmail" placeholder="client@gmail.com" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:outline-none focus:border-[#087F70] transition-all">
                     <p class="text-[10px] text-slate-400 mt-1">Calendar automatically links when client logs in with this Gmail.</p>
                   </div>
 
@@ -3400,11 +3400,20 @@
                   </div>
                 </div>
 
+                <!-- Inline Status / Alert Banner (Instant Visual Feedback) -->
+                <div id="contentCalStatusBanner" class="hidden p-3.5 rounded-xl text-xs font-semibold items-center gap-2.5 transition-all">
+                  <div id="contentCalStatusIcon" class="shrink-0 text-sm"></div>
+                  <div id="contentCalStatusText" class="flex-1 leading-relaxed"></div>
+                </div>
+
                 <!-- 3. Prominent Primary Button -->
                 <div class="pt-2 flex items-center justify-end">
-                  <button type="submit" id="btnGenerateContentCal" class="w-full sm:w-auto px-7 py-3 rounded-xl text-xs font-bold btn-liquid-primary shadow-xs hover:shadow transition-all flex items-center justify-center gap-2 cursor-pointer">
-                    <i class="fa-solid fa-wand-magic-sparkles"></i>
-                    <span>Generate Content Calendar</span>
+                  <button type="button" id="btnGenerateContentCal" class="w-full sm:w-auto px-6 py-3 rounded-xl text-xs font-bold btn-liquid-primary shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2.5 cursor-pointer select-none">
+                    <svg id="btnGenerateContentCalIcon" class="w-[18px] h-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/>
+                      <path d="M12 14v4M10 16h4"/>
+                    </svg>
+                    <span id="btnGenerateContentCalText" class="tracking-wide">Generate Content Calendar</span>
                   </button>
                 </div>
               </form>
