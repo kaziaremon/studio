@@ -7639,8 +7639,8 @@
                 <i class="fa-solid fa-shapes text-[9px]"></i>
                 ${escapeHtml(service)}
               </span>
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700 shrink-0">
-                <i class="fa-solid fa-layer-group text-[9px] text-slate-400"></i>
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 shrink-0 border border-slate-200/60">
+                <i class="fa-solid fa-layer-group text-[9px] text-[#087F70]"></i>
                 ${count} Cards
               </span>
             </div>
@@ -7657,13 +7657,13 @@
           </div>
 
           <div class="pt-3 border-t border-[#E3E9EF] flex items-center justify-between text-xs">
-            <span class="text-[10px] text-slate-400">
+            <span class="text-[10px] text-slate-400 font-medium">
               Updated: ${escapeHtml(updatedStr)}
             </span>
-            <div class="flex items-center gap-1">
-              <button type="button" class="btn-view-content-folder px-3 py-1.5 rounded-lg text-xs font-bold bg-[#EAF5F1] hover:bg-[#d8ece4] text-[#087F70] transition-colors cursor-pointer" data-folder-id="${escapeHtml(f.id)}">
+            <div class="flex items-center gap-1.5">
+              <button type="button" class="btn-view-content-folder px-3 py-1.5 rounded-lg text-xs font-bold bg-[#EAF5F1] hover:bg-[#d8ece4] text-[#087F70] transition-colors cursor-pointer flex items-center gap-1" data-folder-id="${escapeHtml(f.id)}">
                 <span>View</span>
-                <i class="fa-solid fa-chevron-right text-[9px] ml-1"></i>
+                <i class="fa-solid fa-chevron-right text-[9px]"></i>
               </button>
               <button type="button" class="btn-edit-content-folder p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer" data-folder-id="${escapeHtml(f.id)}" title="Edit Folder">
                 <i class="fa-solid fa-pen-to-square text-xs"></i>

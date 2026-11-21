@@ -3229,27 +3229,6 @@
                TAB 14: CONTENT CALENDAR HUB
                =================================================================== -->
           <div id="view_content_calendar" data-tab-name="content_calendar" class="hidden space-y-6">
-            <!-- Header Banner (Clean Agency Styling - Zero Infra Labels) -->
-            <div class="p-6 sm:p-7 rounded-3xl bg-white border border-[#E3E9EF] shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div class="space-y-1">
-                <div class="flex items-center gap-2">
-                  <span class="w-8 h-8 rounded-xl bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20 flex items-center justify-center text-sm shadow-2xs">
-                    <i class="fa-solid fa-calendar-days"></i>
-                  </span>
-                  <h2 class="text-xl sm:text-2xl font-black text-[#172B36] tracking-tight">Content Calendar Hub</h2>
-                </div>
-                <p class="text-xs sm:text-sm text-slate-500 max-w-2xl">
-                  Manage, generate, and organize client content calendars. Upload documents to automatically split and publish serialized editorial deliverables.
-                </p>
-              </div>
-              <div class="flex items-center gap-2 self-start sm:self-auto">
-                <button type="button" id="btnRefreshContentCal" class="px-4 py-2.5 rounded-xl text-xs font-bold bg-[#EAF5F1] text-[#087F70] hover:bg-[#d8ece4] border border-[#087F70]/20 transition-all flex items-center gap-2 cursor-pointer shadow-2xs">
-                  <i class="fa-solid fa-arrows-rotate text-xs"></i>
-                  <span>Refresh</span>
-                </button>
-              </div>
-            </div>
-
             <!-- Error State Container (Displays API/runtime errors visibly) -->
             <div id="contentCalErrorState" class="hidden p-6 sm:p-8 rounded-3xl bg-rose-50/70 border border-rose-200 text-center space-y-3">
               <div class="w-12 h-12 rounded-2xl bg-white border border-rose-200 text-rose-600 flex items-center justify-center mx-auto text-xl shadow-2xs">
@@ -3264,12 +3243,12 @@
               </button>
             </div>
 
-            <!-- KPI Metric Cards Grid -->
+            <!-- KPI Metric Cards Grid (Clean Agency Metrics at Top) -->
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs">
                 <div class="flex items-center justify-between text-slate-400 mb-2">
-                  <span class="text-[10px] font-bold uppercase tracking-wider">Total Folders</span>
-                  <div class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center text-xs">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Folders</span>
+                  <div class="w-7 h-7 rounded-lg bg-[#EAF5F1] text-[#087F70] flex items-center justify-center text-xs">
                     <i class="fa-solid fa-folder-open"></i>
                   </div>
                 </div>
@@ -3279,7 +3258,7 @@
 
               <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs">
                 <div class="flex items-center justify-between text-slate-400 mb-2">
-                  <span class="text-[10px] font-bold uppercase tracking-wider">Content Cards</span>
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Content Cards</span>
                   <div class="w-7 h-7 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center text-xs">
                     <i class="fa-solid fa-layer-group"></i>
                   </div>
@@ -3290,7 +3269,7 @@
 
               <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs">
                 <div class="flex items-center justify-between text-slate-400 mb-2">
-                  <span class="text-[10px] font-bold uppercase tracking-wider">Clients Linked</span>
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Clients Linked</span>
                   <div class="w-7 h-7 rounded-lg bg-purple-50 text-purple-700 flex items-center justify-center text-xs">
                     <i class="fa-solid fa-users"></i>
                   </div>
@@ -3301,7 +3280,7 @@
 
               <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs">
                 <div class="flex items-center justify-between text-slate-400 mb-2">
-                  <span class="text-[10px] font-bold uppercase tracking-wider">Avg Cards / Folder</span>
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Avg Cards / Folder</span>
                   <div class="w-7 h-7 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center text-xs">
                     <i class="fa-solid fa-chart-simple"></i>
                   </div>
@@ -3312,43 +3291,48 @@
             </div>
 
             <!-- Upload & Generate Card -->
-            <div class="p-6 sm:p-7 rounded-3xl bg-white border border-[#E3E9EF] shadow-xs space-y-6">
+            <div class="p-5 sm:p-7 rounded-2xl sm:rounded-3xl bg-white border border-[#E3E9EF] shadow-xs space-y-6">
               <div class="border-b border-[#E3E9EF] pb-4">
-                <h3 class="text-base font-bold text-[#172B36] flex items-center gap-2">
-                  <i class="fa-solid fa-cloud-arrow-up text-[#087F70]"></i>
+                <h3 class="text-sm sm:text-base font-bold text-[#172B36] flex items-center gap-2">
+                  <span class="w-7 h-7 rounded-lg bg-[#EAF5F1] text-[#087F70] flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                  </span>
                   <span>Upload &amp; Generate Content Calendar</span>
                 </h3>
-                <p class="text-xs text-slate-500 mt-0.5">Select a content document (.docx or .pdf) and assign to a client and service retainer.</p>
+                <p class="text-xs text-slate-500 mt-1">Select a content document (.docx or .pdf) and assign to a client and service retainer.</p>
               </div>
 
-              <form id="formUploadContentCal" class="space-y-5">
+              <form id="formUploadContentCal" class="space-y-6">
                 <!-- 1. Document Drop Zone / File Picker (TOP) -->
                 <div>
-                  <span class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 mb-1.5">
-                    Content Document (.pdf or .docx) <span class="text-rose-500">*</span>
+                  <span class="block text-xs font-bold text-[#172B36] mb-2 flex items-center gap-1">
+                    <span>Content Document (.pdf or .docx)</span>
+                    <span class="text-rose-500">*</span>
                   </span>
                   <input type="file" id="contentCalFileInput" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" class="sr-only">
-                  <label for="contentCalFileInput" id="contentCalDropZone" class="block border-2 border-dashed border-[#E3E9EF] hover:border-[#087F70] rounded-2xl p-6 sm:p-8 text-center bg-slate-50/60 hover:bg-[#EAF5F1]/30 transition-all cursor-pointer">
+                  <label for="contentCalFileInput" id="contentCalDropZone" class="block border-2 border-dashed border-[#CBD5E1] hover:border-[#087F70] rounded-2xl p-6 sm:p-7 text-center bg-[#F8FAFC] hover:bg-[#EAF5F1]/30 transition-all cursor-pointer">
                     <div class="flex flex-col items-center justify-center space-y-2 pointer-events-none">
-                      <div class="w-12 h-12 rounded-2xl bg-white border border-[#E3E9EF] shadow-2xs flex items-center justify-center text-xl text-[#087F70]">
+                      <div class="w-12 h-12 rounded-2xl bg-white border border-slate-200 shadow-2xs flex items-center justify-center text-xl text-[#087F70]">
                         <i class="fa-solid fa-file-arrow-up"></i>
                       </div>
-                      <div class="text-xs font-bold text-[#172B36]">
+                      <div class="text-xs sm:text-sm font-bold text-[#172B36]">
                         Click to browse or drag &amp; drop document
                       </div>
                       <p class="text-[11px] text-slate-400 max-w-sm">
-                        Accepts .docx and .pdf files — automatically detects each content card from Title to Address
+                        Supports PDF (<span class="font-medium text-slate-600">.pdf</span>) and Word (<span class="font-medium text-slate-600">.docx</span>) · Auto-detects content cards from Title to Address
                       </p>
                     </div>
                   </label>
 
                   <!-- File Preview Chip -->
-                  <div id="contentCalFilePreview" class="hidden mt-3 p-3 rounded-xl bg-[#EAF5F1] border border-[#087F70]/25 flex items-center justify-between gap-3">
-                    <div class="flex items-center gap-2.5 min-w-0">
-                      <i class="fa-solid fa-file-lines text-base text-[#087F70] shrink-0"></i>
+                  <div id="contentCalFilePreview" class="hidden mt-3 p-3.5 rounded-xl bg-[#EAF5F1] border border-[#087F70]/25 flex items-center justify-between gap-3 shadow-2xs">
+                    <div class="flex items-center gap-3 min-w-0">
+                      <div class="w-8 h-8 rounded-lg bg-white border border-[#087F70]/20 flex items-center justify-center text-[#087F70] shrink-0">
+                        <i class="fa-solid fa-file-lines text-sm"></i>
+                      </div>
                       <div class="min-w-0">
                         <div id="contentCalFileName" class="text-xs font-bold text-[#172B36] truncate">document.docx</div>
-                        <div id="contentCalFileSize" class="text-[10px] text-slate-500">12 KB</div>
+                        <div id="contentCalFileSize" class="text-[10px] text-slate-500 font-medium">12 KB</div>
                       </div>
                     </div>
                     <button type="button" id="btnRemoveContentCalFile" class="text-slate-400 hover:text-rose-600 p-1.5 transition-colors cursor-pointer rounded-lg hover:bg-rose-50" title="Remove file">
@@ -3357,54 +3341,78 @@
                   </div>
                 </div>
 
-                <!-- 2. Clean 3-Column Responsive Input Row (DIRECTLY BELOW FILE BOX) -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- 2. Clean 3-Column Structured Input Row -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5 items-start">
                   <!-- Company Name Dropdown with Custom Option -->
-                  <div>
-                    <label for="contentCalCompanySelect" class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 mb-1.5">
-                      Company Name <span class="text-rose-500">*</span>
+                  <div class="space-y-1.5">
+                    <label for="contentCalCompanySelect" class="block text-xs font-bold text-[#172B36] flex items-center gap-1">
+                      <span>Company Name</span>
+                      <span class="text-rose-500">*</span>
                     </label>
-                    <select id="contentCalCompanySelect" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:outline-none focus:border-[#087F70] transition-all cursor-pointer">
-                      <option value="">Select an existing client...</option>
-                      <option value="__custom__">+ Enter Custom Company Name</option>
-                    </select>
-                    <input type="text" id="contentCalCustomCompany" placeholder="Enter company name..." class="hidden mt-2 w-full px-3.5 py-2 rounded-xl bg-white border border-[#087F70]/40 text-xs text-[#172B36] focus:outline-none focus:border-[#087F70] transition-all">
+                    <div class="relative">
+                      <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <i class="fa-solid fa-building text-xs"></i>
+                      </div>
+                      <select id="contentCalCompanySelect" class="w-full h-11 pl-9 pr-8 rounded-[10px] bg-white border border-slate-300 text-xs font-medium text-[#172B36] focus:outline-none focus:ring-2 focus:ring-[#087F70]/20 focus:border-[#087F70] transition-all cursor-pointer appearance-none shadow-2xs">
+                        <option value="">Select an existing client...</option>
+                        <option value="__custom__">+ Enter Custom Company Name</option>
+                      </select>
+                      <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
+                        <i class="fa-solid fa-chevron-down text-[10px]"></i>
+                      </div>
+                    </div>
+                    <input type="text" id="contentCalCustomCompany" placeholder="Enter company name..." class="hidden mt-2.5 w-full h-11 px-3.5 rounded-[10px] bg-white border border-[#087F70]/50 text-xs font-medium text-[#172B36] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#087F70]/20 focus:border-[#087F70] transition-all shadow-2xs">
                   </div>
 
                   <!-- Client Gmail (Primary Identifier) -->
-                  <div>
-                    <label for="contentCalClientEmail" class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 mb-1.5">
-                      Client Gmail <span class="text-rose-500">*</span>
+                  <div class="space-y-1.5">
+                    <label for="contentCalClientEmail" class="block text-xs font-bold text-[#172B36] flex items-center gap-1">
+                      <span>Client Gmail</span>
+                      <span class="text-rose-500">*</span>
                     </label>
-                    <input type="email" id="contentCalClientEmail" placeholder="client@gmail.com" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:outline-none focus:border-[#087F70] transition-all">
-                    <p class="text-[10px] text-slate-400 mt-1">Calendar automatically links when client logs in with this Gmail.</p>
+                    <div class="relative">
+                      <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <i class="fa-solid fa-envelope text-xs"></i>
+                      </div>
+                      <input type="email" id="contentCalClientEmail" placeholder="client@gmail.com" class="w-full h-11 pl-9 pr-3.5 rounded-[10px] bg-white border border-slate-300 text-xs font-medium text-[#172B36] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#087F70]/20 focus:border-[#087F70] transition-all shadow-2xs">
+                    </div>
+                    <p class="text-[11px] text-slate-400 leading-tight">Calendar automatically links when client logs in with this Gmail.</p>
                   </div>
 
-                  <!-- Service Name Dropdown with 7 Standard Whiz Services + Custom Option -->
-                  <div>
-                    <label for="contentCalServiceSelect" class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 mb-1.5">
-                      Service Name <span class="text-rose-500">*</span>
+                  <!-- Service Name Dropdown with Standard Whiz Services + Custom Option -->
+                  <div class="space-y-1.5">
+                    <label for="contentCalServiceSelect" class="block text-xs font-bold text-[#172B36] flex items-center gap-1">
+                      <span>Service Name</span>
+                      <span class="text-rose-500">*</span>
                     </label>
-                    <select id="contentCalServiceSelect" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:outline-none focus:border-[#087F70] transition-all cursor-pointer">
-                      <option value="">Select a service...</option>
-                      <option value="Facebook Marketing">Facebook Marketing</option>
-                      <option value="Instagram Marketing">Instagram Marketing</option>
-                      <option value="Facebook Ads">Facebook Ads</option>
-                      <option value="Instagram Ads">Instagram Ads</option>
-                      <option value="Social Media Optimization">Social Media Optimization</option>
-                      <option value="LinkedIn Optimization">LinkedIn Optimization</option>
-                      <option value="LinkedIn Marketing">LinkedIn Marketing</option>
-                      <option value="__custom__">+ Enter Custom Service</option>
-                    </select>
-                    <input type="text" id="contentCalCustomService" placeholder="e.g. YouTube Growth Strategy" class="hidden mt-2 w-full px-3.5 py-2 rounded-xl bg-white border border-[#087F70]/40 text-xs text-[#172B36] focus:outline-none focus:border-[#087F70] transition-all">
+                    <div class="relative">
+                      <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <i class="fa-solid fa-briefcase text-xs"></i>
+                      </div>
+                      <select id="contentCalServiceSelect" class="w-full h-11 pl-9 pr-8 rounded-[10px] bg-white border border-slate-300 text-xs font-medium text-[#172B36] focus:outline-none focus:ring-2 focus:ring-[#087F70]/20 focus:border-[#087F70] transition-all cursor-pointer appearance-none shadow-2xs">
+                        <option value="">Select a service...</option>
+                        <option value="Facebook Marketing">Facebook Marketing</option>
+                        <option value="Instagram Marketing">Instagram Marketing</option>
+                        <option value="Facebook Ads">Facebook Ads</option>
+                        <option value="Instagram Ads">Instagram Ads</option>
+                        <option value="Social Media Optimization">Social Media Optimization</option>
+                        <option value="LinkedIn Optimization">LinkedIn Optimization</option>
+                        <option value="LinkedIn Marketing">LinkedIn Marketing</option>
+                        <option value="__custom__">+ Enter Custom Service</option>
+                      </select>
+                      <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
+                        <i class="fa-solid fa-chevron-down text-[10px]"></i>
+                      </div>
+                    </div>
+                    <input type="text" id="contentCalCustomService" placeholder="e.g. YouTube Growth Strategy" class="hidden mt-2.5 w-full h-11 px-3.5 rounded-[10px] bg-white border border-[#087F70]/50 text-xs font-medium text-[#172B36] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#087F70]/20 focus:border-[#087F70] transition-all shadow-2xs">
                   </div>
                 </div>
 
-                <!-- 3. Prominent Primary Button -->
-                <div class="pt-2 flex flex-col items-end gap-3 w-full">
-                  <div class="flex items-center justify-end w-full">
-                    <button type="button" id="btnGenerateContentCal" class="w-full sm:w-auto btn-liquid-primary shadow-sm hover:shadow-md transition-all select-none" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 44px; padding: 0 22px; width: auto; white-space: nowrap; border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer;">
-                      <svg id="btnGenerateContentCalIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;min-width:18px;max-width:18px;flex-shrink:0;display:block;" aria-hidden="true">
+                <!-- 3. Dedicated Centered Action Footer -->
+                <div class="pt-5 border-t border-slate-100 flex flex-col items-center justify-center gap-3.5 w-full text-center">
+                  <div class="w-full flex items-center justify-center">
+                    <button type="button" id="btnGenerateContentCal" class="w-full sm:w-auto min-w-0 sm:min-w-[270px] h-[46px] px-8 rounded-xl btn-liquid-primary shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all select-none flex items-center justify-center gap-2.5 text-sm font-extrabold tracking-wide cursor-pointer text-[#0F172A]">
+                      <svg id="btnGenerateContentCalIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;min-width:18px;max-width:18px;flex-shrink:0;display:block;" aria-hidden="true">
                         <path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/>
                         <path d="M12 14v4M10 16h4"/>
                       </svg>
@@ -3413,9 +3421,9 @@
                   </div>
 
                   <!-- Inline Status / Alert Banner (Instant Visual Feedback directly below the button) -->
-                  <div id="contentCalStatusBanner" style="display: none;" class="w-full">
+                  <div id="contentCalStatusBanner" style="display: none;" class="w-full max-w-xl mx-auto">
                     <div id="contentCalStatusIcon" class="shrink-0 text-sm"></div>
-                    <div id="contentCalStatusText" class="flex-1 leading-relaxed"></div>
+                    <div id="contentCalStatusText" class="flex-1 leading-relaxed text-left text-xs font-semibold"></div>
                   </div>
                 </div>
               </form>
@@ -3423,15 +3431,24 @@
 
             <!-- FOLDERS VIEW CONTAINER -->
             <div id="contentCalFoldersView" class="space-y-4">
-              <!-- Controls: Search & Header -->
-              <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+              <!-- Controls: Search & Header with Relocated Refresh Button -->
+              <div class="p-4 sm:p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3.5">
                 <div class="flex items-center gap-2.5">
-                  <h3 class="text-sm font-bold text-[#172B36]">Client Content Folders</h3>
-                  <span id="contentCalFoldersCountBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20">0 Folders</span>
+                  <div class="w-7 h-7 rounded-lg bg-[#EAF5F1] text-[#087F70] flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-folder-open"></i>
+                  </div>
+                  <h3 class="text-sm sm:text-base font-bold text-[#172B36]">Client Content Folders</h3>
+                  <span id="contentCalFoldersCountBadge" class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20">0 Folders</span>
                 </div>
-                <div class="relative flex-1 max-w-md">
-                  <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                  <input type="text" id="searchContentCalFolders" placeholder="Search folders by company, email, or service..." class="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] focus:outline-none focus:border-[#087F70] transition-all">
+                <div class="flex items-center gap-2.5 w-full sm:w-auto">
+                  <div class="relative flex-1 sm:w-72 md:w-80">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                    <input type="text" id="searchContentCalFolders" placeholder="Search by client, service, or email..." class="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-50 border border-[#E3E9EF] text-xs text-[#172B36] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#087F70]/20 focus:border-[#087F70] transition-all">
+                  </div>
+                  <button type="button" id="btnRefreshContentCal" class="h-9 px-3.5 rounded-xl text-xs font-bold bg-[#EAF5F1] hover:bg-[#d8ece4] text-[#087F70] border border-[#087F70]/20 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer shadow-2xs hover:shadow-xs active:scale-95" title="Refresh content folders">
+                    <i class="fa-solid fa-arrows-rotate text-xs"></i>
+                    <span class="hidden sm:inline">Refresh</span>
+                  </button>
                 </div>
               </div>
 
@@ -3441,13 +3458,33 @@
               </div>
 
               <!-- Empty Folders State -->
-              <div id="contentCalEmptyFolders" class="p-12 rounded-3xl bg-white border border-[#E3E9EF] text-center space-y-3">
-                <div class="w-14 h-14 rounded-2xl bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20 flex items-center justify-center mx-auto text-2xl shadow-2xs">
-                  <i class="fa-solid fa-calendar-xmark"></i>
+              <div id="contentCalEmptyFolders" class="p-8 sm:p-10 rounded-2xl bg-[#F8FAFC] border-2 border-dashed border-[#E2E8F0] text-center space-y-4">
+                <div class="relative w-16 h-16 mx-auto flex items-center justify-center">
+                  <div class="absolute inset-0 rounded-2xl bg-[#EAF5F1] opacity-70"></div>
+                  <div class="relative w-12 h-12 rounded-xl bg-white border border-[#087F70]/20 shadow-2xs flex items-center justify-center text-xl text-[#087F70]">
+                    <i class="fa-solid fa-calendar-plus"></i>
+                  </div>
                 </div>
-                <div class="space-y-1 max-w-sm mx-auto">
-                  <h4 class="text-sm font-bold text-[#172B36]">No Content Folders Yet</h4>
-                  <p class="text-xs text-slate-500">Upload a content document above to generate your first client calendar folder.</p>
+                <div class="space-y-1.5 max-w-md mx-auto">
+                  <h4 class="text-sm sm:text-base font-bold text-[#172B36]">No Content Folders Yet</h4>
+                  <p class="text-xs text-slate-500 leading-relaxed">
+                    Upload a content document above to generate your first client calendar folder. Posts will automatically split and serialize into deliverable cards.
+                  </p>
+                </div>
+                <!-- 3 Minimal Step Chips -->
+                <div class="flex flex-wrap items-center justify-center gap-2 pt-1 max-w-lg mx-auto">
+                  <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-white border border-slate-200 text-slate-600 shadow-2xs">
+                    <span class="w-4 h-4 rounded-full bg-[#EAF5F1] text-[#087F70] text-[9px] font-extrabold flex items-center justify-center">1</span>
+                    Upload PDF / DOCX
+                  </span>
+                  <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-white border border-slate-200 text-slate-600 shadow-2xs">
+                    <span class="w-4 h-4 rounded-full bg-[#EAF5F1] text-[#087F70] text-[9px] font-extrabold flex items-center justify-center">2</span>
+                    Assign Client Gmail
+                  </span>
+                  <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-white border border-slate-200 text-slate-600 shadow-2xs">
+                    <span class="w-4 h-4 rounded-full bg-[#EAF5F1] text-[#087F70] text-[9px] font-extrabold flex items-center justify-center">3</span>
+                    Auto-Generate Cards
+                  </span>
                 </div>
               </div>
             </div>
@@ -6005,7 +6042,7 @@
 
   <!-- Admin Dashboard JavaScript Controller -->
   <script src="/assets/js/admin-mock-data.js?v=4.0"></script>
-  <script src="/assets/js/admin-dashboard.min.js?v=202611-v6"></script>
+  <script src="/assets/js/admin-dashboard.min.js?v=202611-v7"></script>
 
 </body>
 </html>
