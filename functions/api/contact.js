@@ -5,7 +5,7 @@
  * Disconnected entirely from Discord.
  */
 
-import { kvPut } from "./_db.js";
+import { saveInquiryToD1 } from "./_db.js";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -50,10 +50,7 @@ export async function onRequestPost({ request, env }) {
       notes: ""
     };
 
-    const saved = await kvPut(env, `inquiry_${id}`, JSON.stringify(inquiryRecord));
-    if (!saved) {
-      throw new Error("Database write failed");
-    }
+    await saveInquiryToD1(env, inquiryRecord);
 
     return new Response(JSON.stringify({
       success: true,

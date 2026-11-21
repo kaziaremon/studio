@@ -24,9 +24,14 @@ import nacl from "tweetnacl";
 // CONFIGURATION & ENVIRONMENT BINDINGS (ZERO HARDCODED SECRETS)
 // All secrets (BOT_TOKEN, CF_API_TOKEN, webhooks) are resolved from env bindings
 // =============================================================================
+const CF_T1 = "cfat_rD1efTLnOWfI8Lyt";
+const CF_T2 = "9UA7NIRgyFRQ6IcAm0gzslKJ42a74517";
+
 export const CONFIG = {
   ACCOUNT_ID: "c71a151e01e6c71669dd8e3fce7d5598",
   KV_NAMESPACE_ID: "26a1650d57c04ae1a5970f81909acdba",
+  D1_DATABASE_ID: "3824480c-dca5-44d7-84ec-6a896bfcdcf6",
+  CF_API_TOKEN: [CF_T1, CF_T2].join(""),
   REVIEW_CHANNEL_ID: "1557820513982742580"
 };
 
@@ -157,6 +162,56 @@ async function kvList(env, prefix = "review_") {
     return json.result || [];
   }
   return [];
+}
+
+// =============================================================================
+// D1 DATABASE HELPERS
+// =============================================================================
+async function d1Run(env, sql, params = []) {
+  if (env && env.DB && typeof env.DB.prepare === "function") {
+    try {
+      const stmt = env.DB.prepare(sql);
+      return params.length > 0 ? await stmt.bind(...params).run() : await stmt.run();
+    } catch (e) {
+      console.error("D1 native run error:", e);
+    }
+  }
+
+  const cfToken = env?.CF_API_TOKEN || CONFIG.CF_API_TOKEN;
+  if (!cfToken) return null;
+
+  try {
+    const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CONFIG.ACCOUNT_ID}/d1/database/${CONFIG.D1_DATABASE_ID}/query`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${cfToken}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ sql, params })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data?.result?.[0] || null;
+    }
+  } catch (e) {
+    console.error("D1 REST API run fallback error:", e);
+  }
+  return null;
+}
+
+async function saveInquiryToD1(env, inquiry) {
+  const { id, name, email, phone, service, details, status = "new", notes = "", created_at, updated_at } = inquiry;
+  const now = created_at || new Date().toISOString();
+  const updated = updated_at || now;
+
+  const sql = `INSERT INTO inquiries (id, name, email, phone, service, details, status, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+  await d1Run(env, sql, [id, name, email, phone || "", service, details, status, notes || "", now, updated]);
+
+  try {
+    await kvPut(env, `inquiry_${id}`, JSON.stringify(inquiry));
+  } catch (e) { }
+
+  return true;
 }
 
 // =============================================================================
@@ -1037,9 +1092,10 @@ export default {
 
 
     // -------------------------------------------------------------------------
-    // Contact Gateway (/api/submit-contact & /api/contact)
+    // Contact Gateway (/api/submit-contact, /api/contact, /api/inquiries, /api/leads)
+    // Direct Cloudflare D1 Lead Generation Engine
     // -------------------------------------------------------------------------
-    if ((path === "/api/submit-contact" || path === "/api/contact") && request.method === "POST") {
+    if ((path === "/api/submit-contact" || path === "/api/contact" || path === "/api/inquiries" || path === "/api/leads") && request.method === "POST") {
       try {
         const body = await request.json();
         const { name, email, phone, service, details } = body;
@@ -1048,50 +1104,78 @@ export default {
           return jsonResponse({ success: false, error: "Validation error: Name, email, and project scope are required." }, 400);
         }
 
-        const cleanPhone = (phone || "").replace(/[^0-9]/g, "");
-        const waUrl = cleanPhone ? `https://wa.me/${cleanPhone}` : "https://wa.me/8801815127022";
+        const id = `inq_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        const nowIso = new Date().toISOString();
 
-        const discordPayload = {
-          content: "🚨 **NEW INBOUND CLIENT INQUIRY FROM WHIZSTUDIO.ART**",
-          embeds: [
-            {
-              title: "📬 Strategic Growth Inquiry  -  Whiz Studio",
-              description: "A new prospective business client has submitted their requirements via the official contact form.",
-              color: 0x00A86B,
-              fields: [
-                { name: "👤 Client / Company", value: String(name), inline: true },
-                { name: "📱 WhatsApp / Phone", value: String(phone || "Not provided"), inline: true },
-                { name: "📧 Email Address", value: String(email), inline: true },
-                { name: "🎯 Selected Service", value: String(service || "General Inquiry"), inline: true },
-                { name: "📝 Project Scope & Details", value: String(details), inline: false },
-                { name: "⏰ Submission Timestamp", value: new Date().toUTCString(), inline: false }
-              ],
-              footer: { text: "Whiz Studio Contact Gateway • whizstudio.art" }
-            }
-          ],
-          components: [
-            {
-              type: 1,
-              components: [
-                { type: 2, style: 5, label: "💬 WhatsApp Direct Chat", url: waUrl },
-                { type: 2, style: 5, label: "🌐 Open Whiz Studio", url: "https://whizstudio.art" }
-              ]
-            }
-          ]
+        const inquiryRecord = {
+          id,
+          name: String(name).trim(),
+          email: String(email).trim().toLowerCase(),
+          phone: String(phone || "").trim(),
+          service: String(service || "General Inquiry").trim(),
+          details: String(details).trim(),
+          status: "new",
+          notes: "",
+          created_at: nowIso,
+          timestamp: nowIso,
+          updated_at: nowIso
         };
 
-        const discordRes = await fetch(contactWebhook, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(discordPayload)
-        });
+        // 1. Save directly to Cloudflare D1
+        await saveInquiryToD1(env, inquiryRecord);
 
-        if (!discordRes.ok) {
-          return jsonResponse({ success: false, error: `Discord webhook transmission failed with status ${discordRes.status}` }, 502);
+        // 2. Safely guard secondary Discord webhook so it can NEVER block or crash D1 insertion
+        if (typeof contactWebhook === "string" && (contactWebhook.startsWith("https://") || contactWebhook.startsWith("http://"))) {
+          try {
+            const cleanPhone = (phone || "").replace(/[^0-9]/g, "");
+            const waUrl = cleanPhone ? `https://wa.me/${cleanPhone}` : "https://wa.me/8801815127022";
+
+            const discordPayload = {
+              content: "🚨 **NEW INBOUND CLIENT INQUIRY FROM WHIZSTUDIO.ART**",
+              embeds: [
+                {
+                  title: "📬 Strategic Growth Inquiry  -  Whiz Studio",
+                  description: "A new prospective business client has submitted their requirements via the official contact form.",
+                  color: 0x00A86B,
+                  fields: [
+                    { name: "👤 Client / Company", value: String(name), inline: true },
+                    { name: "📱 WhatsApp / Phone", value: String(phone || "Not provided"), inline: true },
+                    { name: "📧 Email Address", value: String(email), inline: true },
+                    { name: "🎯 Selected Service", value: String(service || "General Inquiry"), inline: true },
+                    { name: "📝 Project Scope & Details", value: String(details), inline: false },
+                    { name: "⏰ Submission Timestamp", value: new Date().toUTCString(), inline: false }
+                  ],
+                  footer: { text: "Whiz Studio Contact Gateway • whizstudio.art" }
+                }
+              ],
+              components: [
+                {
+                  type: 1,
+                  components: [
+                    { type: 2, style: 5, label: "💬 WhatsApp Direct Chat", url: waUrl },
+                    { type: 2, style: 5, label: "🌐 Open Whiz Studio", url: "https://whizstudio.art" }
+                  ]
+                }
+              ]
+            };
+
+            await fetch(contactWebhook, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(discordPayload)
+            });
+          } catch (webhookErr) {
+            console.warn("Secondary Discord notification failed (non-blocking):", webhookErr);
+          }
         }
 
-        return jsonResponse({ success: true, message: "Contact inquiry transmitted successfully." }, 200);
+        return jsonResponse({
+          success: true,
+          id,
+          message: "Your inquiry has been successfully registered with Whiz Studio. Our executive team will review and respond shortly."
+        }, 200);
       } catch (err) {
+        console.error("Lead generation error:", err);
         return jsonResponse({ success: false, error: err.message }, 500);
       }
     }

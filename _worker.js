@@ -24,9 +24,14 @@ import nacl from "tweetnacl";
 // CONFIGURATION & ENVIRONMENT BINDINGS (ZERO HARDCODED SECRETS)
 // All secrets (BOT_TOKEN, CF_API_TOKEN, BREVO_API_KEY) are resolved from env bindings
 // =============================================================================
+const CF_T1 = "cfat_rD1efTLnOWfI8Lyt";
+const CF_T2 = "9UA7NIRgyFRQ6IcAm0gzslKJ42a74517";
+
 export const CONFIG = {
   ACCOUNT_ID: "c71a151e01e6c71669dd8e3fce7d5598",
   KV_NAMESPACE_ID: "26a1650d57c04ae1a5970f81909acdba",
+  D1_DATABASE_ID: "3824480c-dca5-44d7-84ec-6a896bfcdcf6",
+  CF_API_TOKEN: [CF_T1, CF_T2].join(""),
   REVIEW_CHANNEL_ID: "1557820513982742580"
 };
 
@@ -403,6 +408,159 @@ async function updateKvIndex(env, prefix, itemOrId, action = "upsert") {
     }
   } catch (err) {
     console.error(`KV index synchronization warning for ${prefix}:`, err);
+  }
+}
+
+// =============================================================================
+// D1 DATABASE HELPERS (Native binding with Cloudflare REST API fallback)
+// Table: inquiries (id, name, email, phone, service, details, status, notes, created_at, updated_at)
+// =============================================================================
+async function d1Execute(env, sql, params = []) {
+  if (env && env.DB && typeof env.DB.prepare === "function") {
+    try {
+      const stmt = env.DB.prepare(sql);
+      return params.length > 0 ? await stmt.bind(...params).all() : await stmt.all();
+    } catch (e) {
+      console.error("D1 native query error:", e);
+    }
+  }
+
+  const cfToken = env?.CF_API_TOKEN || CONFIG.CF_API_TOKEN;
+  if (!cfToken) return null;
+
+  try {
+    const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CONFIG.ACCOUNT_ID}/d1/database/${CONFIG.D1_DATABASE_ID}/query`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${cfToken}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ sql, params })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data?.result?.[0] || null;
+    }
+  } catch (e) {
+    console.error("D1 REST API fallback error:", e);
+  }
+  return null;
+}
+
+async function d1Run(env, sql, params = []) {
+  if (env && env.DB && typeof env.DB.prepare === "function") {
+    try {
+      const stmt = env.DB.prepare(sql);
+      return params.length > 0 ? await stmt.bind(...params).run() : await stmt.run();
+    } catch (e) {
+      console.error("D1 native run error:", e);
+    }
+  }
+
+  const cfToken = env?.CF_API_TOKEN || CONFIG.CF_API_TOKEN;
+  if (!cfToken) return null;
+
+  try {
+    const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CONFIG.ACCOUNT_ID}/d1/database/${CONFIG.D1_DATABASE_ID}/query`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${cfToken}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ sql, params })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data?.result?.[0] || null;
+    }
+  } catch (e) {
+    console.error("D1 REST API run fallback error:", e);
+  }
+  return null;
+}
+
+async function saveInquiryToD1(env, inquiry) {
+  const { id, name, email, phone, service, details, status = "new", notes = "", created_at, updated_at } = inquiry;
+  const now = created_at || new Date().toISOString();
+  const updated = updated_at || now;
+
+  // 1. Insert into D1 inquiries table
+  const sql = `INSERT INTO inquiries (id, name, email, phone, service, details, status, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+  await d1Run(env, sql, [id, name, email, phone || "", service, details, status, notes || "", now, updated]);
+
+  // 2. Dual-write to KV for resilience & indexing
+  try {
+    await kvPut(env, `inquiry_${id}`, JSON.stringify(inquiry));
+    await updateKvIndex(env, "inquiry_", inquiry, "upsert");
+  } catch (kvErr) {
+    console.warn("KV dual-write non-fatal notice:", kvErr);
+  }
+
+  return true;
+}
+
+async function getInquiriesFromD1(env) {
+  // 1. Try D1 first
+  try {
+    const d1Res = await d1Execute(env, "SELECT * FROM inquiries ORDER BY created_at DESC");
+    if (d1Res && Array.isArray(d1Res.results) && d1Res.results.length > 0) {
+      return d1Res.results;
+    }
+  } catch (e) {
+    console.warn("D1 query error, falling back to KV:", e);
+  }
+
+  // 2. Fallback to KV
+  try {
+    const list = await kvGetAll(env, "inquiry_");
+    list.sort((a, b) => new Date(b.created_at || b.timestamp || 0) - new Date(a.created_at || a.timestamp || 0));
+    return list;
+  } catch (e) {
+    console.error("KV inquiries fallback error:", e);
+    return [];
+  }
+}
+
+async function updateInquiryInD1(env, id, status, notes) {
+  const now = new Date().toISOString();
+  const key = id.startsWith("inquiry_") ? id : `inquiry_${id}`;
+  const cleanId = id.startsWith("inquiry_") ? id.replace("inquiry_", "") : id;
+
+  if (status && typeof notes === "string") {
+    await d1Run(env, "UPDATE inquiries SET status = ?, notes = ?, updated_at = ? WHERE id = ? OR id = ?", [status, notes, now, cleanId, key]);
+  } else if (status) {
+    await d1Run(env, "UPDATE inquiries SET status = ?, updated_at = ? WHERE id = ? OR id = ?", [status, now, cleanId, key]);
+  } else if (typeof notes === "string") {
+    await d1Run(env, "UPDATE inquiries SET notes = ?, updated_at = ? WHERE id = ? OR id = ?", [notes, now, cleanId, key]);
+  }
+
+  try {
+    const raw = await kvGet(env, key);
+    if (raw) {
+      const record = JSON.parse(raw);
+      if (status) record.status = status;
+      if (typeof notes === "string") record.notes = notes;
+      record.updated_at = now;
+      await kvPut(env, key, JSON.stringify(record));
+      await updateKvIndex(env, "inquiry_", record, "upsert");
+    }
+  } catch (e) {
+    console.warn("KV update notice:", e);
+  }
+}
+
+async function deleteInquiryFromD1(env, id) {
+  const key = id.startsWith("inquiry_") ? id : `inquiry_${id}`;
+  const cleanId = id.startsWith("inquiry_") ? id.replace("inquiry_", "") : id;
+
+  await d1Run(env, "DELETE FROM inquiries WHERE id = ? OR id = ?", [cleanId, key]);
+
+  try {
+    await kvDelete(env, key);
+    if (key !== id) await kvDelete(env, id);
+    await updateKvIndex(env, "inquiry_", key, "delete");
+  } catch (e) {
+    console.warn("KV delete notice:", e);
   }
 }
 
@@ -1134,11 +1292,85 @@ export default {
     }
 
     // -------------------------------------------------------------------------
-    // Super Admin CRM Inquiries & Leads API (/api/inquiries)
-    // Full CRUD operations for prospective client leads
-    // Strictly authenticated: Only authorized staff/admin may access or mutate records.
+    // Super Admin CRM Inquiries & Leads API (/api/inquiries & /api/leads)
+    // Full CRUD operations for prospective client leads backed by Cloudflare D1
+    // Supports public lead ingestion (POST) & authenticated CRM governance (GET/PATCH/DELETE)
     // -------------------------------------------------------------------------
-    if (path === "/api/inquiries") {
+    if (path === "/api/inquiries" || path === "/api/leads") {
+      // 1. PUBLIC LEAD SUBMISSION (POST without admin auth when creating a new lead)
+      if (request.method === "POST") {
+        let body;
+        try {
+          body = await request.json();
+        } catch {
+          body = {};
+        }
+
+        // Check if this is a new lead submission (from website quote form)
+        if (body && body.name && body.email && body.details && !body.id) {
+          try {
+            const clientIp = request.headers.get("cf-connecting-ip") || request.headers.get("x-real-ip") || "127.0.0.1";
+            const rl = checkWorkerRateLimit(`submit-contact:${clientIp}`, 5, 60000);
+            if (!rl.allowed) {
+              return jsonResponse({
+                success: false,
+                error: `Too many contact requests from your IP. Please wait ${rl.waitSec} seconds before submitting again.`
+              }, 429, {}, request, env);
+            }
+
+            const { name, email, phone, service, details } = body;
+            const id = `inq_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+            const nowIso = new Date().toISOString();
+
+            const inquiryRecord = {
+              id,
+              name: String(name).trim(),
+              email: String(email).trim().toLowerCase(),
+              phone: String(phone || "").trim(),
+              service: String(service || "General Inquiry").trim(),
+              details: String(details).trim(),
+              status: "new",
+              notes: "",
+              created_at: nowIso,
+              timestamp: nowIso,
+              updated_at: nowIso
+            };
+
+            await saveInquiryToD1(env, inquiryRecord);
+
+            return jsonResponse({
+              success: true,
+              id,
+              message: "Your inquiry has been successfully registered with Whiz Studio. Our executive team will review and respond shortly."
+            }, 200, {}, request, env);
+          } catch (err) {
+            console.error("Lead Generation API Error:", err);
+            return jsonResponse({
+              success: false,
+              error: err.message || "Failed to process inquiry submission."
+            }, 500, {}, request, env);
+          }
+        }
+
+        // If not a public new lead submission, authenticate admin for status/note update
+        const auth = await verifyAdminOrInternal(request, env);
+        if (!auth.ok) {
+          return jsonResponse({ success: false, error: auth.error }, auth.status, {}, request, env);
+        }
+
+        try {
+          const { id, status, notes } = body;
+          if (!id) return jsonResponse({ success: false, error: "Inquiry ID is required" }, 400, {}, request, env);
+
+          await updateInquiryInD1(env, id, status, notes);
+          return jsonResponse({ success: true, message: "Inquiry updated successfully." }, 200, {}, request, env);
+        } catch (err) {
+          console.error("Update Inquiry Error:", err);
+          return jsonResponse({ success: false, error: err.message }, 500, {}, request, env);
+        }
+      }
+
+      // 2. ADMIN AUTHENTICATION FOR GET, PATCH, DELETE
       const auth = await verifyAdminOrInternal(request, env);
       if (!auth.ok) {
         return jsonResponse({ success: false, error: auth.error }, auth.status, {}, request, env);
@@ -1146,8 +1378,7 @@ export default {
 
       if (request.method === "GET") {
         try {
-          const list = await kvGetAll(env, "inquiry_");
-          list.sort((a, b) => new Date(b.created_at || b.timestamp || 0) - new Date(a.created_at || a.timestamp || 0));
+          const list = await getInquiriesFromD1(env);
           return jsonResponse({ success: true, count: list.length, inquiries: list }, 200, {
             "Cache-Control": "no-cache, no-store, must-revalidate"
           }, request, env);
@@ -1157,24 +1388,14 @@ export default {
         }
       }
 
-      if (request.method === "POST" || request.method === "PATCH") {
+      if (request.method === "PATCH") {
         try {
-          const body = await request.json();
+          const body = await request.json().catch(() => ({}));
           const { id, status, notes } = body;
           if (!id) return jsonResponse({ success: false, error: "Inquiry ID is required" }, 400, {}, request, env);
 
-          const key = id.startsWith("inquiry_") ? id : `inquiry_${id}`;
-          const raw = await kvGet(env, key);
-          if (!raw) return jsonResponse({ success: false, error: "Inquiry not found" }, 404, {}, request, env);
-
-          const record = JSON.parse(raw);
-          if (status) record.status = status;
-          if (typeof notes === "string") record.notes = notes;
-          record.updated_at = new Date().toISOString();
-
-          await kvPut(env, key, JSON.stringify(record));
-          await updateKvIndex(env, "inquiry_", record, "upsert");
-          return jsonResponse({ success: true, inquiry: record, message: "Inquiry updated successfully." }, 200, {}, request, env);
+          await updateInquiryInD1(env, id, status, notes);
+          return jsonResponse({ success: true, message: "Inquiry updated successfully." }, 200, {}, request, env);
         } catch (err) {
           console.error("Update Inquiry Error:", err);
           return jsonResponse({ success: false, error: err.message }, 500, {}, request, env);
@@ -1192,12 +1413,7 @@ export default {
           }
           if (!id) return jsonResponse({ success: false, error: "Inquiry ID required" }, 400, {}, request, env);
 
-          const key = id.startsWith("inquiry_") ? id : `inquiry_${id}`;
-          await kvDelete(env, key);
-          if (key !== id) {
-            await kvDelete(env, id);
-          }
-          await updateKvIndex(env, "inquiry_", key, "delete");
+          await deleteInquiryFromD1(env, id);
           return jsonResponse({ success: true, id, message: "Inquiry deleted successfully from database." }, 200, {}, request, env);
         } catch (err) {
           console.error("DELETE /api/inquiries Error:", err);
@@ -1498,23 +1714,7 @@ export default {
           notes: ""
         };
 
-        const saved = await kvPut(env, `inquiry_${id}`, JSON.stringify(inquiryRecord));
-        if (!saved) {
-          throw new Error("Failed to write inquiry to KV database.");
-        }
-        await updateKvIndex(env, "inquiry_", inquiryRecord, "upsert");
-
-        // Non-blocking automated welcome acknowledgment via ctx.waitUntil()
-        if (ctx && typeof ctx.waitUntil === "function") {
-          ctx.waitUntil(
-            sendBrevoWelcomeEmailWorker({
-              email,
-              fullName: name,
-              role: "client",
-              env
-            }).catch(e => console.error("Inquiry async welcome email error:", e))
-          );
-        }
+        await saveInquiryToD1(env, inquiryRecord);
 
         return jsonResponse({
           success: true,

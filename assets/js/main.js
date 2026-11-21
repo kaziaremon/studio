@@ -8,9 +8,10 @@
 // 1. CONFIGURATION & WEBHOOK INTEGRATIONS
 // =============================================================================
 
-// CLOUDFLARE WORKER BACKEND ENGINE API
-const CLOUDFLARE_WORKER_API = 'https://whizstudio-proxy.kaziaremon.workers.dev';
-const API_BASE = CLOUDFLARE_WORKER_API;
+// CLOUDFLARE API BASE CONFIGURATION
+// Resolves to relative path in production, or production origin in local environment
+const isLocalEnv = typeof window !== 'undefined' && (window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+const API_BASE = isLocalEnv ? 'https://whizstudio.art' : '';
 
 
 // =============================================================================
@@ -591,28 +592,8 @@ async function handleContactSubmit(e) {
     submitBtn.innerHTML = `<span class="flex items-center space-x-2"><i class="fa-solid fa-spinner fa-spin text-xs"></i><span>Sending...</span></span>`;
   }
 
-  const contactPayload = {
-    embeds: [
-      {
-        title: "📬 New Strategic Inquiry: Whiz Studio",
-        color: 0x00A86B,
-        fields: [
-          { name: "Client / Company", value: name, inline: true },
-          { name: "Email Address", value: email, inline: true },
-          { name: "Phone / WhatsApp", value: phone, inline: true },
-          { name: "Target Capability", value: service, inline: true },
-          { name: "Current Situation & Project Scope", value: details, inline: false },
-          { name: "Inquiry Time", value: new Date().toISOString(), inline: false }
-        ],
-        footer: {
-          text: "Whiz Studio Lead Dispatch • whizstudio.art"
-        }
-      }
-    ]
-  };
-
   try {
-    const apiRes = await fetch(`${API_BASE}/api/submit-contact`, {
+    const apiRes = await fetch(`${API_BASE}/api/inquiries`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, email, phone, service, details })
