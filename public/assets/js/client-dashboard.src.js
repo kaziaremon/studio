@@ -358,7 +358,9 @@
     }, 4000);
   }
 
-  function switchTab(tabId) {
+  function switchTab(tabId, updateHash = true) {
+    if (!tabId) tabId = 'overview';
+    if (tabId === 'content-calendar') tabId = 'content_calendar';
     state.activeTab = tabId;
     const tabs = ['overview', 'services', 'tasks', 'finance', 'reviews', 'profile', 'support', 'settings', 'content_calendar'];
     tabs.forEach(t => {
@@ -426,6 +428,9 @@
     // Scroll to top of content
     const container = document.querySelector('main > div.overflow-y-auto');
     if (container) container.scrollTop = 0;
+    if (updateHash) {
+      window.location.hash = tabId;
+    }
     if (tabId === 'profile') {
       populateProfileForm(state.cif || state.clientProfile);
     }
@@ -2296,6 +2301,23 @@
   }
 
   function init() {
+    // 0. Initial Deep-Link Hash Handler
+    const initialHash = (window.location.hash || '').replace('#', '').trim();
+    if (initialHash) {
+      const normHash = initialHash === 'content-calendar' ? 'content_calendar' : initialHash;
+      if (['overview', 'services', 'tasks', 'finance', 'reviews', 'profile', 'support', 'settings', 'content_calendar'].includes(normHash)) {
+        switchTab(normHash, false);
+      }
+    }
+
+    window.addEventListener('hashchange', () => {
+      const h = (window.location.hash || '').replace('#', '').trim();
+      const normHash = h === 'content-calendar' ? 'content_calendar' : h;
+      if (['overview', 'services', 'tasks', 'finance', 'reviews', 'profile', 'support', 'settings', 'content_calendar'].includes(normHash)) {
+        switchTab(normHash, false);
+      }
+    });
+
     // 1. Tab Switching Listeners (Desktop, Drawer, Bottom Bar)
     document.querySelectorAll('[data-client-tab]').forEach(btn => {
       btn.addEventListener('click', () => {

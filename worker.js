@@ -1532,6 +1532,13 @@ export default {
         const companies = Array.from(companiesMap.values()).sort((a, b) => a.company_name.localeCompare(b.company_name));
 
         const STANDARD_SERVICES = [
+          "Facebook Marketing",
+          "Instagram Marketing",
+          "Facebook Ads",
+          "Instagram Ads",
+          "Social Media Optimization",
+          "LinkedIn Optimization",
+          "LinkedIn Marketing",
           "Social Media Management & Marketing",
           "Performance Ads (Meta & Google)",
           "Search Engine Optimization (SEO)",
@@ -1655,8 +1662,8 @@ export default {
           const itemBody = String(it.content_body || "").trim();
 
           await d1Run(env,
-            "INSERT INTO content_items (id, folder_id, serial_number, title, content_body, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            [itemId, folderId, itemSerial, itemTitle, itemBody, nowIso, nowIso]
+            "INSERT INTO content_items (id, folder_id, serial_number, title, content_body, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+            [itemId, folderId, itemSerial, itemTitle, itemBody, nowIso]
           );
         }
 

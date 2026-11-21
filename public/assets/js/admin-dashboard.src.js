@@ -583,7 +583,13 @@
   // =========================================================================
   function switchTab(tabId, updateHash = true) {
     if (typeof closeActiveGlassMenu === "function") closeActiveGlassMenu();
+    if (!tabId) tabId = 'overview';
+    // Normalize hyphen and underscore variations across routes
+    if (tabId === 'content-calendar') tabId = 'content_calendar';
     if (tabId === 'settings') tabId = 'security';
+    if (tabId === 'reviews-admin') tabId = 'reviews_admin';
+    if (tabId === 'service-tasks') tabId = 'service_tasks';
+    if (tabId === 'client-details') tabId = 'client_details';
 
     // Strict RBAC Route Guard
     const userRole = state.adminProfile?.role || '';
@@ -620,10 +626,13 @@
     ];
 
     allViews.forEach(v => {
-      const el = document.getElementById(`view_${v}`);
+      const el = document.getElementById(`view_${v}`) || (v === 'content_calendar' ? document.getElementById('view_content-calendar') : null);
       if (el) {
-        if (v === tabId) el.classList.remove('hidden');
-        else el.classList.add('hidden');
+        if (v === tabId || (tabId === 'content_calendar' && (v === 'content_calendar' || v === 'content-calendar'))) {
+          el.classList.remove('hidden');
+        } else {
+          el.classList.add('hidden');
+        }
       }
     });
 
@@ -656,7 +665,9 @@
 
     // Sidebar & Mobile Bottom Nav active styling
     document.querySelectorAll('[data-dash-tab]').forEach(btn => {
-      const isTarget = btn.dataset.dashTab === tabId;
+      let bTab = btn.dataset.dashTab;
+      if (bTab === 'content-calendar') bTab = 'content_calendar';
+      const isTarget = bTab === tabId;
       if (btn.closest('#adminMobileBottomNav')) {
         const label = btn.querySelector('.dash-bottom-label');
         if (isTarget) {
@@ -5991,8 +6002,14 @@
       if (accessDenied) accessDenied.classList.add('hidden');
       if (mainLayout) mainLayout.classList.remove('hidden');
 
-      const hash = (window.location.hash || '').replace('#', '');
-      const validTabs = ['overview', 'clients', 'services', 'projects', 'tasks', 'finance', 'team', 'support', 'history', 'security'];
+      const rawHash = (window.location.hash || '').replace('#', '').trim();
+      let hash = rawHash;
+      if (hash === 'content-calendar') hash = 'content_calendar';
+      const validTabs = [
+        'overview', 'clients', 'services', 'projects', 'tasks', 'finance',
+        'team', 'support', 'history', 'security',
+        'inquiries', 'reviews_admin', 'content_calendar', 'content-calendar'
+      ];
       const initialTab = validTabs.includes(hash) ? hash : 'overview';
       switchTab(initialTab, false);
 
@@ -6103,7 +6120,10 @@
       if (typeof initGlassSelects === 'function') initGlassSelects();
 
       // Initialize initial tab or deep-linked view
-      const hash = (window.location.hash || '').replace('#', '');
+      const rawHash = (window.location.hash || '').replace('#', '').trim();
+      let hash = rawHash;
+      if (hash === 'content-calendar') hash = 'content_calendar';
+
       if (hash.startsWith('client-')) {
         const cId = hash.replace('client-', '');
         openClientDetails(cId);
@@ -6111,7 +6131,11 @@
         const sId = hash.replace('service-tasks-', '');
         openServiceTasksWorkspace(sId);
       } else {
-        const validTabs = ['overview', 'clients', 'services', 'projects', 'tasks', 'finance', 'team', 'support', 'history', 'security', 'settings'];
+        const validTabs = [
+          'overview', 'clients', 'services', 'projects', 'tasks', 'finance',
+          'team', 'support', 'history', 'security', 'settings',
+          'inquiries', 'reviews_admin', 'content_calendar', 'content-calendar'
+        ];
         const initialTab = validTabs.includes(hash) ? hash : 'overview';
         switchTab(initialTab);
       }
@@ -6984,19 +7008,73 @@
     return cards;
   }
 
+  let parsersLoadingPromise = null;
+  function ensureDocumentParsersLoaded() {
+    if (parsersLoadingPromise) return parsersLoadingPromise;
+    parsersLoadingPromise = (async () => {
+      // 1. Mammoth for Word (.docx) documents
+      if (!window.mammoth) {
+        try {
+          await loadScriptDynamically('/assets/js/mammoth.browser.min.js');
+        } catch (e1) {
+          console.warn('Local mammoth.browser.min.js failed, loading CDN fallback:', e1);
+          await loadScriptDynamically('https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js');
+        }
+      }
+      // 2. PDF.js for Adobe (.pdf) documents
+      if (!window.pdfjsLib) {
+        try {
+          await loadScriptDynamically('/assets/js/pdf.min.js');
+        } catch (e2) {
+          console.warn('Local pdf.min.js failed, loading CDN fallback:', e2);
+          await loadScriptDynamically('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+        }
+      }
+      if (window.pdfjsLib) {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = '/assets/js/pdf.worker.min.js';
+      }
+    })();
+    return parsersLoadingPromise;
+  }
+
+  function loadScriptDynamically(src) {
+    return new Promise((resolve, reject) => {
+      const existing = document.querySelector(`script[src="${src}"]`);
+      if (existing) {
+        if (existing.dataset.loaded === 'true') return resolve();
+        existing.addEventListener('load', () => resolve());
+        existing.addEventListener('error', (err) => reject(err));
+        return;
+      }
+      const s = document.createElement('script');
+      s.src = src;
+      s.async = true;
+      s.onload = () => {
+        s.dataset.loaded = 'true';
+        resolve();
+      };
+      s.onerror = (err) => reject(new Error(`Failed to load ${src}`));
+      document.head.appendChild(s);
+    });
+  }
+
   async function parseDocxFile(arrayBuffer) {
+    await ensureDocumentParsersLoaded();
     if (!window.mammoth) {
-      throw new Error('Mammoth parser library not loaded. Please refresh the page.');
+      throw new Error('Mammoth parser library not available. Please check your internet connection.');
     }
     const result = await window.mammoth.extractRawText({ arrayBuffer });
     return result.value || '';
   }
 
   async function parsePdfFile(arrayBuffer) {
+    await ensureDocumentParsersLoaded();
     if (!window.pdfjsLib) {
-      throw new Error('PDF.js parser library not loaded. Please refresh the page.');
+      throw new Error('PDF.js parser library not available. Please check your internet connection.');
     }
-    window.pdfjsLib.GlobalWorkerOptions.workerSrc = '/assets/js/pdf.worker.min.js';
+    if (!window.pdfjsLib.GlobalWorkerOptions.workerSrc) {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = '/assets/js/pdf.worker.min.js';
+    }
     const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     let fullText = '';
 
@@ -7040,8 +7118,24 @@
     return fullText;
   }
 
+  const WHIZ_STANDARD_SERVICES = [
+    'Facebook Marketing',
+    'Instagram Marketing',
+    'Facebook Ads',
+    'Instagram Ads',
+    'Social Media Optimization',
+    'LinkedIn Optimization',
+    'LinkedIn Marketing'
+  ];
+
   async function loadContentCalendarData(showToastNotice = false) {
     const refreshBtn = document.getElementById('btnRefreshContentCal');
+    const errorState = document.getElementById('contentCalErrorState');
+    const errorMsg = document.getElementById('contentCalErrorMessage');
+    const foldersGrid = document.getElementById('contentCalFoldersGrid');
+    const emptyState = document.getElementById('contentCalEmptyFolders');
+
+    if (errorState) errorState.classList.add('hidden');
     if (refreshBtn) {
       const icon = refreshBtn.querySelector('i');
       if (icon) icon.classList.add('fa-spin');
@@ -7055,26 +7149,31 @@
           companies: metaRes.data.companies || [],
           services: metaRes.data.services || []
         };
-        populateContentCalendarSelects();
       }
+      populateContentCalendarSelects();
 
       // 2. Fetch Folders
       const foldersRes = await apiFetch('/api/admin/content-calendar/folders');
       if (foldersRes.ok && foldersRes.data?.success) {
         state.contentCalendarFolders = foldersRes.data.folders || [];
+        updateContentCalendarStats();
+        renderContentCalendarFolders();
+        if (showToastNotice) {
+          showToast('Content Calendar Hub synchronized.', 'success');
+        }
       } else {
-        state.contentCalendarFolders = [];
-      }
-
-      updateContentCalendarStats();
-      renderContentCalendarFolders();
-
-      if (showToastNotice) {
-        showToast('Content Calendar Hub synchronized.', 'success');
+        const msg = foldersRes.data?.error || `Server returned status ${foldersRes.status || '500'}`;
+        throw new Error(msg);
       }
     } catch (err) {
       console.error('Error loading content calendar data:', err);
-      showToast('Failed to load content calendar records.', 'error');
+      if (errorState) {
+        errorState.classList.remove('hidden');
+        if (errorMsg) errorMsg.textContent = err.message || 'Failed to load content calendar records.';
+      }
+      if (foldersGrid) foldersGrid.innerHTML = '';
+      if (emptyState) emptyState.classList.add('hidden');
+      showToast(err.message || 'Failed to load content calendar records.', 'error');
     } finally {
       if (refreshBtn) {
         const icon = refreshBtn.querySelector('i');
@@ -7102,9 +7201,14 @@
     const srvSelect = document.getElementById('contentCalServiceSelect');
     if (srvSelect) {
       const currentVal = srvSelect.value;
+      const combinedServices = Array.from(new Set([
+        ...WHIZ_STANDARD_SERVICES,
+        ...(state.contentCalendarMeta.services || [])
+      ]));
+
       srvSelect.innerHTML = `
         <option value="">Select a service...</option>
-        ${(state.contentCalendarMeta.services || []).map(s => `
+        ${combinedServices.map(s => `
           <option value="${escapeHtml(s)}">${escapeHtml(s)}</option>
         `).join('')}
         <option value="__custom__">+ Enter Custom Service</option>
@@ -7157,7 +7261,7 @@
         : 'Recent';
 
       return `
-        <div class="p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs hover:border-[#087F70]/30 hover:shadow-sm transition-all flex flex-col justify-between space-y-4" data-folder-card="${escapeHtml(f.id)}">
+        <div class="p-5 rounded-2xl bg-white border border-[#E3E9EF] shadow-xs hover:border-[#087F70]/40 hover:shadow-sm transition-all flex flex-col justify-between space-y-4 cursor-pointer" data-folder-card="${escapeHtml(f.id)}">
           <div class="space-y-2.5">
             <div class="flex items-start justify-between gap-2">
               <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20 truncate max-w-[200px]">
@@ -7269,13 +7373,14 @@
               <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-[#EAF5F1] text-[#087F70] border border-[#087F70]/20">
                 <i class="fa-solid fa-hashtag text-[9px]"></i> Content ${serial}
               </span>
-              <div class="flex items-center gap-1">
+              <div class="flex items-center gap-1.5">
                 <button type="button" class="btn-copy-content-body px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-[#EAF5F1] text-slate-700 hover:text-[#087F70] transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs" data-item-id="${escapeHtml(it.id)}" title="Copy raw text">
                   <i class="fa-solid fa-copy text-xs"></i>
                   <span>Copy</span>
                 </button>
-                <button type="button" class="btn-delete-content-card p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer" data-item-id="${escapeHtml(it.id)}" title="Delete card">
-                  <i class="fa-solid fa-trash-can text-xs"></i>
+                <button type="button" class="btn-confirm-content-item px-2.5 py-1 rounded-lg text-xs font-bold bg-[#EAF5F1] hover:bg-[#087F70] text-[#087F70] hover:text-white transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs" data-item-id="${escapeHtml(it.id)}" data-serial="${serial}" title="Confirm publication">
+                  <i class="fa-solid fa-check text-xs"></i>
+                  <span>Confirm</span>
                 </button>
               </div>
             </div>
@@ -7286,7 +7391,7 @@
           </div>
 
           <div class="bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/60 max-h-72 overflow-y-auto whiz-nested-scroll">
-            <pre class="font-sans text-xs text-slate-700 leading-relaxed whitespace-pre-wrap select-text m-0">${escapeHtml(body)}</pre>
+            <pre class="font-sans text-xs text-slate-700 leading-relaxed whitespace-pre-wrap select-text m-0" style="word-break: break-word;">${escapeHtml(body)}</pre>
           </div>
         </div>
       `;
@@ -7303,25 +7408,32 @@
     loadContentCalendarData();
   }
 
-  async function deleteContentItem(itemId) {
-    if (!confirm('Are you sure you want to permanently delete this content card? The folder will remain intact.')) {
+  async function confirmContentItem(itemId, serial) {
+    if (!confirm(`Confirm publication of Content #${serial}? This will mark it as executed and permanently remove it from remaining deliverables.`)) {
       return;
     }
 
     try {
       const res = await apiFetch(`/api/admin/content-calendar/items/${itemId}`, { method: 'DELETE' });
       if (res.ok && res.data?.success) {
-        showToast('Content card deleted.', 'success');
+        showToast(`Content #${serial} confirmed and removed.`, 'success');
         state.currentContentItems = state.currentContentItems.filter(i => i.id !== itemId);
         const elCount = document.getElementById('contentCalDetailItemsCount');
         if (elCount) elCount.textContent = `${state.currentContentItems.length} Cards`;
         renderContentCalendarCards();
+
+        // Update item count in current folder in folder list
+        if (state.currentContentFolder) {
+          const f = (state.contentCalendarFolders || []).find(folder => folder.id === state.currentContentFolder.id);
+          if (f) f.item_count = Math.max(0, (Number(f.item_count) || 1) - 1);
+          updateContentCalendarStats();
+        }
       } else {
-        showToast(res.data?.error || 'Failed to delete content card.', 'error');
+        showToast(res.data?.error || 'Failed to confirm content item.', 'error');
       }
     } catch (err) {
-      console.error('Delete item error:', err);
-      showToast('Error deleting content card.', 'error');
+      console.error('Confirm item error:', err);
+      showToast('Error confirming content item.', 'error');
     }
   }
 
@@ -7560,7 +7672,8 @@
     // Tab switching
     document.querySelectorAll('[data-dash-tab]').forEach(btn => {
       btn.addEventListener('click', () => {
-        const tab = btn.dataset.dashTab;
+        let tab = btn.dataset.dashTab;
+        if (tab === 'content-calendar') tab = 'content_calendar';
         switchTab(tab);
         const drawer = document.getElementById('mobileDrawer');
         const backdrop = document.getElementById('mobileDrawerBackdrop');
@@ -8277,7 +8390,10 @@
 
     // Hash change handler for deep linking & back/forward
     window.addEventListener('hashchange', () => {
-      const hash = (window.location.hash || '').replace('#', '');
+      const rawHash = (window.location.hash || '').replace('#', '').trim();
+      let hash = rawHash;
+      if (hash === 'content-calendar') hash = 'content_calendar';
+
       if (hash.startsWith('client-')) {
         const cId = hash.replace('client-', '');
         openClientDetails(cId);
@@ -8778,6 +8894,7 @@
     });
 
     document.getElementById('btnBackToFolders')?.addEventListener('click', closeContentFolderDetail);
+    document.getElementById('btnRetryContentCalLoad')?.addEventListener('click', () => loadContentCalendarData(true));
 
     document.addEventListener('click', async (e) => {
       const viewFolderBtn = e.target.closest('.btn-view-content-folder');
@@ -8801,6 +8918,13 @@
         return;
       }
 
+      const folderCard = e.target.closest('[data-folder-card]');
+      if (folderCard && !e.target.closest('.btn-edit-content-folder') && !e.target.closest('.btn-delete-content-folder') && !e.target.closest('.btn-view-content-folder')) {
+        const fId = folderCard.dataset.folderCard;
+        if (fId) openContentFolderDetail(fId);
+        return;
+      }
+
       const copyBtn = e.target.closest('.btn-copy-content-body');
       if (copyBtn) {
         const itemId = copyBtn.dataset.itemId;
@@ -8816,6 +8940,14 @@
             showToast('Unable to copy to clipboard.', 'warn');
           }
         }
+        return;
+      }
+
+      const confirmItemBtn = e.target.closest('.btn-confirm-content-item');
+      if (confirmItemBtn) {
+        const itemId = confirmItemBtn.dataset.itemId;
+        const serial = confirmItemBtn.dataset.serial || '';
+        if (itemId) confirmContentItem(itemId, serial);
         return;
       }
 
